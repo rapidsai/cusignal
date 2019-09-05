@@ -1,0 +1,25 @@
+name: cusignal
+channels:
+  - nvidia
+  - rapidsai-nightly
+  - conda-forge
+  - defaults
+dependencies:
+  - pytorch
+  - cudf
+  - cuml
+  - cugraph
+  - scipy
+  - numpy
+  - pandas
+  - cudatoolkit=10.0
+  - boost
+  - jupyterlab
+  - matplotlib
+  - nodejs
+  - numba
+  - pip
+  - pip:
+    - git+https://github.com/cupy/cupy.git
+    - git+https://github.com/roger-/pyrtlsdr.git
+
