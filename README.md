@@ -8,7 +8,7 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
 
 **Scipy Signal (CPU)**
-```
+```python
 import numpy as np
 from scipy import signal
 
@@ -26,7 +26,7 @@ cf = signal.resample_poly(cy, resample_up, resample_down, window=('kaiser', 0.5)
 This code executes on 2x Xeon E5-2600 in 2.36 sec.
 
 **cuSignal with Data Generated on the GPU with CuPy**
-```
+```python
 import cupy as cp
 import cusignal
 
@@ -44,7 +44,7 @@ gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.
 This code executes on an NVIDIA P100 in 258 ms.
 
 **cuSignal with Data Generated on the CPU with Mapped, Pinned (zero-copy) Memory**
-```
+```python
 import cupy as cp
 import numpy as np
 import cusignal
@@ -68,7 +68,7 @@ gf = cusignal.resample_poly(gpu_signal, resample_up, resample_down, window=('kai
 This code executes on an NVIDIA P100 in 154 ms.
 
 **cuSignal with Data Generated on the CPU and Copied to GPU [AVOID THIS FOR ONLINE SIGNAL PROCESSING]**
-```
+```python
 import cupy as cp
 import numpy as np
 import cusignal
