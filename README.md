@@ -5,6 +5,87 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 **NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the `master` branch.
 
 ## Quick Start
+cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
+
+**Scipy Signal (CPU)**
+```
+import numpy as np
+from scipy import signal
+
+start = 0
+stop = 10
+num_samps = int(1e8)
+resample_up = 2
+resample_down = 3
+
+cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cy = np.cos(-cx**2/6.0)
+
+cf = signal.resample_poly(cy, resample_up, resample_down, window=('kaiser', 0.5))
+```
+This code executes on 2x Xeon E5-2600 in 2.36 sec.
+
+**cuSignal with Data Generated on the GPU with CuPy**
+```
+import cupy as cp
+import cusignal
+
+start = 0
+stop = 10
+num_samps = int(1e8)
+resample_up = 2
+resample_down = 3
+
+gx = cp.linspace(start, stop, num_samps, endpoint=False) 
+gy = cp.cos(-cx**2/6.0)
+
+gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.5))
+```
+This code executes on an NVIDIA P100 in 258 ms.
+
+**cuSignal with Data Generated on the CPU with Mapped, Pinned (zero-copy) Memory**
+```
+import cupy as cp
+import numpy as np
+import cusignal
+
+start = 0
+stop = 10
+num_samps = int(1e8)
+resample_up = 2
+resample_down = 3
+
+# Generate Data on CPU
+cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cy = np.cos(-cx**2/6.0)
+
+# Create shared memory between CPU and GPU and load with CPU signal (cy)
+gpu_signal = cusignal.get_shared_mem(num_samps, dtype=np.complex128)
+gpu_signal[:] = cy
+
+gf = cusignal.resample_poly(gpu_signal, resample_up, resample_down, window=('kaiser', 0.5))
+```
+This code executes on an NVIDIA P100 in 154 ms.
+
+**cuSignal with Data Generated on the CPU and Copied to GPU [AVOID THIS FOR ONLINE SIGNAL PROCESSING]**
+```
+import cupy as cp
+import numpy as np
+import cusignal
+
+start = 0
+stop = 10
+num_samps = int(1e8)
+resample_up = 2
+resample_down = 3
+
+# Generate Data on CPU
+cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cy = np.cos(-cx**2/6.0)
+
+gf = cusignal.resample_poly(cp.asarray(cy), resample_up, resample_down, window=('kaiser', 0.5))
+```
+This code executes on an NVIDIA P100 in 728 ms.
 
 ## Dependencies
 * NVIDIA GPU (Pascal or Newer)
