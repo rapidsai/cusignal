@@ -299,7 +299,6 @@ def _convolve2d(in1, in2, flip, mode='full', boundary='fill', fillvalue=0):
         
     # Create empty array to hold number of aout dimensions
     out_dimens = np.empty(in1.ndim, np.int)
-    cd 
     if (mode == VALID):
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
