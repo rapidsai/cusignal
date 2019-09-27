@@ -29,7 +29,7 @@ def _truncate(w, needed):
 
 
 def general_cosine(M, a, sym=True):
-    """
+    r"""
     Generic weighted sum of cosine terms window
 
     Parameters
@@ -111,7 +111,7 @@ def general_cosine(M, a, sym=True):
 
 
 def boxcar(M, sym=True):
-    """Return a boxcar or rectangular window.
+    r"""Return a boxcar or rectangular window.
 
     Also known as a rectangular window or Dirichlet window, this is equivalent
     to no window at all.
@@ -164,7 +164,7 @@ def boxcar(M, sym=True):
 
 
 def triang(M, sym=True):
-    """Return a triangular window.
+    r"""Return a triangular window.
 
     Parameters
     ----------
@@ -228,7 +228,7 @@ def triang(M, sym=True):
 
 
 def parzen(M, sym=True):
-    """Return a Parzen window.
+    r"""Return a Parzen window.
 
     Parameters
     ----------
@@ -292,7 +292,7 @@ def parzen(M, sym=True):
 
 
 def bohman(M, sym=True):
-    """Return a Bohman window.
+    r"""Return a Bohman window.
 
     Parameters
     ----------
@@ -347,7 +347,7 @@ def bohman(M, sym=True):
 
 
 def blackman(M, sym=True):
-    """
+    r"""
     Return a Blackman window.
 
     The Blackman window is a taper formed by using the first three terms of
@@ -432,7 +432,7 @@ def blackman(M, sym=True):
 
 
 def nuttall(M, sym=True):
-    """Return a minimum 4-term Blackman-Harris window according to Nuttall.
+    r"""Return a minimum 4-term Blackman-Harris window according to Nuttall.
 
     This variation is called "Nuttall4c" by Heinzel. [2]_
 
@@ -491,7 +491,7 @@ def nuttall(M, sym=True):
 
 
 def blackmanharris(M, sym=True):
-    """Return a minimum 4-term Blackman-Harris window.
+    r"""Return a minimum 4-term Blackman-Harris window.
 
     Parameters
     ----------
@@ -538,7 +538,7 @@ def blackmanharris(M, sym=True):
 
 
 def flattop(M, sym=True):
-    """Return a flat top window.
+    r"""Return a flat top window.
 
     Parameters
     ----------
@@ -600,7 +600,7 @@ def flattop(M, sym=True):
 
 
 def bartlett(M, sym=True):
-    """
+    r"""
     Return a Bartlett window.
 
     The Bartlett window is very similar to a triangular window, except
@@ -698,7 +698,7 @@ def bartlett(M, sym=True):
 
 
 def hann(M, sym=True):
-    """
+    r"""
     Return a Hann window.
 
     The Hann window is a taper formed by using a raised cosine or sine-squared
@@ -780,7 +780,7 @@ def hann(M, sym=True):
 
 
 def tukey(M, alpha=0.5, sym=True):
-    """Return a Tukey window, also known as a tapered cosine window.
+    r"""Return a Tukey window, also known as a tapered cosine window.
 
     Parameters
     ----------
@@ -863,7 +863,7 @@ def tukey(M, alpha=0.5, sym=True):
 
 
 def barthann(M, sym=True):
-    """Return a modified Bartlett-Hann window.
+    r"""Return a modified Bartlett-Hann window.
 
     Parameters
     ----------
@@ -918,7 +918,7 @@ def barthann(M, sym=True):
 
 
 def general_hamming(M, alpha, sym=True):
-    """Return a generalized Hamming window.
+    r"""Return a generalized Hamming window.
 
     The generalized Hamming window is constructed by multiplying a rectangular
     window by one period of a cosine function [1]_.
@@ -1005,7 +1005,7 @@ def general_hamming(M, alpha, sym=True):
 
 
 def hamming(M, sym=True):
-    """
+    r"""
     Return a Hamming window.
 
     The Hamming window is a taper formed by using a raised cosine with
@@ -1094,7 +1094,7 @@ def hamming(M, sym=True):
 
 
 def kaiser(M, beta, sym=True):
-    """
+    r"""
     Return a Kaiser window.
 
     The Kaiser window is a taper formed by using a Bessel function.
@@ -1216,7 +1216,7 @@ def kaiser(M, beta, sym=True):
 
 
 def gaussian(M, std, sym=True):
-    """Return a Gaussian window.
+    r"""Return a Gaussian window.
 
     Parameters
     ----------
@@ -1279,7 +1279,7 @@ def gaussian(M, std, sym=True):
 
 
 def general_gaussian(M, p, sig, sym=True):
-    """Return a window with a generalized Gaussian shape.
+    r"""Return a window with a generalized Gaussian shape.
 
     Parameters
     ----------
@@ -1350,7 +1350,7 @@ def general_gaussian(M, p, sig, sym=True):
 
 # `chebwin` contributed by Kumar Appaiah.
 def chebwin(M, at, sym=True):
-    """Return a Dolph-Chebyshev window.
+    r"""Return a Dolph-Chebyshev window.
 
     Parameters
     ----------
@@ -1563,7 +1563,7 @@ def chebwin(M, at, sym=True):
 
 
 def cosine(M, sym=True):
-    """Return a window with a simple cosine shape.
+    r"""Return a window with a simple cosine shape.
 
     Parameters
     ----------
@@ -1622,7 +1622,7 @@ def cosine(M, sym=True):
 
 
 def exponential(M, center=None, tau=1., sym=True):
-    """Return an exponential (or Poisson) window.
+    r"""Return an exponential (or Poisson) window.
 
     Parameters
     ----------
@@ -2020,7 +2020,7 @@ for k, v in _win_equiv_raw.items():
 
 
 def get_window(window, Nx, fftbins=True):
-    """
+    r"""
     Return a window of a given length and type.
 
     Parameters

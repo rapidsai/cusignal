@@ -54,7 +54,7 @@ def _inputs_swap_needed(mode, shape1, shape2):
 
 
 def correlate(in1, in2, mode='full', method='auto'):
-    """
+    r"""
     Cross-correlate two N-dimensional arrays.
 
     Cross-correlate `in1` and `in2`, with the output size determined by the
