@@ -111,6 +111,10 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 `conda env update -f cusignal_conda_env.yml`
 
+### Also, confirm unit testing via PyTest
+
+`pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
+
 ## Contributing Guide
 
 Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/master/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
