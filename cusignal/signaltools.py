@@ -757,7 +757,7 @@ def convolve(in1, in2, mode='full', method='auto'):
     elif method == 'direct':
         # fastpath to faster numpy.convolve for 1d inputs when possible
         if _np_conv_ok(volume, kernel, mode):
-            return cp.convolve(volume, kernel, mode)
+            return cp.asarray(np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode))
 
         return correlate(volume, _reverse_and_conj(kernel), mode, 'direct')
     else:
