@@ -37,7 +37,7 @@ resample_up = 2
 resample_down = 3
 
 gx = cp.linspace(start, stop, num_samps, endpoint=False) 
-gy = cp.cos(-cx**2/6.0)
+gy = cp.cos(-gx**2/6.0)
 
 gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
