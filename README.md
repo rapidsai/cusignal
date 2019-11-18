@@ -119,5 +119,5 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/master/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
 
-## GTC DC Slides
-You can learn more about the cuSignal stack and motivations by viewing these GTC DC 2019 slides, located [here](https://drive.google.com/open?id=1rDNJVIHvCpFfNEDB9Gau5MzCN8G77lkH).
+## GTC DC Slides and Presentation
+You can learn more about the cuSignal stack and motivations by viewing these GTC DC 2019 slides, located [here](https://drive.google.com/open?id=1rDNJVIHvCpFfNEDB9Gau5MzCN8G77lkH). The recording of this talk can be found at [GTC On Demand](https://on-demand.gputechconf.com/gtcdc/2019/video/dc91165-cusignal-gpu-acceleration-of-scipy-signal/)
