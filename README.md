@@ -94,7 +94,7 @@ This code executes on an NVIDIA P100 in 728 ms.
 * CuPy >= 6.2.0
 * Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
 
-## Install cuSignal
+## Install cuSignal - Linux
 
 ### Download and install Andaconda then create conda environment. 
 `conda env create -f cusignal_conda_env.yml`
@@ -114,6 +114,27 @@ This code executes on an NVIDIA P100 in 728 ms.
 ### Also, confirm unit testing via PyTest
 
 `pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
+
+## Install cuSignal - Windows (Thanks, Evan Mayer!)
+
+### Download and install Anaconda for Windows
+
+### Activate conda environment
+
+`conda activate cusignal`
+
+### Install cuSignal Core Dependencies
+
+```
+conda install numpy numba scipy pip
+pip install cupy-cudaXXX
+```
+
+Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`
+
+### Install cuSignal module
+
+`python setup.py install`
 
 ## Contributing Guide
 
