@@ -96,34 +96,34 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 ## Install cuSignal - Linux
 
-### Download and install Andaconda then create conda environment. 
+1. Download and install Andaconda then create conda environment. 
 `conda env create -f cusignal_conda_env.yml`
 
-### Activate conda environment
+2. Activate conda environment
 
 `conda activate cusignal`
 
-### Install cuSignal module
+3. Install cuSignal module
 
 `python setup.py install`
 
-### Once installed, periodically update environment
+4. Once installed, periodically update environment
 
 `conda env update -f cusignal_conda_env.yml`
 
-### Also, confirm unit testing via PyTest
+5. Also, confirm unit testing via PyTest
 
 `pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
 
 ## Install cuSignal - Windows (Thanks, Evan Mayer!)
 
-### Download and install Anaconda for Windows
+1. Download and install Anaconda for Windows
 
-### Activate conda environment
+2. Activate conda environment
 
 `conda activate cusignal`
 
-### Install cuSignal Core Dependencies
+3. Install cuSignal Core Dependencies
 
 ```
 conda install numpy numba scipy pip
@@ -132,7 +132,7 @@ pip install cupy-cudaXXX
 
 Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`
 
-### Install cuSignal module
+4. Install cuSignal module
 
 `python setup.py install`
 
