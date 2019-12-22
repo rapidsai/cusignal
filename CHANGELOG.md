@@ -1,8 +1,10 @@
 # cuSignal 0.2 (Date TBD)
 
+## Improvements
+- PR #5 - Update cuSignal install directions for Windows OS.
+
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
-
 
 # cuSignal 0.1 (04 Nov 2019)
 
