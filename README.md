@@ -119,22 +119,35 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 1. Download and install Anaconda for Windows
 
-2. Activate conda environment
+In an Anaconda Prompt, navigate to your checkout of cuSignal.
+
+2. Create cuSignal conda environment
+
+`conda create --name cusignal`
+
+3. Activate conda environment
 
 `conda activate cusignal`
 
-3. Install cuSignal Core Dependencies
+4. Install cuSignal Core Dependencies
 
 ```
-conda install numpy numba scipy pip
+conda install numpy numba scipy cudatoolkit pip
 pip install cupy-cudaXXX
 ```
 
-Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`
+Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
 
 4. Install cuSignal module
 
 `python setup.py install`
+
+5. \[Optional\] Run tests
+In the cuSignal top level directory:
+```
+pip install pytest
+pytest
+```
 
 ## Contributing Guide
 
