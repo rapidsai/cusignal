@@ -115,11 +115,9 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 `pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
 
-## Install cuSignal - Windows (Thanks, Evan Mayer!)
+## Install cuSignal - Windows
 
-1. Download and install Anaconda for Windows
-
-In an Anaconda Prompt, navigate to your checkout of cuSignal.
+1. Download and install Anaconda for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
 2. Create cuSignal conda environment
 
