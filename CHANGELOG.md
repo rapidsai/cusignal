@@ -1,5 +1,8 @@
 # cuSignal 0.2 (Date TBD)
 
+## New Features
+- PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
+
 ## Improvements
 - PR #5 - Update cuSignal install directions for Windows OS.
 
