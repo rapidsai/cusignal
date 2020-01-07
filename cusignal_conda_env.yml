@@ -3,6 +3,7 @@ channels:
   - nvidia
   - conda-forge
   - defaults
+  - numba
 dependencies:
   - scipy
   - numpy
