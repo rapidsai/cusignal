@@ -7,10 +7,8 @@ channels:
 dependencies:
   - scipy
   - numpy
-  - pandas
   - cudatoolkit>=10.0
   - boost
-  - jupyterlab
   - matplotlib
   - numba
   - pip
