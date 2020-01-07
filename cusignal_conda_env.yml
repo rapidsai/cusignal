@@ -7,7 +7,7 @@ channels:
 dependencies:
   - scipy
   - numpy
-  - cudatoolkit>=10.0
+  - cudatoolkit>=9.2,<10.2
   - boost
   - matplotlib
   - numba
