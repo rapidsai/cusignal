@@ -1,7 +1,7 @@
-name: cusignal
+name: cusignal_test
 channels:
-  - nvidia
   - conda-forge
+  - nvidia
   - defaults
   - numba
 dependencies:
@@ -11,7 +11,5 @@ dependencies:
   - boost
   - matplotlib
   - numba
-  - pip
   - pytest
-  - pip:
-    - cupy
+  - cupy>=6.2.0
