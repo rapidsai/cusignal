@@ -98,7 +98,7 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 1. Download and install Andaconda then create conda environment.
 
-`conda env create -f cusignal_conda_env.yml`
+`conda env create -f cusignal_conda_base_env.yml`
 
 2. Activate conda environment
 
