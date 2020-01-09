@@ -1,0 +1,15 @@
+name: cusignal
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+  - numba
+dependencies:
+  - scipy
+  - numpy
+  - matplotlib
+  - numba
+  - pytest
+  - pip
+  - pip:
+      - cupy>=6.2.0
