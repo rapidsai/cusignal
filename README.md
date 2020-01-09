@@ -94,59 +94,83 @@ This code executes on an NVIDIA P100 in 728 ms.
 * CuPy >= 6.2.0
 * Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
 
-## Install cuSignal - Linux
+## Install cuSignal, Linux OS, GeForce/Tesla/Quadro GPU
 
-1. Download and install Andaconda then create conda environment.
+1. Download and install [Andaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
 
-`conda env create -f cusignal_conda_base_env.yml`
+    `conda env create -f conda/environments/cusignal_base.yml`
 
 2. Activate conda environment
 
-`conda activate cusignal`
+    `conda activate cusignal`
 
 3. Install cuSignal module
 
-`python setup.py install`
+    `python setup.py install`
 
 4. Once installed, periodically update environment
 
-`conda env update -f cusignal_conda_env.yml`
+    `conda env update -f conda/environments/cusignal_base.yml`
 
 5. Also, confirm unit testing via PyTest
 
-`pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
+    `pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
 
-## Install cuSignal - Windows
+## Install cuSignal, Linux OS, Jetson Nano, Xavier, TX1, TX2
 
-1. Download and install Anaconda for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
+While there are many versions of Anaconda for AArch64 platforms, cuSignal has been tested and supports [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases). Conda4aarch64 is also described in the [Numba aarch64 installation instructions](http://numba.pydata.org/numba-doc/latest/user/installing.html#installing-on-linux-armv8-aarch64-platforms). Further, it's assumed that your Jetson device is running a current edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
+
+1. Install [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) and create the cuSignal conda environment:
+
+    `conda env create -f conda/environments/cusignal_jetson_base.yml`
+
+2. Activate conda environment
+
+    `conda activate cusignal`
+
+3. Install cuSignal module
+
+    `python setup.py install`
+
+4. Once installed, periodically update environment
+
+    `conda env update -f conda/environments/cusignal_jetson_base.yml`
+
+5. Also, confirm unit testing via PyTest
+
+    `pytest -v` for verbose mode with `pytest -v -k <function name>` for more select testing
+
+## Install cuSignal, Windows OS, GeForce/Tesla/Quadro GPU
+
+1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
 2. Create cuSignal conda environment
 
-`conda create --name cusignal`
+    `conda create --name cusignal`
 
 3. Activate conda environment
 
-`conda activate cusignal`
+    `conda activate cusignal`
 
 4. Install cuSignal Core Dependencies
 
-```
-conda install numpy numba scipy cudatoolkit pip
-pip install cupy-cudaXXX
-```
+    ```
+    conda install numpy numba scipy cudatoolkit pip
+    pip install cupy-cudaXXX
+    ```
 
-Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
+    Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
 
 4. Install cuSignal module
 
-`python setup.py install`
+    `python setup.py install`
 
 5. \[Optional\] Run tests
 In the cuSignal top level directory:
-```
-pip install pytest
-pytest
-```
+    ```
+    pip install pytest
+    pytest
+    ```
 
 ## Contributing Guide
 

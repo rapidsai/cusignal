@@ -4,6 +4,7 @@ channels:
   - nvidia
   - defaults
   - numba
+  - c4aarch64
 dependencies:
   - scipy
   - numpy
@@ -12,4 +13,4 @@ dependencies:
   - pytest
   - pip
   - pip:
-      - cupy>=6.2.0
+    - cupy>=6.2.0
