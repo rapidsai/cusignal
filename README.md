@@ -98,7 +98,13 @@ This code executes on an NVIDIA P100 in 728 ms.
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
 
+    **Base environment (core dependencies for cuSignal)**
+
     `conda env create -f conda/environments/cusignal_base.yml`
+
+    **Full environment (including RAPIDS's cuDF, cuML, cuGraph, and PyTorch)**
+
+    `conda env create -f conda/environments/cusignal_full.yml`
 
 2. Activate conda environment
 
