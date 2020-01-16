@@ -11,16 +11,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import versioneer
 from setuptools import setup, find_packages
 
 
+INSTALL_REQUIRES=["numba"]
+
 setup(
     name='cusignal',
-    version='0.1',
+    version=versioneer.get_version(),
     description="cuSignal - GPU Signal Processing",
     url="https://github.com/rapidsai/cusignal",
     author="NVIDIA Corporation",
     license="Apache 2.0",
-    packages=find_packages(),
-    include_package_data=True
+    packages=find_packages(include=["cusignal", "cusignal.*"]),
+    cmdclass=versioneer.get_cmdclass(),
+    install_requires=INSTALL_REQUIRES,
+    zip_safe=False
 )
