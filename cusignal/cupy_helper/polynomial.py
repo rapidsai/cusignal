@@ -1,8 +1,8 @@
 # Implemention of functionals not currently supported in cuPy v6
 # poly1d type unsupported
 
-import cupy as cp
 from cupy import arange, asarray, zeros_like
+
 
 def polyval(p, x):
     """
@@ -59,5 +59,3 @@ def polyval(p, x):
     for i in arange(0, len(p)):
         y = y * x + p[i]
     return y
-
-

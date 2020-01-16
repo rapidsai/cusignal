@@ -1,6 +1,7 @@
 import cupy as cp
 from cupy.lib.stride_tricks import as_strided
 
+
 def toeplitz(c, r=None):
     """
     Construct a Toeplitz matrix.
@@ -54,7 +55,7 @@ def toeplitz(c, r=None):
     vals = cp.concatenate((c[::-1], r[1:]))
     out_shp = len(c), len(r)
     n = vals.strides[0]
-    return as_strided(vals[len(c)-1:], shape=out_shp, strides=(-n, n)).copy()
+    return as_strided(vals[len(c) - 1:], shape=out_shp, strides=(-n, n)).copy()
 
 
 def hankel(c, r=None):

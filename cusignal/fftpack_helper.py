@@ -1,5 +1,5 @@
 from cupy import (arange, array, asarray, atleast_1d, intc, integer,
-                   isscalar, issubdtype, take, unique, where)
+                  isscalar, issubdtype, take, unique, where)
 from bisect import bisect_left
 
 
@@ -69,7 +69,7 @@ def next_fast_len(target):
         return target
 
     # Quickly check if it's already a power of 2
-    if not (target & (target-1)):
+    if not (target & (target - 1)):
         return target
 
     # Get result quickly for small sizes, since FFT itself is similarly fast.

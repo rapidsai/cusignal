@@ -20,12 +20,13 @@ def test_csd(num_samps, fs, nperseg):
 
     assert array_equal(cpu_csd, gpu_csd)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 @pytest.mark.parametrize('nperseg', [1024, 2048])
 def test_csd_complex(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
+    cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_x = cp.asarray(cpu_x)
     gpu_y = cp.asarray(cpu_y)
 
@@ -33,6 +34,7 @@ def test_csd_complex(num_samps, fs, nperseg):
     gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
 
     assert array_equal(cpu_csd, gpu_csd)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
@@ -42,24 +44,33 @@ def test_periodogram(num_samps, fs, window, scaling):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
-    cpu_periodogram = signal.periodogram(cpu_sig, fs, window=window, scaling=scaling)
-    gpu_periodogram = cp.asnumpy(cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling))
+    cpu_periodogram = signal.periodogram(cpu_sig, fs, window=window,
+                                         scaling=scaling)
+    gpu_periodogram = cp.asnumpy(
+        cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
+    )
 
     assert array_equal(cpu_periodogram, gpu_periodogram)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 @pytest.mark.parametrize('window', ['flattop', 'nuttall'])
 @pytest.mark.parametrize('scaling', ['spectrum', 'density'])
 def test_periodogram_complex(num_samps, fs, window, scaling):
-    cpu_sig = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
-    cf, cpu_periodogram = signal.periodogram(cpu_sig, fs, window=window, scaling=scaling)
-    gf, gpu_periodogram = cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
+    cf, cpu_periodogram = signal.periodogram(
+        cpu_sig, fs, window=window, scaling=scaling
+    )
+    gf, gpu_periodogram = cusignal.periodogram(
+        gpu_sig, fs, window=window, scaling=scaling
+    )
     gpu_periodogram = cp.asnumpy(gpu_periodogram)
 
     assert array_equal(cpu_periodogram, gpu_periodogram)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
@@ -74,11 +85,12 @@ def test_welch(num_samps, fs, nperseg):
 
     assert array_equal(cPxx_spec, gPxx_spec)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 @pytest.mark.parametrize('nperseg', [1024, 2048])
 def test_welch_complex(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
     cf, cPxx_spec = signal.welch(cpu_sig, fs, nperseg=nperseg)
@@ -86,6 +98,7 @@ def test_welch_complex(num_samps, fs, nperseg):
     gPxx_spec = cp.asnumpy(gPxx_spec)
 
     assert array_equal(cPxx_spec, gPxx_spec)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
@@ -99,10 +112,11 @@ def test_spectrogram(num_samps, fs):
 
     assert array_equal(cPxx_spec, gPxx_spec)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 def test_spectrogram_complex(num_samps, fs):
-    cpu_sig = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
     cf, ct, cPxx_spec = signal.spectrogram(cpu_sig, fs)
@@ -110,6 +124,7 @@ def test_spectrogram_complex(num_samps, fs):
     gPxx_spec = cp.asnumpy(gPxx_spec)
 
     assert array_equal(cPxx_spec, gPxx_spec)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
@@ -126,12 +141,13 @@ def test_coherence(num_samps, fs, nperseg):
 
     assert array_equal(cpu_coherence, gpu_coherence)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 @pytest.mark.parametrize('nperseg', [1024, 2048])
 def test_coherence_complex(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
+    cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_x = cp.asarray(cpu_x)
     gpu_y = cp.asarray(cpu_y)
 
@@ -140,6 +156,7 @@ def test_coherence_complex(num_samps, fs, nperseg):
     gpu_coherence = cp.asnumpy(gpu_coherence)
 
     assert array_equal(cpu_coherence, gpu_coherence)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
@@ -154,11 +171,12 @@ def test_stft(num_samps, fs, nperseg):
 
     assert array_equal(cpu_stft, gpu_stft)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fs', [1.0, 1e6])
 @pytest.mark.parametrize('nperseg', [1024, 2048])
 def test_stft_complex(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps) + 1j*np.random.rand(num_samps)
+    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
     cf, ct, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)

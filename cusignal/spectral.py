@@ -1,14 +1,8 @@
 import cupy as cp
-from cupy import (allclose, angle, arange, argsort, array, asarray,
-                   atleast_1d, atleast_2d, dot, exp, expand_dims,
-                   iscomplexobj, mean, ndarray, newaxis, ones, pi,
-                   prod, r_, ravel, reshape, sort, take, transpose, 
-                   unique, where, zeros, zeros_like)
+from cupy import (angle, arange, asarray, reshape, zeros)
 from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
 import numpy as np
-from numba import cuda
-import math
 
 from .windows import get_window
 from ._arraytools import even_ext, odd_ext, const_ext, zero_ext, as_strided
@@ -129,17 +123,23 @@ def lombscargle(x,
     blockspergrid = (numSM * 20)
 
     if normalize:
-        y_dot = cp.dot(y,y)
+        y_dot = cp.dot(y, y)
         if precenter:
-            _lombscargle_norm[blockspergrid, threadsperblock](x, y - y.mean(), freqs, pgram, y_dot)
+            _lombscargle_norm[blockspergrid, threadsperblock](
+                x, y - y.mean(), freqs, pgram, y_dot
+            )
         else:
-            _lombscargle_norm[blockspergrid, threadsperblock](x, y, freqs, pgram, y_dot)
+            _lombscargle_norm[blockspergrid, threadsperblock](
+                x, y, freqs, pgram, y_dot
+            )
     else:
         if precenter:
-            _lombscargle[blockspergrid, threadsperblock](x, y - y.mean(), freqs, pgram)
+            _lombscargle[blockspergrid, threadsperblock](
+                x, y - y.mean(), freqs, pgram
+            )
         else:
             _lombscargle[blockspergrid, threadsperblock](x, y, freqs, pgram)
-    
+
     return pgram
 
 
@@ -172,7 +172,7 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         done. Defaults to 'constant'.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     scaling : { 'density', 'spectrum' }, optional
         Selects between computing the power spectral density ('density')
@@ -266,7 +266,7 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         nperseg = x.shape[axis]
     elif nfft < x.shape[axis]:
         # cp.s_ not implemented
-        s = [np.s_[:]]*len(x.shape)
+        s = [np.s_[:]] * len(x.shape)
         s[axis] = np.s_[:nfft]
         x = cp.asarray(x[tuple(s)])
         nperseg = nfft
@@ -319,7 +319,7 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
         done. Defaults to 'constant'.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     scaling : { 'density', 'spectrum' }, optional
         Selects between computing the power spectral density ('density')
@@ -424,7 +424,8 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     >>> x[int(N//2):int(N//2)+10] *= 50.
     >>> f, Pxx_den = signal.welch(x, fs, nperseg=1024)
-    >>> f_med, Pxx_den_med = signal.welch(x, fs, nperseg=1024, average='median')
+    >>> f_med, Pxx_den_med = signal.welch(x, fs, nperseg=1024,
+                                          average='median')
     >>> plt.semilogy(f, Pxx_den, label='mean')
     >>> plt.semilogy(f_med, Pxx_den_med, label='median')
     >>> plt.ylim([0.5e-3, 1])
@@ -484,7 +485,7 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
         done. Defaults to 'constant'.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     scaling : { 'density', 'spectrum' }, optional
         Selects between computing the cross spectral density ('density')
@@ -628,7 +629,7 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
         done. Defaults to 'constant'.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     scaling : { 'density', 'spectrum' }, optional
         Selects between computing the power spectral density ('density')
@@ -796,7 +797,7 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
         done. Defaults to `False`.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     boundary : str or None, optional
         Specifies whether the input signal is extended at both ends, and
@@ -912,7 +913,7 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
 
     return freqs, time, Zxx
 
-    
+
 def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
               nfft=None, detrend='constant', axis=-1):
     r"""
@@ -1080,7 +1081,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         done. Defaults to 'constant'.
     return_onesided : bool, optional
         If `True`, return a one-sided spectrum for real data. If
-        `False` return a two-sided spectrum. Defaults to `True`, but for 
+        `False` return a two-sided spectrum. Defaults to `True`, but for
         complex data, a two-sided spectrum is always returned.
     scaling : { 'density', 'spectrum' }, optional
         Selects between computing the cross spectral density ('density')
@@ -1207,7 +1208,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         nfft = int(nfft)
 
     if noverlap is None:
-        noverlap = nperseg//2
+        noverlap = nperseg // 2
     else:
         noverlap = int(noverlap)
     if noverlap >= nperseg:
@@ -1222,14 +1223,14 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     if boundary is not None:
         ext_func = boundary_funcs[boundary]
-        x = ext_func(x, nperseg//2, axis=-1)
+        x = ext_func(x, nperseg // 2, axis=-1)
         if not same_data:
-            y = ext_func(y, nperseg//2, axis=-1)
+            y = ext_func(y, nperseg // 2, axis=-1)
 
     if padded:
         # Pad to integer number of windowed segments
         # I.e make x.shape[-1] = nperseg + (nseg-1)*nstep, with integer nseg
-        nadd = (-(x.shape[-1]-nperseg) % nstep) % nperseg
+        nadd = (-(x.shape[-1] - nperseg) % nstep) % nperseg
         zeros_shape = list(x.shape[:-1]) + [nadd]
         x = cp.concatenate((x, zeros(zeros_shape)), axis=-1)
         if not same_data:
@@ -1257,7 +1258,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         win = win.astype(outdtype)
 
     if scaling == 'density':
-        scale = 1.0 / (fs * (win*win).sum())
+        scale = 1.0 / (fs * (win * win).sum())
     elif scaling == 'spectrum':
         scale = 1.0 / win.sum()**2
     else:
@@ -1282,9 +1283,9 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         sides = 'twosided'
 
     if sides == 'twosided':
-        freqs = cp.fft.fftfreq(nfft, 1/fs)
+        freqs = cp.fft.fftfreq(nfft, 1 / fs)
     elif sides == 'onesided':
-        freqs = cp.fft.rfftfreq(nfft, 1/fs)
+        freqs = cp.fft.rfftfreq(nfft, 1 / fs)
 
     # Perform the windowed FFTs
     result = _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides)
@@ -1305,10 +1306,10 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
             # Last point is unpaired Nyquist freq point, don't double
             result[..., 1:-1] *= 2
 
-    time = arange(nperseg/2, x.shape[-1] - nperseg/2 + 1,
-                     nperseg - noverlap)/float(fs)
+    time = arange(nperseg / 2, x.shape[-1] - nperseg / 2 + 1,
+                  nperseg - noverlap) / float(fs)
     if boundary is not None:
-        time -= (nperseg/2) / fs
+        time -= (nperseg / 2) / fs
 
     result = result.astype(outdtype)
 
@@ -1355,11 +1356,10 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
     else:
         # https://stackoverflow.com/a/5568169
         step = nperseg - noverlap
-        shape = x.shape[:-1]+((x.shape[-1]-noverlap)//step, nperseg)
-        strides = x.strides[:-1]+(step*x.strides[-1], x.strides[-1])
+        shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
+        strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
         # Need to optimize this in cuSignal
-        result = as_strided(x, shape=shape,
-                                                 strides=strides)
+        result = as_strided(x, shape=shape, strides=strides)
 
     # Detrend each data segment individually
     result = detrend_func(result)
@@ -1456,7 +1456,5 @@ def _median_bias(n):
     bias : float
         Calculated bias.
     """
-    ii_2 = 2 * arange(1., (n-1) // 2 + 1)
+    ii_2 = 2 * arange(1., (n - 1) // 2 + 1)
     return 1 + cp.sum(1. / (ii_2 + 1) - 1. / ii_2)
-
-

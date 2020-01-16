@@ -1,8 +1,6 @@
 import cupy as cp
-from cupy import (logical_and, asarray, pi, zeros_like,
-                   array, arctan2, tan, zeros, arange, floor)
-from cupy import (abs, sqrt, exp, greater, less, cos, add, sin,
-                              less_equal, greater_equal)
+from cupy import (asarray, pi, zeros_like, arctan2, tan, zeros, arange)
+from cupy import (abs, sqrt, exp, greater, less, cos, add, sin)
 
 
 def gauss_spline(x, n):
@@ -16,8 +14,8 @@ def gauss_spline(x, n):
     References
     ----------
     .. [1] Bouma H., Vilanova A., Bescos J.O., ter Haar Romeny B.M., Gerritsen
-       F.A. (2007) Fast and Accurate Gaussian Derivatives Based on B-Splines. In:
-       Sgallari F., Murli A., Paragios N. (eds) Scale Space and Variational
+       F.A. (2007) Fast and Accurate Gaussian Derivatives Based on B-Splines.
+       In: Sgallari F., Murli A., Paragios N. (eds) Scale Space and Variational
        Methods in Computer Vision. SSVM 2007. Lecture Notes in Computer
        Science, vol 4485. Springer, Berlin, Heidelberg
    """
@@ -103,9 +101,9 @@ def _cubic_smooth_coeff(signal, lamb):
     y = zeros((K,), signal.dtype.char)
 
     y[K - 1] = add((_hs(k, cs, rho, omega) +
-                           _hs(k + 1, cs, rho, omega)) * signal[::-1])
+                    _hs(k + 1, cs, rho, omega)) * signal[::-1])
     y[K - 2] = add((_hs(k - 1, cs, rho, omega) +
-                           _hs(k + 2, cs, rho, omega)) * signal[::-1])
+                    _hs(k + 2, cs, rho, omega)) * signal[::-1])
 
     for n in range(K - 3, -1, -1):
         y[n] = (cs * yp[n] + 2 * rho * cos(omega) * y[n + 1] -

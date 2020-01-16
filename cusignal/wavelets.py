@@ -1,6 +1,7 @@
 import cupy as cp
 from .signaltools import convolve
 
+
 def qmf(hk):
     """
     Return high-pass qmf filter from low-pass
@@ -14,7 +15,6 @@ def qmf(hk):
     N = len(hk) - 1
     asgn = [{0: 1, 1: -1}[k % 2] for k in range(N + 1)]
     return hk[::-1] * cp.array(asgn)
-
 
     """
     Return (x, phi, psi) at dyadic points ``K/2**J`` from filter coefficients.

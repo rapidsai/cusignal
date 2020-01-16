@@ -1,7 +1,7 @@
 import cupy as cp
 from cupyx.scipy import fftpack, special
 from cupy import (array, ones, zeros, cos, arange, sqrt, pi, linspace, abs,
-                    sin, exp)
+                  sin, exp)
 from scipy._lib.six import string_types
 
 
@@ -848,14 +848,14 @@ def tukey(M, alpha=0.5, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     n = arange(0, M)
-    width = int(cp.floor(alpha*(M-1)/2.0))
-    n1 = n[0:width+1]
-    n2 = n[width+1:M-width-1]
-    n3 = n[M-width-1:]
+    width = int(cp.floor(alpha * (M - 1) / 2.0))
+    n1 = n[0:width + 1]
+    n2 = n[width + 1:M - width - 1]
+    n3 = n[M - width - 1:]
 
-    w1 = 0.5 * (1 + cos(pi * (-1 + 2.0*n1/alpha/(M-1))))
+    w1 = 0.5 * (1 + cos(pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
     w2 = ones(n2.shape)
-    w3 = 0.5 * (1 + cos(pi * (-2.0/alpha + 1 + 2.0*n3/alpha/(M-1))))
+    w3 = 0.5 * (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * n3 / alpha / (M - 1))))
 
     w = cp.concatenate((w1, w2, w3))
 
@@ -1448,7 +1448,7 @@ def chebwin(M, at, sym=True):
     # compute the parameter beta
     order = M - 1.0
     beta = cp.cosh(1.0 / order * cp.arccosh(10 ** (abs(at) / 20.)))
-    k = cp.arange(0,M) * 1.0
+    k = cp.arange(0, M) * 1.0
     x = beta * cp.cos(pi * k / M)
     # Find the window's DFT coefficients
     # Use analytic definition of Chebyshev polynomial instead of expansion
@@ -1466,7 +1466,7 @@ def chebwin(M, at, sym=True):
         w = w[:n]
         w = cp.concatenate((w[n - 1:0:-1], w))
     else:
-        p = p * exp(1.j * pi / M * cp.arange(0,M))
+        p = p * exp(1.j * pi / M * cp.arange(0, M))
         w = cp.real(fftpack.fft(p))
         n = M // 2 + 1
         w = cp.concatenate((w[n - 1:0:-1], w[1:n]))
@@ -1496,7 +1496,8 @@ def chebwin(M, at, sym=True):
 #     sym : bool, optional
 #         When True (default), generates a symmetric window, for use in filter
 #         design.
-#         When False, generates a periodic window, for use in spectral analysis.
+#         When False, generates a periodic window, for use in spectral
+#         analysis.
 
 #     Returns
 #     -------
@@ -1513,8 +1514,8 @@ def chebwin(M, at, sym=True):
 #            Fourier analysis and uncertainty-I," Bell Syst. Tech. J., vol.40,
 #            pp.43-63, 1961. https://archive.org/details/bstj40-1-43
 #     .. [2] H. J. Landau & H. O. Pollak: "Prolate spheroidal wave functions,
-#            Fourier analysis and uncertainty-II," Bell Syst. Tech. J. , vol.40,
-#            pp.65-83, 1961. https://archive.org/details/bstj40-1-65
+#            Fourier analysis and uncertainty-II," Bell Syst. Tech. J. ,
+#            vol.40, pp.65-83, 1961. https://archive.org/details/bstj40-1-65
 
 #     Examples
 #     --------
@@ -1701,10 +1702,10 @@ def exponential(M, center=None, tau=1., sym=True):
     M, needs_trunc = _extend(M, sym)
 
     if center is None:
-        center = (M-1) / 2
+        center = (M - 1) / 2
 
     n = arange(0, M)
-    w = exp(-abs(n-center) / tau)
+    w = exp(-abs(n - center) / tau)
 
     return _truncate(w, needs_trunc)
 
@@ -1941,7 +1942,8 @@ def exponential(M, center=None, tau=1., sym=True):
 #             windows[2 * i + 1] *= -1
 
 #     # Now find the eigenvalues of the original spectral concentration problem
-#     # Use the autocorr sequence technique from Percival and Walden, 1993 pg 390
+#     # Use the autocorr sequence technique from Percival and Walden, 1993 pg
+#     # 390
 #     if return_ratios:
 #         dpss_rxx = _fftautocorr(windows)
 #         r = 4 * W * cp.sinc(2 * W * nidx)
@@ -1972,7 +1974,7 @@ def exponential(M, center=None, tau=1., sym=True):
 def _fftautocorr(x):
     """Compute the autocorrelation of a real array and crop the result."""
     N = x.shape[-1]
-    use_N = fftpack.next_fast_len(2*N-1)
+    use_N = fftpack.next_fast_len(2 * N - 1)
     x_fft = cp.fft.rfft(x, use_N, axis=-1)
     cxy = cp.fft.irfft(x_fft * x_fft.conj(), n=use_N)[:, :N]
     # Or equivalently (but in most cases slower):
@@ -2001,7 +2003,7 @@ _win_equiv_raw = {
     ('kaiser', 'ksr'): (kaiser, True),
     ('nuttall', 'nutl', 'nut'): (nuttall, False),
     ('parzen', 'parz', 'par'): (parzen, False),
-    #('slepian', 'slep', 'optimal', 'dpss', 'dss'): (slepian, True),
+    # ('slepian', 'slep', 'optimal', 'dpss', 'dss'): (slepian, True),
     ('triangle', 'triang', 'tri'): (triang, False),
     ('tukey', 'tuk'): (tukey, True),
 }

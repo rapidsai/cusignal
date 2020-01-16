@@ -2,6 +2,7 @@ import cupy as cp
 from numba import cuda
 import math
 
+
 def _pad_h(h, up):
     """Store coefficients in a transposed, flipped arrangement.
 
@@ -30,33 +31,34 @@ def _output_len(len_h, in_len, up, down):
         need += 1
     return need
 
+
 # Custom Numba kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 @cuda.jit(fastmath=True)
 def _apply(x, h_trans_flip, out, up, down, axis=-1):
-   
-    num_loops=1
-    for i in range(out.ndim-1):
-        if i!=axis:
+
+    num_loops = 1
+    for i in range(out.ndim - 1):
+        if i != axis:
             num_loops *= out.shape[i]
-            
+
     X, Y = cuda.grid(2)
-    
+
     if X < out.shape[0] and Y < out.shape[1]:
 
         i = X
         y_idx = Y
-        
+
         h_per_phase = len(h_trans_flip) // up
         padded_len = x.shape[axis] + h_per_phase - 1
-        
+
         if axis == 1:
             x_idx = ((Y * down) // up) % padded_len
             h_idx = (Y * down) % up * h_per_phase
         else:
             x_idx = ((i * down) // up) % padded_len
             h_idx = (i * down) % up * h_per_phase
-        
+
         x_conv_idx = x_idx - h_per_phase + 1
         if x_conv_idx < 0:
             h_idx -= x_conv_idx
@@ -67,25 +69,33 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
             if x_conv_idx < x.shape[axis] and x_conv_idx >= 0:
                 # if multi-dimenstional array
                 if num_loops > 1:   # a loop is an additional column
-                    out[i,y_idx] = out[i,y_idx] + x[i,x_conv_idx] * h_trans_flip[h_idx]
+                    out[i, y_idx] = (
+                        out[i, y_idx] +
+                        x[i, x_conv_idx] * h_trans_flip[h_idx]
+                    )
                 else:
-                    out[i,y_idx] = out[i,y_idx] + x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
+                    out[i, y_idx] = (
+                        out[i, y_idx] +
+                        x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
+                    )
+
             h_idx += 1
-    
+
+
 @cuda.jit(fastmath=True)
 def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
-                 
+
     X = cuda.grid(1)
     strideX = cuda.gridsize(1)
-        
+
     for i in range(X, out.shape[0], strideX):
-        
+
         h_per_phase = len(h_trans_flip) // up
         padded_len = x.shape[axis] + h_per_phase - 1
-        
+
         x_idx = ((i * down) // up) % padded_len
         h_idx = (i * down) % up * h_per_phase
-        
+
         x_conv_idx = x_idx - h_per_phase + 1
         if x_conv_idx < 0:
             h_idx -= x_conv_idx
@@ -97,7 +107,7 @@ def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
                 out[i] = out[i] + x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
-            
+
 class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
         """Helper for resampling"""
@@ -113,14 +123,16 @@ class _UpFIRDn(object):
         # This both transposes, and "flips" each phase for filtering
         self._h_trans_flip = _pad_h(h, self._up)
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
-    
+
     def apply_filter(self, x, axis=-1):
         """Apply the prepared filter to the specified axis of a nD signal x"""
         output_len = _output_len(len(self._h_trans_flip), x.shape[axis],
                                  self._up, self._down)
         output_shape = cp.asarray(x.shape)
         output_shape[axis] = output_len
-        out = cp.zeros(cp.asnumpy(output_shape), dtype=self._output_type, order='C')
+        out = cp.zeros(cp.asnumpy(output_shape),
+                       dtype=self._output_type,
+                       order='C')
         axis = axis % x.ndim
 
         if out.ndim > 1:
@@ -129,16 +141,18 @@ class _UpFIRDn(object):
             blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
             blockspergrid = (blockspergrid_x, blockspergrid_y)
 
-            _apply[blockspergrid, threadsperblock](cp.asarray(x, self._output_type),
-                   self._h_trans_flip, out,
-                   self._up, self._down, axis)
+            _apply[blockspergrid, threadsperblock](
+                cp.asarray(x, self._output_type),
+                self._h_trans_flip, out,
+                self._up, self._down, axis)
         else:
             d = cp.cuda.device.Device(0)
             numSM = d.attributes['MultiProcessorCount']
             threadsperblock = (256)
             blockspergrid = (numSM * 10)
-            
-            _apply_1d[blockspergrid,threadsperblock](cp.asarray(x, self._output_type),
+
+            _apply_1d[blockspergrid, threadsperblock](
+                cp.asarray(x, self._output_type),
                 self._h_trans_flip, out,
                 self._up, self._down, axis)
         return out

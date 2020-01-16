@@ -1,9 +1,9 @@
 import cupy as cp
-from cupy import (allclose, angle, arange, argsort, array, asarray,
-                   atleast_1d, atleast_2d, dot, exp, expand_dims,
-                   iscomplexobj, mean, ndarray, newaxis, ones, pi,
-                   prod, r_, ravel, reshape, sort, take, transpose, 
-                   unique, where, zeros, zeros_like)
+from cupy import (angle, arange, argsort, array, asarray,
+                  atleast_2d, dot, exp, expand_dims,
+                  iscomplexobj, mean, ndarray, newaxis, ones, pi,
+                  prod, r_, ravel, reshape, sort, take, transpose,
+                  unique, where, zeros)
 from cupyx.scipy import fftpack
 from cupy.fft import ifftshift
 from cupy import linalg
@@ -15,7 +15,7 @@ import sys
 
 from . import _signaltools
 from .windows import get_window
-from .fftpack_helper import _init_nd_shape_and_axes, _init_nd_shape_and_axes_sorted, next_fast_len
+from .fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from ._upfirdn import upfirdn, _output_len
 from .fir_filter_design import firwin
 
@@ -108,7 +108,8 @@ def correlate(in1, in2, mode='full', method='auto'):
     -----
     The correlation z of two d-dimensional arrays x and y is defined as::
 
-        z[...,k,...] = sum[..., i_l, ...] x[..., i_l,...] * conj(y[..., i_l - k,...])
+        z[...,k,...] =
+            sum[..., i_l, ...] x[..., i_l,...] * conj(y[..., i_l - k,...])
 
     This way, if x and y are 1-D arrays and ``z = correlate(x, y, 'full')``
     then
@@ -175,7 +176,7 @@ def correlate(in1, in2, mode='full', method='auto'):
 
     elif method == 'direct':
         raise ValueError("Direct method is not yet implemented in cuSignal")
-        
+
         # fastpath to faster numpy.correlate for 1d inputs when possible
         if _np_conv_ok(in1, in2, mode):
             return cp.correlate(in1, in2, mode)
@@ -361,7 +362,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     # Speed up FFT by padding to optimal size for FFTPACK
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
-    
+
     if not complex_result:
         sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
         sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
@@ -454,8 +455,9 @@ def _fftconv_faster(x, h, mode):
     # see whether the Fourier transform convolution method or the direct
     # convolution method is faster (discussed in scikit-image PR #1792)
     direct_time = (x.size * h.size * _prod(out_shape))
-    fft_time = sum(n * cp.log(n) for n in (x.shape + h.shape +
-                                             tuple(out_shape)))
+    fft_time = sum(n * cp.log(n) for n in
+                   (x.shape + h.shape + tuple(out_shape)))
+
     return big_O_constant * fft_time < direct_time
 
 
@@ -757,7 +759,8 @@ def convolve(in1, in2, mode='full', method='auto'):
     elif method == 'direct':
         # fastpath to faster numpy.convolve for 1d inputs when possible
         if _np_conv_ok(volume, kernel, mode):
-            return cp.asarray(np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode))
+            return cp.asarray(np.convolve(cp.asnumpy(volume),
+                                          cp.asnumpy(kernel), mode))
 
         return correlate(volume, _reverse_and_conj(kernel), mode, 'direct')
     else:
@@ -1486,7 +1489,8 @@ def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
         # Design a linear-phase low-pass FIR filter
         max_rate = max(up, down)
         f_c = 1. / max_rate  # cutoff of FIR filter (rel. to Nyquist)
-        half_len = 10 * max_rate  # reasonable cutoff for our sinc-like function
+        # reasonable cutoff for our sinc-like function
+        half_len = 10 * max_rate
         h = firwin(2 * half_len + 1, f_c, window=window)
     h *= up
 
@@ -1503,7 +1507,7 @@ def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
 
     # filter then remove excess
     y = upfirdn(h, x, up, down, axis=axis)
-    keep = [slice(None), ]*x.ndim
+    keep = [slice(None), ] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]
 
@@ -1571,7 +1575,7 @@ def vectorstrength(events, period):
         raise ValueError('periods must be positive')
 
     # this converts the times to vectors
-    vectors = exp(dot(2j*pi/period.T, events))
+    vectors = exp(dot(2j * pi / period.T, events))
 
     # the vector strength is just the magnitude of the mean of the vectors
     # the vector phase is the angle of the mean of the vectors
@@ -1687,4 +1691,4 @@ def freq_shift(x, freq, fs):
         freq or time
     """
     x = asarray(x)
-    return x * exp(-1j*2*pi*freq/fs*arange(x.size))
+    return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))

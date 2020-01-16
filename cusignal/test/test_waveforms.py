@@ -17,6 +17,7 @@ def test_square(num_samps, duty):
 
     assert array_equal(cpu_pwm, gpu_pwm)
 
+
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('fc', [0.75, 5])
 def test_gausspulse(num_samps, fc):
@@ -24,9 +25,12 @@ def test_gausspulse(num_samps, fc):
     gpu_time = cp.asarray(cpu_time)
 
     cpu_pwm = signal.gausspulse(cpu_time, fc, retquad=True, retenv=True)
-    gpu_pwm = cp.asnumpy(cusignal.gausspulse(gpu_time, fc, retquad=True, retenv=True))
+    gpu_pwm = cp.asnumpy(
+        cusignal.gausspulse(gpu_time, fc, retquad=True, retenv=True)
+    )
 
     assert array_equal(cpu_pwm, gpu_pwm)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('f0', [6])
@@ -41,6 +45,7 @@ def test_chirp(num_samps, f0, t1, f1, method):
     gpu_chirp = cp.asnumpy(cusignal.chirp(gpu_time, f0, t1, f1, method))
 
     assert array_equal(cpu_chirp, gpu_chirp)
+
 
 @pytest.mark.parametrize('num_samps', [2**14])
 @pytest.mark.parametrize('idx', ['mid'])

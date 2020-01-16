@@ -390,7 +390,7 @@ def _chirp_phase(t, f0, t1, f1, method='linear', vertex_zero=True):
             # Singular point: the instantaneous frequency blows up
             # when t == sing.
             sing = -f1 * t1 / (f0 - f1)
-            phase = 2 * pi * (-sing * f0) * log(cp.abs(1 - t/sing))
+            phase = 2 * pi * (-sing * f0) * log(cp.abs(1 - t / sing))
 
     else:
         raise ValueError("method must be 'linear', 'quadratic', 'logarithmic',"

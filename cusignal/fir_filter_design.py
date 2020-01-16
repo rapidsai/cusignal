@@ -1,5 +1,4 @@
 import cupy as cp
-from cupy.fft import irfft
 
 
 def _get_fs(fs, nyq):
@@ -11,7 +10,7 @@ def _get_fs(fs, nyq):
     elif nyq is not None:
         if fs is not None:
             raise ValueError("Values cannot be given for both 'nyq' and 'fs'.")
-        fs = 2*nyq
+        fs = 2 * nyq
     return fs
 
 
@@ -108,7 +107,8 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
     window : string or tuple of string and parameter values, optional
         Desired window to use. See `scipy.signal.get_window` for a list
         of windows and required parameters.
-    pass_zero : {True, False, 'bandpass', 'lowpass', 'highpass', 'bandstop'}, optional
+    pass_zero : {True, False, 'bandpass', 'lowpass', 'highpass', 'bandstop'},
+        optional
         If True, the gain at the frequency 0 (i.e. the "DC gain") is 1.
         If False, the DC gain is 0. Can also be a string argument for the
         desired filter type (equivalent to ``btype`` in IIR design functions).
@@ -196,7 +196,7 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
     >>> signal.firwin(numtaps, [f1, f2, f3, f4], pass_zero=False)
     array([ 0.04890915,  0.91284326,  0.04890915])
 
-    """    
+    """
     cutoff = cp.atleast_1d(cutoff) / float(nyq)
 
     # Check for invalid input.

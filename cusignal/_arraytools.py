@@ -2,14 +2,19 @@ import cupy as cp
 from numba import cuda
 import numpy as np
 
-# Return shared memory array -- necessary for zero copy between CPU and GPU on NVIDIA embedded platforms
+
+# Return shared memory array -- necessary for zero copy between CPU and GPU on
+# NVIDIA embedded platforms
 # Confirmed working with Numba 0.45 and NVIDIA TX2, Nano, and Xavier
-def get_shared_array(data, strides=None, order='C', stream=0, portable=False, wc=True):
+def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
+                     wc=True):
     shape = data.shape
     dtype = data.dtype
 
     # Allocate mapped, shared memory in Numba
-    shared_mem_array = cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order, stream=stream, portable=portable, wc=wc)
+    shared_mem_array = cuda.mapped_array(shape, dtype=dtype, strides=strides,
+                                         order=order, stream=stream,
+                                         portable=portable, wc=wc)
 
     # Load data into array space
     shared_mem_array[:] = data
@@ -18,8 +23,10 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False, wc
 
 
 # Return shared memory array - similar to np.zeros
-def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0, portable=False, wc=True):
-    return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order, stream=stream, portable=portable, wc=wc)
+def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
+                   portable=False, wc=True):
+    return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order,
+                             stream=stream, portable=portable, wc=wc)
 
 
 def axis_slice(a, start=None, stop=None, step=None, axis=-1):
@@ -294,5 +301,4 @@ def as_strided(x, shape=None, strides=None):
     strides = x.strides if strides is None else tuple(strides)
 
     return cp.ndarray(shape=shape, dtype=x.dtype,
-                        memptr=x.data, strides=strides)
-
+                      memptr=x.data, strides=strides)
