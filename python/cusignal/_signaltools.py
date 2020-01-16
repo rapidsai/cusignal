@@ -33,35 +33,6 @@ def _bvalfromboundary(boundary):
                          "(or 'wrap'), and 'symmetric' (or 'symm').")
 
 
-def _inputs_swap_needed(mode, shape1, shape2):
-    """
-    If in 'valid' mode, returns whether or not the input arrays need to be
-    swapped depending on whether `shape1` is at least as large as `shape2` in
-    every dimension.
-    This is important for some of the correlation and convolution
-    implementations in this module, where the larger array input needs to come
-    before the smaller array input when operating in this mode.
-    Note that if the mode provided is not 'valid', False is immediately
-    returned.
-    """
-    if (mode == 'valid'):
-        ok1, ok2 = True, True
-
-        for d1, d2 in zip(shape1, shape2):
-            if not d1 >= d2:
-                ok1 = False
-            if not d2 >= d1:
-                ok2 = False
-
-        if not (ok1 or ok2):
-            raise ValueError("For 'valid' mode, one must be at least "
-                             "as large as the other in every dimension")
-
-        return not ok1
-
-    return False
-
-
 def _iDivUp(a, b):
     return (a // b + 1) if (a % b != 0) else (a // b)
 
