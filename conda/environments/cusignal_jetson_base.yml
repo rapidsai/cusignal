@@ -11,6 +11,10 @@ dependencies:
   - matplotlib
   - numba
   - pytest
+  - sphinx
+  - sphinx_rtd_theme
+  - numpydoc
+  - ipython
   - pip
   - pip:
     - cupy>=6.2.0

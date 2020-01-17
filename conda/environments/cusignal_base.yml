@@ -13,3 +13,7 @@ dependencies:
   - numba
   - pytest
   - cupy>=6.2.0
+  - sphinx
+  - sphinx_rtd_theme
+  - numpydoc
+  - ipython
