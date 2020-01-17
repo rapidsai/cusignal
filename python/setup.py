@@ -15,7 +15,7 @@ import versioneer
 from setuptools import setup, find_packages
 
 
-INSTALL_REQUIRES=["numba"]
+INSTALL_REQUIRES = ["numba"]
 
 setup(
     name='cusignal',
