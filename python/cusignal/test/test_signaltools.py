@@ -29,7 +29,7 @@ def test_resample(num_samps, resample_num_samps, window):
 
     cpu_resample = signal.resample(cpu_sig, resample_num_samps, window=window)
     gpu_resample = cp.asnumpy(
-        cusignal.resample(cpu_sig, resample_num_samps, window=window)
+        cusignal.resample(gpu_sig, resample_num_samps, window=window)
     )
 
     assert array_equal(cpu_resample, gpu_resample)
@@ -46,7 +46,7 @@ def test_resample_poly(num_samps, up, down, window):
 
     cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
     gpu_resample = cp.asnumpy(
-        cusignal.resample_poly(cpu_sig, up, down, window=window)
+        cusignal.resample_poly(gpu_sig, up, down, window=window)
     )
 
     assert array_equal(cpu_resample, gpu_resample)
@@ -146,7 +146,7 @@ def test_convolve2d(num_samps, num_taps, boundary, mode):
         cpu_sig, cpu_filt, boundary=boundary, mode=mode
     )
     gpu_convolve2d = cp.asnumpy(
-        cusignal.convolve2d(cpu_sig, cpu_filt, boundary=boundary, mode=mode)
+        cusignal.convolve2d(gpu_sig, gpu_filt, boundary=boundary, mode=mode)
     )
     assert array_equal(cpu_convolve2d, gpu_convolve2d)
 
@@ -165,6 +165,6 @@ def test_correlate2d(num_samps, num_taps, boundary, mode):
         cpu_sig, cpu_filt, boundary=boundary, mode=mode
     )
     gpu_correlate2d = cp.asnumpy(
-        cusignal.correlate2d(cpu_sig, cpu_filt, boundary=boundary, mode=mode)
+        cusignal.correlate2d(gpu_sig, gpu_filt, boundary=boundary, mode=mode)
     )
     assert array_equal(cpu_correlate2d, gpu_correlate2d)
