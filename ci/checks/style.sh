@@ -11,8 +11,10 @@ PATH=/conda/bin:$PATH
 # Activate common conda env
 source activate gdf
 
+cd $WORKSPACE/python
+
 # Run flake8 and get results/return code
-FLAKE=`flake8 --exclude=versioneer.py python`
+FLAKE=`flake8`
 RETVAL=$?
 
 # Output results if failure otherwise show pass
