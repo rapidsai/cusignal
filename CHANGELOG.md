@@ -1,7 +1,8 @@
-# cuSignal 0.2 (Date TBD)
+# cuSignal 0.13 (Date TBD)
 
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
+- PR #17 - Add conda recipe and gpuCI scripts
 
 ## Improvements
 - PR #5 - Update cuSignal install directions for Windows OS.
