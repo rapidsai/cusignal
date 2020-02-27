@@ -96,6 +96,10 @@ This code executes on an NVIDIA P100 in 728 ms.
 * CuPy >= 6.2.0
 * Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
 
+## Install cuSignal, Linux OS, GeForce/Tesla/Quadro GPU with Anaconda
+
+`conda install -c rapidsai-nightly -c conda-forge cusignal`
+
 ## Install cuSignal, Linux OS, GeForce/Tesla/Quadro GPU
 
 1. Clone the repository
