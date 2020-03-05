@@ -132,9 +132,48 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
     h_per_phase = len(h_trans_flip) // up
     padded_len = x.shape[axis] + h_per_phase - 1
 
-    kernel = cp.RawKernel(r'''
-    extern "C" __global__
-    void my_test(const int n, 
+    loaded_from_source = r'''
+    extern "C" {
+
+    __global__ void _raw_apply_1d_int(const int n, 
+            const int x_shape_a,
+            const int h_per_phase,
+            const int padded_len, 
+            const int up, 
+            const int down,
+            const int * __restrict__ x,
+            const int * __restrict__ h_trans_flip,
+            int * __restrict__ out) {
+
+        const int t { blockIdx.x * blockDim.x + threadIdx.x };
+        const int stride { blockDim.x * gridDim.x };
+
+        for (int tid = t; tid < n; tid += stride) {
+
+            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
+            int h_idx { (tid * down) % up * h_per_phase };
+
+            int x_conv_idx { x_idx - h_per_phase + 1 };
+
+            if (x_conv_idx < 0) {
+                h_idx -= x_conv_idx;
+                x_conv_idx = 0;
+            }
+
+            int temp {};
+
+            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
+                if (x_c < x_shape_a && x_c >= 0) {
+                    //out[tid] = out[tid] + x[x_c] * h_trans_flip[h_idx];
+                    temp = temp + x[x_c] * h_trans_flip[h_idx];
+                }
+                out[tid] = temp;
+                h_idx += 1;
+            }
+        }
+    }
+
+    __global__ void _raw_apply_1d_float(const int n, 
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len, 
@@ -144,8 +183,8 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
             const float * __restrict__ h_trans_flip,
             float * __restrict__ out) {
 
-        const int t = blockIdx.x * blockDim.x + threadIdx.x;
-        const int stride = blockDim.x * gridDim.x;
+        const int t { blockIdx.x * blockDim.x + threadIdx.x };
+        const int stride { blockDim.x * gridDim.x };
 
         for (int tid = t; tid < n; tid += stride) {
 
@@ -171,9 +210,18 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
             }
         }
     }
-    ''', name='my_test', options=('-std=c++11',),)
 
-    kernel((bpg,), (tpb,), (n, x_shape_a, h_per_phase, padded_len, up, down, xx, xh_trans_flip, xout, ))
+    }
+    '''
+
+    module = cp.RawModule(code=loaded_from_source, options=('-std=c++11',))
+    kernel_float = module.get_function('_raw_apply_1d_float')
+    kernel_int = module.get_function('_raw_apply_1d_int')
+
+    if out.dtype==cp.int:
+        kernel_int((bpg,), (tpb,), (n, x_shape_a, h_per_phase, padded_len, up, down, xx, xh_trans_flip, xout, ))
+    elif out.dtype==cp.float:
+        kernel_float((bpg,), (tpb,), (n, x_shape_a, h_per_phase, padded_len, up, down, xx, xh_trans_flip, xout, ))
 
     cp.cuda.runtime.deviceSynchronize()
 
