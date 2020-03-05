@@ -9,7 +9,7 @@ channels:
 dependencies:
   - scipy
   - numpy
-  - cudatoolkit>=9.2,<10.2
+  - cudatoolkit>=9.2,<=10.2
   - boost
   - matplotlib
   - numba
@@ -20,3 +20,7 @@ dependencies:
   - cuml
   - cugraph
   - pandas
+  - sphinx
+  - sphinx_rtd_theme
+  - numpydoc
+  - ipython

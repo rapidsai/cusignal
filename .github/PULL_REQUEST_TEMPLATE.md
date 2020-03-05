@@ -1,6 +1,6 @@
 <!--
 
-Thank you for contributing to ___PROJECT___ :)
+Thank you for contributing to cuSignal :)
 
 Here are some guidelines to help the review process go smoothly.
 
