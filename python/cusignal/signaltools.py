@@ -1344,7 +1344,7 @@ def resample(x, num, t=None, axis=0, window=None):
         return y, new_t
 
 
-def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
+def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0), use_numba=True):
     """
     Resample `x` along the given axis using polyphase filtering.
 
@@ -1471,7 +1471,7 @@ def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
-    y = upfirdn(h, x, up, down, axis=axis)
+    y = upfirdn(h, x, up, down, axis=axis, use_numba=use_numba)
     keep = [slice(None), ] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]
