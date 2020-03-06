@@ -3,16 +3,13 @@
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
 - PR #17 - Add conda recipe and gpuCI scripts
+- PR #16 - Raw CuPy Module for upfirdn
 
 ## Improvements
 - PR #5 - Update cuSignal install directions for Windows OS.
 - PR #9 - Update cuSignal documentation and Conda install ymls to better support Jetson Devices and prune dependencies
 - PR #11 - Update cuSignal structure to match other RAPIDS projects
-<<<<<<< HEAD
-- PR #16 - Raw CuPy Module for upfirdn
-=======
 - PR #20 - Updated conda environment and README file
->>>>>>> upstream/branch-0.13
 
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
