@@ -87,7 +87,8 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
                     )
                 else:
                     out[i, y_idx] = (
-                        out[i, y_idx] + x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
+                        out[i, y_idx] + x[x_conv_idx, y_idx] *
+                        h_trans_flip[h_idx]
                     )
 
             h_idx += 1
@@ -220,13 +221,15 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
         kernel_int(
             (bpg,),
             (tpb,),
-            (n, x_shape_a, h_per_phase, padded_len, up, down, xx, xh_trans_flip, xout,),
+            (n, x_shape_a, h_per_phase, padded_len,
+             up, down, xx, xh_trans_flip, xout,),
         )
     elif out.dtype == cp.float:
         kernel_float(
             (bpg,),
             (tpb,),
-            (n, x_shape_a, h_per_phase, padded_len, up, down, xx, xh_trans_flip, xout,),
+            (n, x_shape_a, h_per_phase, padded_len,
+             up, down, xx, xh_trans_flip, xout,),
         )
 
     cp.cuda.runtime.deviceSynchronize()
