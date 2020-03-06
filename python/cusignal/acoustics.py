@@ -1,6 +1,8 @@
+from math import floor, pi
+
 import cupy as cp
 import cupyx.scipy.fftpack as fft
-from math import floor, pi
+
 
 def rceps(x, n=None, axis=-1):
     r"""
@@ -36,8 +38,8 @@ def cceps_unwrap(x):
 
     n = len(x)
     y = cp.unwrap(x)
-    nh = floor((n+1)/2)
-    nd = cp.round_(y[nh]/pi)
+    nh = floor((n + 1)/2)
+    nd = cp.round_(y[nh] / pi)
     y = y - cp.pi * nd * cp.arange(0, n)/nh
 
     return y
@@ -72,4 +74,3 @@ def cceps(x, n=None, axis=-1):
     cceps = fft.ifft(logh, n=n, axis=axis).real
 
     return cceps
-    
