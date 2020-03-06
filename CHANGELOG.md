@@ -1,6 +1,7 @@
 # cuSignal 0.13 (Date TBD)
 
 ## New Features
+- PR #23 - Addition of real and complex cepstrum for speech/acoustic signal processing
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
 - PR #17 - Add conda recipe and gpuCI scripts
 
