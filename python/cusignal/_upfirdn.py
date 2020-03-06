@@ -260,7 +260,8 @@ class _UpFIRDn(object):
         )
         output_shape = cp.asarray(x.shape)
         output_shape[axis] = output_len
-        out = cp.zeros(cp.asnumpy(output_shape), dtype=self._output_type, order="C")
+        out = cp.zeros(cp.asnumpy(output_shape),
+                       dtype=self._output_type, order="C")
         axis = axis % x.ndim
 
         if use_numba:
