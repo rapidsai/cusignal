@@ -208,7 +208,8 @@ def correlate(in1, in2, mode="full", method="auto"):
         raise ValueError("Direct method is not yet implemented in cuSignal")
 
     else:
-        raise ValueError("Acceptable method flags are 'auto'," " 'direct', or 'fft'.")
+        raise ValueError("Acceptable method flags are 'auto',"
+                         " 'direct', or 'fft'.")
 
 
 def _centered(arr, newshape):
@@ -342,9 +343,8 @@ def fftconvolve(in1, in2, mode="full", axes=None):
             " {0} and {1}".format(in1.shape, in2.shape)
         )
 
-    complex_result = cp.issubdtype(in1.dtype, cp.complexfloating) or cp.issubdtype(
-        in2.dtype, cp.complexfloating
-    )
+    complex_result = cp.issubdtype(in1.dtype, cp.complexfloating) or \
+        cp.issubdtype(in2.dtype, cp.complexfloating)
     shape = cp.maximum(s1, s2)
     shape[axes] = s1[axes] + s2[axes] - 1
 
@@ -381,7 +381,8 @@ def fftconvolve(in1, in2, mode="full", axes=None):
         shape_valid[axes] = s1[axes] - s2[axes] + 1
         return _centered(ret, shape_valid)
     else:
-        raise ValueError("acceptable mode flags are 'valid'," " 'same', or 'full'")
+        raise ValueError("acceptable mode flags are \
+                         'valid'," " 'same', or 'full'")
 
 
 def _numeric_arrays(arrays, kinds="buifc"):
@@ -442,12 +443,14 @@ def _fftconv_faster(x, h, mode):
         out_shape = [n - k + 1 for n, k in zip(x.shape, h.shape)]
         big_O_constant = 41954.28006344 if x.ndim == 1 else 66453.24316434
     else:
-        raise ValueError("Acceptable mode flags are 'valid'," " 'same', or 'full'.")
+        raise ValueError("Acceptable mode flags are \
+                         'valid'," " 'same', or 'full'.")
 
     # see whether the Fourier transform convolution method or the direct
     # convolution method is faster (discussed in scikit-image PR #1792)
     direct_time = x.size * h.size * _prod(out_shape)
-    fft_time = sum(n * cp.log(n) for n in (x.shape + h.shape + tuple(out_shape)))
+    fft_time = sum(n * cp.log(n)
+                   for n in (x.shape + h.shape + tuple(out_shape)))
 
     return big_O_constant * fft_time < direct_time
 
@@ -732,7 +735,8 @@ def convolve(in1, in2, mode="full", method="auto"):
     if volume.ndim == kernel.ndim == 0:
         return volume * kernel
     elif volume.ndim != kernel.ndim:
-        raise ValueError("volume and kernel should have the same " "dimensionality")
+        raise ValueError("volume and kernel should have \
+                         the same " "dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
         # Convolution is commutative; order doesn't have any effect on output
@@ -750,11 +754,13 @@ def convolve(in1, in2, mode="full", method="auto"):
     elif method == "direct":
         # fastpath to faster numpy.convolve for 1d inputs when possible
         if _np_conv_ok(volume, kernel, mode):
-            return cp.asarray(np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode))
+            return cp.asarray(np.convolve(cp.asnumpy(volume),
+                                          cp.asnumpy(kernel), mode))
 
         return correlate(volume, _reverse_and_conj(kernel), mode, "direct")
     else:
-        raise ValueError("Acceptable method flags are 'auto'," " 'direct', or 'fft'.")
+        raise ValueError("Acceptable method flags are \
+                         'auto'," " 'direct', or 'fft'.")
 
 
 def wiener(im, mysize=None, noise=None):
@@ -794,7 +800,8 @@ def wiener(im, mysize=None, noise=None):
     lMean = correlate(im, ones(mysize), "same") / prod(mysize, axis=0)
 
     # Estimate the local variance
-    lVar = correlate(im ** 2, ones(mysize), "same") / prod(mysize, axis=0) - lMean ** 2
+    lVar = correlate(im ** 2, ones(mysize),
+                     "same") / prod(mysize, axis=0) - lMean ** 2
 
     # Estimate the noise power if needed.
     if noise is None:
@@ -1190,7 +1197,7 @@ def hilbert2(x, N=None):
         N = (N, N)
     elif len(N) != 2 or cp.any(cp.asarray(N) <= 0):
         raise ValueError(
-            "When given as a tuple, N must hold exactly " "two positive integers"
+            "When given as a tuple, N must hold exactly two positive integers"
         )
 
     Xf = fftpack.fft2(x, N, axes=(0, 1))
@@ -1498,7 +1505,7 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
 
     # filter then remove excess
     y = upfirdn(h, x, up, down, axis=axis, use_numba=use_numba)
-    keep = [slice(None),] * x.ndim
+    keep = [slice(None), ] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]
 
@@ -1635,7 +1642,8 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         bp = sort(unique(r_[0, bp, N]))
         if cp.any(bp > N):
             raise ValueError(
-                "Breakpoints must be less than length " "of data along given axis."
+                "Breakpoints must be less than length of \
+                data along given axis."
             )
         Nreg = len(bp) - 1
         # Restructure data so that axis is along first dimension and
@@ -1644,7 +1652,8 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         if axis < 0:
             axis = axis + rnk
         newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
-        newdata = reshape(transpose(data, tuple(newdims)), (N, _prod(dshape) // N))
+        newdata = reshape(transpose(data, tuple(newdims)),
+                          (N, _prod(dshape) // N))
         if not overwrite_data:
             newdata = newdata.copy()  # make sure we have a copy
         if newdata.dtype.char not in "dfDF":
