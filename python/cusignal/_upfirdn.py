@@ -120,16 +120,11 @@ def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
             h_idx += 1
 
 
-def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
-    n = out.shape[0]
-    xx = cp.array(x, dtype=cp.float32)
-    xh_trans_flip = cp.array(h_trans_flip, dtype=cp.float32)
-    xout = cp.array(out, dtype=cp.float32)
+_cached_modules = dict()
 
-    x_shape_a = x.shape[axis]
-
-    h_per_phase = len(h_trans_flip) // up
-    padded_len = x.shape[axis] + h_per_phase - 1
+def _init_raw_apply1d_modules():
+    if '_raw_apply_1d_int' in _cached_modules:
+        return
 
     loaded_from_source = r"""
     extern "C" {
@@ -214,8 +209,24 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
     """
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-    kernel_float = module.get_function("_raw_apply_1d_float")
-    kernel_int = module.get_function("_raw_apply_1d_int")
+    _cached_modules['_raw_apply_1d_float'] = module.get_function("_raw_apply_1d_float")
+    _cached_modules['_raw_apply_1d_int'] = module.get_function("_raw_apply_1d_int")
+
+
+def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
+    n = out.shape[0]
+    xx = cp.array(x, dtype=cp.float32)
+    xh_trans_flip = cp.array(h_trans_flip, dtype=cp.float32)
+    xout = cp.array(out, dtype=cp.float32)
+
+    x_shape_a = x.shape[axis]
+
+    h_per_phase = len(h_trans_flip) // up
+    padded_len = x.shape[axis] + h_per_phase - 1
+
+    _init_raw_apply1d_modules()
+    kernel_float = _cached_modules['_raw_apply_1d_float']
+    kernel_int = _cached_modules['_raw_apply_1d_int']
 
     if out.dtype == cp.int:
         kernel_int(
