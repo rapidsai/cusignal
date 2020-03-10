@@ -12,11 +12,33 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (angle, arange, argsort, array, asarray,
-                  atleast_2d, dot, exp, expand_dims,
-                  iscomplexobj, mean, ndarray, newaxis, ones, pi,
-                  prod, r_, ravel, reshape, sort, take, transpose,
-                  unique, where, zeros)
+from cupy import (
+    angle,
+    arange,
+    argsort,
+    array,
+    asarray,
+    atleast_2d,
+    dot,
+    exp,
+    expand_dims,
+    iscomplexobj,
+    mean,
+    ndarray,
+    newaxis,
+    ones,
+    pi,
+    prod,
+    r_,
+    ravel,
+    reshape,
+    sort,
+    take,
+    transpose,
+    unique,
+    where,
+    zeros,
+)
 from cupyx.scipy import fftpack
 from cupy.fft import ifftshift
 from cupy import linalg
@@ -32,7 +54,7 @@ from .fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from ._upfirdn import upfirdn, _output_len
 from .fir_filter_design import firwin
 
-_modedict = {'valid': 0, 'same': 1, 'full': 2}
+_modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def _inputs_swap_needed(mode, shape1, shape2):
@@ -48,7 +70,7 @@ def _inputs_swap_needed(mode, shape1, shape2):
     Note that if the mode provided is not 'valid', False is immediately
     returned.
     """
-    if mode == 'valid':
+    if mode == "valid":
         ok1, ok2 = True, True
 
         for d1, d2 in zip(shape1, shape2):
@@ -58,15 +80,17 @@ def _inputs_swap_needed(mode, shape1, shape2):
                 ok2 = False
 
         if not (ok1 or ok2):
-            raise ValueError("For 'valid' mode, one must be at least "
-                             "as large as the other in every dimension")
+            raise ValueError(
+                "For 'valid' mode, one must be at least "
+                "as large as the other in every dimension"
+            )
 
         return not ok1
 
     return False
 
 
-def correlate(in1, in2, mode='full', method='auto'):
+def correlate(in1, in2, mode="full", method="auto"):
     r"""
     Cross-correlate two N-dimensional arrays.
 
@@ -177,10 +201,10 @@ def correlate(in1, in2, mode='full', method='auto'):
         raise ValueError("in1 and in2 should have the same dimensionality")
 
     # this either calls fftconvolve or this function with method=='direct'
-    if method in ('fft', 'auto'):
+    if method in ("fft", "auto"):
         return convolve(in1, _reverse_and_conj(in2), mode, method)
 
-    elif method == 'direct':
+    elif method == "direct":
         raise ValueError("Direct method is not yet implemented in cuSignal")
 
     else:
@@ -309,13 +333,18 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     s1 = array(in1.shape)
     s2 = array(in2.shape)
 
-    if not cp.all((s1[other_axes] == s2[other_axes])
-                  | (s1[other_axes] == 1) | (s2[other_axes] == 1)):
-        raise ValueError("incompatible shapes for in1 and in2:"
-                         " {0} and {1}".format(in1.shape, in2.shape))
+    if not cp.all(
+        (s1[other_axes] == s2[other_axes])
+        | (s1[other_axes] == 1)
+        | (s2[other_axes] == 1)
+    ):
+        raise ValueError(
+            "incompatible shapes for in1 and in2:"
+            " {0} and {1}".format(in1.shape, in2.shape)
+        )
 
-    complex_result = (cp.issubdtype(in1.dtype, cp.complexfloating)
-                      or cp.issubdtype(in2.dtype, cp.complexfloating))
+    complex_result = cp.issubdtype(in1.dtype, cp.complexfloating) or \
+        cp.issubdtype(in2.dtype, cp.complexfloating)
     shape = cp.maximum(s1, s2)
     shape[axes] = s1[axes] + s2[axes] - 1
 
@@ -352,11 +381,11 @@ def fftconvolve(in1, in2, mode="full", axes=None):
         shape_valid[axes] = s1[axes] - s2[axes] + 1
         return _centered(ret, shape_valid)
     else:
-        raise ValueError("acceptable mode flags are 'valid',"
-                         " 'same', or 'full'")
+        raise ValueError("acceptable mode flags are \
+                         'valid'," " 'same', or 'full'")
 
 
-def _numeric_arrays(arrays, kinds='buifc'):
+def _numeric_arrays(arrays, kinds="buifc"):
     """
     See if a list of arrays are all numeric.
 
@@ -398,10 +427,10 @@ def _fftconv_faster(x, h, mode):
     is found in both big O constants). Regardless, this had been tuned on an
     early 2015 MacBook Pro with 8GB RAM and an Intel i5 processor.
     """
-    if mode == 'full':
+    if mode == "full":
         out_shape = [n + k - 1 for n, k in zip(x.shape, h.shape)]
         big_O_constant = 10963.92823819 if x.ndim == 1 else 8899.1104874
-    elif mode == 'same':
+    elif mode == "same":
         out_shape = x.shape
         if x.ndim == 1:
             if h.size <= x.size:
@@ -410,18 +439,18 @@ def _fftconv_faster(x, h, mode):
                 big_O_constant = 856.78174111
         else:
             big_O_constant = 34519.21021589
-    elif mode == 'valid':
+    elif mode == "valid":
         out_shape = [n - k + 1 for n, k in zip(x.shape, h.shape)]
         big_O_constant = 41954.28006344 if x.ndim == 1 else 66453.24316434
     else:
-        raise ValueError("Acceptable mode flags are 'valid',"
-                         " 'same', or 'full'.")
+        raise ValueError("Acceptable mode flags are \
+                         'valid'," " 'same', or 'full'.")
 
     # see whether the Fourier transform convolution method or the direct
     # convolution method is faster (discussed in scikit-image PR #1792)
-    direct_time = (x.size * h.size * _prod(out_shape))
-    fft_time = sum(n * cp.log(n) for n in
-                   (x.shape + h.shape + tuple(out_shape)))
+    direct_time = x.size * h.size * _prod(out_shape)
+    fft_time = sum(n * cp.log(n)
+                   for n in (x.shape + h.shape + tuple(out_shape)))
 
     return big_O_constant * fft_time < direct_time
 
@@ -443,9 +472,9 @@ def _np_conv_ok(volume, kernel, mode):
     Invalid mode strings will return False and be caught by the calling func.
     """
     if volume.ndim == kernel.ndim == 1:
-        if mode in ('full', 'valid'):
+        if mode in ("full", "valid"):
             return True
-        elif mode == 'same':
+        elif mode == "same":
             return volume.size >= kernel.size
     else:
         return False
@@ -470,7 +499,7 @@ def _timeit_fast(stmt="pass", setup="pass", repeat=3):
     # determine number of calls per rep so total time for 1 rep >= 5 ms
     x = 0
     for p in range(0, 10):
-        number = 10**p
+        number = 10 ** p
         x = timer.timeit(number)  # seconds
         if x >= 5e-3 / 10:  # 5 ms for final test, 1/10th that for this one
             break
@@ -486,7 +515,7 @@ def _timeit_fast(stmt="pass", setup="pass", repeat=3):
     return sec
 
 
-def choose_conv_method(in1, in2, mode='full', measure=False):
+def choose_conv_method(in1, in2, mode="full", measure=False):
     """
     Find the fastest convolution/correlation method.
 
@@ -580,39 +609,40 @@ def choose_conv_method(in1, in2, mode='full', measure=False):
 
     if measure:
         times = {}
-        for method in ['fft', 'direct']:
-            times[method] = _timeit_fast(lambda: convolve(volume, kernel,
-                                         mode=mode, method=method))
+        for method in ["fft", "direct"]:
+            times[method] = _timeit_fast(
+                lambda: convolve(volume, kernel, mode=mode, method=method)
+            )
 
-        chosen_method = 'fft' if times['fft'] < times['direct'] else 'direct'
+        chosen_method = "fft" if times["fft"] < times["direct"] else "direct"
         return chosen_method, times
 
     # fftconvolve doesn't support complex256
-    fftconv_unsup = "complex256" if sys.maxsize > 2**32 else "complex192"
+    fftconv_unsup = "complex256" if sys.maxsize > 2 ** 32 else "complex192"
     if hasattr(cp, fftconv_unsup):
         if volume.dtype == fftconv_unsup or kernel.dtype == fftconv_unsup:
-            return 'direct'
+            return "direct"
 
     # for integer input,
     # catch when more precision required than float provides (representing an
     # integer as float can lose precision in fftconvolve if larger than 2**52)
-    if any([_numeric_arrays([x], kinds='ui') for x in [volume, kernel]]):
+    if any([_numeric_arrays([x], kinds="ui") for x in [volume, kernel]]):
         max_value = int(cp.abs(volume).max()) * int(cp.abs(kernel).max())
         max_value *= int(min(volume.size, kernel.size))
-        if max_value > 2**cp.finfo('float').nmant - 1:
-            return 'direct'
+        if max_value > 2 ** cp.finfo("float").nmant - 1:
+            return "direct"
 
-    if _numeric_arrays([volume, kernel], kinds='b'):
-        return 'direct'
+    if _numeric_arrays([volume, kernel], kinds="b"):
+        return "direct"
 
     if _numeric_arrays([volume, kernel]):
         if _fftconv_faster(volume, kernel, mode):
-            return 'fft'
+            return "fft"
 
-    return 'direct'
+    return "direct"
 
 
-def convolve(in1, in2, mode='full', method='auto'):
+def convolve(in1, in2, mode="full", method="auto"):
     """
     Convolve two N-dimensional arrays.
 
@@ -705,32 +735,32 @@ def convolve(in1, in2, mode='full', method='auto'):
     if volume.ndim == kernel.ndim == 0:
         return volume * kernel
     elif volume.ndim != kernel.ndim:
-        raise ValueError("volume and kernel should have the same "
-                         "dimensionality")
+        raise ValueError("volume and kernel should have \
+                         the same " "dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
         # Convolution is commutative; order doesn't have any effect on output
         volume, kernel = kernel, volume
 
-    if method == 'auto':
+    if method == "auto":
         method = choose_conv_method(volume, kernel, mode=mode)
 
-    if method == 'fft':
+    if method == "fft":
         out = fftconvolve(volume, kernel, mode=mode)
         result_type = cp.result_type(volume, kernel)
-        if result_type.kind in {'u', 'i'}:
+        if result_type.kind in {"u", "i"}:
             out = cp.around(out)
         return out.astype(result_type)
-    elif method == 'direct':
+    elif method == "direct":
         # fastpath to faster numpy.convolve for 1d inputs when possible
         if _np_conv_ok(volume, kernel, mode):
             return cp.asarray(np.convolve(cp.asnumpy(volume),
                                           cp.asnumpy(kernel), mode))
 
-        return correlate(volume, _reverse_and_conj(kernel), mode, 'direct')
+        return correlate(volume, _reverse_and_conj(kernel), mode, "direct")
     else:
-        raise ValueError("Acceptable method flags are 'auto',"
-                         " 'direct', or 'fft'.")
+        raise ValueError("Acceptable method flags are \
+                         'auto'," " 'direct', or 'fft'.")
 
 
 def wiener(im, mysize=None, noise=None):
@@ -767,25 +797,25 @@ def wiener(im, mysize=None, noise=None):
         mysize = np.asarray(mysize)
 
     # Estimate the local mean
-    lMean = correlate(im, ones(mysize), 'same') / prod(mysize, axis=0)
+    lMean = correlate(im, ones(mysize), "same") / prod(mysize, axis=0)
 
     # Estimate the local variance
-    lVar = (correlate(im ** 2, ones(mysize), 'same') /
-            prod(mysize, axis=0) - lMean ** 2)
+    lVar = correlate(im ** 2, ones(mysize),
+                     "same") / prod(mysize, axis=0) - lMean ** 2
 
     # Estimate the noise power if needed.
     if noise is None:
         noise = mean(ravel(lVar), axis=0)
 
-    res = (im - lMean)
-    res *= (1 - noise / lVar)
+    res = im - lMean
+    res *= 1 - noise / lVar
     res += lMean
     out = where(lVar < noise, lMean, res)
 
     return out
 
 
-def convolve2d(in1, in2, mode='full', boundary='fill', fillvalue=0):
+def convolve2d(in1, in2, mode="full", boundary="fill", fillvalue=0):
     """
     Convolve two 2-dimensional arrays.
     Convolve `in1` and `in2` with output size determined by `mode`, and
@@ -853,7 +883,7 @@ def convolve2d(in1, in2, mode='full', boundary='fill', fillvalue=0):
     in2 = asarray(in2)
 
     if not in1.ndim == in2.ndim == 2:
-        raise ValueError('convolve2d inputs must both be 2D arrays')
+        raise ValueError("convolve2d inputs must both be 2D arrays")
 
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
@@ -864,7 +894,7 @@ def convolve2d(in1, in2, mode='full', boundary='fill', fillvalue=0):
     return out
 
 
-def correlate2d(in1, in2, mode='full', boundary='fill', fillvalue=0):
+def correlate2d(in1, in2, mode="full", boundary="fill", fillvalue=0):
     """
     Cross-correlate two 2-dimensional arrays.
     Cross correlate `in1` and `in2` with output size determined by `mode`, and
@@ -933,7 +963,7 @@ def correlate2d(in1, in2, mode='full', boundary='fill', fillvalue=0):
     in2 = asarray(in2)
 
     if not in1.ndim == in2.ndim == 2:
-        raise ValueError('correlate2d inputs must both be 2D arrays')
+        raise ValueError("correlate2d inputs must both be 2D arrays")
 
     swapped_inputs = _inputs_swap_needed(mode, in1.shape, in2.shape)
     if swapped_inputs:
@@ -993,7 +1023,7 @@ def lfiltic(b, a, y, x=None):
     M = cp.size(b) - 1
     K = cp.max(M, N)
     y = asarray(y)
-    if y.dtype.kind in 'bui':
+    if y.dtype.kind in "bui":
         # ensure calculations are floating point
         y = y.astype(np.float64)
     zi = zeros(K, y.dtype)
@@ -1009,10 +1039,10 @@ def lfiltic(b, a, y, x=None):
         y = r_[y, zeros(N - L)]
 
     for m in range(M):
-        zi[m] = cp.sum(b[m + 1:] * x[:M - m], axis=0)
+        zi[m] = cp.sum(b[m + 1 :] * x[: M - m], axis=0)
 
     for m in range(N):
-        zi[m] -= cp.sum(a[m + 1:] * y[:N - m], axis=0)
+        zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
 
     return zi
 
@@ -1119,10 +1149,10 @@ def hilbert(x, N=None, axis=-1):
     h = zeros(N)
     if N % 2 == 0:
         h[0] = h[N // 2] = 1
-        h[1:N // 2] = 2
+        h[1 : N // 2] = 2
     else:
         h[0] = 1
-        h[1:(N + 1) // 2] = 2
+        h[1 : (N + 1) // 2] = 2
 
     if x.ndim > 1:
         ind = [newaxis] * x.ndim
@@ -1166,21 +1196,22 @@ def hilbert2(x, N=None):
             raise ValueError("N must be positive.")
         N = (N, N)
     elif len(N) != 2 or cp.any(cp.asarray(N) <= 0):
-        raise ValueError("When given as a tuple, N must hold exactly "
-                         "two positive integers")
+        raise ValueError(
+            "When given as a tuple, N must hold exactly two positive integers"
+        )
 
     Xf = fftpack.fft2(x, N, axes=(0, 1))
-    h1 = zeros(N[0], 'd')
-    h2 = zeros(N[1], 'd')
+    h1 = zeros(N[0], "d")
+    h2 = zeros(N[1], "d")
     for p in range(2):
         h = eval("h%d" % (p + 1))
         N1 = N[p]
         if N1 % 2 == 0:
             h[0] = h[N1 // 2] = 1
-            h[1:N1 // 2] = 2
+            h[1 : N1 // 2] = 2
         else:
             h[0] = 1
-            h[1:(N1 + 1) // 2] = 2
+            h[1 : (N1 + 1) // 2] = 2
         exec("h%d = h" % (p + 1), globals(), locals())
 
     h = h1[:, newaxis] * h2[newaxis, :]
@@ -1315,7 +1346,7 @@ def resample(x, num, t=None, axis=0, window=None):
             W = window(fftpack.fftfreq(Nx))
         elif isinstance(window, ndarray):
             if window.shape != (Nx,):
-                raise ValueError('window must have the same length as data')
+                raise ValueError("window must have the same length as data")
             W = window
         else:
             W = ifftshift(get_window(window, Nx))
@@ -1327,14 +1358,14 @@ def resample(x, num, t=None, axis=0, window=None):
     newshape = list(x.shape)
     newshape[axis] = num
     N = int(cp.minimum(num, Nx))
-    Y = zeros(newshape, 'D')
+    Y = zeros(newshape, "D")
     sl[axis] = slice(0, (N + 1) // 2)
     Y[sl] = X[sl]
     sl[axis] = slice(-(N - 1) // 2, None)
     Y[sl] = X[sl]
     y = fftpack.ifft(Y, axis=axis) * (float(num) / float(Nx))
 
-    if x.dtype.char not in ['F', 'D']:
+    if x.dtype.char not in ["F", "D"]:
         y = y.real
 
     if t is None:
@@ -1344,7 +1375,7 @@ def resample(x, num, t=None, axis=0, window=None):
         return y, new_t
 
 
-def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
+def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
     """
     Resample `x` along the given axis using polyphase filtering.
 
@@ -1431,7 +1462,7 @@ def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
     up = int(up)
     down = int(down)
     if up < 1 or down < 1:
-        raise ValueError('up and down must be >= 1')
+        raise ValueError("up and down must be >= 1")
 
     # Determine our up and down factors
     # Use a rational approimation to save computation time on really long
@@ -1447,38 +1478,40 @@ def resample_poly(x, up, down, axis=0, window=('kaiser', 5.0)):
     if isinstance(window, (list, ndarray)):
         window = asarray(window)
         if window.ndim > 1:
-            raise ValueError('window must be 1-D')
+            raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
         h = window
     else:
         # Design a linear-phase low-pass FIR filter
         max_rate = max(up, down)
-        f_c = 1. / max_rate  # cutoff of FIR filter (rel. to Nyquist)
+        f_c = 1.0 / max_rate  # cutoff of FIR filter (rel. to Nyquist)
         # reasonable cutoff for our sinc-like function
         half_len = 10 * max_rate
         h = firwin(2 * half_len + 1, f_c, window=window)
     h *= up
 
     # Zero-pad our filter to put the output samples at the center
-    n_pre_pad = (down - half_len % down)
+    n_pre_pad = down - half_len % down
     n_post_pad = 0
     n_pre_remove = (half_len + n_pre_pad) // down
     # We should rarely need to do this given our filter lengths...
-    while _output_len(len(h) + n_pre_pad + n_post_pad, x.shape[axis],
-                      up, down) < n_out + n_pre_remove:
+    while (
+        _output_len(len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down)
+        < n_out + n_pre_remove
+    ):
         n_post_pad += 1
     h = cp.concatenate((zeros(n_pre_pad), h, zeros(n_post_pad)))
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
-    y = upfirdn(h, x, up, down, axis=axis)
+    y = upfirdn(h, x, up, down, axis=axis, use_numba=use_numba)
     keep = [slice(None), ] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]
 
 
 def vectorstrength(events, period):
-    '''
+    """
     Determine the vector strength of the events corresponding to the given
     period.
 
@@ -1523,13 +1556,13 @@ def vectorstrength(events, period):
         when we vary the "probing" frequency while keeping the spike times
         fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
         :doi:`10.1007/s00422-013-0560-8`.
-    '''
+    """
     events = asarray(events)
     period = asarray(period)
     if events.ndim > 1:
-        raise ValueError('events cannot have dimensions more than 1')
+        raise ValueError("events cannot have dimensions more than 1")
     if period.ndim > 1:
-        raise ValueError('period cannot have dimensions more than 1')
+        raise ValueError("period cannot have dimensions more than 1")
 
     # we need to know later if period was originally a scalar
     scalarperiod = not period.ndim
@@ -1537,7 +1570,7 @@ def vectorstrength(events, period):
     events = atleast_2d(events)
     period = atleast_2d(period)
     if (period <= 0).any():
-        raise ValueError('periods must be positive')
+        raise ValueError("periods must be positive")
 
     # this converts the times to vectors
     vectors = exp(dot(2j * pi / period.T, events))
@@ -1555,7 +1588,7 @@ def vectorstrength(events, period):
     return strength, phase
 
 
-def detrend(data, axis=-1, type='linear', bp=0, overwrite_data=False):
+def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     """
     Remove linear trend along axis from data.
 
@@ -1594,13 +1627,13 @@ def detrend(data, axis=-1, type='linear', bp=0, overwrite_data=False):
     True
 
     """
-    if type not in ['linear', 'l', 'constant', 'c']:
+    if type not in ["linear", "l", "constant", "c"]:
         raise ValueError("Trend type must be 'linear' or 'constant'.")
     data = asarray(data)
     dtype = data.dtype.char
-    if dtype not in 'dfDF':
-        dtype = 'd'
-    if type in ['constant', 'c']:
+    if dtype not in "dfDF":
+        dtype = "d"
+    if type in ["constant", "c"]:
         ret = data - expand_dims(mean(data, axis), axis)
         return ret
     else:
@@ -1608,20 +1641,22 @@ def detrend(data, axis=-1, type='linear', bp=0, overwrite_data=False):
         N = dshape[axis]
         bp = sort(unique(r_[0, bp, N]))
         if cp.any(bp > N):
-            raise ValueError("Breakpoints must be less than length "
-                             "of data along given axis.")
+            raise ValueError(
+                "Breakpoints must be less than length of \
+                data along given axis."
+            )
         Nreg = len(bp) - 1
         # Restructure data so that axis is along first dimension and
         #  all other dimensions are collapsed into second dimension
         rnk = len(dshape)
         if axis < 0:
             axis = axis + rnk
-        newdims = np.r_[axis, 0:axis, axis + 1:rnk]
+        newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
         newdata = reshape(transpose(data, tuple(newdims)),
                           (N, _prod(dshape) // N))
         if not overwrite_data:
             newdata = newdata.copy()  # make sure we have a copy
-        if newdata.dtype.char not in 'dfDF':
+        if newdata.dtype.char not in "dfDF":
             newdata = newdata.astype(dtype)
         # Find leastsq fit and remove it for each piece
         for m in range(Nreg):
