@@ -3,7 +3,8 @@
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
 - PR #17 - Add conda recipe and gpuCI scripts
-- PR #16 - Raw CuPy Module for upfirdn
+- PR #22 - Addition of real and complex cepstrum for speech/acoustic signal processing
+- PR #25 - Raw CuPy Module for upfirdn
 
 ## Improvements
 - PR #5 - Update cuSignal install directions for Windows OS.
