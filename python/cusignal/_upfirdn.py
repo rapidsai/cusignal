@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from numba import cuda
+from numba import cuda, float32, int32, void
 import math
 
 
@@ -94,7 +94,8 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
             h_idx += 1
 
 
-@cuda.jit(fastmath=True)
+@cuda.jit(void(float32[:], float32[:], float32[:], int32, int32, int32),
+          fastmath=True)
 def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
 
     X = cuda.grid(1)
@@ -121,6 +122,7 @@ def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
 
 
 _cached_modules = dict()
+
 
 def _init_raw_apply1d_modules():
     if '_raw_apply_1d_int' in _cached_modules:
@@ -209,8 +211,10 @@ def _init_raw_apply1d_modules():
     """
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-    _cached_modules['_raw_apply_1d_float'] = module.get_function("_raw_apply_1d_float")
-    _cached_modules['_raw_apply_1d_int'] = module.get_function("_raw_apply_1d_int")
+    _cached_modules['_raw_apply_1d_float'] = \
+        module.get_function("_raw_apply_1d_float")
+    _cached_modules['_raw_apply_1d_int'] = \
+        module.get_function("_raw_apply_1d_int")
 
 
 def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
