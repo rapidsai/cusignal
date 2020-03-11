@@ -4,7 +4,7 @@
 
 The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://github.com/cupy/cupy), [Numba](https://github.com/numba/numba), and the RAPIDS ecosystem for GPU accelerated signal processing. In some cases, cuSignal is a direct port of [Scipy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) to leverage GPU compute resources via CuPy but also contains Numba CUDA kernels for additional speedups for selected functions. cuSignal achieves its best gains on large signals and compute intensive functions but stresses online processing with zero-copy memory (pinned, mapped) between CPU and GPU.
 
-**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the lastest branch.
+**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the latest branch.
 
 ## Quick Start
 cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
@@ -109,14 +109,14 @@ NOTE: if used with other portions of RAPIDS, then GPU needs to be Pascal or late
 1. Clone the repository
 
     ```bash
-    # Set the localtion to cuSignal in an environment variable CUSIGNAL_HOME
+    # Set the location to cuSignal in an environment variable CUSIGNAL_HOME
     export CUSIGNAL_HOME=$(pwd)/cusignal
 
     # Download the cuSignal repo
     git clone https://github.com/rapidsai/cusignal.git $CUSIGNAL_HOME
     ```
 
-2. Download and install [Andaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
+2. Download and install [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
 
     **Base environment (core dependencies for cuSignal)**
 
