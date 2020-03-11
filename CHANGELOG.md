@@ -13,6 +13,7 @@
 - PR #20 - Updated conda environment and README file
 - PR #26 - Cache raw CuPy kernels in upfirdn
 - PR #29 - Fix typos in README
+- PR #30 - Add Apache 2.0 license header to acoustics.py
 
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
