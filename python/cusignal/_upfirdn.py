@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from numba import cuda, float32, int32, void
+from numba import cuda
 import math
 
 
@@ -94,8 +94,7 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
             h_idx += 1
 
 
-@cuda.jit(void(float32[:], float32[:], float32[:], int32, int32, int32),
-          fastmath=True)
+@cuda.jit(fastmath=True)
 def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
 
     X = cuda.grid(1)
@@ -169,15 +168,15 @@ def _init_raw_apply1d_modules():
         }
     }
 
-    __global__ void _raw_apply_1d_float(const int n,
+    __global__ void _raw_apply_1d_double(const int n,
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
             const int up,
             const int down,
-            const float * __restrict__ x,
-            const float * __restrict__ h_trans_flip,
-            float * __restrict__ out) {
+            const double * __restrict__ x,
+            const double * __restrict__ h_trans_flip,
+            double * __restrict__ out) {
 
         const int t { blockIdx.x * blockDim.x + threadIdx.x };
         const int stride { blockDim.x * gridDim.x };
@@ -194,7 +193,7 @@ def _init_raw_apply1d_modules():
                 x_conv_idx = 0;
             }
 
-            float temp {};
+            double temp {};
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
                 if (x_c < x_shape_a && x_c >= 0) {
@@ -211,17 +210,17 @@ def _init_raw_apply1d_modules():
     """
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-    _cached_modules['_raw_apply_1d_float'] = \
-        module.get_function("_raw_apply_1d_float")
+    _cached_modules['_raw_apply_1d_double'] = \
+        module.get_function("_raw_apply_1d_double")
     _cached_modules['_raw_apply_1d_int'] = \
         module.get_function("_raw_apply_1d_int")
 
 
 def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
     n = out.shape[0]
-    xx = cp.array(x, dtype=cp.float32)
-    xh_trans_flip = cp.array(h_trans_flip, dtype=cp.float32)
-    xout = cp.array(out, dtype=cp.float32)
+    xx = cp.array(x, dtype=cp.float64)
+    xh_trans_flip = cp.array(h_trans_flip, dtype=cp.float64)
+    xout = cp.array(out, dtype=cp.float64)
 
     x_shape_a = x.shape[axis]
 
@@ -229,7 +228,7 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
     padded_len = x.shape[axis] + h_per_phase - 1
 
     _init_raw_apply1d_modules()
-    kernel_float = _cached_modules['_raw_apply_1d_float']
+    kernel_double = _cached_modules['_raw_apply_1d_double']
     kernel_int = _cached_modules['_raw_apply_1d_int']
 
     if out.dtype == cp.int:
@@ -239,8 +238,8 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
             (n, x_shape_a, h_per_phase, padded_len,
              up, down, xx, xh_trans_flip, xout,),
         )
-    elif out.dtype == cp.float:
-        kernel_float(
+    elif out.dtype == cp.float64:
+        kernel_double(
             (bpg,),
             (tpb,),
             (n, x_shape_a, h_per_phase, padded_len,
