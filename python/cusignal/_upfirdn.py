@@ -12,22 +12,17 @@
 # limitations under the License.
 
 import cupy as cp
-from numba import cuda
+from numba import cuda, float32, float64, int32, int64, void
 import math
-
 
 def _pad_h(h, up):
     """Store coefficients in a transposed, flipped arrangement.
-
     For example, suppose upRate is 3, and the
     input number of coefficients is 10, represented as h[0], ..., h[9].
-
     Then the internal buffer will look like this::
-
        h[9], h[6], h[3], h[0],   // flipped phase 0 coefs
        0,    h[7], h[4], h[1],   // flipped phase 1 coefs (zero-padded)
        0,    h[8], h[5], h[2],   // flipped phase 2 coefs (zero-padded)
-
     """
     h_padlen = len(h) + (-len(h) % up)
     h_full = cp.zeros(h_padlen, h.dtype)
@@ -44,11 +39,10 @@ def _output_len(len_h, in_len, up, down):
         need += 1
     return need
 
-
 # Custom Numba kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 @cuda.jit(fastmath=True)
-def _apply(x, h_trans_flip, out, up, down, axis=-1):
+def _numba_upfirdn_2d(x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out):
 
     num_loops = 1
     for i in range(out.ndim - 1):
@@ -61,9 +55,6 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
 
         i = X
         y_idx = Y
-
-        h_per_phase = len(h_trans_flip) // up
-        padded_len = x.shape[axis] + h_per_phase - 1
 
         if axis == 1:
             x_idx = ((Y * down) // up) % padded_len
@@ -79,31 +70,29 @@ def _apply(x, h_trans_flip, out, up, down, axis=-1):
 
         # If axis = 0, we need to know each column in x.
         for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x.shape[axis] and x_conv_idx >= 0:
+            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
                 # if multi-dimenstional array
                 if num_loops > 1:  # a loop is an additional column
-                    out[i, y_idx] = (
-                        out[i, y_idx] + x[i, x_conv_idx] * h_trans_flip[h_idx]
+                    out[i, y_idx] += (
+                        x[i, x_conv_idx] * h_trans_flip[h_idx]
                     )
                 else:
-                    out[i, y_idx] = (
-                        out[i, y_idx] + x[x_conv_idx, y_idx] *
+                    out[i, y_idx] += (
+                        x[x_conv_idx, y_idx] *
                         h_trans_flip[h_idx]
                     )
 
             h_idx += 1
 
-
-@cuda.jit(fastmath=True)
-def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
+# @cuda.jit(fastmath=True) # 38 registers - 157-190us
+# @cuda.jit(void(float32[:], float32[:], int32, int32, int32, int32, int32, float32[:],), fastmath=True) # 48 registers - 160-190us
+@cuda.jit(void(float32[:], float32[:], int64, int64, int64, int64, int64, float32[:],), fastmath=True) # 38 registers - 157-190us
+def _numba_upfirdn_1d_float(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
 
     X = cuda.grid(1)
     strideX = cuda.gridsize(1)
 
     for i in range(X, out.shape[0], strideX):
-
-        h_per_phase = len(h_trans_flip) // up
-        padded_len = x.shape[axis] + h_per_phase - 1
 
         x_idx = ((i * down) // up) % padded_len
         h_idx = (i * down) % up * h_per_phase
@@ -115,52 +104,124 @@ def _apply_1d(x, h_trans_flip, out, up, down, axis=-1):
 
         # If axis = 0, we need to know each column in x.
         for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x.shape[axis] and x_conv_idx >= 0:
-                out[i] = out[i] + x[x_conv_idx] * h_trans_flip[h_idx]
+            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
+                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
+# @cuda.jit(fastmath=True) # 38 registers - 157-190us
+# @cuda.jit(void(float64[:], float64[:], int32, int32, int32, int32, int32, float64[:],), fastmath=True) # 48 registers - 160-190us
+@cuda.jit(void(float64[:], float64[:], int64, int64, int64, int64, int64, float64[:],), fastmath=True) # 39 registers - 157-190us
+def _numba_upfirdn_1d_double(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
 
+    X = cuda.grid(1)
+    strideX = cuda.gridsize(1)
+
+    for i in range(X, out.shape[0], strideX):
+
+        x_idx = ((i * down) // up) % padded_len
+        h_idx = (i * down) % up * h_per_phase
+
+        x_conv_idx = x_idx - h_per_phase + 1
+        if x_conv_idx < 0:
+            h_idx -= x_conv_idx
+            x_conv_idx = 0
+
+        # If axis = 0, we need to know each column in x.
+        for x_conv_idx in range(x_conv_idx, x_idx + 1):
+            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
+                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
+            h_idx += 1
+
+def _numba_init(x, h_trans_flip, up, down, axis, out):
+
+    x_shape_a = x.shape[axis]
+    h_per_phase = len(h_trans_flip) // up
+    padded_len = x.shape[axis] + h_per_phase - 1
+
+    if out.ndim > 1:
+        threadsperblock = (16, 16)
+        blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
+        blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
+        blockspergrid = (blockspergrid_x, blockspergrid_y)
+
+        _numba_upfirdn_2d[blockspergrid, threadsperblock](
+            x,
+            h_trans_flip,
+            up,
+            down,
+            axis,
+            x_shape_a,
+            h_per_phase,
+            padded_len,
+            out
+        )
+    else:
+        device_id = cp.cuda.Device()
+        numSM = device_id.attributes["MultiProcessorCount"]
+        threadsperblock = 256
+        blockspergrid = numSM * 20
+
+        if out.dtype == cp.float32:
+            _numba_upfirdn_1d_float[blockspergrid, threadsperblock](
+                x,
+                h_trans_flip,
+                up,
+                down,
+                x_shape_a,
+                h_per_phase,
+                padded_len,
+                out
+            )
+
+        elif out.dtype == cp.float64:
+            _numba_upfirdn_1d_double[blockspergrid, threadsperblock](
+                x,
+                h_trans_flip,
+                up,
+                down,
+                x_shape_a,
+                h_per_phase,
+                padded_len,
+                out
+            )
+
+
+# Custom Cupy raw kernel implementing upsample, filter, downsample operation
+# Matthew Nicely - mnicely@nvidia.com
 _cached_modules = dict()
 
-
-def _init_raw_apply1d_modules():
-    if '_raw_apply_1d_int' in _cached_modules:
-        return
+def _init_cupy_upfirdn_1d_modules():
 
     loaded_from_source = r"""
-    extern "C" {
 
-    __global__ void _raw_apply_1d_int(const int n,
+    extern "C" {
+    __global__ void _upfirdn_1d_float(const int n,
+            const float * __restrict__ x,
+            const float * __restrict__ h_trans_flip,
+            const int up,
+            const int down,
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
-            const int up,
-            const int down,
-            const int * __restrict__ x,
-            const int * __restrict__ h_trans_flip,
-            int * __restrict__ out) {
+            float * __restrict__ out) {
 
         const int t { blockIdx.x * blockDim.x + threadIdx.x };
         const int stride { blockDim.x * gridDim.x };
 
         for (int tid = t; tid < n; tid += stride) {
-
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
-
             int x_conv_idx { x_idx - h_per_phase + 1 };
-
             if (x_conv_idx < 0) {
                 h_idx -= x_conv_idx;
                 x_conv_idx = 0;
             }
 
-            int temp {};
+            float temp {};
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
                 if (x_c < x_shape_a && x_c >= 0) {
-                    //out[tid] = out[tid] + x[x_c] * h_trans_flip[h_idx];
-                    temp = temp + x[x_c] * h_trans_flip[h_idx];
+                    temp += x[x_c] * h_trans_flip[h_idx];
                 }
                 out[tid] = temp;
                 h_idx += 1;
@@ -168,26 +229,23 @@ def _init_raw_apply1d_modules():
         }
     }
 
-    __global__ void _raw_apply_1d_double(const int n,
+    __global__ void _upfirdn_1d_double(const int n,
+            const double * __restrict__ x,
+            const double * __restrict__ h_trans_flip,
+            const int up,
+            const int down,
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
-            const int up,
-            const int down,
-            const double * __restrict__ x,
-            const double * __restrict__ h_trans_flip,
             double * __restrict__ out) {
 
         const int t { blockIdx.x * blockDim.x + threadIdx.x };
         const int stride { blockDim.x * gridDim.x };
 
         for (int tid = t; tid < n; tid += stride) {
-
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
-
             int x_conv_idx { x_idx - h_per_phase + 1 };
-
             if (x_conv_idx < 0) {
                 h_idx -= x_conv_idx;
                 x_conv_idx = 0;
@@ -197,59 +255,71 @@ def _init_raw_apply1d_modules():
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
                 if (x_c < x_shape_a && x_c >= 0) {
-                    //out[tid] = out[tid] + x[x_c] * h_trans_flip[h_idx];
-                    temp = temp + x[x_c] * h_trans_flip[h_idx];
+                    temp += x[x_c] * h_trans_flip[h_idx];
                 }
                 out[tid] = temp;
                 h_idx += 1;
             }
         }
     }
-
-    }
+    } // extern "C"
     """
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-    _cached_modules['_raw_apply_1d_double'] = \
-        module.get_function("_raw_apply_1d_double")
-    _cached_modules['_raw_apply_1d_int'] = \
-        module.get_function("_raw_apply_1d_int")
+    _cached_modules['_upfirdn_1d_float'] = \
+        module.get_function("_upfirdn_1d_float")
+    _cached_modules['_upfirdn_1d_double'] = \
+        module.get_function("_upfirdn_1d_double")
 
-
-def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
-    n = out.shape[0]
-    xx = cp.array(x, dtype=cp.float64)
-    xh_trans_flip = cp.array(h_trans_flip, dtype=cp.float64)
-    xout = cp.array(out, dtype=cp.float64)
+def _cupy_init(x, h_trans_flip, up, down, axis, out):
 
     x_shape_a = x.shape[axis]
-
     h_per_phase = len(h_trans_flip) // up
     padded_len = x.shape[axis] + h_per_phase - 1
 
-    _init_raw_apply1d_modules()
-    kernel_double = _cached_modules['_raw_apply_1d_double']
-    kernel_int = _cached_modules['_raw_apply_1d_int']
+    if out.ndim > 1:
+        raise NotImplementedError(
+            "Raw CuPy Kernel is not implemented \
+            for ndim > 1"
+                )
+    else:
+        _init_cupy_upfirdn_1d_modules()
+        upfirdn_1d_float = _cached_modules['_upfirdn_1d_float'] # 21 registers - 9-14us
+        upfirdn_1d_double = _cached_modules['_upfirdn_1d_double'] # 30 registers - 30us
+        
+        d = cp.cuda.device.Device(0)
+        numSM = d.attributes["MultiProcessorCount"]
+        threadsperblock = 256
+        blockspergrid = numSM * 20
 
-    if out.dtype == cp.int:
-        kernel_int(
-            (bpg,),
-            (tpb,),
-            (n, x_shape_a, h_per_phase, padded_len,
-             up, down, xx, xh_trans_flip, xout,),
-        )
-    elif out.dtype == cp.float64:
-        kernel_double(
-            (bpg,),
-            (tpb,),
-            (n, x_shape_a, h_per_phase, padded_len,
-             up, down, xx, xh_trans_flip, xout,),
-        )
-
-    cp.cuda.runtime.deviceSynchronize()
-
-    return xout
-
+        if out.dtype == cp.float32:
+            upfirdn_1d_float(
+                (blockspergrid,),
+                (threadsperblock,),
+                (out.shape[0], 
+                x,
+                h_trans_flip, 
+                up, 
+                down,
+                x_shape_a, 
+                h_per_phase, 
+                padded_len,
+                out,),
+            )
+        elif out.dtype == cp.float64:
+            upfirdn_1d_double(
+                (blockspergrid,),
+                (threadsperblock,),
+                (out.shape[0], 
+                x,
+                h_trans_flip, 
+                up, 
+                down,
+                x_shape_a, 
+                h_per_phase, 
+                padded_len,
+                out,),
+            )
 
 class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
@@ -257,6 +327,7 @@ class _UpFIRDn(object):
         h = cp.asarray(h)
         if h.ndim != 1 or h.size == 0:
             raise ValueError("h must be 1D with non-zero length")
+
         self._output_type = cp.result_type(h.dtype, x_dtype, cp.float32)
         h = cp.asarray(h, self._output_type)
         self._up = int(up)
@@ -279,64 +350,28 @@ class _UpFIRDn(object):
         axis = axis % x.ndim
 
         if use_numba:
-            if out.ndim > 1:
-                threadsperblock = (16, 16)
-                blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
-                blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
-                blockspergrid = (blockspergrid_x, blockspergrid_y)
-
-                _apply[blockspergrid, threadsperblock](
-                    cp.asarray(x, self._output_type),
-                    self._h_trans_flip,
-                    out,
-                    self._up,
-                    self._down,
-                    axis,
-                )
-            else:
-                d = cp.cuda.device.Device(0)
-                numSM = d.attributes["MultiProcessorCount"]
-                threadsperblock = 256
-                blockspergrid = numSM * 10
-
-                _apply_1d[blockspergrid, threadsperblock](
-                    cp.asarray(x, self._output_type),
-                    self._h_trans_flip,
-                    out,
-                    self._up,
-                    self._down,
-                    axis,
-                )
+            _numba_init(
+                cp.asarray(x, self._output_type),
+                self._h_trans_flip,
+                self._up,
+                self._down,
+                axis,
+                out,
+            )
         else:
-            if out.ndim > 1:
-                raise NotImplementedError(
-                    "Raw CuPy Kernel is not implemented \
-                    for ndim > 1"
-                )
-            else:
-                d = cp.cuda.device.Device(0)
-                numSM = d.attributes["MultiProcessorCount"]
-                threadsperblock = 256
-                blockspergrid = numSM * 10
-
-                xout = _raw_apply_1d(
-                    threadsperblock,
-                    blockspergrid,
-                    cp.asarray(x, self._output_type),
-                    self._h_trans_flip,
-                    out,
-                    self._up,
-                    self._down,
-                    axis,
-                )
-                out = xout
+            _cupy_init(
+                cp.asarray(x, self._output_type),
+                self._h_trans_flip,
+                self._up,
+                self._down,
+                axis,
+                out,
+            )
 
         return out
 
-
 def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
     """Upsample, FIR filter, and downsample
-
     Parameters
     ----------
     h : array_like
@@ -351,33 +386,29 @@ def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
         The axis of the input data array along which to apply the
         linear filter. The filter is applied to each subarray along
         this axis. Default is -1.
-
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is True.
     Returns
     -------
     y : ndarray
         The output signal array. Dimensions will be the same as `x` except
         for along `axis`, which will change size according to the `h`,
         `up`,  and `down` parameters.
-
     Notes
     -----
     The algorithm is an implementation of the block diagram shown on page 129
     of the Vaidyanathan text [1]_ (Figure 4.3-8d).
-
     .. [1] P. P. Vaidyanathan, Multirate Systems and Filter Banks,
        Prentice Hall, 1993.
-
     The direct approach of upsampling by factor of P with zero insertion,
     FIR filtering of length ``N``, and downsampling by factor of Q is
     O(N*Q) per output sample. The polyphase implementation used here is
     O(N/P).
-
     .. versionadded:: 0.18
-
     Examples
     --------
     Simple operations:
-
     >>> from scipy.signal import upfirdn
     >>> upfirdn([1, 1, 1], [1, 1, 1])   # FIR filter
     array([ 1.,  2.,  3.,  2.,  1.])
@@ -391,27 +422,21 @@ def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
     array([ 0.,  3.,  6.,  9.])
     >>> upfirdn([.5, 1, .5], np.arange(10), 2, 3)  # linear interp, rate 2/3
     array([ 0. ,  1. ,  2.5,  4. ,  5.5,  7. ,  8.5,  0. ])
-
     Apply a single filter to multiple signals:
-
     >>> x = np.reshape(np.arange(8), (4, 2))
     >>> x
     array([[0, 1],
            [2, 3],
            [4, 5],
            [6, 7]])
-
     Apply along the last dimension of ``x``:
-
     >>> h = [1, 1]
     >>> upfirdn(h, x, 2)
     array([[ 0.,  0.,  1.,  1.],
            [ 2.,  2.,  3.,  3.],
            [ 4.,  4.,  5.,  5.],
            [ 6.,  6.,  7.,  7.]])
-
     Apply along the 0th dimension of ``x``:
-
     >>> upfirdn(h, x, 2, axis=0)
     array([[ 0.,  1.],
            [ 0.,  1.],
@@ -421,7 +446,6 @@ def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
            [ 4.,  5.],
            [ 6.,  7.],
            [ 6.,  7.]])
-
     """
     x = cp.asarray(x)
     ufd = _UpFIRDn(h, x.dtype, up, down)
