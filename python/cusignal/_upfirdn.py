@@ -125,6 +125,9 @@ _cached_modules = dict()
 
 def _init_raw_apply1d_modules():
 
+    if '_raw_apply_1d_double' in _cached_modules:
+        return
+
     loaded_from_source = r"""
     extern "C" {
 
