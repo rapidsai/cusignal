@@ -9,6 +9,7 @@
 - PR #9 - Update cuSignal documentation and Conda install ymls to better support Jetson Devices and prune dependencies
 - PR #11 - Update cuSignal structure to match other RAPIDS projects
 - PR #20 - Updated conda environment and README file
+- PR #29 - Fix typos in README
 
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
