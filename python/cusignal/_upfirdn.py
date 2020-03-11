@@ -130,49 +130,7 @@ def _init_raw_apply1d_modules():
     loaded_from_source = r"""
     extern "C" {
 
-<<<<<<< HEAD
-    __global__ void _raw_apply_1d_float(const int n,
-=======
-    __global__ void _raw_apply_1d_int(const int n,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            const int up,
-            const int down,
-            const int * __restrict__ x,
-            const int * __restrict__ h_trans_flip,
-            int * __restrict__ out) {
-
-        const int t { blockIdx.x * blockDim.x + threadIdx.x };
-        const int stride { blockDim.x * gridDim.x };
-
-        for (int tid = t; tid < n; tid += stride) {
-
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-
-            if (x_conv_idx < 0) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            int temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if (x_c < x_shape_a && x_c >= 0) {
-                    //out[tid] = out[tid] + x[x_c] * h_trans_flip[h_idx];
-                    temp = temp + x[x_c] * h_trans_flip[h_idx];
-                }
-                out[tid] = temp;
-                h_idx += 1;
-            }
-        }
-    }
-
     __global__ void _raw_apply_1d_double(const int n,
->>>>>>> upstream/branch-0.13
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
@@ -214,16 +172,8 @@ def _init_raw_apply1d_modules():
     """
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-<<<<<<< HEAD
-    kernel_float = module.get_function("_raw_apply_1d_float")
-
-    if out.dtype == cp.float:
-        kernel_float(
-=======
     _cached_modules['_raw_apply_1d_double'] = \
         module.get_function("_raw_apply_1d_double")
-    _cached_modules['_raw_apply_1d_int'] = \
-        module.get_function("_raw_apply_1d_int")
 
 
 def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
@@ -239,18 +189,9 @@ def _raw_apply_1d(tpb, bpg, x, h_trans_flip, out, up, down, axis=-1):
 
     _init_raw_apply1d_modules()
     kernel_double = _cached_modules['_raw_apply_1d_double']
-    kernel_int = _cached_modules['_raw_apply_1d_int']
 
-    if out.dtype == cp.int:
-        kernel_int(
-            (bpg,),
-            (tpb,),
-            (n, x_shape_a, h_per_phase, padded_len,
-             up, down, xx, xh_trans_flip, xout,),
-        )
-    elif out.dtype == cp.float64:
+    if out.dtype == cp.float64:
         kernel_double(
->>>>>>> upstream/branch-0.13
             (bpg,),
             (tpb,),
             (n, x_shape_a, h_per_phase, padded_len,
