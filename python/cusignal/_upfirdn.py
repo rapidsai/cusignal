@@ -13,7 +13,7 @@
 
 import cupy as cp
 from cupy import prof
-from numba import cuda, float32, float64, int32, int64, void
+from numba import cuda, float32, float64, complex64, complex128, int32, int64, void
 import math
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -160,18 +160,60 @@ def _numba_upfirdn_1d_double(x, h_trans_flip, up, down, x_shape_a, h_per_phase, 
                 out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
+@cuda.jit(fastmath=True) # 38 registers - 157-170us
+# @cuda.jit(void(complex64[:], complex64[:], int64, int64, int64, int64, int64, complex64[:],), fastmath=True) # 39 registers - 157-190us
+def _numba_upfirdn_1d_complex64(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
+
+    X = cuda.grid(1)
+    strideX = cuda.gridsize(1)
+
+    for i in range(X, out.shape[0], strideX):
+
+        x_idx = ((i * down) // up) % padded_len
+        h_idx = (i * down) % up * h_per_phase
+
+        x_conv_idx = x_idx - h_per_phase + 1
+        if x_conv_idx < 0:
+            h_idx -= x_conv_idx
+            x_conv_idx = 0
+
+        # If axis = 0, we need to know each column in x.
+        for x_conv_idx in range(x_conv_idx, x_idx + 1):
+            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
+                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
+            h_idx += 1
+
+@cuda.jit(fastmath=True) # 38 registers - 266us
+# @cuda.jit(void(complex128[:], complex128[:], int64, int64, int64, int64, int64, complex128[:],), fastmath=True) # 39 registers - 157-190us
+def _numba_upfirdn_1d_complex128(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
+
+    X = cuda.grid(1)
+    strideX = cuda.gridsize(1)
+
+    for i in range(X, out.shape[0], strideX):
+
+        x_idx = ((i * down) // up) % padded_len
+        h_idx = (i * down) % up * h_per_phase
+
+        x_conv_idx = x_idx - h_per_phase + 1
+        if x_conv_idx < 0:
+            h_idx -= x_conv_idx
+            x_conv_idx = 0
+
+        # If axis = 0, we need to know each column in x.
+        for x_conv_idx in range(x_conv_idx, x_idx + 1):
+            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
+                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
+            h_idx += 1
+
 @cp.prof.TimeRangeDecorator()
-def _numba_init(x, h_trans_flip, up, down, axis, stream, out):
+def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, stream, out):
 
     x_shape_a = x.shape[axis]
     h_per_phase = len(h_trans_flip) // up
     padded_len = x.shape[axis] + h_per_phase - 1
 
     if out.ndim > 1:
-        threadsperblock = (16, 16)
-        blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
-        blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
-        blockspergrid = (blockspergrid_x, blockspergrid_y)
 
         _numba_upfirdn_2d[blockspergrid, threadsperblock, stream](
             x,
@@ -185,10 +227,6 @@ def _numba_init(x, h_trans_flip, up, down, axis, stream, out):
             out
         )
     else:
-        device_id = cp.cuda.Device()
-        numSM = device_id.attributes["MultiProcessorCount"]
-        threadsperblock = 256
-        blockspergrid = numSM * 20
 
         if out.dtype == cp.float32:
             _numba_upfirdn_1d_float[blockspergrid, threadsperblock, stream](
@@ -214,6 +252,30 @@ def _numba_init(x, h_trans_flip, up, down, axis, stream, out):
                 out
             )
 
+        elif out.dtype == cp.complex64:
+            _numba_upfirdn_1d_complex64[blockspergrid, threadsperblock, stream](
+                x,
+                h_trans_flip,
+                up,
+                down,
+                x_shape_a,
+                h_per_phase,
+                padded_len,
+                out
+            )
+
+        elif out.dtype == cp.complex128:
+            _numba_upfirdn_1d_complex128[blockspergrid, threadsperblock, stream](
+                x,
+                h_trans_flip,
+                up,
+                down,
+                x_shape_a,
+                h_per_phase,
+                padded_len,
+                out
+            )
+
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 _cached_modules = dict()
@@ -223,10 +285,12 @@ def _init_cupy_upfirdn_1d_modules():
     if '_upfirdn_1d_double' in _cached_modules:
         return
 
-    loaded_from_source = r"""
+    loaded_from_source = r'''
+
+    #include <cupy/complex.cuh>
 
     extern "C" {
-    __global__ void _upfirdn_1d_float(const int n,
+    __global__ void _cupy_upfirdn_1d_float(const int n,
             const float * __restrict__ x,
             const float * __restrict__ h_trans_flip,
             const int up,
@@ -243,6 +307,7 @@ def _init_cupy_upfirdn_1d_modules():
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
+
             if (x_conv_idx < 0) {
                 h_idx -= x_conv_idx;
                 x_conv_idx = 0;
@@ -260,7 +325,7 @@ def _init_cupy_upfirdn_1d_modules():
         }
     }
 
-    __global__ void _upfirdn_1d_double(const int n,
+    __global__ void _cupy_upfirdn_1d_double(const int n,
             const double * __restrict__ x,
             const double * __restrict__ h_trans_flip,
             const int up,
@@ -277,6 +342,7 @@ def _init_cupy_upfirdn_1d_modules():
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
+
             if (x_conv_idx < 0) {
                 h_idx -= x_conv_idx;
                 x_conv_idx = 0;
@@ -293,17 +359,91 @@ def _init_cupy_upfirdn_1d_modules():
             }
         }
     }
+
+    __global__ void _cupy_upfirdn_1d_complex_float(const int n,
+            const complex<float> * __restrict__ x,
+            const complex<float> * __restrict__ h_trans_flip,
+            const int up,
+            const int down,
+            const int x_shape_a,
+            const int h_per_phase,
+            const int padded_len,
+            complex<float> * __restrict__ out) {
+
+        const int t { blockIdx.x * blockDim.x + threadIdx.x };
+        const int stride { blockDim.x * gridDim.x };
+
+        for (int tid = t; tid < n; tid += stride) {
+            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
+            int h_idx { (tid * down) % up * h_per_phase };
+            int x_conv_idx { x_idx - h_per_phase + 1 };
+
+            if (x_conv_idx < 0) {
+                h_idx -= x_conv_idx;
+                x_conv_idx = 0;
+            }
+
+            complex<float> temp {};
+
+            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
+                if (x_c < x_shape_a && x_c >= 0) {
+                    temp += x[x_c] * h_trans_flip[h_idx];
+                }
+                out[tid] = temp;
+                h_idx += 1;
+            }
+        }
+    }
+
+    __global__ void _cupy_upfirdn_1d_complex_double(const int n,
+            const complex<double> * __restrict__ x,
+            const complex<double> * __restrict__ h_trans_flip,
+            const int up,
+            const int down,
+            const int x_shape_a,
+            const int h_per_phase,
+            const int padded_len,
+            complex<double> * __restrict__ out) {
+
+        const int t { blockIdx.x * blockDim.x + threadIdx.x };
+        const int stride { blockDim.x * gridDim.x };
+
+        for (int tid = t; tid < n; tid += stride) {
+            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
+            int h_idx { (tid * down) % up * h_per_phase };
+            int x_conv_idx { x_idx - h_per_phase + 1 };
+
+            if (x_conv_idx < 0) {
+                h_idx -= x_conv_idx;
+                x_conv_idx = 0;
+            }
+
+            //complex<double> temp {};
+
+            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
+                if (x_c < x_shape_a && x_c >= 0) {
+                    out[tid] += x[x_c] * h_trans_flip[h_idx];
+                }
+                //out[tid] = temp;
+                h_idx += 1;
+            }
+        }
+    }
     } // extern "C"
-    """
+    '''
 
     module = cp.RawModule(code=loaded_from_source, options=("-std=c++11",))
-    _cached_modules['_upfirdn_1d_float'] = \
-        module.get_function("_upfirdn_1d_float")
-    _cached_modules['_upfirdn_1d_double'] = \
-        module.get_function("_upfirdn_1d_double")
+    _cached_modules['_cupy_upfirdn_1d_float'] = \
+        module.get_function("_cupy_upfirdn_1d_float")
+    _cached_modules['_cupy_upfirdn_1d_double'] = \
+        module.get_function("_cupy_upfirdn_1d_double")
+    _cached_modules['_cupy_upfirdn_1d_complex_float'] = \
+        module.get_function("_cupy_upfirdn_1d_complex_float")
+    _cached_modules['_cupy_upfirdn_1d_complex_double'] = \
+        module.get_function("_cupy_upfirdn_1d_complex_double")
 
 @cp.prof.TimeRangeDecorator()
-def _cupy_init(x, h_trans_flip, up, down, axis, stream, out):
+def _cupy_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, stream, out):
 
     x_shape_a = x.shape[axis]
     h_per_phase = len(h_trans_flip) // up
@@ -316,18 +456,15 @@ def _cupy_init(x, h_trans_flip, up, down, axis, stream, out):
                 )
     else:
         _init_cupy_upfirdn_1d_modules()
-        upfirdn_1d_float = _cached_modules['_upfirdn_1d_float'] # 21 registers - 9-14us
-        upfirdn_1d_double = _cached_modules['_upfirdn_1d_double'] # 30 registers - 30us
-        
-        d = cp.cuda.device.Device(0)
-        numSM = d.attributes["MultiProcessorCount"]
-        threadsperblock = 256
-        blockspergrid = numSM * 20
+        cupy_upfirdn_1d_float = _cached_modules['_cupy_upfirdn_1d_float'] # 21 registers - 9-12us
+        cupy_upfirdn_1d_double = _cached_modules['_cupy_upfirdn_1d_double'] # 30 registers - 14us
+        cupy_upfirdn_1d_complex_float = _cached_modules['_cupy_upfirdn_1d_complex_float'] # 32 registers - 22us
+        cupy_upfirdn_1d_complex_double = _cached_modules['_cupy_upfirdn_1d_complex_double'] # 52 registers - 50-70us
 
         stream.use()
 
         if out.dtype == cp.float32:
-            upfirdn_1d_float(
+            cupy_upfirdn_1d_float(
                 (blockspergrid,),
                 (threadsperblock,),
                 (out.shape[0], 
@@ -341,7 +478,37 @@ def _cupy_init(x, h_trans_flip, up, down, axis, stream, out):
                 out,),
             )
         elif out.dtype == cp.float64:
-            upfirdn_1d_double(
+            cupy_upfirdn_1d_double(
+                (blockspergrid,),
+                (threadsperblock,),
+                (out.shape[0], 
+                x,
+                h_trans_flip, 
+                up, 
+                down,
+                x_shape_a, 
+                h_per_phase, 
+                padded_len,
+                out,),
+            )
+
+        elif out.dtype == cp.complex64:
+            cupy_upfirdn_1d_complex_float(
+                (blockspergrid,),
+                (threadsperblock,),
+                (out.shape[0], 
+                x,
+                h_trans_flip, 
+                up, 
+                down,
+                x_shape_a, 
+                h_per_phase, 
+                padded_len,
+                out,),
+            )
+
+        elif out.dtype == cp.complex128:
+            cupy_upfirdn_1d_complex_double(
                 (blockspergrid,),
                 (threadsperblock,),
                 (out.shape[0], 
@@ -386,9 +553,23 @@ class _UpFIRDn(object):
                        dtype=self._output_type, order="C")
         axis = axis % x.ndim
 
+        if out.ndim > 1:
+            blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
+            blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
+            blockspergrid = (blockspergrid_x, blockspergrid_y)
+            threadsperblock = (16, 16)
+
+        else:
+            device_id = cp.cuda.Device()
+            numSM = device_id.attributes["MultiProcessorCount"]
+            blockspergrid = numSM * 20
+            threadsperblock = 64
+
         if use_numba:
             nb_stream = stream_cupy_to_numba(cp_stream)
             _numba_init(
+                blockspergrid,
+                threadsperblock,
                 cp.asarray(x, self._output_type),
                 self._h_trans_flip,
                 self._up,
@@ -399,6 +580,8 @@ class _UpFIRDn(object):
             )
         else:
             _cupy_init(
+                blockspergrid,
+                threadsperblock,
                 cp.asarray(x, self._output_type),
                 self._h_trans_flip,
                 self._up,
