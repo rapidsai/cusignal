@@ -12,9 +12,37 @@
 # limitations under the License.
 
 import cupy as cp
+from cupy import prof
 from numba import cuda, float32, float64, int32, int64, void
 import math
 
+# Use until functionality provided in Numba 0.49/0.50 available
+def stream_cupy_to_numba(cp_stream):
+    '''
+    Notes: 
+        1. The lifetime of the returned Numba stream should be as long as the CuPy one,
+           which handles the deallocation of the underlying CUDA stream.
+        2. The returned Numba stream is assumed to live in the same CUDA context as the
+           CuPy one.
+        3. The implementation here closely follows that of cuda.stream() in Numba.
+    '''
+    from ctypes import c_void_p
+    import weakref
+
+    # get the pointer to actual CUDA stream
+    raw_str = cp_stream.ptr
+
+    # gather necessary ingredients
+    ctx = cuda.devices.get_context()
+    handle = c_void_p(raw_str)
+    # finalizer = cuda.cudadrv.driver._stream_finalizer(ctx.deallocations, handle) # Let CuPy destory stream, not Numba
+
+    # create a Numba stream  
+    nb_stream = cuda.cudadrv.driver.Stream(weakref.proxy(ctx), handle, finalizer=None)
+
+    return nb_stream
+
+@cp.prof.TimeRangeDecorator()
 def _pad_h(h, up):
     """Store coefficients in a transposed, flipped arrangement.
     For example, suppose upRate is 3, and the
@@ -30,7 +58,7 @@ def _pad_h(h, up):
     h_full = h_full.reshape(-1, up).T[:, ::-1].ravel()
     return h_full
 
-
+@cp.prof.TimeRangeDecorator()
 def _output_len(len_h, in_len, up, down):
     in_len_copy = in_len + (len_h + (-len_h % up)) // up - 1
     nt = in_len_copy * up
@@ -132,7 +160,8 @@ def _numba_upfirdn_1d_double(x, h_trans_flip, up, down, x_shape_a, h_per_phase, 
                 out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
-def _numba_init(x, h_trans_flip, up, down, axis, out):
+@cp.prof.TimeRangeDecorator()
+def _numba_init(x, h_trans_flip, up, down, axis, stream, out):
 
     x_shape_a = x.shape[axis]
     h_per_phase = len(h_trans_flip) // up
@@ -144,7 +173,7 @@ def _numba_init(x, h_trans_flip, up, down, axis, out):
         blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
         blockspergrid = (blockspergrid_x, blockspergrid_y)
 
-        _numba_upfirdn_2d[blockspergrid, threadsperblock](
+        _numba_upfirdn_2d[blockspergrid, threadsperblock, stream](
             x,
             h_trans_flip,
             up,
@@ -162,7 +191,7 @@ def _numba_init(x, h_trans_flip, up, down, axis, out):
         blockspergrid = numSM * 20
 
         if out.dtype == cp.float32:
-            _numba_upfirdn_1d_float[blockspergrid, threadsperblock](
+            _numba_upfirdn_1d_float[blockspergrid, threadsperblock, stream](
                 x,
                 h_trans_flip,
                 up,
@@ -174,7 +203,7 @@ def _numba_init(x, h_trans_flip, up, down, axis, out):
             )
 
         elif out.dtype == cp.float64:
-            _numba_upfirdn_1d_double[blockspergrid, threadsperblock](
+            _numba_upfirdn_1d_double[blockspergrid, threadsperblock, stream](
                 x,
                 h_trans_flip,
                 up,
@@ -185,12 +214,14 @@ def _numba_init(x, h_trans_flip, up, down, axis, out):
                 out
             )
 
-
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 _cached_modules = dict()
 
+@cp.prof.TimeRangeDecorator()
 def _init_cupy_upfirdn_1d_modules():
+    if '_upfirdn_1d_double' in _cached_modules:
+        return
 
     loaded_from_source = r"""
 
@@ -271,7 +302,8 @@ def _init_cupy_upfirdn_1d_modules():
     _cached_modules['_upfirdn_1d_double'] = \
         module.get_function("_upfirdn_1d_double")
 
-def _cupy_init(x, h_trans_flip, up, down, axis, out):
+@cp.prof.TimeRangeDecorator()
+def _cupy_init(x, h_trans_flip, up, down, axis, stream, out):
 
     x_shape_a = x.shape[axis]
     h_per_phase = len(h_trans_flip) // up
@@ -291,6 +323,8 @@ def _cupy_init(x, h_trans_flip, up, down, axis, out):
         numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = 256
         blockspergrid = numSM * 20
+
+        stream.use()
 
         if out.dtype == cp.float32:
             upfirdn_1d_float(
@@ -322,6 +356,7 @@ def _cupy_init(x, h_trans_flip, up, down, axis, out):
             )
 
 class _UpFIRDn(object):
+    @cp.prof.TimeRangeDecorator()
     def __init__(self, h, x_dtype, up, down):
         """Helper for resampling"""
         h = cp.asarray(h)
@@ -338,8 +373,10 @@ class _UpFIRDn(object):
         self._h_trans_flip = _pad_h(h, self._up)
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
 
-    def apply_filter(self, x, axis=-1, use_numba=True):
+    @cp.prof.TimeRangeDecorator()
+    def apply_filter(self, x, axis=-1, cp_stream=cp.cuda.stream.Stream(null=True), use_numba=True):
         """Apply the prepared filter to the specified axis of a nD signal x"""
+
         output_len = _output_len(
             len(self._h_trans_flip), x.shape[axis], self._up, self._down
         )
@@ -350,12 +387,14 @@ class _UpFIRDn(object):
         axis = axis % x.ndim
 
         if use_numba:
+            nb_stream = stream_cupy_to_numba(cp_stream)
             _numba_init(
                 cp.asarray(x, self._output_type),
                 self._h_trans_flip,
                 self._up,
                 self._down,
                 axis,
+                nb_stream,
                 out,
             )
         else:
@@ -365,12 +404,14 @@ class _UpFIRDn(object):
                 self._up,
                 self._down,
                 axis,
+                cp_stream,
                 out,
             )
 
         return out
 
-def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
+@cp.prof.TimeRangeDecorator()
+def upfirdn(h, x, up=1, down=1, axis=-1, cp_stream=cp.cuda.stream.Stream(null=True), use_numba=True):
     """Upsample, FIR filter, and downsample
     Parameters
     ----------
@@ -450,4 +491,4 @@ def upfirdn(h, x, up=1, down=1, axis=-1, use_numba=True):
     x = cp.asarray(x)
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using np.apply_along_axis
-    return ufd.apply_filter(x, axis, use_numba=use_numba)
+    return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
