@@ -13,7 +13,7 @@
 
 import cupy as cp
 from cupy import prof
-from numba import cuda, float32, float64, complex64, complex128, int32, int64, void
+from numba import cuda, float32, float64, complex64, complex128, int64, void
 import math
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -112,18 +112,15 @@ def _numba_upfirdn_2d(x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, p
 
             h_idx += 1
 
-# @cuda.jit(fastmath=True) # 38 registers - 157-190us
-# @cuda.jit(void(float32[:], float32[:], int32, int32, int32, int32, int32, float32[:],), fastmath=True) # 48 registers - 160-190us
-@cuda.jit(void(float32[:], float32[:], int64, int64, int64, int64, int64, float32[:],), fastmath=True) # 38 registers - 157-190us
-def _numba_upfirdn_1d_float(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
+def _numba_upfirdn_1d(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
 
     X = cuda.grid(1)
     strideX = cuda.gridsize(1)
 
-    for i in range(X, out.shape[0], strideX):
+    for i in range(X, cp.int32(out.shape[0]), strideX):
 
-        x_idx = ((i * down) // up) % padded_len
-        h_idx = (i * down) % up * h_per_phase
+        x_idx = cp.int32(cp.int32(cp.int32(i * down) // up) % padded_len)
+        h_idx = cp.int32(cp.int32(cp.int32(i * down) % up) * h_per_phase)
 
         x_conv_idx = x_idx - h_per_phase + 1
         if x_conv_idx < 0:
@@ -136,75 +133,24 @@ def _numba_upfirdn_1d_float(x, h_trans_flip, up, down, x_shape_a, h_per_phase, p
                 out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
-# @cuda.jit(fastmath=True) # 38 registers - 157-190us
-# @cuda.jit(void(float64[:], float64[:], int32, int32, int32, int32, int32, float64[:],), fastmath=True) # 48 registers - 160-190us
-@cuda.jit(void(float64[:], float64[:], int64, int64, int64, int64, int64, float64[:],), fastmath=True) # 39 registers - 157-190us
-def _numba_upfirdn_1d_double(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
+def sig_1d(ty):
+    return void(
+        ty[:],  # x
+        ty[:],  # h_trans_flip
+        int64,  # up
+        int64,  # down
+        int64,  # x_shape_a
+        int64,  # h_per_phase
+        int64,  # padded_len
+        ty[:]   # out
+    )
 
-    X = cuda.grid(1)
-    strideX = cuda.gridsize(1)
-
-    for i in range(X, out.shape[0], strideX):
-
-        x_idx = ((i * down) // up) % padded_len
-        h_idx = (i * down) % up * h_per_phase
-
-        x_conv_idx = x_idx - h_per_phase + 1
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
-                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
-            h_idx += 1
-
-@cuda.jit(fastmath=True) # 38 registers - 157-170us
-# @cuda.jit(void(complex64[:], complex64[:], int64, int64, int64, int64, int64, complex64[:],), fastmath=True) # 39 registers - 157-190us
-def _numba_upfirdn_1d_complex64(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
-
-    X = cuda.grid(1)
-    strideX = cuda.gridsize(1)
-
-    for i in range(X, out.shape[0], strideX):
-
-        x_idx = ((i * down) // up) % padded_len
-        h_idx = (i * down) % up * h_per_phase
-
-        x_conv_idx = x_idx - h_per_phase + 1
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
-                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
-            h_idx += 1
-
-@cuda.jit(fastmath=True) # 38 registers - 266us
-# @cuda.jit(void(complex128[:], complex128[:], int64, int64, int64, int64, int64, complex128[:],), fastmath=True) # 39 registers - 157-190us
-def _numba_upfirdn_1d_complex128(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
-
-    X = cuda.grid(1)
-    strideX = cuda.gridsize(1)
-
-    for i in range(X, out.shape[0], strideX):
-
-        x_idx = ((i * down) // up) % padded_len
-        h_idx = (i * down) % up * h_per_phase
-
-        x_conv_idx = x_idx - h_per_phase + 1
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
-                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
-            h_idx += 1
+_numba_upfirdn_1d_kernels = {
+    'float32': cuda.jit(sig_1d(float32), fastmath=True)(_numba_upfirdn_1d),
+    'float64': cuda.jit(sig_1d(float64), fastmath=True)(_numba_upfirdn_1d),
+    'complex64': cuda.jit(sig_1d(complex64), fastmath=True)(_numba_upfirdn_1d),
+    'complex128': cuda.jit(sig_1d(complex128), fastmath=True)(_numba_upfirdn_1d),
+}
 
 @cp.prof.TimeRangeDecorator()
 def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, stream, out):
@@ -227,54 +173,17 @@ def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis,
             out
         )
     else:
-
-        if out.dtype == cp.float32:
-            _numba_upfirdn_1d_float[blockspergrid, threadsperblock, stream](
-                x,
-                h_trans_flip,
-                up,
-                down,
-                x_shape_a,
-                h_per_phase,
-                padded_len,
-                out
-            )
-
-        elif out.dtype == cp.float64:
-            _numba_upfirdn_1d_double[blockspergrid, threadsperblock, stream](
-                x,
-                h_trans_flip,
-                up,
-                down,
-                x_shape_a,
-                h_per_phase,
-                padded_len,
-                out
-            )
-
-        elif out.dtype == cp.complex64:
-            _numba_upfirdn_1d_complex64[blockspergrid, threadsperblock, stream](
-                x,
-                h_trans_flip,
-                up,
-                down,
-                x_shape_a,
-                h_per_phase,
-                padded_len,
-                out
-            )
-
-        elif out.dtype == cp.complex128:
-            _numba_upfirdn_1d_complex128[blockspergrid, threadsperblock, stream](
-                x,
-                h_trans_flip,
-                up,
-                down,
-                x_shape_a,
-                h_per_phase,
-                padded_len,
-                out
-            )
+        kernel = _numba_upfirdn_1d_kernels[out.dtype.name]
+        kernel[blockspergrid, threadsperblock, stream](
+            x,
+            h_trans_flip,
+            up,
+            down,
+            x_shape_a,
+            h_per_phase,
+            padded_len,
+            out
+        )
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
@@ -304,6 +213,7 @@ def _init_cupy_upfirdn_1d_modules():
         const int stride { blockDim.x * gridDim.x };
 
         for (int tid = t; tid < n; tid += stride) {
+            
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
