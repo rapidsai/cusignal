@@ -328,13 +328,13 @@ def _init_cupy_upfirdn_1d_modules():
                 x_conv_idx = 0;
             }
 
-            //complex<double> temp {};
+            complex<double> temp {};
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
                 if (x_c < x_shape_a && x_c >= 0) {
-                    out[tid] += x[x_c] * h_trans_flip[h_idx];
+                    temp += x[x_c] * h_trans_flip[h_idx];
                 }
-                //out[tid] = temp;
+                out[tid] = temp;
                 h_idx += 1;
             }
         }
