@@ -191,7 +191,7 @@ _cached_modules = dict()
 
 @cp.prof.TimeRangeDecorator()
 def _init_cupy_upfirdn_1d_modules():
-    if '_upfirdn_1d_double' in _cached_modules:
+    if '_cupy_upfirdn_1d_double' in _cached_modules:
         return
 
     loaded_from_source = r'''
