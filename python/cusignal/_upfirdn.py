@@ -369,7 +369,7 @@ def _cupy_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, 
         cupy_upfirdn_1d_float = _cached_modules['_cupy_upfirdn_1d_float'] # 21 registers - 9-12us
         cupy_upfirdn_1d_double = _cached_modules['_cupy_upfirdn_1d_double'] # 30 registers - 14us
         cupy_upfirdn_1d_complex_float = _cached_modules['_cupy_upfirdn_1d_complex_float'] # 32 registers - 22us
-        cupy_upfirdn_1d_complex_double = _cached_modules['_cupy_upfirdn_1d_complex_double'] # 52 registers - 50-70us
+        cupy_upfirdn_1d_complex_double = _cached_modules['_cupy_upfirdn_1d_complex_double'] # 34 registers - 50-70us
 
         stream.use()
 
@@ -473,7 +473,7 @@ class _UpFIRDn(object):
             device_id = cp.cuda.Device()
             numSM = device_id.attributes["MultiProcessorCount"]
             blockspergrid = numSM * 20
-            threadsperblock = 64
+            threadsperblock = 512
 
         if use_numba:
             nb_stream = stream_cupy_to_numba(cp_stream)
