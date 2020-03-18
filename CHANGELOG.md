@@ -15,6 +15,7 @@
 - PR #28 - Add use_numba documentation in upfirdn and resample_poly; remove int support
 - PR #29 - Fix typos in README
 - PR #30 - Add Apache 2.0 license header to acoustics.py
+- PR #31 - Adding stream support and additional data types to upfirdn
 
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
