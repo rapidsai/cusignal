@@ -11,10 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from numba import cuda
 
 import numpy as np
 import cupy as cp
+from .fir_filter_design import firwin
 
 FULL = 2
 SAME = 1
@@ -344,3 +346,58 @@ def _convolve2d(in1, in2, flip, mode='full', boundary='fill', fillvalue=0):
         fill)
 
     return out
+
+
+def _design_resample_poly(up, down, window):
+    """
+    Design a prototype FIR low-pass filter using the window method
+    for use in polyphase rational resampling.
+
+    Parameters
+    ----------
+    up : int
+        The upsampling factor.
+    down : int
+        The downsampling factor.
+    window : string or tuple
+        Desired window to use to design the low-pass filter.
+        See below for details.
+
+    Returns
+    -------
+    h : array
+        The computed FIR filter coefficients.
+
+    See Also
+    --------
+    resample_poly : Resample up or down using the polyphase method.
+
+    Notes
+    -----
+    The argument `window` specifies the FIR low-pass filter design.
+    The functions `scipy.signal.get_window` and `scipy.signal.firwin`
+    are called to generate the appropriate filter coefficients.
+
+    The returned array of coefficients will always be of data type
+    `complex128` to maintain precision. For use in lower-precision
+    filter operations, this array should be converted to the desired
+    data type before providing it to `cusignal.resample_poly`.
+
+    """
+
+    # Determine our up and down factors
+    # Use a rational approimation to save computation time on really long
+    # signals
+    g_ = math.gcd(up, down)
+    up //= g_
+    down //= g_
+
+    # Design a linear-phase low-pass FIR filter
+    max_rate = max(up, down)
+    f_c = 1.0 / max_rate  # cutoff of FIR filter (rel. to Nyquist)
+
+    # reasonable cutoff for our sinc-like function
+    half_len = 10 * max_rate
+
+    h = firwin(2 * half_len + 1, f_c, window=window)
+    return h
