@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import prof
 from numba import cuda, float32, float64, complex64, complex128, int64, void
 import math
 
