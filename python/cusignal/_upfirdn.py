@@ -586,3 +586,4 @@ def upfirdn(h, x, up=1, down=1, axis=-1, cp_stream=cp.cuda.stream.Stream(null=Tr
 	ufd = _UpFIRDn(h, x.dtype, up, down)
 	# This is equivalent to (but faster than) using np.apply_along_axis
 	return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
+

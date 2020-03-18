@@ -1398,6 +1398,9 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
     window : string, tuple, or array_like, optional
         Desired window to use to design the low-pass filter, or the FIR filter
         coefficients to employ. See below for details.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is True.
 
     Returns
     -------
