@@ -31,10 +31,6 @@ requirements:
     - numba>=0.46.0
     - cupy>=6.2.0
 
-test:
-  commands:
-    - python -c "import cusignal"
-
 about:
   home: http://rapids.ai/
   license: Apache-2.0
