@@ -52,7 +52,6 @@ from . import _signaltools
 from .windows import get_window
 from .fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from ._upfirdn import upfirdn, _output_len
-from .fir_filter_design import firwin
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
@@ -1483,15 +1482,10 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
-        h = window
+        h = up * window
     else:
-        # Design a linear-phase low-pass FIR filter
-        max_rate = max(up, down)
-        f_c = 1.0 / max_rate  # cutoff of FIR filter (rel. to Nyquist)
-        # reasonable cutoff for our sinc-like function
-        half_len = 10 * max_rate
-        h = firwin(2 * half_len + 1, f_c, window=window)
-    h *= up
+        half_len = 10 * max(up, down)
+        h = up * _signaltools._design_resample_poly(up, down, window)
 
     # Zero-pad our filter to put the output samples at the center
     n_pre_pad = down - half_len % down
@@ -1503,7 +1497,10 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
         < n_out + n_pre_remove
     ):
         n_post_pad += 1
-    h = cp.concatenate((zeros(n_pre_pad), h, zeros(n_post_pad)))
+
+    h = cp.concatenate(
+        (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+    )
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
