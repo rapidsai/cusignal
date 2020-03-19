@@ -11,20 +11,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-from numba import cuda, float32, float64, complex64, complex128, int64, void
 import math
+from string import Template
+
+import cupy as cp
+from numba import complex64, complex128, cuda, float32, float64, int64, void
+
 
 # Use until functionality provided in Numba 0.49/0.50 available
 def stream_cupy_to_numba(cp_stream):
-    '''
-    Notes: 
-        1. The lifetime of the returned Numba stream should be as long as the CuPy one,
-           which handles the deallocation of the underlying CUDA stream.
-        2. The returned Numba stream is assumed to live in the same CUDA context as the
-           CuPy one.
-        3. The implementation here closely follows that of cuda.stream() in Numba.
-    '''
+    """
+    Notes:
+        1. The lifetime of the returned Numba stream should be as
+           long as the CuPy one, which handles the deallocation
+           of the underlying CUDA stream.
+        2. The returned Numba stream is assumed to live in the same
+           CUDA context as the CuPy one.
+        3. The implementation here closely follows that of
+           cuda.stream() in Numba.
+    """
     from ctypes import c_void_p
     import weakref
 
@@ -34,12 +39,14 @@ def stream_cupy_to_numba(cp_stream):
     # gather necessary ingredients
     ctx = cuda.devices.get_context()
     handle = c_void_p(raw_str)
-    # finalizer = cuda.cudadrv.driver._stream_finalizer(ctx.deallocations, handle) # Let CuPy destory stream, not Numba
 
-    # create a Numba stream  
-    nb_stream = cuda.cudadrv.driver.Stream(weakref.proxy(ctx), handle, finalizer=None)
+    # create a Numba stream
+    nb_stream = cuda.cudadrv.driver.Stream(
+        weakref.proxy(ctx), handle, finalizer=None
+    )
 
     return nb_stream
+
 
 def _pad_h(h, up):
     """Store coefficients in a transposed, flipped arrangement.
@@ -56,6 +63,7 @@ def _pad_h(h, up):
     h_full = h_full.reshape(-1, up).T[:, ::-1].ravel()
     return h_full
 
+
 def _output_len(len_h, in_len, up, down):
     in_len_copy = in_len + (len_h + (-len_h % up)) // up - 1
     nt = in_len_copy * up
@@ -64,9 +72,29 @@ def _output_len(len_h, in_len, up, down):
         need += 1
     return need
 
+
+# type_key[0] - Python type (string)
+# type_key[1] - Python type
+# type_key[2] - C/C++ type (string)
+# type_key[3] - Complex number header for CuPy kernels (string)
+type_key = [
+    ("float32", float32, "float", ""),
+    ("float64", float64, "double", ""),
+    ("complex64", complex64, "complex<float>", "#include <cupy/complex.cuh>"),
+    (
+        "complex128",
+        complex128,
+        "complex<double>",
+        "#include <cupy/complex.cuh>",
+    ),
+]
+
+
 # Custom Numba kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
-def _numba_upfirdn_2d(x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out):
+def _numba_upfirdn_2d(
+    x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
+):
 
     num_loops = 1
     for i in range(out.ndim - 1):
@@ -97,18 +125,16 @@ def _numba_upfirdn_2d(x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, p
             if x_conv_idx < x_shape_a and x_conv_idx >= 0:
                 # if multi-dimenstional array
                 if num_loops > 1:  # a loop is an additional column
-                    out[i, y_idx] += (
-                        x[i, x_conv_idx] * h_trans_flip[h_idx]
-                    )
+                    out[i, y_idx] += x[i, x_conv_idx] * h_trans_flip[h_idx]
                 else:
-                    out[i, y_idx] += (
-                        x[x_conv_idx, y_idx] *
-                        h_trans_flip[h_idx]
-                    )
+                    out[i, y_idx] += x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
 
             h_idx += 1
 
-def _numba_upfirdn_1d(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out):
+
+def _numba_upfirdn_1d(
+    x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out
+):
 
     X = cuda.grid(1)
     strideX = cuda.gridsize(1)
@@ -129,6 +155,7 @@ def _numba_upfirdn_1d(x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_
                 out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
             h_idx += 1
 
+
 def sig_1d(ty):
     return void(
         ty[:],  # x
@@ -138,21 +165,38 @@ def sig_1d(ty):
         int64,  # x_shape_a
         int64,  # h_per_phase
         int64,  # padded_len
-        ty[:]   # out
+        ty[:],  # out
     )
 
-_numba_upfirdn_1d_kernels = {
-    'float32': cuda.jit(sig_1d(float32), fastmath=True)(_numba_upfirdn_1d),
-    'float64': cuda.jit(sig_1d(float64), fastmath=True)(_numba_upfirdn_1d),
-    'complex64': cuda.jit(sig_1d(complex64), fastmath=True)(_numba_upfirdn_1d),
-    'complex128': cuda.jit(sig_1d(complex128), fastmath=True)(_numba_upfirdn_1d),
-}
 
-def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, stream, out):
+_numba_upfirdn_1d_kernels = {}
 
-    x_shape_a = x.shape[axis]
-    h_per_phase = len(h_trans_flip) // up
-    padded_len = x.shape[axis] + h_per_phase - 1
+# float32, float64, complex64, complex128
+for i in range(len(type_key)):
+    _numba_upfirdn_1d_kernels.update(
+        [
+            (
+                type_key[i][0],
+                cuda.jit(sig_1d(type_key[i][1]), fastmath=True)(
+                    _numba_upfirdn_1d
+                ),
+            )
+        ]
+    )
+
+
+def _numba_init(
+    blockspergrid,
+    threadsperblock,
+    x,
+    h_trans_flip,
+    up,
+    down,
+    axis,
+    precomputed,
+    stream,
+    out,
+):
 
     if out.ndim > 1:
 
@@ -162,10 +206,10 @@ def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis,
             up,
             down,
             axis,
-            x_shape_a,
-            h_per_phase,
-            padded_len,
-            out
+            precomputed[0],  # x_shape_a
+            precomputed[1],  # h_per_phase
+            precomputed[2],  # padded_len
+            out,
         )
     else:
         kernel = _numba_upfirdn_1d_kernels[out.dtype.name]
@@ -174,70 +218,29 @@ def _numba_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis,
             h_trans_flip,
             up,
             down,
-            x_shape_a,
-            h_per_phase,
-            padded_len,
-            out
+            precomputed[0],  # x_shape_a
+            precomputed[1],  # h_per_phase
+            precomputed[2],  # padded_len
+            out,
         )
+
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
-_cached_modules = dict()
+loaded_from_source = Template(
+    """
+$header
 
-def _init_cupy_upfirdn_1d_modules():
-    if '_cupy_upfirdn_1d_double' in _cached_modules:
-        return
-
-    loaded_from_source = r'''
-
-    #include <cupy/complex.cuh>
-
-    extern "C" {
-    __global__ void _cupy_upfirdn_1d_float(const int n,
-            const float * __restrict__ x,
-            const float * __restrict__ h_trans_flip,
+extern "C" {
+    __global__ void _cupy_upfirdn_1d(const int n,
+            const ${datatype} * __restrict__ x,
+            const ${datatype} * __restrict__ h_trans_flip,
             const int up,
             const int down,
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
-            float * __restrict__ out) {
-
-        const int t { blockIdx.x * blockDim.x + threadIdx.x };
-        const int stride { blockDim.x * gridDim.x };
-
-        for (int tid = t; tid < n; tid += stride) {
-            
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-
-            if (x_conv_idx < 0) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            float temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if (x_c < x_shape_a && x_c >= 0) {
-                    temp += x[x_c] * h_trans_flip[h_idx];
-                }
-                out[tid] = temp;
-                h_idx += 1;
-            }
-        }
-    }
-
-    __global__ void _cupy_upfirdn_1d_double(const int n,
-            const double * __restrict__ x,
-            const double * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            double * __restrict__ out) {
+            ${datatype} * __restrict__ out) {
 
         const int t { blockIdx.x * blockDim.x + threadIdx.x };
         const int stride { blockDim.x * gridDim.x };
@@ -252,7 +255,7 @@ def _init_cupy_upfirdn_1d_modules():
                 x_conv_idx = 0;
             }
 
-            double temp {};
+            ${datatype} temp {};
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
                 if (x_c < x_shape_a && x_c >= 0) {
@@ -263,173 +266,61 @@ def _init_cupy_upfirdn_1d_modules():
             }
         }
     }
+}
+"""
+)
 
-    __global__ void _cupy_upfirdn_1d_complex_float(const int n,
-            const complex<float> * __restrict__ x,
-            const complex<float> * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            complex<float> * __restrict__ out) {
+_cupy_upfirdn_1d_kernels = {}
 
-        const int t { blockIdx.x * blockDim.x + threadIdx.x };
-        const int stride { blockDim.x * gridDim.x };
+# float, double, complex<float>, complex<double>
+for i in range(len(type_key)):
+    t = loaded_from_source.substitute(
+        datatype=type_key[i][2], header=type_key[i][3]
+    )
+    module2 = cp.RawModule(code=t, options=("-std=c++11", "-use_fast_math",))
+    _cupy_upfirdn_1d_kernels.update(
+        [(type_key[i][0], module2.get_function("_cupy_upfirdn_1d"))]
+    )
 
-        for (int tid = t; tid < n; tid += stride) {
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-            int x_conv_idx { x_idx - h_per_phase + 1 };
 
-            if (x_conv_idx < 0) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            complex<float> temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if (x_c < x_shape_a && x_c >= 0) {
-                    temp += x[x_c] * h_trans_flip[h_idx];
-                }
-                out[tid] = temp;
-                h_idx += 1;
-            }
-        }
-    }
-
-    __global__ void _cupy_upfirdn_1d_complex_double(const int n,
-            const complex<double> * __restrict__ x,
-            const complex<double> * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            complex<double> * __restrict__ out) {
-
-        const int t { blockIdx.x * blockDim.x + threadIdx.x };
-        const int stride { blockDim.x * gridDim.x };
-
-        for (int tid = t; tid < n; tid += stride) {
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-
-            if (x_conv_idx < 0) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            complex<double> temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if (x_c < x_shape_a && x_c >= 0) {
-                    temp += x[x_c] * h_trans_flip[h_idx];
-                }
-                out[tid] = temp;
-                h_idx += 1;
-            }
-        }
-    }
-    } // extern "C"
-    '''
-
-    module = cp.RawModule(code=loaded_from_source, options=("-std=c++11", "-use_fast_math",))
-
-    _cached_modules['_cupy_upfirdn_1d_float'] = \
-        module.get_function("_cupy_upfirdn_1d_float")
-    _cached_modules['_cupy_upfirdn_1d_double'] = \
-        module.get_function("_cupy_upfirdn_1d_double")
-    _cached_modules['_cupy_upfirdn_1d_complex_float'] = \
-        module.get_function("_cupy_upfirdn_1d_complex_float")
-    _cached_modules['_cupy_upfirdn_1d_complex_double'] = \
-        module.get_function("_cupy_upfirdn_1d_complex_double")
-
-def _cupy_init(blockspergrid, threadsperblock, x, h_trans_flip, up, down, axis, stream, out):
-
-    x_shape_a = x.shape[axis]
-    h_per_phase = len(h_trans_flip) // up
-    padded_len = x.shape[axis] + h_per_phase - 1
+def _cupy_init(
+    blockspergrid,
+    threadsperblock,
+    x,
+    h_trans_flip,
+    up,
+    down,
+    axis,
+    precomputed,
+    stream,
+    out,
+):
 
     if out.ndim > 1:
         raise NotImplementedError(
             "Raw CuPy Kernel is not implemented \
             for ndim > 1"
-                )
+        )
     else:
-        _init_cupy_upfirdn_1d_modules()
-        cupy_upfirdn_1d_float = _cached_modules['_cupy_upfirdn_1d_float'] # 21 registers - 9-12us
-        cupy_upfirdn_1d_double = _cached_modules['_cupy_upfirdn_1d_double'] # 30 registers - 14us
-        cupy_upfirdn_1d_complex_float = _cached_modules['_cupy_upfirdn_1d_complex_float'] # 32 registers - 22us
-        cupy_upfirdn_1d_complex_double = _cached_modules['_cupy_upfirdn_1d_complex_double'] # 34 registers - 50-70us
-
         stream.use()
 
-        if out.dtype == cp.float32:
-            cupy_upfirdn_1d_float(
-                (blockspergrid,),
-                (threadsperblock,),
-                (out.shape[0], 
+        kernel = _cupy_upfirdn_1d_kernels[out.dtype.name]
+        kernel(
+            (blockspergrid,),
+            (threadsperblock,),
+            (
+                out.shape[0],
                 x,
-                h_trans_flip, 
-                up, 
+                h_trans_flip,
+                up,
                 down,
-                x_shape_a, 
-                h_per_phase, 
-                padded_len,
-                out,),
-            )
-        elif out.dtype == cp.float64:
-            cupy_upfirdn_1d_double(
-                (blockspergrid,),
-                (threadsperblock,),
-                (out.shape[0], 
-                x,
-                h_trans_flip, 
-                up, 
-                down,
-                x_shape_a, 
-                h_per_phase, 
-                padded_len,
-                out,),
-            )
+                precomputed[0],  # x_shape_a
+                precomputed[1],  # h_per_phase
+                precomputed[2],  # padded_len
+                out,
+            ),
+        )
 
-        elif out.dtype == cp.complex64:
-            cupy_upfirdn_1d_complex_float(
-                (blockspergrid,),
-                (threadsperblock,),
-                (out.shape[0], 
-                x,
-                h_trans_flip, 
-                up, 
-                down,
-                x_shape_a, 
-                h_per_phase, 
-                padded_len,
-                out,),
-            )
-
-        elif out.dtype == cp.complex128:
-            cupy_upfirdn_1d_complex_double(
-                (blockspergrid,),
-                (threadsperblock,),
-                (out.shape[0], 
-                x,
-                h_trans_flip, 
-                up, 
-                down,
-                x_shape_a, 
-                h_per_phase, 
-                padded_len,
-                out,),
-            )
-            
-        else:
-            raise NotImplementedError(
-                "Out type - %r not supported" % (out.dtype)
-                )
 
 class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
@@ -448,7 +339,13 @@ class _UpFIRDn(object):
         self._h_trans_flip = _pad_h(h, self._up)
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
 
-    def apply_filter(self, x, axis=-1, cp_stream=cp.cuda.stream.Stream(null=True), use_numba=True):
+    def apply_filter(
+        self,
+        x,
+        axis=-1,
+        cp_stream=cp.cuda.stream.Stream(null=True),
+        use_numba=True,
+    ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
 
         output_len = _output_len(
@@ -456,15 +353,24 @@ class _UpFIRDn(object):
         )
         output_shape = cp.asarray(x.shape)
         output_shape[axis] = output_len
-        out = cp.zeros(cp.asnumpy(output_shape),
-                       dtype=self._output_type, order="C")
+        out = cp.zeros(
+            cp.asnumpy(output_shape), dtype=self._output_type, order="C"
+        )
         axis = axis % x.ndim
 
+        # Precompute variables on CPU
+        precomputed = []
+        precomputed.append(x.shape[axis])  # x_shape_a
+        precomputed.append(len(self._h_trans_flip) // self._up)  # h_per_phase
+        precomputed.append(
+            x.shape[axis] + (len(self._h_trans_flip) // self._up) - 1
+        )  # padded_len
+
         if out.ndim > 1:
+            threadsperblock = (16, 16)
             blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
             blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
             blockspergrid = (blockspergrid_x, blockspergrid_y)
-            threadsperblock = (16, 16)
 
         else:
             device_id = cp.cuda.Device()
@@ -482,6 +388,7 @@ class _UpFIRDn(object):
                 self._up,
                 self._down,
                 axis,
+                precomputed,
                 nb_stream,
                 out,
             )
@@ -494,13 +401,23 @@ class _UpFIRDn(object):
                 self._up,
                 self._down,
                 axis,
+                precomputed,
                 cp_stream,
                 out,
             )
 
         return out
 
-def upfirdn(h, x, up=1, down=1, axis=-1, cp_stream=cp.cuda.stream.Stream(null=True), use_numba=True):
+
+def upfirdn(
+    h,
+    x,
+    up=1,
+    down=1,
+    axis=-1,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    use_numba=True,
+):
     """Upsample, FIR filter, and downsample
     Parameters
     ----------
@@ -518,7 +435,7 @@ def upfirdn(h, x, up=1, down=1, axis=-1, cp_stream=cp.cuda.stream.Stream(null=Tr
         this axis. Default is -1.
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to 
+        of multiple non-default streams allow multiple kernels to
         run concurrently. Default is cp.cuda.stream.Stream(null=True)
         or default stream.
     use_numba : bool, optional
@@ -586,4 +503,3 @@ def upfirdn(h, x, up=1, down=1, axis=-1, cp_stream=cp.cuda.stream.Stream(null=Tr
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using np.apply_along_axis
     return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
-
