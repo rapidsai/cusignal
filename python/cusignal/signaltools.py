@@ -1484,6 +1484,7 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
         half_len = (window.size - 1) // 2
         h = up * window
     else:
+        half_len = 10 * max(up, down)
         h = up * _signaltools._design_resample_poly(up, down, window)
 
     # Zero-pad our filter to put the output samples at the center
