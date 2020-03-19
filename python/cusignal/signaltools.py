@@ -1482,11 +1482,9 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=True):
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
-        h = window
+        h = up * window
     else:
-        h = _signaltools._design_resample_poly(up, down, window)
-
-    h *= up
+        h = up * _signaltools._design_resample_poly(up, down, window)
 
     # Zero-pad our filter to put the output samples at the center
     n_pre_pad = down - half_len % down
