@@ -265,11 +265,16 @@ def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba):
 
     if use_numba:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(ndim, str(dtype))]
-        return kernel[grid, block, nb_stream]
+        kernel = _numba_kernel_cache[(ndim, dtype.name)]
+        if kernel:
+            return kernel[grid, block, nb_stream]
     else:
-        kernel = _cupy_kernel_cache[(ndim, str(dtype))]
-        return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+        kernel = _cupy_kernel_cache[(ndim, dtype.name)]
+        if kernel:
+            return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+
+    raise NotImplementedError(
+        "No kernel found for ndim {}, datatype {}".format(ndim, dtype.name))
 
 
 def _populate_kernel_cache():
