@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import math
+import warnings
 from string import Template
 
 import cupy as cp
@@ -260,8 +261,10 @@ def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba):
         raise NotImplementedError(
             "upfirdn() requires ndim <= 2")
     elif ndim > 1 and not use_numba:
-        raise NotImplementedError(
-            "CuPy backend is only implemented for ndim == 1")
+        warnings.warn(
+            "CuPy backend is only implemented for ndim == 1 \
+                Running with Numba CUDA backend", UserWarning)
+        use_numba = True
 
     if use_numba:
         nb_stream = stream_cupy_to_numba(stream)
@@ -322,7 +325,7 @@ class _UpFIRDn(object):
         x,
         axis=-1,
         cp_stream=cp.cuda.stream.Stream(null=True),
-        use_numba=True,
+        use_numba=False,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
 
@@ -380,7 +383,7 @@ def upfirdn(
     down=1,
     axis=-1,
     cp_stream=cp.cuda.stream.Stream(null=True),
-    use_numba=True,
+    use_numba=False,
 ):
     """Upsample, FIR filter, and downsample
     Parameters
@@ -404,7 +407,7 @@ def upfirdn(
         or default stream.
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is True.
+        can yield performance gains over Numba. Default is False.
     Returns
     -------
     y : ndarray

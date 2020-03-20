@@ -23,6 +23,7 @@ resample_down = 3
 cx = np.linspace(start, stop, num_samps, endpoint=False) 
 cy = np.cos(-cx**2/6.0)
 
+%%timeit
 cf = signal.resample_poly(cy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
 This code executes on 2x Xeon E5-2600 in 2.36 sec.
@@ -41,9 +42,10 @@ resample_down = 3
 gx = cp.linspace(start, stop, num_samps, endpoint=False) 
 gy = cp.cos(-gx**2/6.0)
 
+%%timeit
 gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 258 ms.
+This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Signal
 
 **cuSignal with Data Generated on the CPU with Mapped, Pinned (zero-copy) Memory**
 ```python
@@ -62,12 +64,14 @@ cx = np.linspace(start, stop, num_samps, endpoint=False)
 cy = np.cos(-cx**2/6.0)
 
 # Create shared memory between CPU and GPU and load with CPU signal (cy)
-gpu_signal = cusignal.get_shared_mem(num_samps, dtype=np.complex128)
-gpu_signal[:] = cy
+gpu_signal = cusignal.get_shared_mem(num_samps, dtype=np.float64)
 
+%%time
+# Move data to GPU/CPU shared buffer and run polyphase resampler
+gpu_signal[:] = cy
 gf = cusignal.resample_poly(gpu_signal, resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 154 ms.
+This code executes on an NVIDIA V100 in 174 ms.
 
 **cuSignal with Data Generated on the CPU and Copied to GPU [AVOID THIS FOR ONLINE SIGNAL PROCESSING]**
 ```python
@@ -85,9 +89,10 @@ resample_down = 3
 cx = np.linspace(start, stop, num_samps, endpoint=False) 
 cy = np.cos(-cx**2/6.0)
 
+%%time
 gf = cusignal.resample_poly(cp.asarray(cy), resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 728 ms.
+This code executes on an NVIDIA V100 in 637 ms.
 
 ## Dependencies
 * NVIDIA GPU (Maxwell or Newer GeForce/Tesla/Quadro)
