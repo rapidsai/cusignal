@@ -18,6 +18,7 @@
 - PR #31 - Adding stream support and additional data types to upfirdn
 - PR #32 - Enable filter coefficient reuse across multiple calls to resample_poly and performance bug fixes
 - PR #34 - Implement CuPy kernels as module object and templating
+- PR #35 - Make upfirdn's kernel caching more generic; support 2D
 
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
