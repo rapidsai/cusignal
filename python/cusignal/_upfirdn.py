@@ -16,6 +16,18 @@ from string import Template
 
 import cupy as cp
 from numba import complex64, complex128, cuda, float32, float64, int64, void
+from numba.types.scalars import Complex
+
+_numba_kernel_cache = {}
+_cupy_kernel_cache = {}
+
+# Numba type supported and corresponding C type
+_SUPPORTED_TYPES = {
+    float32: "float",
+    float64: "double",
+    complex64: "complex<float>",
+    complex128: "complex<double>"
+}
 
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -73,23 +85,6 @@ def _output_len(len_h, in_len, up, down):
     return need
 
 
-# type_key[0] - Python type (string)
-# type_key[1] - Python type
-# type_key[2] - C/C++ type (string)
-# type_key[3] - Complex number header for CuPy kernels (string)
-type_key = [
-    ("float32", float32, "float", ""),
-    ("float64", float64, "double", ""),
-    ("complex64", complex64, "complex<float>", "#include <cupy/complex.cuh>"),
-    (
-        "complex128",
-        complex128,
-        "complex<double>",
-        "#include <cupy/complex.cuh>",
-    ),
-]
-
-
 # Custom Numba kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 def _numba_upfirdn_2d(
@@ -133,7 +128,7 @@ def _numba_upfirdn_2d(
 
 
 def _numba_upfirdn_1d(
-    x, h_trans_flip, up, down, x_shape_a, h_per_phase, padded_len, out
+    x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
 ):
 
     X = cuda.grid(1)
@@ -156,73 +151,22 @@ def _numba_upfirdn_1d(
             h_idx += 1
 
 
-def sig_1d(ty):
+def _numba_upfirdn_signature(ty, ndim):
+    if ndim == 1:
+        arr_ty = ty[:]
+    elif ndim == 2:
+        arr_ty = ty[:, :]
     return void(
-        ty[:],  # x
-        ty[:],  # h_trans_flip
-        int64,  # up
-        int64,  # down
-        int64,  # x_shape_a
-        int64,  # h_per_phase
-        int64,  # padded_len
-        ty[:],  # out
+        arr_ty,  # x
+        ty[:],   # h_trans_flip
+        int64,   # up
+        int64,   # down
+        int64,   # axis
+        int64,   # x_shape_a
+        int64,   # h_per_phase
+        int64,   # padded_len
+        arr_ty,  # out
     )
-
-
-_numba_upfirdn_1d_kernels = {}
-
-# float32, float64, complex64, complex128
-for i in range(len(type_key)):
-    _numba_upfirdn_1d_kernels.update(
-        [
-            (
-                type_key[i][0],
-                cuda.jit(sig_1d(type_key[i][1]), fastmath=True)(
-                    _numba_upfirdn_1d
-                ),
-            )
-        ]
-    )
-
-
-def _numba_init(
-    blockspergrid,
-    threadsperblock,
-    x,
-    h_trans_flip,
-    up,
-    down,
-    axis,
-    precomputed,
-    stream,
-    out,
-):
-
-    if out.ndim > 1:
-
-        _numba_upfirdn_2d[blockspergrid, threadsperblock, stream](
-            x,
-            h_trans_flip,
-            up,
-            down,
-            axis,
-            precomputed[0],  # x_shape_a
-            precomputed[1],  # h_per_phase
-            precomputed[2],  # padded_len
-            out,
-        )
-    else:
-        kernel = _numba_upfirdn_1d_kernels[out.dtype.name]
-        kernel[blockspergrid, threadsperblock, stream](
-            x,
-            h_trans_flip,
-            up,
-            down,
-            precomputed[0],  # x_shape_a
-            precomputed[1],  # h_per_phase
-            precomputed[2],  # padded_len
-            out,
-        )
 
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
@@ -270,56 +214,90 @@ extern "C" {
 """
 )
 
-_cupy_upfirdn_1d_kernels = {}
 
-# float, double, complex<float>, complex<double>
-for i in range(len(type_key)):
-    t = loaded_from_source.substitute(
-        datatype=type_key[i][2], header=type_key[i][3]
-    )
-    module2 = cp.RawModule(code=t, options=("-std=c++11", "-use_fast_math",))
-    _cupy_upfirdn_1d_kernels.update(
-        [(type_key[i][0], module2.get_function("_cupy_upfirdn_1d"))]
-    )
+class _cupy_upfirdn_wrapper(object):
+
+    def __init__(self, grid, block, stream, kernel):
+        if isinstance(grid, int):
+            grid = (grid, )
+        if isinstance(block, int):
+            block = (block, )
+
+        self.grid = grid
+        self.block = block
+        self.stream = stream
+        self.kernel = kernel
+
+    def __call__(self,
+                 x,
+                 h_trans_flip,
+                 up,
+                 down,
+                 axis,
+                 x_shape_a,
+                 h_per_phase,
+                 padded_len,
+                 out):
+
+        kernel_args = (
+            out.shape[0],
+            x,
+            h_trans_flip,
+            up,
+            down,
+            x_shape_a,
+            h_per_phase,
+            padded_len,
+            out
+        )
+
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args)
 
 
-def _cupy_init(
-    blockspergrid,
-    threadsperblock,
-    x,
-    h_trans_flip,
-    up,
-    down,
-    axis,
-    precomputed,
-    stream,
-    out,
-):
-
-    if out.ndim > 1:
+def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba):
+    if ndim > 2:
         raise NotImplementedError(
-            "Raw CuPy Kernel is not implemented \
-            for ndim > 1"
-        )
-    else:
-        stream.use()
+            "upfirdn() requires ndim <= 2")
+    elif ndim > 1 and not use_numba:
+        raise NotImplementedError(
+            "CuPy backend is only implemented for ndim == 1")
 
-        kernel = _cupy_upfirdn_1d_kernels[out.dtype.name]
-        kernel(
-            (blockspergrid,),
-            (threadsperblock,),
-            (
-                out.shape[0],
-                x,
-                h_trans_flip,
-                up,
-                down,
-                precomputed[0],  # x_shape_a
-                precomputed[1],  # h_per_phase
-                precomputed[2],  # padded_len
-                out,
-            ),
-        )
+    if use_numba:
+        nb_stream = stream_cupy_to_numba(stream)
+        kernel = _numba_kernel_cache[(ndim, dtype.name)]
+        if kernel:
+            return kernel[grid, block, nb_stream]
+    else:
+        kernel = _cupy_kernel_cache[(ndim, dtype.name)]
+        if kernel:
+            return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+
+    raise NotImplementedError(
+        "No kernel found for ndim {}, datatype {}".format(ndim, dtype.name))
+
+
+def _populate_kernel_cache():
+    for numba_type, c_type in _SUPPORTED_TYPES.items():
+        # JIT compile the numba kernels, both 1d and 2d
+        sig_1d = _numba_upfirdn_signature(numba_type, 1)
+        _numba_kernel_cache[(1, str(numba_type))] = \
+            cuda.jit(sig_1d, fastmath=True)(_numba_upfirdn_1d)
+
+        sig_2d = _numba_upfirdn_signature(numba_type, 2)
+        _numba_kernel_cache[(2, str(numba_type))] = \
+            cuda.jit(sig_2d, fastmath=True)(_numba_upfirdn_2d)
+
+        # Instantiate the cupy kernel for this type and compile
+        if isinstance(numba_type, Complex):
+            header = "#include <cupy/complex.cuh>"
+        else:
+            header = ""
+        src = loaded_from_source.substitute(datatype=c_type, header=header)
+        module2 = cp.RawModule(code=src,
+                               options=("-std=c++11", "-use_fast_math"))
+        _cupy_kernel_cache[(1, str(numba_type))] = \
+            module2.get_function("_cupy_upfirdn_1d")
 
 
 class _UpFIRDn(object):
@@ -359,12 +337,9 @@ class _UpFIRDn(object):
         axis = axis % x.ndim
 
         # Precompute variables on CPU
-        precomputed = []
-        precomputed.append(x.shape[axis])  # x_shape_a
-        precomputed.append(len(self._h_trans_flip) // self._up)  # h_per_phase
-        precomputed.append(
-            x.shape[axis] + (len(self._h_trans_flip) // self._up) - 1
-        )  # padded_len
+        x_shape_a = x.shape[axis]
+        h_per_phase = len(self._h_trans_flip) // self._up
+        padded_len = x.shape[axis] + (len(self._h_trans_flip) // self._up) - 1
 
         if out.ndim > 1:
             threadsperblock = (16, 16)
@@ -378,33 +353,22 @@ class _UpFIRDn(object):
             blockspergrid = numSM * 20
             threadsperblock = 512
 
-        if use_numba:
-            nb_stream = stream_cupy_to_numba(cp_stream)
-            _numba_init(
-                blockspergrid,
-                threadsperblock,
-                cp.asarray(x, self._output_type),
-                self._h_trans_flip,
-                self._up,
-                self._down,
-                axis,
-                precomputed,
-                nb_stream,
-                out,
-            )
-        else:
-            _cupy_init(
-                blockspergrid,
-                threadsperblock,
-                cp.asarray(x, self._output_type),
-                self._h_trans_flip,
-                self._up,
-                self._down,
-                axis,
-                precomputed,
-                cp_stream,
-                out,
-            )
+        kernel = _get_backend_kernel(out.ndim,
+                                     out.dtype,
+                                     blockspergrid,
+                                     threadsperblock,
+                                     cp_stream,
+                                     use_numba)
+
+        kernel(cp.asarray(x, self._output_type),
+               self._h_trans_flip,
+               self._up,
+               self._down,
+               axis,
+               x_shape_a,
+               h_per_phase,
+               padded_len,
+               out)
 
         return out
 
@@ -503,3 +467,10 @@ def upfirdn(
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using np.apply_along_axis
     return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
+
+
+# Code executed at import time goes here to make it clear to future
+# maintainers the side-effects of importing this module.
+
+# 1) Load and compile upfirdn kernels for each supported data type.
+_populate_kernel_cache()
