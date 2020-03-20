@@ -1374,7 +1374,8 @@ def resample(x, num, t=None, axis=0, window=None):
         return y, new_t
 
 
-def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), use_numba=False):
+def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0),
+                  use_numba=False):
     """
     Resample `x` along the given axis using polyphase filtering.
 
