@@ -24,6 +24,7 @@
 ## Bug Fixes
 - PR #4 - Direct method convolution isn't supported in CuPy, defaulting to NumPy [Examine in future for performance]
 - PR #33 - Removes the conda test phase
+- PR #37 - Fix docs to include all cuSignal modules
 
 # cuSignal 0.1 (04 Nov 2019)
 
