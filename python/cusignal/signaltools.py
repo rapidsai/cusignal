@@ -1310,11 +1310,11 @@ def resample(x, num, t=None, axis=0, window=None, fft=False):
     >>> plt.show()
     """
     X = asarray(x)
+    Nx = X.shape[axis]
 
     if not fft:
-        X = fftpack.fft(x, axis=axis)
+        X = fftpack.fft(X, axis=axis)
 
-    Nx = x.shape[axis]
     if window is not None:
         if callable(window):
             W = window(fftpack.fftfreq(Nx))
