@@ -1249,7 +1249,7 @@ def resample(x, num, t=None, axis=0, window=None, fft=False):
         Specifies the window applied to the signal in the Fourier
         domain.  See below for details.
     fft : bool, optional
-        If True, consider `x` as an FFT. Default is False.
+        If True, consider frequency domain `x`. Default is False.
 
     Returns
     -------
