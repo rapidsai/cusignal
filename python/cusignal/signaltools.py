@@ -1226,7 +1226,7 @@ def cmplx_sort(p):
     return take(p, indx, 0), indx
 
 
-def resample(x, num, t=None, axis=0, window=None):
+def resample(x, num, t=None, axis=0, window=None, fft=False):
     """
     Resample `x` to `num` samples using Fourier method along the given axis.
 
@@ -1248,6 +1248,8 @@ def resample(x, num, t=None, axis=0, window=None):
     window : array_like, callable, string, float, or tuple, optional
         Specifies the window applied to the signal in the Fourier
         domain.  See below for details.
+    fft : bool, optional
+        If True, consider `x` as an FFT. Default is False. 
 
     Returns
     -------
@@ -1307,8 +1309,11 @@ def resample(x, num, t=None, axis=0, window=None):
     >>> plt.legend(['data', 'resampled'], loc='best')
     >>> plt.show()
     """
-    x = asarray(x)
-    X = fftpack.fft(x, axis=axis)
+    X = asarray(x)
+    
+    if not fft:
+        X = fftpack.fft(x, axis=axis)
+    
     Nx = x.shape[axis]
     if window is not None:
         if callable(window):
@@ -1638,7 +1643,6 @@ def detrend(data, axis=-1, type='linear', bp=0, overwrite_data=False):
         olddims = vals[:axis] + [0] + vals[axis:]
         ret = transpose(ret, tuple(cp.asnumpy(olddims)))
         return ret
-
 
 def freq_shift(x, freq, fs):
     """
