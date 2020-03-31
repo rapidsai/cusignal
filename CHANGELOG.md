@@ -1,4 +1,4 @@
-# cuSignal 0.13 (Date TBD)
+# cuSignal 0.13 (21 Mar 2020)
 
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
