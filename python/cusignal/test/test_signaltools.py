@@ -39,14 +39,16 @@ def test_resample(num_samps, resample_num_samps, window):
 @pytest.mark.parametrize('up', [2, 3, 7])
 @pytest.mark.parametrize('down', [1, 2, 9])
 @pytest.mark.parametrize('window', [('kaiser', 0.5)])
-def test_resample_poly(num_samps, up, down, window):
+@pytest.mark.parametrize('use_numba', [True, False])
+def test_resample_poly(num_samps, up, down, window, use_numba):
     cpu_time = np.linspace(0, 10, num_samps, endpoint=False)
     cpu_sig = np.cos(-cpu_time ** 2 / 6.0)
     gpu_sig = cp.asarray(cpu_sig)
 
     cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
     gpu_resample = cp.asnumpy(
-        cusignal.resample_poly(gpu_sig, up, down, window=window)
+        cusignal.resample_poly(gpu_sig, up, down, window=window,
+                               use_numba=use_numba)
     )
 
     assert array_equal(cpu_resample, gpu_resample)

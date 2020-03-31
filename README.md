@@ -1,8 +1,10 @@
 # <div align="left"><img src="https://rapids.ai/assets/images/rapids_logo.png" width="90px"/>&nbsp;cuSignal</div>
 
+[![Build Status](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/badge/icon)](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/)
+
 The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://github.com/cupy/cupy), [Numba](https://github.com/numba/numba), and the RAPIDS ecosystem for GPU accelerated signal processing. In some cases, cuSignal is a direct port of [Scipy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) to leverage GPU compute resources via CuPy but also contains Numba CUDA kernels for additional speedups for selected functions. cuSignal achieves its best gains on large signals and compute intensive functions but stresses online processing with zero-copy memory (pinned, mapped) between CPU and GPU.
 
-**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the `master` branch.
+**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the latest branch.
 
 ## Quick Start
 cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
@@ -21,6 +23,7 @@ resample_down = 3
 cx = np.linspace(start, stop, num_samps, endpoint=False) 
 cy = np.cos(-cx**2/6.0)
 
+%%timeit
 cf = signal.resample_poly(cy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
 This code executes on 2x Xeon E5-2600 in 2.36 sec.
@@ -39,9 +42,10 @@ resample_down = 3
 gx = cp.linspace(start, stop, num_samps, endpoint=False) 
 gy = cp.cos(-gx**2/6.0)
 
+%%timeit
 gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 258 ms.
+This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Signal
 
 **cuSignal with Data Generated on the CPU with Mapped, Pinned (zero-copy) Memory**
 ```python
@@ -60,12 +64,14 @@ cx = np.linspace(start, stop, num_samps, endpoint=False)
 cy = np.cos(-cx**2/6.0)
 
 # Create shared memory between CPU and GPU and load with CPU signal (cy)
-gpu_signal = cusignal.get_shared_mem(num_samps, dtype=np.complex128)
-gpu_signal[:] = cy
+gpu_signal = cusignal.get_shared_mem(num_samps, dtype=np.float64)
 
+%%time
+# Move data to GPU/CPU shared buffer and run polyphase resampler
+gpu_signal[:] = cy
 gf = cusignal.resample_poly(gpu_signal, resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 154 ms.
+This code executes on an NVIDIA V100 in 174 ms.
 
 **cuSignal with Data Generated on the CPU and Copied to GPU [AVOID THIS FOR ONLINE SIGNAL PROCESSING]**
 ```python
@@ -83,30 +89,39 @@ resample_down = 3
 cx = np.linspace(start, stop, num_samps, endpoint=False) 
 cy = np.cos(-cx**2/6.0)
 
+%%time
 gf = cusignal.resample_poly(cp.asarray(cy), resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA P100 in 728 ms.
+This code executes on an NVIDIA V100 in 637 ms.
 
 ## Dependencies
-* NVIDIA GPU (Maxwell or Newer)
+* NVIDIA GPU (Maxwell or Newer GeForce/Tesla/Quadro)
 * CUDA Divers
 * Anaconda/Miniconda (3.7 version)
 * CuPy >= 6.2.0
-* Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
+* Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). 
 
-## Install cuSignal, Linux OS, GeForce/Tesla/Quadro GPU
+NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
+
+NOTE: if used with other portions of RAPIDS, then GPU needs to be Pascal or later, and CUDA 10+
+
+## Install cuSignal, Linux OS with Anaconda
+
+`conda install -c rapidsai-nightly -c conda-forge cusignal`
+
+## Install cuSignal, Linux OS
 
 1. Clone the repository
 
     ```bash
-    # Set the localtion to cuSignal in an environment variable CUSIGNAL_HOME
+    # Set the location to cuSignal in an environment variable CUSIGNAL_HOME
     export CUSIGNAL_HOME=$(pwd)/cusignal
 
     # Download the cuSignal repo
     git clone https://github.com/rapidsai/cusignal.git $CUSIGNAL_HOME
     ```
 
-2. Download and install [Andaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
+2. Download and install [Anaconda](https://www.anaconda.com/distribution/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) then create the cuSignal conda environment:
 
     **Base environment (core dependencies for cuSignal)**
 
@@ -211,7 +226,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
     pytest -v -k <function name>  # for more select testing
     ```
 
-## Install cuSignal, Windows OS, GeForce/Tesla/Quadro GPU
+## Install cuSignal on Windows OS
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
