@@ -58,7 +58,7 @@ class BenchResample:
 @pytest.mark.parametrize("up", [2, 3, 7])
 @pytest.mark.parametrize("down", [1, 2, 9])
 @pytest.mark.parametrize("window", [("kaiser", 0.5)])
-class TestResamplePoly:
+class BenchResamplePoly:
     # This function will ensure the GPU version is getting the correct answer
     def cpu_version(self, cpu_sig, up, down, window):
         return signal.resample_poly(cpu_sig, up, down, window=window)
@@ -98,7 +98,7 @@ class TestResamplePoly:
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("f1", [0.1, 0.15])
 @pytest.mark.parametrize("f2", [0.2, 0.4])
-class TestFirWin:
+class BenchFirWin:
     def cpu_version(self, num_samps, f1, f2):
         return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
@@ -121,7 +121,7 @@ class TestFirWin:
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("num_taps", [128, 2 ** 8, 2 ** 15])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-class TestCorrelate:
+class BenchCorrelate:
     def cpu_version(self, cpu_sig, num_taps, mode):
         return signal.correlate(cpu_sig, num_taps, mode=mode)
 
@@ -148,7 +148,7 @@ class TestCorrelate:
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("num_taps", [128, 2 ** 8, 2 ** 15])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-class TestConvolve:
+class BenchConvolve:
     def cpu_version(self, cpu_sig, cpu_win, mode):
         return signal.convolve(cpu_sig, cpu_win, mode=mode)
 
@@ -176,7 +176,7 @@ class TestConvolve:
 @pytest.mark.benchmark(group="FFTConvolve")
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-class TestFFTConvolve:
+class BenchFFTConvolve:
     def cpu_version(self, cpu_sig, mode):
         return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
 
@@ -197,7 +197,7 @@ class TestFFTConvolve:
 
 @pytest.mark.benchmark(group="Wiener")
 @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
-class TestWiener:
+class BenchWiener:
     def cpu_version(self, cpu_sig):
         return signal.wiener(cpu_sig)
 
@@ -216,7 +216,7 @@ class TestWiener:
 
 @pytest.mark.benchmark(group="Hilbert")
 @pytest.mark.parametrize("num_samps", [2 ** 15])
-class TestHilbert:
+class BenchHilbert:
     def cpu_version(self, cpu_sig):
         return signal.hilbert(cpu_sig)
 
@@ -235,7 +235,7 @@ class TestHilbert:
 
 @pytest.mark.benchmark(group="Hilbert2")
 @pytest.mark.parametrize("num_samps", [2 ** 8])
-class TestHilbert2:
+class BenchHilbert2:
     def cpu_version(self, cpu_sig):
         return signal.hilbert2(cpu_sig)
 
@@ -257,7 +257,7 @@ class TestHilbert2:
 @pytest.mark.parametrize("num_taps", [5, 100])
 @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-class TestConvolve2d:
+class BenchConvolve2d:
     def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
         return signal.convolve2d(
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
@@ -293,7 +293,7 @@ class TestConvolve2d:
 @pytest.mark.parametrize("num_taps", [5, 100])
 @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-class TestCorrelate2d:
+class BenchCorrelate2d:
     def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
         return signal.correlate2d(
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
