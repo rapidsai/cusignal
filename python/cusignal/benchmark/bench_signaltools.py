@@ -180,11 +180,15 @@ class BenchFFTConvolve:
     def cpu_version(self, cpu_sig, mode):
         return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
 
-    def bench_fftconvolve_cpu(self, rand_sig_setup, benchmark, num_samps, mode):
+    def bench_fftconvolve_cpu(
+        self, rand_sig_setup, benchmark, num_samps, mode
+    ):
         cpu_sig, _ = rand_sig_setup(num_samps)
         benchmark(self.cpu_version, cpu_sig, mode)
 
-    def bench_fftconvolve_gpu(self, rand_sig_setup, benchmark, num_samps, mode):
+    def bench_fftconvolve_gpu(
+        self, rand_sig_setup, benchmark, num_samps, mode
+    ):
 
         cpu_sig, gpu_sig = rand_sig_setup(num_samps)
         output = benchmark(
