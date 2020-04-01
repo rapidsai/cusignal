@@ -3,6 +3,7 @@
 ## New Features
 
 ## Improvements
+- PR #40 - Ability to specify time/freq domain for resample.
 
 ## Bug Fixes
 
