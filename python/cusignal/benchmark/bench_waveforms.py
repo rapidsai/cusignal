@@ -94,10 +94,10 @@ class BenchUnitImpulse:
     def cpu_version(self, num_samps, idx):
         return signal.unit_impulse(num_samps, idx)
 
-    def bench_unit_impulse_cpu(self, time_data_gen, benchmark, num_samps, idx):
+    def bench_unit_impulse_cpu(self, benchmark, num_samps, idx):
         benchmark(self.cpu_version, num_samps, idx)
 
-    def bench_unit_impulse_gpu(self, time_data_gen, benchmark, num_samps, idx):
+    def bench_unit_impulse_gpu(self, benchmark, num_samps, idx):
 
         output = benchmark(cusignal.unit_impulse, num_samps, idx)
 
