@@ -13,7 +13,6 @@
 
 import pytest
 import cupy as cp
-import numpy as np
 from cusignal.test.utils import array_equal
 import cusignal
 from scipy import signal
@@ -47,7 +46,7 @@ class BenchCSD:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="CSD_complex")
+@pytest.mark.benchmark(group="CSDComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("nperseg", [1024, 2048])
@@ -102,7 +101,7 @@ class BenchPeriodogram:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="Periodogram_complex")
+@pytest.mark.benchmark(group="PeriodogramComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("window", ["flattop", "nuttall"])
@@ -155,7 +154,7 @@ class BenchWelch:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="Welch_complex")
+@pytest.mark.benchmark(group="WelchComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("nperseg", [1024, 2048])
@@ -207,7 +206,7 @@ class BenchSpectrogram:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="Spectrogram_complex")
+@pytest.mark.benchmark(group="SpectrogramComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("nperseg", [1024, 2048])
@@ -263,7 +262,7 @@ class BenchCoherence:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="Coherence_complex")
+@pytest.mark.benchmark(group="CoherenceComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("nperseg", [1024, 2048])
@@ -313,7 +312,7 @@ class BenchSTFT:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="STFT_complex")
+@pytest.mark.benchmark(group="STFTComplex")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("fs", [1.0, 1e6])
 @pytest.mark.parametrize("nperseg", [1024, 2048])

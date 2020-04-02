@@ -21,9 +21,9 @@ import numpy as np
 # Generate data for resample and resample_poly
 @pytest.fixture(scope="session")
 def resample_data_gen():
-    def _generate(arg):
+    def _generate(start, stop, num_samps, endpoint):
 
-        cpu_time = np.linspace(0, 10, endpoint=False)
+        cpu_time = np.linspace(start, stop, num_samps, endpoint)
         cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -35,9 +35,9 @@ def resample_data_gen():
 # Generate array with random data
 @pytest.fixture(scope="session")
 def rand_data_gen():
-    def _generate(arg):
+    def _generate(num_samps):
 
-        cpu_sig = np.random.rand(arg)
+        cpu_sig = np.random.rand(num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
         return cpu_sig, gpu_sig
@@ -48,9 +48,9 @@ def rand_data_gen():
 # Generate array with random complex data
 @pytest.fixture(scope="session")
 def rand_complex_data_gen():
-    def _generate(arg):
+    def _generate(num_samps):
 
-        cpu_sig = np.random.rand(arg) + 1j * np.random.rand(arg)
+        cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
         return cpu_sig, gpu_sig
@@ -61,9 +61,22 @@ def rand_complex_data_gen():
 # Generate 2d array with random data
 @pytest.fixture(scope="session")
 def rand_2d_data_gen():
-    def _generate(arg):
+    def _generate(num_samps):
 
-        cpu_sig = np.random.rand(arg, arg)
+        cpu_sig = np.random.rand(num_samps, num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
+
+        return cpu_sig, gpu_sig
+
+    return _generate
+
+
+# Generate time array with linspace
+@pytest.fixture(scope="session")
+def time_data_gen():
+    def _generate(start, stop, num_samps):
+
+        cpu_sig = np.linspace(start, stop, num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
         return cpu_sig, gpu_sig

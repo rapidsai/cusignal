@@ -38,7 +38,7 @@ class BenchResample:
         resample_num_samps,
         window,
     ):
-        cpu_sig, _ = resample_data_gen(num_samps)
+        cpu_sig, _ = resample_data_gen(0, 10, num_samps, endpoint=False)
         benchmark(
             self.cpu_version, cpu_sig, resample_num_samps, window,
         )
@@ -52,7 +52,7 @@ class BenchResample:
         window,
     ):
 
-        cpu_sig, gpu_sig = resample_data_gen(num_samps)
+        cpu_sig, gpu_sig = resample_data_gen(0, 10, num_samps, endpoint=False)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
@@ -63,7 +63,7 @@ class BenchResample:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="Resample_Poly")
+@pytest.mark.benchmark(group="ResamplePoly")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("up", [2, 3, 7])
 @pytest.mark.parametrize("down", [1, 2, 9])
@@ -76,7 +76,7 @@ class BenchResamplePoly:
     def bench_resample_poly_cpu(
         self, resample_data_gen, benchmark, num_samps, up, down, window
     ):
-        cpu_sig, _ = resample_data_gen(num_samps)
+        cpu_sig, _ = resample_data_gen(0, 10, num_samps, endpoint=False)
         benchmark(
             self.cpu_version, cpu_sig, up, down, window,
         )
@@ -95,7 +95,7 @@ class BenchResamplePoly:
         use_numba,
     ):
 
-        cpu_sig, gpu_sig = resample_data_gen(num_samps)
+        cpu_sig, gpu_sig = resample_data_gen(0, 10, num_samps, endpoint=False)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
