@@ -6,7 +6,7 @@
 - PR #40 - Ability to specify time/freq domain for resample.
 
 ## Bug Fixes
-
+- PR #44 - Fix issues in pytests 
 
 # cuSignal 0.13 (Date TBD)
 

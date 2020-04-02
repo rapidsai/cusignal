@@ -11,31 +11,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import cupy as cp
-from cusignal.test.utils import array_equal
-import cusignal
 import numpy as np
+import pytest
 from scipy import signal
 
+import cusignal
+from cusignal.test.utils import array_equal
 
-@pytest.mark.parametrize('num_samps', [2**14])
+
+@pytest.mark.parametrize("num_samps", [2 ** 14])
 def test_morlet(num_samps):
     cpu_window = signal.morlet(num_samps)
     gpu_window = cp.asnumpy(cusignal.morlet(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('a', [10, 1000])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("a", [10, 1000])
 def test_ricker(num_samps, a):
-    cpu_window = signal.morlet(num_samps)
-    gpu_window = cp.asnumpy(cusignal.morlet(num_samps))
+    cpu_window = signal.ricker(num_samps, a)
+    gpu_window = cp.asnumpy(cusignal.ricker(num_samps, a))
     assert array_equal(cpu_window, gpu_window)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('widths', [31, 127])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("widths", [31, 127])
 def test_cwt(num_samps, widths):
     cpu_signal = np.random.rand(int(num_samps))
     gpu_signal = cp.asarray(cpu_signal)
@@ -48,11 +49,11 @@ def test_cwt(num_samps, widths):
     assert array_equal(cpu_cwt, gpu_cwt)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('widths', [31, 127])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("widths", [31, 127])
 def test_cwt_complex(num_samps, widths):
-    cpu_signal = (
-        np.random.rand(int(num_samps)) + 1j * np.random.rand(int(num_samps))
+    cpu_signal = np.random.rand(int(num_samps)) + 1j * np.random.rand(
+        int(num_samps)
     )
     gpu_signal = cp.asarray(cpu_signal)
 
