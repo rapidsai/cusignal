@@ -15,10 +15,12 @@ import pytest
 import cupy as cp
 import numpy as np
 
-# This fixture will execute once and be shared will
-# all tests that need it.
+# Fixtures with (scope="session") will execute once
+# and be shared will all tests that need it.
+
+# Generate data for resample and resample_poly
 @pytest.fixture(scope="session")
-def resample_setup():
+def resample_data_gen():
     def _generate(arg):
 
         cpu_time = np.linspace(0, 10, endpoint=False)
@@ -30,8 +32,9 @@ def resample_setup():
     return _generate
 
 
+# Generate array with random data
 @pytest.fixture(scope="session")
-def rand_sig_setup():
+def rand_data_gen():
     def _generate(arg):
 
         cpu_sig = np.random.rand(arg)
@@ -42,8 +45,22 @@ def rand_sig_setup():
     return _generate
 
 
+# Generate array with random complex data
 @pytest.fixture(scope="session")
-def rand_2d_sig_setup():
+def rand_complex_data_gen():
+    def _generate(arg):
+
+        cpu_sig = np.random.rand(arg) + 1j * np.random.rand(arg)
+        gpu_sig = cp.asarray(cpu_sig)
+
+        return cpu_sig, gpu_sig
+
+    return _generate
+
+
+# Generate 2d array with random data
+@pytest.fixture(scope="session")
+def rand_2d_data_gen():
     def _generate(arg):
 
         cpu_sig = np.random.rand(arg, arg)

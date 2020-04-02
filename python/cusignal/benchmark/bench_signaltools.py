@@ -31,25 +31,35 @@ class BenchResample:
 
     # bench_ is required in function name to be searchable with -k parameter
     def bench_resample_cpu(
-        self, resample_setup, benchmark, num_samps, resample_num_samps, window
+        self,
+        resample_data_gen,
+        benchmark,
+        num_samps,
+        resample_num_samps,
+        window,
     ):
-        cpu_sig, _ = resample_setup(num_samps)
+        cpu_sig, _ = resample_data_gen(num_samps)
         benchmark(
-            self.cpu_version, cpu_sig, resample_num_samps, window=window,
+            self.cpu_version, cpu_sig, resample_num_samps, window,
         )
 
     def bench_resample_gpu(
-        self, resample_setup, benchmark, num_samps, resample_num_samps, window
+        self,
+        resample_data_gen,
+        benchmark,
+        num_samps,
+        resample_num_samps,
+        window,
     ):
 
-        cpu_sig, gpu_sig = resample_setup(num_samps)
+        cpu_sig, gpu_sig = resample_data_gen(num_samps)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
             cusignal.resample, gpu_sig, resample_num_samps, window=window
         )
 
-        key = self.cpu_version(cpu_sig, resample_num_samps, window=window)
+        key = self.cpu_version(cpu_sig, resample_num_samps, window)
         assert array_equal(cp.asnumpy(output), key)
 
 
@@ -64,21 +74,28 @@ class BenchResamplePoly:
         return signal.resample_poly(cpu_sig, up, down, window=window)
 
     def bench_resample_poly_cpu(
-        self, resample_setup, benchmark, num_samps, up, down, window
+        self, resample_data_gen, benchmark, num_samps, up, down, window
     ):
-        cpu_sig, _ = resample_setup(num_samps)
+        cpu_sig, _ = resample_data_gen(num_samps)
         benchmark(
-            self.cpu_version, cpu_sig, up, down, window=window,
+            self.cpu_version, cpu_sig, up, down, window,
         )
 
     # Add parameter 'use_numba' to GPU test. It is not needed on CPU test.
     # This reduces redundant executions and runtime
     @pytest.mark.parametrize("use_numba", [True, False])
     def bench_resample_poly_gpu(
-        self, resample_setup, benchmark, num_samps, up, down, window, use_numba
+        self,
+        resample_data_gen,
+        benchmark,
+        num_samps,
+        up,
+        down,
+        window,
+        use_numba,
     ):
 
-        cpu_sig, gpu_sig = resample_setup(num_samps)
+        cpu_sig, gpu_sig = resample_data_gen(num_samps)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
@@ -90,7 +107,7 @@ class BenchResamplePoly:
             use_numba=use_numba,
         )
 
-        key = self.cpu_version(cpu_sig, up, down, window=window)
+        key = self.cpu_version(cpu_sig, up, down, window)
         assert array_equal(cp.asnumpy(output), key)
 
 
@@ -102,12 +119,12 @@ class BenchFirWin:
     def cpu_version(self, num_samps, f1, f2):
         return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
-    def bench_firwin_cpu(self, resample_setup, benchmark, num_samps, f1, f2):
+    def bench_firwin_cpu(self, benchmark, num_samps, f1, f2):
         benchmark(
             self.cpu_version, num_samps, f1, f2,
         )
 
-    def bench_firwin_gpu(self, resample_setup, benchmark, num_samps, f1, f2):
+    def bench_firwin_gpu(self, benchmark, num_samps, f1, f2):
 
         output = benchmark(
             cusignal.firwin, num_samps, [f1, f2], pass_zero=False
@@ -126,16 +143,16 @@ class BenchCorrelate:
         return signal.correlate(cpu_sig, num_taps, mode=mode)
 
     def bench_correlate_cpu(
-        self, rand_sig_setup, benchmark, num_samps, num_taps, mode
+        self, rand_data_gen, benchmark, num_samps, num_taps, mode
     ):
-        cpu_sig, _ = rand_sig_setup(num_samps)
+        cpu_sig, _ = rand_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig, np.ones(num_taps), mode)
 
     def bench_correlate_gpu(
-        self, rand_sig_setup, benchmark, num_samps, num_taps, mode
+        self, rand_data_gen, benchmark, num_samps, num_taps, mode
     ):
 
-        cpu_sig, gpu_sig = rand_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
         output = benchmark(
             cusignal.correlate, gpu_sig, cp.ones(num_taps), mode=mode
         )
@@ -153,18 +170,18 @@ class BenchConvolve:
         return signal.convolve(cpu_sig, cpu_win, mode=mode)
 
     def bench_convolve_cpu(
-        self, rand_sig_setup, benchmark, num_samps, num_taps, mode
+        self, rand_data_gen, benchmark, num_samps, num_taps, mode
     ):
-        cpu_sig, _ = rand_sig_setup(num_samps)
+        cpu_sig, _ = rand_data_gen(num_samps)
         cpu_win = signal.windows.hann(num_taps)
 
         benchmark(self.cpu_version, cpu_sig, cpu_win, mode)
 
     def bench_convolve_gpu(
-        self, rand_sig_setup, benchmark, num_samps, num_taps, mode
+        self, rand_data_gen, benchmark, num_samps, num_taps, mode
     ):
 
-        cpu_sig, gpu_sig = rand_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
         gpu_win = cusignal.windows.hann(num_taps)
         output = benchmark(cusignal.convolve, gpu_sig, gpu_win, mode=mode)
 
@@ -180,17 +197,13 @@ class BenchFFTConvolve:
     def cpu_version(self, cpu_sig, mode):
         return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
 
-    def bench_fftconvolve_cpu(
-        self, rand_sig_setup, benchmark, num_samps, mode
-    ):
-        cpu_sig, _ = rand_sig_setup(num_samps)
+    def bench_fftconvolve_cpu(self, rand_data_gen, benchmark, num_samps, mode):
+        cpu_sig, _ = rand_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig, mode)
 
-    def bench_fftconvolve_gpu(
-        self, rand_sig_setup, benchmark, num_samps, mode
-    ):
+    def bench_fftconvolve_gpu(self, rand_data_gen, benchmark, num_samps, mode):
 
-        cpu_sig, gpu_sig = rand_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
         output = benchmark(
             cusignal.fftconvolve, gpu_sig, gpu_sig[::-1], mode=mode
         )
@@ -205,13 +218,13 @@ class BenchWiener:
     def cpu_version(self, cpu_sig):
         return signal.wiener(cpu_sig)
 
-    def bench_wiener_cpu(self, rand_sig_setup, benchmark, num_samps):
-        cpu_sig, _ = rand_sig_setup(num_samps)
+    def bench_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
+        cpu_sig, _ = rand_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig)
 
-    def bench_wiener_gpu(self, rand_sig_setup, benchmark, num_samps):
+    def bench_wiener_gpu(self, rand_data_gen, benchmark, num_samps):
 
-        cpu_sig, gpu_sig = rand_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
         output = benchmark(cusignal.wiener, gpu_sig)
 
         key = self.cpu_version(cpu_sig)
@@ -224,13 +237,13 @@ class BenchHilbert:
     def cpu_version(self, cpu_sig):
         return signal.hilbert(cpu_sig)
 
-    def bench_hilbert_cpu(self, rand_sig_setup, benchmark, num_samps):
-        cpu_sig, _ = rand_sig_setup(num_samps)
+    def bench_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
+        cpu_sig, _ = rand_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig)
 
-    def bench_hilbert_gpu(self, rand_sig_setup, benchmark, num_samps):
+    def bench_hilbert_gpu(self, rand_data_gen, benchmark, num_samps):
 
-        cpu_sig, gpu_sig = rand_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
         output = benchmark(cusignal.hilbert, gpu_sig)
 
         key = self.cpu_version(cpu_sig)
@@ -243,13 +256,13 @@ class BenchHilbert2:
     def cpu_version(self, cpu_sig):
         return signal.hilbert2(cpu_sig)
 
-    def bench_hilbert2_cpu(self, rand_2d_sig_setup, benchmark, num_samps):
-        cpu_sig, _ = rand_2d_sig_setup(num_samps)
+    def bench_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
+        cpu_sig, _ = rand_2d_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig)
 
-    def bench_hilbert2_gpu(self, rand_2d_sig_setup, benchmark, num_samps):
+    def bench_hilbert2_gpu(self, rand_2d_data_gen, benchmark, num_samps):
 
-        cpu_sig, gpu_sig = rand_2d_sig_setup(num_samps)
+        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
         output = benchmark(cusignal.hilbert2, gpu_sig)
 
         key = self.cpu_version(cpu_sig)
@@ -268,18 +281,18 @@ class BenchConvolve2d:
         )
 
     def bench_convolve2d_cpu(
-        self, rand_2d_sig_setup, benchmark, num_samps, num_taps, boundary, mode
+        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
     ):
-        cpu_sig, _ = rand_2d_sig_setup(num_samps)
-        cpu_filt, _ = rand_2d_sig_setup(num_taps)
+        cpu_sig, _ = rand_2d_data_gen(num_samps)
+        cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
     def bench_convolve2d_gpu(
-        self, rand_2d_sig_setup, benchmark, num_samps, num_taps, boundary, mode
+        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
     ):
 
-        cpu_sig, gpu_sig = rand_2d_sig_setup(num_samps)
-        cpu_filt, gpu_filt = rand_2d_sig_setup(num_taps)
+        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+        cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
         output = benchmark(
             cusignal.convolve2d,
             gpu_sig,
@@ -304,18 +317,18 @@ class BenchCorrelate2d:
         )
 
     def bench_correlate2d_cpu(
-        self, rand_2d_sig_setup, benchmark, num_samps, num_taps, boundary, mode
+        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
     ):
-        cpu_sig, _ = rand_2d_sig_setup(num_samps)
-        cpu_filt, _ = rand_2d_sig_setup(num_taps)
+        cpu_sig, _ = rand_2d_data_gen(num_samps)
+        cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
     def bench_correlate2d_gpu(
-        self, rand_2d_sig_setup, benchmark, num_samps, num_taps, boundary, mode
+        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
     ):
 
-        cpu_sig, gpu_sig = rand_2d_sig_setup(num_samps)
-        cpu_filt, gpu_filt = rand_2d_sig_setup(num_taps)
+        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+        cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
         output = benchmark(
             cusignal.correlate2d,
             gpu_sig,
