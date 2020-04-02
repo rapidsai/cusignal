@@ -1256,7 +1256,7 @@ def cmplx_sort(p):
     return take(p, indx, 0), indx
 
 
-def resample(x, num, t=None, axis=0, window=None):
+def resample(x, num, t=None, axis=0, window=None, domain='time'):
     """
     Resample `x` to `num` samples using Fourier method along the given axis.
 
@@ -1278,6 +1278,13 @@ def resample(x, num, t=None, axis=0, window=None):
     window : array_like, callable, string, float, or tuple, optional
         Specifies the window applied to the signal in the Fourier
         domain.  See below for details.
+    domain : string, optional
+        A string indicating the domain of the input `x`:
+
+        ``time``
+           Consider the input `x` as time-domain. (Default)
+        ``freq``
+           Consider the input `x` as frequency-domain.
 
     Returns
     -------
@@ -1338,8 +1345,15 @@ def resample(x, num, t=None, axis=0, window=None):
     >>> plt.show()
     """
     x = asarray(x)
-    X = fftpack.fft(x, axis=axis)
     Nx = x.shape[axis]
+
+    if domain == 'time':
+        X = fftpack.fft(x, axis=axis)
+    elif domain == 'freq':
+        X = x
+    else:
+        raise NotImplementedError("domain should be 'time' or 'freq'")
+
     if window is not None:
         if callable(window):
             W = window(fftpack.fftfreq(Nx))
