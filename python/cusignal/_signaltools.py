@@ -262,7 +262,6 @@ def _get_backend_kernel(flip, pick, dtype, grid, block, stream, use_numba):
         nb_stream = stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(flip, pick, dtype.name)]
 
-        kernel.inspect_types()
         if kernel:
             return kernel[grid, block, nb_stream]
 
