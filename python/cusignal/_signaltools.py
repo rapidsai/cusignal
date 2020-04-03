@@ -104,133 +104,83 @@ def stream_cupy_to_numba(cp_stream):
     return nb_stream
 
 
-def _correlate2d_odd(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
+def _numba_correlate2d(inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick):
 
     x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S)
+    j = cp.int32(x + S0)
+    i = cp.int32(y + S0)
 
     if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
         oPixelPos = (y, x)
         temp: out.dtype = 0
 
-        for k in range(cp.int32(-S), cp.int32(S + 1)):
-            for l in range(cp.int32(-S), cp.int32(S + 1)):
-                iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                coefPos = (cp.int32(k + S), cp.int32(l + S))
-                temp += inp[iPixelPos] * kernel[coefPos]
+        if pick == 1:  # odd
+            for k in range(cp.int32(-S0), cp.int32(S0 + 1)):
+                for l in range(cp.int32(-S0), cp.int32(S0 + 1)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
+                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
-        out[oPixelPos] = temp
+        elif pick == 2:  # even
+            for k in range(cp.int32(-S0), cp.int32(S0)):
+                for l in range(cp.int32(-S0), cp.int32(S0)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
+                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
-
-# For square/even kernels
-def _correlate2d_even(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
-
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S)
-
-    if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
-        oPixelPos = (y, x)
-        temp: out.dtype = 0
-
-        for k in range(cp.int32(-S), cp.int32(S)):
-            for l in range(cp.int32(-S), cp.int32(S)):
-                iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                coefPos = (cp.int32(k + S), cp.int32(l + S))
-                temp += inp[iPixelPos] * kernel[coefPos]
-
-        out[oPixelPos] = temp
-
-
-# For non-square kernels
-def _correlate2d_ns(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
-
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S1)
-
-    if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
-        oPixelPos = (y, x)
-        temp: out.dtype = 0
-
-        for k in range(cp.int32(S)):
-            for l in range(cp.int32(S1)):
-                iPixelPos = (
-                    cp.int32(cp.int32(i + k) - S1),
-                    cp.int32(cp.int32(j + l) - S),
-                )
-                coefPos = (k, l)
-                temp += inp[iPixelPos] * kernel[coefPos]
+        else:  # non-squares
+            for k in range(cp.int32(S0)):
+                for l in range(cp.int32(S1)):
+                    iPixelPos = (
+                        cp.int32(cp.int32(i + k) - S1),
+                        cp.int32(cp.int32(j + l) - S0),
+                    )
+                    coefPos = (k, l)
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
         out[oPixelPos] = temp
 
 
 # For square/odd kernels
-def _convolve2d_odd(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
+def _numba_convolve2d(inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick):
 
     x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S)
+    j = cp.int32(x + S0)
+    i = cp.int32(y + S0)
 
     if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
         oPixelPos = (y, x)
         temp: out.dtype = 0
 
-        for k in range(cp.int32(-S), cp.int32(S + 1)):
-            for l in range(cp.int32(-S), cp.int32(S + 1)):
-                iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                coefPos = (cp.int32(-k + S), cp.int32(-l + S))
-                temp += inp[iPixelPos] * kernel[coefPos]
+        if pick == 1:  # odd
+            for k in range(cp.int32(-S0), cp.int32(S0 + 1)):
+                for l in range(cp.int32(-S0), cp.int32(S0 + 1)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
+                    coefPos = (cp.int32(-k + S0), cp.int32(-l + S0))
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
-        out[oPixelPos] = temp
+        elif pick == 2:  # even
+            for k in range(cp.int32(-S0), cp.int32(S0)):
+                for l in range(cp.int32(-S0), cp.int32(S0)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
+                    coefPos = (
+                        cp.int32(cp.int32(-k + S0) - 1),
+                        cp.int32(cp.int32(-l + S0) - 1),
+                    )
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
-
-# For square/even kernels
-def _convolve2d_even(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
-
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S)
-
-    if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
-        oPixelPos = (y, x)
-        temp: out.dtype = 0
-
-        for k in range(cp.int32(-S), cp.int32(S)):
-            for l in range(cp.int32(-S), cp.int32(S)):
-                iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                coefPos = (
-                    cp.int32(cp.int32(-k + S) - 1),
-                    cp.int32(cp.int32(-l + S) - 1),
-                )
-                temp += inp[iPixelPos] * kernel[coefPos]
-
-        out[oPixelPos] = temp
-
-
-# For non-square kernels
-def _convolve2d_ns(inp, inpW, inpH, kernel, S, S1, out, outW, outH):
-
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S)
-    i = cp.int32(y + S1)
-
-    if (x >= 0) and (x < outW) and (y >= 0) and (y < outH):
-        oPixelPos = (y, x)
-        temp: out.dtype = 0
-
-        for k in range(cp.int32(S)):
-            for l in range(cp.int32(S1)):
-                iPixelPos = (
-                    cp.int32(cp.int32(i + k) - S1),
-                    cp.int32(cp.int32(j + l) - S),
-                )
-                coefPos = (
-                    cp.int32(cp.int32(-k + S) - 1),
-                    cp.int32(cp.int32(-l + S1) - 1),
-                )
-                temp += inp[iPixelPos] * kernel[coefPos]
+        else:  # non-squares
+            for k in range(cp.int32(S0)):
+                for l in range(cp.int32(S1)):
+                    iPixelPos = (
+                        cp.int32(cp.int32(i + k) - S1),
+                        cp.int32(cp.int32(j + l) - S0),
+                    )
+                    coefPos = (
+                        cp.int32(cp.int32(-k + S0) - 1),
+                        cp.int32(cp.int32(-l + S1) - 1),
+                    )
+                    temp += inp[iPixelPos] * kernel[coefPos]
 
         out[oPixelPos] = temp
 
@@ -241,15 +191,16 @@ def _numba_signature(ty):
         int64,  # inpW
         int64,  # inpH
         ty[:, :],  # kernel
-        int64,  # S
+        int64,  # S0
         int64,  # S1 - only used by non-squares
         ty[:, :],  # out
         int64,  # outW
         int64,  # outH
+        int64,  # pick
     )
 
 
-def _get_backend_kernel(flip, pick, dtype, grid, block, stream, use_numba):
+def _get_backend_kernel(flip, dtype, grid, block, stream, use_numba):
     if not use_numba:
         warnings.warn(
             "CuPy backend is not implemented \
@@ -260,41 +211,26 @@ def _get_backend_kernel(flip, pick, dtype, grid, block, stream, use_numba):
 
     if use_numba:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(flip, pick, dtype.name)]
+        kernel = _numba_kernel_cache[(flip, dtype.name)]
 
         if kernel:
             return kernel[grid, block, nb_stream]
 
     raise NotImplementedError(
-        "No kernel found for flip {}, pick {}, datatype {}".format(
-            flip, pick, dtype.name
-        )
+        "No kernel found for flip {}, datatype {}".format(flip, dtype.name)
     )
 
 
 def _populate_kernel_cache():
     for numba_type, _ in _SUPPORTED_TYPES.items():
-        # JIT compile the numba kernels, flip = 0/1, pick = 1/2/3
+        # JIT compile the numba kernels, flip = 0/1 (correlate/convolve)
         sig = _numba_signature(numba_type)
-        _numba_kernel_cache[(1, 1, str(numba_type))] = cuda.jit(
+        _numba_kernel_cache[(0, str(numba_type))] = cuda.jit(
             sig, fastmath=True
-        )(_convolve2d_odd)
-        _numba_kernel_cache[(1, 2, str(numba_type))] = cuda.jit(
+        )(_numba_correlate2d)
+        _numba_kernel_cache[(1, str(numba_type))] = cuda.jit(
             sig, fastmath=True
-        )(_convolve2d_even)
-        _numba_kernel_cache[(1, 3, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_convolve2d_ns)
-
-        _numba_kernel_cache[(0, 1, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_correlate2d_odd)
-        _numba_kernel_cache[(0, 2, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_correlate2d_even)
-        _numba_kernel_cache[(0, 3, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_correlate2d_ns)
+        )(_numba_convolve2d)
 
 
 def _convolve2d_gpu(
@@ -304,47 +240,48 @@ def _convolve2d_gpu(
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
         raise Exception("Invalid boundary flag")
 
+    S = np.zeros(2, dtype=int)
+
     # If kernel is square and odd
     if kernel.shape[0] == kernel.shape[1]:  # square
-        S1 = 0  # Not used
         if kernel.shape[0] % 2 == 1:  # odd
             pick = 1
-            S = (kernel.shape[0] - 1) // 2
+            S[0] = (kernel.shape[0] - 1) // 2
             if mode == 2:  # full
-                P1 = P2 = P3 = P4 = S * 2
+                P1 = P2 = P3 = P4 = S[0] * 2
             else:  # same/valid
-                P1 = P2 = P3 = P4 = S
+                P1 = P2 = P3 = P4 = S[0]
         else:  # even
             pick = 2
-            S = kernel.shape[0] // 2
+            S[0] = kernel.shape[0] // 2
             if mode == 2:  # full
-                P1 = P2 = P3 = P4 = S * 2 - 1
+                P1 = P2 = P3 = P4 = S[0] * 2 - 1
             else:  # same/valid
                 if flip:
-                    P1 = P2 = P3 = P4 = S
+                    P1 = P2 = P3 = P4 = S[0]
                 else:
-                    P1 = P3 = S - 1
-                    P2 = P4 = S
+                    P1 = P3 = S[0] - 1
+                    P2 = P4 = S[0]
     else:  # Non-square
         pick = 3
-        S = kernel.shape[0]
-        S1 = kernel.shape[1]
+        S[0] = kernel.shape[0]
+        S[1] = kernel.shape[1]
         if mode == 2:  # full
-            P1 = S - 1
-            P2 = S - 1
-            P3 = S1 - 1
-            P4 = S1 - 1
+            P1 = S[0] - 1
+            P2 = S[0] - 1
+            P3 = S[1] - 1
+            P4 = S[1] - 1
         else:  # same/valid
             if flip:
-                P1 = S // 2
-                P2 = S // 2 if (S % 2) else S // 2 - 1
-                P3 = S1 // 2
-                P4 = S1 // 2 if (S1 % 2) else S1 // 2 - 1
+                P1 = S[0] // 2
+                P2 = S[0] // 2 if (S[0] % 2) else S[0] // 2 - 1
+                P3 = S[1] // 2
+                P4 = S[1] // 2 if (S[1] % 2) else S[1] // 2 - 1
             else:
-                P1 = S // 2 if (S % 2) else S // 2 - 1
-                P2 = S // 2
-                P3 = S1 // 2 if (S1 % 2) else S1 // 2 - 1
-                P4 = S1 // 2
+                P1 = S[0] // 2 if (S[0] % 2) else S[0] // 2 - 1
+                P2 = S[0] // 2
+                P3 = S[1] // 2 if (S[1] % 2) else S[1] // 2 - 1
+                P4 = S[1] // 2
 
     if mode == 1:  # SAME
         pad = ((P1, P2), (P3, P4))  # 4x5
@@ -385,17 +322,11 @@ def _convolve2d_gpu(
     )
 
     kernel = _get_backend_kernel(
-        flip,
-        pick,
-        out.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        use_numba,
+        flip, out.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
     )
 
     kernel(
-        d_inp, paddedW, paddedH, d_kernel, S, S1, out, outW, outH,
+        d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
 
     return out
