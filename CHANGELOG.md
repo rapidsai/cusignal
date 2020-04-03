@@ -8,7 +8,7 @@
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
 
-# cuSignal 0.13 (Date TBD)
+# cuSignal 0.13 (31 Mar 2020)
 
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
