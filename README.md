@@ -94,22 +94,103 @@ gf = cusignal.resample_poly(cp.asarray(cy), resample_up, resample_down, window=(
 ```
 This code executes on an NVIDIA V100 in 637 ms.
 
-## Dependencies
-* NVIDIA GPU (Maxwell or Newer GeForce/Tesla/Quadro)
-* CUDA Divers
-* Anaconda/Miniconda (3.7 version)
-* CuPy >= 6.2.0
-* Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). 
+## Installation
 
-NOTE: [pyrtlsdr](https://github.com/roger-/pyrtlsdr) is not automatically installed with the default cusignal environment. To make use of some of the examples in the Notebooks, you'll need to buy/install an rtl-sdr and necessary software packages.
+### Conda, Linux OS
+cuSignal can be installed with conda([miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel). If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda-jetson-nano-tk1-tx2-xavier-linux-os)
 
-NOTE: if used with other portions of RAPIDS, then GPU needs to be Pascal or later, and CUDA 10+
+For `cusignal version == 0.13`:
 
-## Install cuSignal, Linux OS with Anaconda
+```
+# For CUDA 10.0
+conda install -c rapidsai -c nvidia -c conda-forge \
+    -c defaults cusignal=0.13 python=3.6 cudatoolkit=10.0
 
-`conda install -c rapidsai-nightly -c conda-forge cusignal`
+# or, for CUDA 10.1.2
+conda install -c rapidsai -c nvidia -c numba -c conda-forge \
+    cudf=0.13 python=3.6 cudatoolkit=10.1
 
-## Install cuSignal, Linux OS
+# or, for CUDA 10.2
+conda install -c rapidsai -c nvidia -c numba -c conda-forge \
+    cudf=0.13 python=3.6 cudatoolkit=10.2
+```
+
+For the nightly verison of `cusignal`:
+
+```
+# For CUDA 10.0
+conda install -c rapidsai-nightly -c nvidia -c conda-forge \
+    -c defaults cusignal=0.13 python=3.6 cudatoolkit=10.0
+
+# or, for CUDA 10.1.2
+conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
+    cudf=0.13 python=3.6 cudatoolkit=10.1
+
+# or, for CUDA 10.2
+conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
+    cudf=0.13 python=3.6 cudatoolkit=10.2
+```
+
+cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
+
+See the [Get RAPIDS versoin picker](https://rapids.ai/start.html) for more OS and version info
+
+### Conda - Jetson Nano, TK1, TX2, Xavier, Linux OS
+
+While there are many versions of Anaconda for AArch64 platforms, cuSignal has been tested and supports [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases). Conda4aarch64 is also described in the [Numba aarch64 installation instructions](http://numba.pydata.org/numba-doc/latest/user/installing.html#installing-on-linux-armv8-aarch64-platforms). Further, it's assumed that your Jetson device is running a current edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
+
+1. Clone the repository
+
+    ```bash
+    # Set the localtion to cuSignal in an environment variable CUSIGNAL_HOME
+    export CUSIGNAL_HOME=$(pwd)/cusignal
+
+    # Download the cuSignal repo
+    git clone https://github.com/rapidsai/cusignal.git $CUSIGNAL_HOME
+    ```
+
+2. Install [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) and create the cuSignal conda environment:
+
+    ```bash
+    cd $CUSIGNAL_HOME
+    conda env create -f conda/environments/cusignal_jetson_base.yml
+    ```
+
+3. Activate conda environment
+
+    `conda activate cusignal`
+
+4. Install cuSignal module
+
+    ```bash
+    cd $CUSIGNAL_HOME/python
+    python setup.py install
+    ```
+
+    or
+
+    ```bash
+    cd $CUSIGNAL_HOME
+    ./build.sh  # install cuSignal to $PREFIX if set, otherwise $CONDA_PREFIX
+                # run ./build.sh -h to print the supported command line options.
+    ```
+
+5. Once installed, periodically update environment
+
+    ```bash
+    cd $CUSIGNAL_HOME
+    conda env update -f conda/environments/cusignal_jetson_base.yml
+    ```
+
+6. Also, confirm unit testing via PyTest
+
+    ```bash
+    cd $CUSIGNAL_HOME/python
+    pytest -v  # for verbose mode
+    pytest -v -k <function name>  # for more select testing
+    ```
+
+### Source, Linux OS
 
 1. Clone the repository
 
@@ -171,62 +252,7 @@ NOTE: if used with other portions of RAPIDS, then GPU needs to be Pascal or late
     pytest -v -k <function name>  # for more select testing
     ```
 
-## Install cuSignal, Linux OS, Jetson Nano, Xavier, TX1, TX2
-
-While there are many versions of Anaconda for AArch64 platforms, cuSignal has been tested and supports [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases). Conda4aarch64 is also described in the [Numba aarch64 installation instructions](http://numba.pydata.org/numba-doc/latest/user/installing.html#installing-on-linux-armv8-aarch64-platforms). Further, it's assumed that your Jetson device is running a current edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
-
-1. Clone the repository
-
-    ```bash
-    # Set the localtion to cuSignal in an environment variable CUSIGNAL_HOME
-    export CUSIGNAL_HOME=$(pwd)/cusignal
-
-    # Download the cuSignal repo
-    git clone https://github.com/rapidsai/cusignal.git $CUSIGNAL_HOME
-    ```
-
-2. Install [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) and create the cuSignal conda environment:
-
-    ```bash
-    cd $CUSIGNAL_HOME
-    conda env create -f conda/environments/cusignal_jetson_base.yml
-    ```
-
-3. Activate conda environment
-
-    `conda activate cusignal`
-
-4. Install cuSignal module
-
-    ```bash
-    cd $CUSIGNAL_HOME/python
-    python setup.py install
-    ```
-
-    or
-
-    ```bash
-    cd $CUSIGNAL_HOME
-    ./build.sh  # install cuSignal to $PREFIX if set, otherwise $CONDA_PREFIX
-                # run ./build.sh -h to print the supported command line options.
-    ```
-
-5. Once installed, periodically update environment
-
-    ```bash
-    cd $CUSIGNAL_HOME
-    conda env update -f conda/environments/cusignal_jetson_base.yml
-    ```
-
-6. Also, confirm unit testing via PyTest
-
-    ```bash
-    cd $CUSIGNAL_HOME/python
-    pytest -v  # for verbose mode
-    pytest -v -k <function name>  # for more select testing
-    ```
-
-## Install cuSignal on Windows OS
+### Source, Windows OS [Expiremental]
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
@@ -260,6 +286,13 @@ In the cuSignal top level directory:
     pip install pytest
     pytest
     ```
+
+## Dependencies
+* NVIDIA GPU (Maxwell Architecture or newer; Pascal if using cuSignal with other RAPIDS libraries)
+* CUDA Divers
+* Anaconda/Miniconda (3.7 version)
+* CuPy >= 6.2.0
+* Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
 
 ## Contributing Guide
 
