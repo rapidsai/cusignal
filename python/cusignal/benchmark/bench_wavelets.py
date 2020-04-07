@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import pytest
-import pytest-benchmark
 import cupy as cp
 import numpy as np
 from cusignal.test.utils import array_equal
