@@ -1,10 +1,13 @@
 # cuSignal 0.14 (Date TBD)
 
 ## New Features
+- PR #43 - Add pytest-benchmarks tests
 - PR #48 - Addition of decimate for FIR ftypes
+- PR #49 - Add CuPy Module for convolve2d and correlate2d
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
+- PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
