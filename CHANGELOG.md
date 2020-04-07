@@ -3,6 +3,7 @@
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
 - PR #48 - Addition of decimate for FIR ftypes
+- PR #49 - Add CuPy Module for convolve2d and correlate2d
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
