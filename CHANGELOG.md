@@ -1,7 +1,7 @@
 # cuSignal 0.14 (Date TBD)
 
 ## New Features
-- PR #46 - Addition of decimate for FIR ftypes
+- PR #48 - Addition of decimate for FIR ftypes
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
