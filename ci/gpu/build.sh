@@ -48,7 +48,8 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     "numpy>=1.17.3" \
     boost \
     "numba>=0.46.0" \
-    "cupy>=6.2.0"
+    "cupy>=6.2.0" \
+    pytest-benchmark
 
 logger "Check versions..."
 python --version
