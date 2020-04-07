@@ -1750,15 +1750,14 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
     sl = [slice(None)] * x.ndim
     a = cp.asarray(a)
 
-    if a.size == 1:  # FIR case
-        b = b / a
-        if zero_phase:
-            y = resample_poly(x, 1, q, axis=axis, window=b)
-        else:
-            # upfirdn is generally faster than lfilter by a factor equal to the
-            # downsampling factor, since it only calculates the needed outputs
-            n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
-            y = upfirdn(b, x, up=1, down=q, axis=axis)
-            sl[axis] = slice(None, n_out, None)
+    b = b / a
+    if zero_phase:
+        y = resample_poly(x, 1, q, axis=axis, window=b)
+    else:
+        # upfirdn is generally faster than lfilter by a factor equal to the
+        # downsampling factor, since it only calculates the needed outputs
+        n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
+        y = upfirdn(b, x, up=1, down=q, axis=axis)
+        sl[axis] = slice(None, n_out, None)
 
     return y[tuple(sl)]
