@@ -170,3 +170,20 @@ def test_correlate2d(num_samps, num_taps, boundary, mode):
         cusignal.correlate2d(gpu_sig, gpu_filt, boundary=boundary, mode=mode)
     )
     assert array_equal(cpu_correlate2d, gpu_correlate2d)
+
+
+@pytest.mark.parametrize('num_samps', [2**14])
+@pytest.mark.parametrize('downsample_factor', [2, 3, 4, 8, 64])
+@pytest.mark.parametrize('zero_phase', [True, False])
+def test_decimate(num_samps, downsample_factor, zero_phase):
+    cpu_time = np.linspace(0, 10, num_samps, endpoint=False)
+    cpu_sig = np.cos(-cpu_time ** 2 / 6.0)
+    gpu_sig = cp.asarray(cpu_sig)
+
+    cpu_decimate = signal.decimate(cpu_sig, downsample_factor,
+                                   ftype='fir', zero_phase=zero_phase)
+    gpu_decimate = cp.asnumpy(
+        cusignal.decimate(gpu_sig, downsample_factor, zero_phase=zero_phase)
+    )
+
+    assert array_equal(cpu_decimate, gpu_decimate)

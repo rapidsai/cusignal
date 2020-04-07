@@ -52,6 +52,7 @@ from . import _signaltools
 from .windows import get_window
 from .fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from ._upfirdn import upfirdn, _output_len
+from .fir_filter_design import firwin
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
@@ -1707,3 +1708,57 @@ def freq_shift(x, freq, fs):
     """
     x = asarray(x)
     return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
+
+
+def decimate(x, q, n=None, axis=-1, zero_phase=True):
+    """
+    Downsample the signal after applying an anti-aliasing filter.
+    Parameters
+    ----------
+    x : array_like
+        The signal to be downsampled, as an N-dimensional array.
+    q : int
+        The downsampling factor.
+    n : int, optional
+        The order of the filter (1 less than the length for FIR). Defaults to
+        20 times the downsampling factor.
+    axis : int, optional
+        The axis along which to decimate.
+    zero_phase : bool, optional
+        Prevent shifting the outputs back by the filter's
+        group delay when using an FIR filter. The default value of ``True`` is
+        recommended, since a phase shift is generally not desired.
+    Returns
+    -------
+    y : ndarray
+        The down-sampled signal.
+    See Also
+    --------
+    resample : Resample up or down using the FFT method.
+    resample_poly : Resample using polyphase filtering and an FIR filter.
+    Notes
+    -----
+    Only FIR filter types are currently supported in cuSignal.
+    """
+
+    x = cp.asarray(x)
+    if n is None:
+        half_len = 10 * q  # reasonable cutoff for our sinc-like function
+        n = 2 * half_len
+    b, a = firwin(n + 1, 1. / q, window='hamming'), 1.
+
+    sl = [slice(None)] * x.ndim
+    a = cp.asarray(a)
+
+    if a.size == 1:  # FIR case
+        b = b / a
+        if zero_phase:
+            y = resample_poly(x, 1, q, axis=axis, window=b)
+        else:
+            # upfirdn is generally faster than lfilter by a factor equal to the
+            # downsampling factor, since it only calculates the needed outputs
+            n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
+            y = upfirdn(b, x, up=1, down=q, axis=axis)
+            sl[axis] = slice(None, n_out, None)
+
+    return y[tuple(sl)]
