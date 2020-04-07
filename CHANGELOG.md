@@ -4,6 +4,7 @@
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
+- PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
