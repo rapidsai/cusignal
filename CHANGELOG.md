@@ -1,6 +1,7 @@
 # cuSignal 0.14 (Date TBD)
 
 ## New Features
+- PR #43 - Add pytest-benchmarks tests
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
