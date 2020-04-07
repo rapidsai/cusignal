@@ -133,7 +133,7 @@ conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
 
-See the [Get RAPIDS versoin picker](https://rapids.ai/start.html) for more OS and version info
+See the [Get RAPIDS version picker](https://rapids.ai/start.html) for more OS and version info.
 
 ### Conda - Jetson Nano, TK1, TX2, Xavier, Linux OS
 
@@ -287,12 +287,29 @@ In the cuSignal top level directory:
     pytest
     ```
 
-## Dependencies
-* NVIDIA GPU (Maxwell Architecture or newer; Pascal if using cuSignal with other RAPIDS libraries)
-* CUDA Divers
-* Anaconda/Miniconda (3.7 version)
-* CuPy >= 6.2.0
-* Optional: RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
+### Docker - All RAPIDS Libraries, including cuSignal
+
+For `cusignal version == 0.13`:
+
+```
+# For CUDA 10.0
+docker pull rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
+    rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+```
+
+For the nightly version of `cusignal`
+```
+docker pull rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
+    rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+```
+
+Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions.
+
+## Optional Dependencies
+* [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) if using Docker 
+* RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
 
 ## Contributing Guide
 
