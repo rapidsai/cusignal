@@ -121,15 +121,17 @@ def _numba_correlate_2d(
     inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick
 ):
 
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S0)
-    if pick != 3:  # non-square
-        i = cp.int32(y + S0)
-    else:
-        i = cp.int32(y + S1)
+    y, x = cuda.grid(2)
 
-    if (x < outW) and (y < outH):
-        oPixelPos = (y, x)
+    if pick != 3:  # non-square
+        i = cp.int32(x + S0)
+    else:
+        i = cp.int32(x + S1)
+    j = cp.int32(y + S0)
+
+    oPixelPos = (x, y)
+    if (x < outH) and (y < outW):
+
         temp: out.dtype = 0
 
         if pick == 1:  # odd
@@ -162,15 +164,17 @@ def _numba_correlate_2d(
 
 def _numba_convolve_2d(inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick):
 
-    x, y = cuda.grid(2)
-    j = cp.int32(x + S0)
-    if pick != 3:  # non-square
-        i = cp.int32(y + S0)
-    else:
-        i = cp.int32(y + S1)
+    y, x = cuda.grid(2)
 
-    if (x < outW) and (y < outH):
-        oPixelPos = (y, x)
+    if pick != 3:  # non-square
+        i = cp.int32(x + S0)
+    else:
+        i = cp.int32(x + S1)
+    j = cp.int32(y + S0)
+
+    oPixelPos = (x, y)
+    if (x < outH) and (y < outW):
+
         temp: out.dtype = 0
 
         if pick == 1:  # odd
@@ -202,7 +206,6 @@ def _numba_convolve_2d(inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick):
                         cp.int32(cp.int32(-l + S1) - 1),
                     )
                     temp += inp[iPixelPos] * kernel[coefPos]
-                    # temp = inp[iPixelPos]
 
         out[oPixelPos] = temp
 
@@ -502,23 +505,18 @@ def _convolve2d_gpu(
     if mode == 1:  # SAME
         pad = ((P1, P2), (P3, P4))  # 4x5
         if boundary == REFLECT:
-            # symmetric not implemented in cupy, move to numpy
-            inp = cp.asarray(
-                np.pad(cp.asnumpy(inp), cp.asnumpy(pad), "symmetric")
-            )
+            inp = cp.pad(inp, pad, "symmetric")
         if boundary == CIRCULAR:
-            inp = cp.asarray(np.pad(cp.asnumpy(inp), cp.asnumpy(pad), "wrap"))
+            inp = cp.pad(inp, pad, "wrap")
         if boundary == PAD:
             inp = cp.pad(inp, pad, "constant", constant_values=(fillvalue))
 
     if mode == 2:  # FULL
         pad = ((P1, P2), (P3, P4))
         if boundary == REFLECT:
-            inp = cp.asarray(
-                np.pad(cp.asnumpy(inp), cp.asnumpy(pad), "symmetric")
-            )
+            inp = cp.pad(inp, pad, "symmetric")
         if boundary == CIRCULAR:
-            inp = cp.asarray(np.pad(cp.asnumpy(inp), cp.asnumpy(pad), "wrap"))
+            inp = cp.pad(inp, pad, "wrap")
         if boundary == PAD:
             inp = cp.pad(inp, pad, "constant", constant_values=(fillvalue))
 
@@ -540,18 +538,6 @@ def _convolve2d_gpu(
     kernell = _get_backend_kernel(
         flip, out.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
     )
-
-    # print(
-    #     paddedW,
-    #     paddedH,
-    #     d_inp.strides,
-    #     S[0],
-    #     S[1],
-    #     outW,
-    #     outH,
-    #     out.strides,
-    #     pick,
-    # )
 
     kernell(
         d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
