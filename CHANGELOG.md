@@ -1,15 +1,16 @@
 # cuSignal 0.14 (Date TBD)
 
 ## New Features
+- PR #43 - Add pytest-benchmarks tests
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
 - PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 
 ## Bug Fixes
+- PR #44 - Fix issues in pytests 
 
-
-# cuSignal 0.13 (Date TBD)
+# cuSignal 0.13 (31 Mar 2020)
 
 ## New Features
 - PR #6 - Added Simple WFM Demodulation, Jupyter Notebook with SoapySDR integration
