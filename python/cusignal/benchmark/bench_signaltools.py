@@ -287,8 +287,16 @@ class BenchConvolve2d:
         cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
+    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_convolve2d_gpu(
-        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
+        self,
+        rand_2d_data_gen,
+        benchmark,
+        num_samps,
+        num_taps,
+        boundary,
+        mode,
+        use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -299,6 +307,7 @@ class BenchConvolve2d:
             gpu_filt,
             boundary=boundary,
             mode=mode,
+            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
@@ -323,8 +332,16 @@ class BenchCorrelate2d:
         cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
+    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_correlate2d_gpu(
-        self, rand_2d_data_gen, benchmark, num_samps, num_taps, boundary, mode
+        self,
+        rand_2d_data_gen,
+        benchmark,
+        num_samps,
+        num_taps,
+        boundary,
+        mode,
+        use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -335,6 +352,7 @@ class BenchCorrelate2d:
             gpu_filt,
             boundary=boundary,
             mode=mode,
+            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
