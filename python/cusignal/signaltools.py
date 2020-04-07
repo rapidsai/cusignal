@@ -1573,7 +1573,7 @@ def resample_poly(
 
     # filter then remove excess
     y = upfirdn(h, x, up, down, axis=axis, use_numba=use_numba)
-    keep = [slice(None),] * x.ndim
+    keep = [slice(None)] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]
 
