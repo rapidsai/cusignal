@@ -9,7 +9,8 @@
 - PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 
 ## Bug Fixes
-- PR #44 - Fix issues in pytests 
+- PR #44 - Fix issues in pytests
+- PR #51 - Added missing lombscargle tests/benchmarks
 
 # cuSignal 0.13 (31 Mar 2020)
 
