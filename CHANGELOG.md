@@ -3,6 +3,7 @@
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
 - PR #49 - Add CuPy Module for convolve2d and correlate2d
+- PR #51 - Add CuPy Module for lombscargle, along with tests/benchmarks
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
@@ -10,7 +11,6 @@
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests
-- PR #51 - Added missing lombscargle tests/benchmarks
 
 # cuSignal 0.13 (31 Mar 2020)
 
