@@ -2,12 +2,14 @@
 
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
+- PR #48 - Addition of decimate for FIR ftypes
 - PR #49 - Add CuPy Module for convolve2d and correlate2d
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
 - PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
-- PR #54 - Update notebooks to use timeit instead of time
+- PR #50 - Update README to reorganize install instructions
+- PR #55 - Update notebooks to use timeit instead of time
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
