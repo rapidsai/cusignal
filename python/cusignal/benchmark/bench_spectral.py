@@ -341,8 +341,8 @@ class BenchSTFTComplex:
 @pytest.mark.benchmark(group="LombScargle")
 @pytest.mark.parametrize("num_in_samps", [2 ** 10])
 @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
-@pytest.mark.parametrize("precenter", ["True"])
-@pytest.mark.parametrize("normalize", ["True", "False"])
+@pytest.mark.parametrize("precenter", [True, False])
+@pytest.mark.parametrize("normalize", [True, False])
 class BenchLombScargle:
     def cpu_version(self, x, y, f, precenter, normalize):
         return signal.lombscargle(x, y, f, precenter, normalize)
@@ -372,6 +372,7 @@ class BenchLombScargle:
 
         benchmark(self.cpu_version, x, y, f, precenter, normalize)
 
+    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_lombscargle_gpu(
         self,
         linspace_data_gen,
@@ -381,6 +382,7 @@ class BenchLombScargle:
         num_out_samps,
         precenter,
         normalize,
+        use_numba,
     ):
         A = 2.0
         w = 1.0
@@ -397,7 +399,13 @@ class BenchLombScargle:
         d_y = cp.asarray(y)
 
         output = benchmark(
-            cusignal.lombscargle, d_x, d_y, d_f, precenter, normalize
+            cusignal.lombscargle,
+            d_x,
+            d_y,
+            d_f,
+            precenter,
+            normalize,
+            use_numba=use_numba,
         )
 
         key = self.cpu_version(x, y, f, precenter, normalize)

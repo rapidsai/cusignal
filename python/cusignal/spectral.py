@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (angle, arange, asarray, reshape, zeros)
+from cupy import angle, arange, asarray, reshape, zeros
 from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
 import numpy as np
@@ -20,16 +20,20 @@ import numpy as np
 from .windows import get_window
 from ._arraytools import even_ext, odd_ext, const_ext, zero_ext, as_strided
 from . import signaltools
-from ._spectral import _lombscargle, _lombscargle_norm
+from ._spectral import _lombscargle
 
 import warnings
 
 
-def lombscargle(x,
-                y,
-                freqs,
-                precenter=False,
-                normalize=False):
+def lombscargle(
+    x,
+    y,
+    freqs,
+    precenter=False,
+    normalize=False,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    use_numba=False,
+):
     """
     lombscargle(x, y, freqs)
     Computes the Lomb-Scargle periodogram.
@@ -54,6 +58,14 @@ def lombscargle(x,
         Pre-center amplitudes by subtracting the mean.
     normalize : bool, optional
         Compute normalized periodogram.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
     Returns
     -------
     pgram : array_like
@@ -119,7 +131,7 @@ def lombscargle(x,
 
     x = asarray(x, dtype=cp.float64)
     y = asarray(y, dtype=cp.float64)
-    freqs = asarray(freqs, dtype=np.float64)
+    freqs = asarray(freqs, dtype=cp.float64)
     pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
 
     assert x.ndim == 1
@@ -130,34 +142,32 @@ def lombscargle(x,
     if x.shape[0] != y.shape[0]:
         raise ValueError("Input arrays do not have the same size.")
 
-    d = cp.cuda.device.Device(0)
-    numSM = d.attributes['MultiProcessorCount']
-    threadsperblock = (256)
-    blockspergrid = (numSM * 20)
-
+    y_dot = cp.zeros(1, dtype=cp.float64)
     if normalize:
-        y_dot = cp.dot(y, y)
-        if precenter:
-            _lombscargle_norm[blockspergrid, threadsperblock](
-                x, y - y.mean(), freqs, pgram, y_dot
-            )
-        else:
-            _lombscargle_norm[blockspergrid, threadsperblock](
-                x, y, freqs, pgram, y_dot
-            )
+        cp.dot(y, y, out=y_dot)
+
+    if precenter:
+        y_in = y - y.mean()
     else:
-        if precenter:
-            _lombscargle[blockspergrid, threadsperblock](
-                x, y - y.mean(), freqs, pgram
-            )
-        else:
-            _lombscargle[blockspergrid, threadsperblock](x, y, freqs, pgram)
+        y_in = y
+
+    _lombscargle(
+        x, y_in, freqs, pgram, y_dot, cp_stream=cp_stream, use_numba=use_numba
+    )
 
     return pgram
 
 
-def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
-                return_onesided=True, scaling='density', axis=-1):
+def periodogram(
+    x,
+    fs=1.0,
+    window="boxcar",
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+):
     """
     Estimate power spectral density using a periodogram.
 
@@ -269,7 +279,7 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         return cp.empty(x.shape), cp.empty(x.shape)
 
     if window is None:
-        window = 'boxcar'
+        window = "boxcar"
 
     if nfft is None:
         nperseg = x.shape[axis]
@@ -285,14 +295,33 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         nperseg = nfft
         nfft = None
 
-    return welch(x, fs=fs, window=window, nperseg=nperseg, noverlap=0,
-                 nfft=nfft, detrend=detrend, return_onesided=return_onesided,
-                 scaling=scaling, axis=axis)
+    return welch(
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=0,
+        nfft=nfft,
+        detrend=detrend,
+        return_onesided=return_onesided,
+        scaling=scaling,
+        axis=axis,
+    )
 
 
-def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
-          detrend='constant', return_onesided=True, scaling='density',
-          axis=-1, average='mean'):
+def welch(
+    x,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    average="mean",
+):
     r"""
     Estimate power spectral density using Welch's method.
 
@@ -449,17 +478,38 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     """
 
-    freqs, Pxx = csd(x, x, fs=fs, window=window, nperseg=nperseg,
-                     noverlap=noverlap, nfft=nfft, detrend=detrend,
-                     return_onesided=return_onesided, scaling=scaling,
-                     axis=axis, average=average)
+    freqs, Pxx = csd(
+        x,
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        return_onesided=return_onesided,
+        scaling=scaling,
+        axis=axis,
+        average=average,
+    )
 
     return freqs, Pxx.real
 
 
-def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
-        detrend='constant', return_onesided=True, scaling='density',
-        axis=-1, average='mean'):
+def csd(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    average="mean",
+):
     r"""
     Estimate the cross power spectral density, Pxy, using Welch's
     method.
@@ -582,29 +632,51 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     """
     x = asarray(x)
     y = asarray(y)
-    freqs, _, Pxy = _spectral_helper(x, y, fs, window, nperseg, noverlap, nfft,
-                                     detrend, return_onesided, scaling, axis,
-                                     mode='psd')
+    freqs, _, Pxy = _spectral_helper(
+        x,
+        y,
+        fs,
+        window,
+        nperseg,
+        noverlap,
+        nfft,
+        detrend,
+        return_onesided,
+        scaling,
+        axis,
+        mode="psd",
+    )
 
     # Average over windows.
     if len(Pxy.shape) >= 2 and Pxy.size > 0:
         if Pxy.shape[-1] > 1:
-            if average == 'median':
+            if average == "median":
                 Pxy = cp.median(Pxy, axis=-1) / _median_bias(Pxy.shape[-1])
-            elif average == 'mean':
+            elif average == "mean":
                 Pxy = Pxy.mean(axis=-1)
             else:
-                raise ValueError('average must be "median" or "mean", got %s'
-                                 % (average,))
+                raise ValueError(
+                    'average must be "median" or "mean", got %s' % (average,)
+                )
         else:
             Pxy = reshape(Pxy, Pxy.shape[:-1])
 
     return freqs, Pxy
 
 
-def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
-                nfft=None, detrend='constant', return_onesided=True,
-                scaling='density', axis=-1, mode='psd'):
+def spectrogram(
+    x,
+    fs=1.0,
+    window=("tukey", 0.25),
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    mode="psd",
+):
     """
     Compute a spectrogram with consecutive Fourier transforms.
 
@@ -731,36 +803,60 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
     >>> plt.xlabel('Time [sec]')
     >>> plt.show()
     """
-    modelist = ['psd', 'complex', 'magnitude', 'angle', 'phase']
+    modelist = ["psd", "complex", "magnitude", "angle", "phase"]
     if mode not in modelist:
-        raise ValueError('unknown value for mode {}, must be one of {}'
-                         .format(mode, modelist))
+        raise ValueError(
+            "unknown value for mode {}, must be one of {}".format(
+                mode, modelist
+            )
+        )
 
     # need to set default for nperseg before setting default for noverlap below
-    window, nperseg = _triage_segments(window, nperseg,
-                                       input_length=x.shape[axis])
+    window, nperseg = _triage_segments(
+        window, nperseg, input_length=x.shape[axis]
+    )
 
     # Less overlap than welch, so samples are more statisically independent
     if noverlap is None:
         noverlap = nperseg // 8
 
-    if mode == 'psd':
-        freqs, time, Sxx = _spectral_helper(x, x, fs, window, nperseg,
-                                            noverlap, nfft, detrend,
-                                            return_onesided, scaling, axis,
-                                            mode='psd')
+    if mode == "psd":
+        freqs, time, Sxx = _spectral_helper(
+            x,
+            x,
+            fs,
+            window,
+            nperseg,
+            noverlap,
+            nfft,
+            detrend,
+            return_onesided,
+            scaling,
+            axis,
+            mode="psd",
+        )
 
     else:
-        freqs, time, Sxx = _spectral_helper(x, x, fs, window, nperseg,
-                                            noverlap, nfft, detrend,
-                                            return_onesided, scaling, axis,
-                                            mode='stft')
+        freqs, time, Sxx = _spectral_helper(
+            x,
+            x,
+            fs,
+            window,
+            nperseg,
+            noverlap,
+            nfft,
+            detrend,
+            return_onesided,
+            scaling,
+            axis,
+            mode="stft",
+        )
 
-        if mode == 'magnitude':
+        if mode == "magnitude":
             Sxx = cp.abs(Sxx)
-        elif mode in ['angle', 'phase']:
+        elif mode in ["angle", "phase"]:
             Sxx = angle(Sxx)
-            if mode == 'phase':
+            if mode == "phase":
                 # Sxx has one additional dimension for time strides
                 if axis < 0:
                     axis -= 1
@@ -771,9 +867,19 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
     return freqs, time, Sxx
 
 
-def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
-         detrend=False, return_onesided=True, boundary='zeros', padded=True,
-         axis=-1):
+def stft(
+    x,
+    fs=1.0,
+    window="hann",
+    nperseg=256,
+    noverlap=None,
+    nfft=None,
+    detrend=False,
+    return_onesided=True,
+    boundary="zeros",
+    padded=True,
+    axis=-1,
+):
     r"""
     Compute the Short Time Fourier Transform (STFT).
 
@@ -918,17 +1024,37 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
     >>> plt.show()
     """
 
-    freqs, time, Zxx = _spectral_helper(x, x, fs, window, nperseg, noverlap,
-                                        nfft, detrend, return_onesided,
-                                        scaling='spectrum', axis=axis,
-                                        mode='stft', boundary=boundary,
-                                        padded=padded)
+    freqs, time, Zxx = _spectral_helper(
+        x,
+        x,
+        fs,
+        window,
+        nperseg,
+        noverlap,
+        nfft,
+        detrend,
+        return_onesided,
+        scaling="spectrum",
+        axis=axis,
+        mode="stft",
+        boundary=boundary,
+        padded=padded,
+    )
 
     return freqs, time, Zxx
 
 
-def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
-              nfft=None, detrend='constant', axis=-1):
+def coherence(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    axis=-1,
+):
     r"""
     Estimate the magnitude squared coherence estimate, Cxy, of
     discrete-time signals X and Y using Welch's method.
@@ -1034,23 +1160,59 @@ def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     >>> plt.show()
     """
 
-    freqs, Pxx = welch(x, fs=fs, window=window, nperseg=nperseg,
-                       noverlap=noverlap, nfft=nfft, detrend=detrend,
-                       axis=axis)
-    _, Pyy = welch(y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap,
-                   nfft=nfft, detrend=detrend, axis=axis)
-    _, Pxy = csd(x, y, fs=fs, window=window, nperseg=nperseg,
-                 noverlap=noverlap, nfft=nfft, detrend=detrend, axis=axis)
+    freqs, Pxx = welch(
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
+    _, Pyy = welch(
+        y,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
+    _, Pxy = csd(
+        x,
+        y,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
 
-    Cxy = cp.abs(Pxy)**2 / Pxx / Pyy
+    Cxy = cp.abs(Pxy) ** 2 / Pxx / Pyy
 
     return freqs, Cxy
 
 
-def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
-                     nfft=None, detrend='constant', return_onesided=True,
-                     scaling='density', axis=-1, mode='psd', boundary=None,
-                     padded=False):
+def _spectral_helper(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    mode="psd",
+    boundary=None,
+    padded=False,
+):
     """
     Calculate various forms of windowed FFTs for PSD, CSD, etc.
 
@@ -1137,24 +1299,31 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     .. versionadded:: 0.16.0
     """
-    if mode not in ['psd', 'stft']:
-        raise ValueError("Unknown value for mode %s, must be one of: "
-                         "{'psd', 'stft'}" % mode)
+    if mode not in ["psd", "stft"]:
+        raise ValueError(
+            "Unknown value for mode %s, must be one of: "
+            "{'psd', 'stft'}" % mode
+        )
 
-    boundary_funcs = {'even': even_ext,
-                      'odd': odd_ext,
-                      'constant': const_ext,
-                      'zeros': zero_ext,
-                      None: None}
+    boundary_funcs = {
+        "even": even_ext,
+        "odd": odd_ext,
+        "constant": const_ext,
+        "zeros": zero_ext,
+        None: None,
+    }
 
     if boundary not in boundary_funcs:
-        raise ValueError("Unknown boundary option '{0}', must be one of: {1}"
-                         .format(boundary, list(boundary_funcs.keys())))
+        raise ValueError(
+            "Unknown boundary option '{0}', must be one of: {1}".format(
+                boundary, list(boundary_funcs.keys())
+            )
+        )
 
     # If x and y are the same object we can save ourselves some computation.
     same_data = y is x
 
-    if not same_data and mode != 'psd':
+    if not same_data and mode != "psd":
         raise ValueError("x and y must be equal if mode is 'stft'")
 
     axis = int(axis)
@@ -1176,7 +1345,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         try:
             outershape = cp.broadcast(cp.empty(xouter), cp.empty(youter)).shape
         except ValueError:
-            raise ValueError('x and y cannot be broadcast together.')
+            raise ValueError("x and y cannot be broadcast together.")
 
     if same_data:
         if x.size == 0:
@@ -1208,7 +1377,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     if nperseg is not None:  # if specified by user
         nperseg = int(nperseg)
         if nperseg < 1:
-            raise ValueError('nperseg must be a positive integer')
+            raise ValueError("nperseg must be a positive integer")
 
     # parse window; if array like, then set nperseg = win.shape
     win, nperseg = _triage_segments(window, nperseg, input_length=x.shape[-1])
@@ -1216,7 +1385,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     if nfft is None:
         nfft = nperseg
     elif nfft < nperseg:
-        raise ValueError('nfft must be greater than or equal to nperseg.')
+        raise ValueError("nfft must be greater than or equal to nperseg.")
     else:
         nfft = int(nfft)
 
@@ -1225,7 +1394,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     else:
         noverlap = int(noverlap)
     if noverlap >= nperseg:
-        raise ValueError('noverlap must be less than nperseg.')
+        raise ValueError("noverlap must be less than nperseg.")
     nstep = nperseg - noverlap
 
     # Padding occurs after boundary extension, so that the extended signal ends
@@ -1252,11 +1421,15 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     # Handle detrending and window functions
     if not detrend:
+
         def detrend_func(d):
             return d
-    elif not hasattr(detrend, '__call__'):
+
+    elif not hasattr(detrend, "__call__"):
+
         def detrend_func(d):
             return signaltools.detrend(d, type=detrend, axis=-1)
+
     elif axis != -1:
         # Wrap this function so that it receives a shape that it could
         # reasonably expect to receive.
@@ -1264,40 +1437,44 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
             d = cp.rollaxis(d, -1, axis)
             d = detrend(d)
             return cp.rollaxis(d, axis, len(d.shape))
+
     else:
         detrend_func = detrend
 
     if cp.result_type(win, cp.complex64) != outdtype:
         win = win.astype(outdtype)
 
-    if scaling == 'density':
+    if scaling == "density":
         scale = 1.0 / (fs * (win * win).sum())
-    elif scaling == 'spectrum':
-        scale = 1.0 / win.sum()**2
+    elif scaling == "spectrum":
+        scale = 1.0 / win.sum() ** 2
     else:
-        raise ValueError('Unknown scaling: %r' % scaling)
+        raise ValueError("Unknown scaling: %r" % scaling)
 
-    if mode == 'stft':
+    if mode == "stft":
         scale = cp.sqrt(scale)
 
     if return_onesided:
         if cp.iscomplexobj(x):
-            sides = 'twosided'
-            warnings.warn('Input data is complex, switching to '
-                          'return_onesided=False')
+            sides = "twosided"
+            warnings.warn(
+                "Input data is complex, switching to " "return_onesided=False"
+            )
         else:
-            sides = 'onesided'
+            sides = "onesided"
             if not same_data:
                 if cp.iscomplexobj(y):
-                    sides = 'twosided'
-                    warnings.warn('Input data is complex, switching to '
-                                  'return_onesided=False')
+                    sides = "twosided"
+                    warnings.warn(
+                        "Input data is complex, switching to "
+                        "return_onesided=False"
+                    )
     else:
-        sides = 'twosided'
+        sides = "twosided"
 
-    if sides == 'twosided':
+    if sides == "twosided":
         freqs = cp.fft.fftfreq(nfft, 1 / fs)
-    elif sides == 'onesided':
+    elif sides == "onesided":
         freqs = cp.fft.rfftfreq(nfft, 1 / fs)
 
     # Perform the windowed FFTs
@@ -1305,29 +1482,31 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     if not same_data:
         # All the same operations on the y data
-        result_y = _fft_helper(y, win, detrend_func, nperseg, noverlap, nfft,
-                               sides)
+        result_y = _fft_helper(
+            y, win, detrend_func, nperseg, noverlap, nfft, sides
+        )
         result = cp.conj(result) * result_y
-    elif mode == 'psd':
+    elif mode == "psd":
         result = cp.conj(result) * result
 
     result *= scale
-    if sides == 'onesided' and mode == 'psd':
+    if sides == "onesided" and mode == "psd":
         if nfft % 2:
             result[..., 1:] *= 2
         else:
             # Last point is unpaired Nyquist freq point, don't double
             result[..., 1:-1] *= 2
 
-    time = arange(nperseg / 2, x.shape[-1] - nperseg / 2 + 1,
-                  nperseg - noverlap) / float(fs)
+    time = arange(
+        nperseg / 2, x.shape[-1] - nperseg / 2 + 1, nperseg - noverlap
+    ) / float(fs)
     if boundary is not None:
         time -= (nperseg / 2) / fs
 
     result = result.astype(outdtype)
 
     # All imaginary parts are zero anyways
-    if same_data and mode != 'stft':
+    if same_data and mode != "stft":
         result = result.real
 
     # Output is going to have new last axis for time/window index, so a
@@ -1381,7 +1560,7 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
     result = win * result
 
     # Perform the fft. Acts on last axis by default. Zero-pads automatically
-    if sides == 'twosided':
+    if sides == "twosided":
         func = fftpack.fft
     else:
         result = result.real
@@ -1432,23 +1611,26 @@ def _triage_segments(window, nperseg, input_length):
         if nperseg is None:
             nperseg = 256  # then change to default
         if nperseg > input_length:
-            warnings.warn('nperseg = {0:d} is greater than input length '
-                          ' = {1:d}, using nperseg = {1:d}'
-                          .format(nperseg, input_length))
+            warnings.warn(
+                "nperseg = {0:d} is greater than input length "
+                " = {1:d}, using nperseg = {1:d}".format(nperseg, input_length)
+            )
             nperseg = input_length
         win = get_window(window, nperseg)
     else:
         win = cp.asarray(window)
         if len(win.shape) != 1:
-            raise ValueError('window must be 1-D')
+            raise ValueError("window must be 1-D")
         if input_length < win.shape[-1]:
-            raise ValueError('window is longer than input signal')
+            raise ValueError("window is longer than input signal")
         if nperseg is None:
             nperseg = win.shape[0]
         elif nperseg is not None:
             if nperseg != win.shape[0]:
-                raise ValueError("value specified for nperseg is different"
-                                 " from length of window")
+                raise ValueError(
+                    "value specified for nperseg is different"
+                    " from length of window"
+                )
     return win, nperseg
 
 
@@ -1469,5 +1651,5 @@ def _median_bias(n):
     bias : float
         Calculated bias.
     """
-    ii_2 = 2 * arange(1., (n - 1) // 2 + 1)
-    return 1 + cp.sum(1. / (ii_2 + 1) - 1. / ii_2)
+    ii_2 = 2 * arange(1.0, (n - 1) // 2 + 1)
+    return 1 + cp.sum(1.0 / (ii_2 + 1) - 1.0 / ii_2)
