@@ -32,7 +32,8 @@ from cusignal.signaltools import (
     resample_poly,
     vectorstrength,
     detrend,
-    freq_shift
+    freq_shift,
+    decimate
 )
 from cusignal.windows import (
     general_cosine,
