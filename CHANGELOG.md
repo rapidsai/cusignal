@@ -12,6 +12,7 @@
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
+- PR #52 - Mirror API change in Numba 0.49
 
 # cuSignal 0.13 (31 Mar 2020)
 

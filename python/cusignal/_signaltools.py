@@ -26,7 +26,7 @@ from numba import (
     int64,
     void,
 )
-from numba.types.scalars import Complex
+from numba.core.types.scalars import Complex
 
 from .fir_filter_design import firwin
 
