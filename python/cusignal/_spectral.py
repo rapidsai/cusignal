@@ -50,11 +50,11 @@ def _lombscargle(x, y, freqs, pgram):
 
         freq = freqs[i]
 
-        xc = 0.
-        xs = 0.
-        cc = 0.
-        ss = 0.
-        cs = 0.
+        xc = 0.0
+        xs = 0.0
+        cc = 0.0
+        ss = 0.0
+        cs = 0.0
 
         for j in range(x.shape[0]):
 
@@ -75,10 +75,14 @@ def _lombscargle(x, y, freqs, pgram):
         cs_tau = 2.0 * c_tau * s_tau
 
         pgram[i] = 0.5 * (
-            ((c_tau * xc + s_tau * xs)**2 /
-             (c_tau2 * cc + cs_tau * cs + s_tau2 * ss)) +
-            ((c_tau * xs - s_tau * xc)**2 /
-             (c_tau2 * ss - cs_tau * cs + s_tau2 * cc))
+            (
+                (c_tau * xc + s_tau * xs) ** 2
+                / (c_tau2 * cc + cs_tau * cs + s_tau2 * ss)
+            )
+            + (
+                (c_tau * xs - s_tau * xc) ** 2
+                / (c_tau2 * ss - cs_tau * cs + s_tau2 * cc)
+            )
         )
 
 
@@ -118,11 +122,11 @@ def _lombscargle_norm(x, y, freqs, pgram, y_dot):
         freq = freqs[i]
         yD = 2.0 / y_dot[0]
 
-        xc = 0.
-        xs = 0.
-        cc = 0.
-        ss = 0.
-        cs = 0.
+        xc = 0.0
+        xs = 0.0
+        cc = 0.0
+        ss = 0.0
+        cs = 0.0
 
         # cuda.syncthreads()
 
@@ -145,10 +149,14 @@ def _lombscargle_norm(x, y, freqs, pgram, y_dot):
         cs_tau = 2.0 * c_tau * s_tau
 
         temp = 0.5 * (
-            ((c_tau * xc + s_tau * xs)**2 /
-             (c_tau2 * cc + cs_tau * cs + s_tau2 * ss)) +
-            ((c_tau * xs - s_tau * xc)**2 /
-             (c_tau2 * ss - cs_tau * cs + s_tau2 * cc))
+            (
+                (c_tau * xc + s_tau * xs) ** 2
+                / (c_tau2 * cc + cs_tau * cs + s_tau2 * ss)
+            )
+            + (
+                (c_tau * xs - s_tau * xc) ** 2
+                / (c_tau2 * ss - cs_tau * cs + s_tau2 * cc)
+            )
         )
 
         pgram[i] = temp * yD
