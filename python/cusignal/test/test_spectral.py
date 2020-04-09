@@ -19,9 +19,9 @@ import numpy as np
 from scipy import signal
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_csd(num_samps, fs, nperseg):
     cpu_x = np.random.rand(num_samps)
     cpu_y = np.random.rand(num_samps)
@@ -34,9 +34,9 @@ def test_csd(num_samps, fs, nperseg):
     assert array_equal(cpu_csd, gpu_csd)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_csd_complex(num_samps, fs, nperseg):
     cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
@@ -49,16 +49,17 @@ def test_csd_complex(num_samps, fs, nperseg):
     assert array_equal(cpu_csd, gpu_csd)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('window', ['flattop', 'nuttall'])
-@pytest.mark.parametrize('scaling', ['spectrum', 'density'])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("window", ["flattop", "nuttall"])
+@pytest.mark.parametrize("scaling", ["spectrum", "density"])
 def test_periodogram(num_samps, fs, window, scaling):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
-    cpu_periodogram = signal.periodogram(cpu_sig, fs, window=window,
-                                         scaling=scaling)
+    cpu_periodogram = signal.periodogram(
+        cpu_sig, fs, window=window, scaling=scaling
+    )
     gpu_periodogram = cp.asnumpy(
         cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
     )
@@ -66,10 +67,10 @@ def test_periodogram(num_samps, fs, window, scaling):
     assert array_equal(cpu_periodogram, gpu_periodogram)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('window', ['flattop', 'nuttall'])
-@pytest.mark.parametrize('scaling', ['spectrum', 'density'])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("window", ["flattop", "nuttall"])
+@pytest.mark.parametrize("scaling", ["spectrum", "density"])
 def test_periodogram_complex(num_samps, fs, window, scaling):
     cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -85,9 +86,9 @@ def test_periodogram_complex(num_samps, fs, window, scaling):
     assert array_equal(cpu_periodogram, gpu_periodogram)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_welch(num_samps, fs, nperseg):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -99,9 +100,9 @@ def test_welch(num_samps, fs, nperseg):
     assert array_equal(cPxx_spec, gPxx_spec)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_welch_complex(num_samps, fs, nperseg):
     cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -113,8 +114,8 @@ def test_welch_complex(num_samps, fs, nperseg):
     assert array_equal(cPxx_spec, gPxx_spec)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
 def test_spectrogram(num_samps, fs):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -126,8 +127,8 @@ def test_spectrogram(num_samps, fs):
     assert array_equal(cPxx_spec, gPxx_spec)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
 def test_spectrogram_complex(num_samps, fs):
     cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -139,9 +140,9 @@ def test_spectrogram_complex(num_samps, fs):
     assert array_equal(cPxx_spec, gPxx_spec)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_coherence(num_samps, fs, nperseg):
     cpu_x = np.random.rand(num_samps)
     cpu_y = np.random.rand(num_samps)
@@ -155,9 +156,9 @@ def test_coherence(num_samps, fs, nperseg):
     assert array_equal(cpu_coherence, gpu_coherence)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_coherence_complex(num_samps, fs, nperseg):
     cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
@@ -171,9 +172,9 @@ def test_coherence_complex(num_samps, fs, nperseg):
     assert array_equal(cpu_coherence, gpu_coherence)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_stft(num_samps, fs, nperseg):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -185,9 +186,9 @@ def test_stft(num_samps, fs, nperseg):
     assert array_equal(cpu_stft, gpu_stft)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("fs", [1.0, 1e6])
+@pytest.mark.parametrize("nperseg", [1024, 2048])
 def test_stft_complex(num_samps, fs, nperseg):
     cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -197,3 +198,39 @@ def test_stft_complex(num_samps, fs, nperseg):
     gpu_stft = cp.asnumpy(gpu_stft)
 
     assert array_equal(cpu_stft, gpu_stft)
+
+
+@pytest.mark.parametrize("num_in_samps", [2 ** 10])
+@pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
+@pytest.mark.parametrize("precenter", [True, False])
+@pytest.mark.parametrize("normalize", [True, False])
+@pytest.mark.parametrize("use_numba", [True, False])
+def test_lombscargle(
+    num_in_samps, num_out_samps, precenter, normalize, use_numba
+):
+    A = 2.0
+    w = 1.0
+    phi = 0.5 * np.pi
+    frac_points = 0.9  # Fraction of points to select
+
+    r = np.random.rand(num_in_samps)
+    x = np.linspace(0.01, 10 * np.pi, num_in_samps)
+    x = x[r >= frac_points]
+
+    y = A * np.cos(w * x + phi)
+
+    f = np.linspace(0.01, 10, num_out_samps)
+
+    cpu_lombscargle = signal.lombscargle(x, y, f, precenter, normalize)
+
+    d_x = cp.asarray(x)
+    d_y = cp.asarray(y)
+    d_f = cp.asarray(f)
+
+    gpu_lombscargle = cp.asnumpy(
+        cusignal.lombscargle(
+            d_x, d_y, d_f, precenter, normalize, use_numba=use_numba,
+        )
+    )
+
+    assert array_equal(cpu_lombscargle, gpu_lombscargle)
