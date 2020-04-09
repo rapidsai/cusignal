@@ -17,7 +17,12 @@ from string import Template
 
 import cupy as cp
 from numba import complex64, complex128, cuda, float32, float64, int64, void
-from numba.core.types.scalars import Complex
+try:
+    # Numba <= 0.49
+    from numba.types.scalars import Complex
+except ImportError:
+    # Numba >= 0.49
+    from numba.core.types.scalars import Complex
 
 _numba_kernel_cache = {}
 _cupy_kernel_cache = {}
