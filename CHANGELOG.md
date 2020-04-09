@@ -4,6 +4,7 @@
 - PR #43 - Add pytest-benchmarks tests
 - PR #48 - Addition of decimate for FIR ftypes
 - PR #49 - Add CuPy Module for convolve2d and correlate2d
+- PR #51 - Add CuPy Module for lombscargle, along with tests/benchmarks
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.

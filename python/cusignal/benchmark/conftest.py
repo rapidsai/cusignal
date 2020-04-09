@@ -18,10 +18,10 @@ import numpy as np
 # Fixtures with (scope="session") will execute once
 # and be shared will all tests that need it.
 
-# Generate data for resample and resample_poly
+# Generate data for using linspace
 @pytest.fixture(scope="session")
-def resample_data_gen():
-    def _generate(start, stop, num_samps, endpoint):
+def linspace_data_gen():
+    def _generate(start, stop, num_samps, endpoint=False):
 
         cpu_time = np.linspace(start, stop, num_samps, endpoint)
         cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)

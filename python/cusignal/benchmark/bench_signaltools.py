@@ -32,27 +32,27 @@ class BenchResample:
     # bench_ is required in function name to be searchable with -k parameter
     def bench_resample_cpu(
         self,
-        resample_data_gen,
+        linspace_data_gen,
         benchmark,
         num_samps,
         resample_num_samps,
         window,
     ):
-        cpu_sig, _ = resample_data_gen(0, 10, num_samps, endpoint=False)
+        cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
         benchmark(
             self.cpu_version, cpu_sig, resample_num_samps, window,
         )
 
     def bench_resample_gpu(
         self,
-        resample_data_gen,
+        linspace_data_gen,
         benchmark,
         num_samps,
         resample_num_samps,
         window,
     ):
 
-        cpu_sig, gpu_sig = resample_data_gen(0, 10, num_samps, endpoint=False)
+        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
@@ -74,9 +74,9 @@ class BenchResamplePoly:
         return signal.resample_poly(cpu_sig, up, down, window=window)
 
     def bench_resample_poly_cpu(
-        self, resample_data_gen, benchmark, num_samps, up, down, window
+        self, linspace_data_gen, benchmark, num_samps, up, down, window
     ):
-        cpu_sig, _ = resample_data_gen(0, 10, num_samps, endpoint=False)
+        cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
         benchmark(
             self.cpu_version, cpu_sig, up, down, window,
         )
@@ -86,7 +86,7 @@ class BenchResamplePoly:
     @pytest.mark.parametrize("use_numba", [True, False])
     def bench_resample_poly_gpu(
         self,
-        resample_data_gen,
+        linspace_data_gen,
         benchmark,
         num_samps,
         up,
@@ -95,7 +95,7 @@ class BenchResamplePoly:
         use_numba,
     ):
 
-        cpu_sig, gpu_sig = resample_data_gen(0, 10, num_samps, endpoint=False)
+        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
         # Variable output holds result from final cusignal.resample
         # It is not copied back until assert to so timing is not impacted
         output = benchmark(
