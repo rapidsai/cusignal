@@ -16,6 +16,7 @@ from math import sin, cos, atan2
 from string import Template
 
 import cupy as cp
+import numpy as np
 from numba import (
     cuda,
     float64,
@@ -28,7 +29,7 @@ _cupy_kernel_cache = {}
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
-    float64: "double",
+    np.float64: [float64, "double"],
 }
 
 
@@ -270,14 +271,18 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba):
     )
 
 
-def _populate_kernel_cache():
-    for numba_type, c_type in _SUPPORTED_TYPES.items():
-        # JIT compile the numba kernels
-        sig = _numba_lombscargle_signature(numba_type)
-        _numba_kernel_cache[(str(numba_type))] = cuda.jit(sig, fastmath=True)(
-            _numba_lombscargle
-        )
+def _populate_kernel_cache(np_type, use_numba):
 
+    try:
+        numba_type, c_type = _SUPPORTED_TYPES.get(np_type)
+    except TypeError:
+        print("Data type {} not supported.".format(np_type))
+        return
+
+    # JIT compile the numba kernels
+    if not use_numba:
+        if str(numba_type) in _cupy_kernel_cache:
+            return
         # Instantiate the cupy kernel for this type and compile
         src = loaded_from_source.substitute(datatype=c_type)
         module = cp.RawModule(
@@ -287,6 +292,19 @@ def _populate_kernel_cache():
             "_cupy_lombscargle"
         )
 
+    else:
+        if str(numba_type) in _numba_kernel_cache:
+            return
+        sig = _numba_lombscargle_signature(numba_type)
+        _numba_kernel_cache[(str(numba_type))] = cuda.jit(sig, fastmath=True)(
+            _numba_lombscargle
+        )
+
+
+def _precompile_kernels(dtype, use_numba=False):
+
+    _populate_kernel_cache(dtype, use_numba)
+
 
 def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
 
@@ -295,12 +313,10 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     threadsperblock = 256
     blockspergrid = numSM * 20
 
+    _populate_kernel_cache(pgram.dtype.type, use_numba)
+
     kernel = _get_backend_kernel(
         pgram.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
     )
 
     kernel(x, y, freqs, pgram, y_dot)
-
-
-# 1) Load and compile upfirdn kernels for each supported data type.
-_populate_kernel_cache()
