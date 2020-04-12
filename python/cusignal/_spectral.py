@@ -11,26 +11,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from math import sin, cos, atan2
-
 from string import Template
-
-import cupy as cp
-import numpy as np
 from numba import (
     cuda,
     float64,
     void,
 )
+import itertools
+import cupy as cp
+import numpy as np
+
+
+class GPUBackend(Enum):
+    CUPY = 0
+    NUMBA = 1
+
+
+_SUPPORTED_TYPES = {
+    np.float64: [float64, "double"],
+}
 
 
 _numba_kernel_cache = {}
 _cupy_kernel_cache = {}
 
 # Numba type supported and corresponding C type
-_SUPPORTED_TYPES = {
-    np.float64: [float64, "double"],
-}
 
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -274,10 +281,10 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba):
 def _populate_kernel_cache(np_type, use_numba):
 
     try:
-        numba_type, c_type = _SUPPORTED_TYPES.get(np_type)
-    except TypeError:
-        print("Data type {} not supported.".format(np_type))
-        return
+        numba_type, c_type = _SUPPORTED_TYPES[np_type]
+
+    except KeyError:
+        "No kernel found for datatype {}".format(np_type.name)
 
     # JIT compile the numba kernels
     if not use_numba:
@@ -301,9 +308,23 @@ def _populate_kernel_cache(np_type, use_numba):
         )
 
 
-def _precompile_kernels(dtype, use_numba=False):
+def precompile_kernels(dtype=None, backend=None):
+    r"""
+    Precompile GPU kernels for later use.
 
-    _populate_kernel_cache(dtype, use_numba)
+    Parameters
+    ----------
+    dtype : numpy datatype or list of datatypes, optional
+        Data types for which kernels should be precompiled. If not
+        specified, all supported data types will be precompiled.
+    backend : GPUBackend, optional
+        Which GPU backend to precompile for. If not specified,
+        all supported backends will be precompiled.
+    """
+    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+    backend = list(backend) if backend else list(GPUBackend)
+    for d, b in itertools.product(dtype, backend):
+        _populate_kernel_cache(d, b.value)
 
 
 def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
