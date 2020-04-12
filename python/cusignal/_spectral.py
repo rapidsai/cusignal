@@ -284,7 +284,7 @@ def _populate_kernel_cache(np_type, use_numba):
         numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
     except KeyError:
-        "No kernel found for datatype {}".format(np_type.name)
+        raise Exception("No kernel found for datatype {}".format(np_type))
 
     # JIT compile the numba kernels
     if not use_numba:
@@ -302,6 +302,7 @@ def _populate_kernel_cache(np_type, use_numba):
     else:
         if str(numba_type) in _numba_kernel_cache:
             return
+        # JIT compile the numba kernels
         sig = _numba_lombscargle_signature(numba_type)
         _numba_kernel_cache[(str(numba_type))] = cuda.jit(sig, fastmath=True)(
             _numba_lombscargle
@@ -333,6 +334,8 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     numSM = device_id.attributes["MultiProcessorCount"]
     threadsperblock = 256
     blockspergrid = numSM * 20
+
+    print(pgram.dtype.type)
 
     _populate_kernel_cache(pgram.dtype.type, use_numba)
 
