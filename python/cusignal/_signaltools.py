@@ -11,11 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-from string import Template
-
-import numpy as np
 import cupy as cp
+import itertools
+import numpy as np
+
+from enum import Enum
+from math import gcd
 from numba import (
     complex64,
     complex128,
@@ -27,21 +28,28 @@ from numba import (
     void,
 )
 from numba.types.scalars import Complex
+from string import Template
 
 from .fir_filter_design import firwin
 
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
+
+class GPUBackend(Enum):
+    CUPY = 0
+    NUMBA = 1
+
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
-    int32: "int",
-    int64: "long int",
-    float32: "float",
-    float64: "double",
-    complex64: "complex<float>",
-    complex128: "complex<double>",
+    np.int32: [int32, "int"],
+    np.int64: [int64, "long int"],
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+    np.complex64: [complex64, "complex<float>"],
+    np.complex128: [complex128, "complex<double>"],
 }
+
+_numba_kernel_cache = {}
+_cupy_kernel_cache = {}
 
 FULL = 2
 SAME = 1
@@ -424,8 +432,36 @@ def _get_backend_kernel(flip, dtype, grid, block, stream, use_numba):
     )
 
 
-def _populate_kernel_cache():
-    for numba_type, c_type in _SUPPORTED_TYPES.items():
+def _populate_kernel_cache(np_type, use_numba):
+
+    try:
+        numba_type, c_type = _SUPPORTED_TYPES[np_type]
+
+    except KeyError:
+        raise Exception("No kernel found for datatype {}".format(np_type))
+
+    if not use_numba:
+        if (0, str(numba_type)) in _cupy_kernel_cache:  # Not work
+            return
+        # Instantiate the cupy kernel for this type and compile
+        if isinstance(numba_type, Complex):
+            header = "#include <cupy/complex.cuh>"
+        else:
+            header = ""
+        src = loaded_from_source.substitute(datatype=c_type, header=header)
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        _cupy_kernel_cache[(0, str(numba_type))] = module.get_function(
+            "_cupy_correlate_2d"
+        )
+        _cupy_kernel_cache[(1, str(numba_type))] = module.get_function(
+            "_cupy_convolve_2d"
+        )
+
+    else:
+        if (0, str(numba_type)) in _numba_kernel_cache:
+            return
         # JIT compile the numba kernels, flip = 0/1 (correlate/convolve)
         sig = _numba_convolve_2d_signature(numba_type)
         _numba_kernel_cache[(0, str(numba_type))] = cuda.jit(
@@ -435,21 +471,24 @@ def _populate_kernel_cache():
             sig, fastmath=True
         )(_numba_convolve_2d)
 
-        # Instantiate the cupy kernel for this type and compile
-        if isinstance(numba_type, Complex):
-            header = "#include <cupy/complex.cuh>"
-        else:
-            header = ""
-        src = loaded_from_source.substitute(datatype=c_type, header=header)
-        module2 = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
-        )
-        _cupy_kernel_cache[(0, str(numba_type))] = module2.get_function(
-            "_cupy_correlate_2d"
-        )
-        _cupy_kernel_cache[(1, str(numba_type))] = module2.get_function(
-            "_cupy_convolve_2d"
-        )
+
+def precompile_kernels(dtype=None, backend=None):
+    r"""
+    Precompile GPU kernels for later use.
+
+    Parameters
+    ----------
+    dtype : numpy datatype or list of datatypes, optional
+        Data types for which kernels should be precompiled. If not
+        specified, all supported data types will be precompiled.
+    backend : GPUBackend, optional
+        Which GPU backend to precompile for. If not specified,
+        all supported backends will be precompiled.
+    """
+    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+    backend = list(backend) if backend else list(GPUBackend)
+    for d, b in itertools.product(dtype, backend):
+        _populate_kernel_cache(d, b.value)
 
 
 def _convolve2d_gpu(
@@ -534,6 +573,8 @@ def _convolve2d_gpu(
         _iDivUp(outW, threadsperblock[0]),
         _iDivUp(outH, threadsperblock[1]),
     )
+
+    _populate_kernel_cache(out.dtype.type, use_numba)
 
     kernell = _get_backend_kernel(
         flip, out.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
@@ -656,7 +697,7 @@ def _design_resample_poly(up, down, window):
     # Determine our up and down factors
     # Use a rational approimation to save computation time on really long
     # signals
-    g_ = math.gcd(up, down)
+    g_ = gcd(up, down)
     up //= g_
     down //= g_
 
@@ -669,7 +710,3 @@ def _design_resample_poly(up, down, window):
 
     h = firwin(2 * half_len + 1, f_c, window=window)
     return h
-
-
-# 1) Load and compile upfirdn kernels for each supported data type.
-_populate_kernel_cache()

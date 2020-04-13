@@ -11,24 +11,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-import warnings
-from string import Template
-
 import cupy as cp
+import itertools
+import numpy as np
+import warnings
+
+from enum import Enum
+from math import ceil
 from numba import complex64, complex128, cuda, float32, float64, int64, void
 from numba.types.scalars import Complex
+from string import Template
 
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
+
+class GPUBackend(Enum):
+    CUPY = 0
+    NUMBA = 1
+
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
-    float32: "float",
-    float64: "double",
-    complex64: "complex<float>",
-    complex128: "complex<double>"
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+    np.complex64: [complex64, "complex<float>"],
+    np.complex128: [complex128, "complex<double>"],
 }
+
+_numba_kernel_cache = {}
+_cupy_kernel_cache = {}
 
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -159,13 +168,13 @@ def _numba_upfirdn_signature(ty, ndim):
         arr_ty = ty[:, :]
     return void(
         arr_ty,  # x
-        ty[:],   # h_trans_flip
-        int64,   # up
-        int64,   # down
-        int64,   # axis
-        int64,   # x_shape_a
-        int64,   # h_per_phase
-        int64,   # padded_len
+        ty[:],  # h_trans_flip
+        int64,  # up
+        int64,  # down
+        int64,  # axis
+        int64,  # x_shape_a
+        int64,  # h_per_phase
+        int64,  # padded_len
         arr_ty,  # out
     )
 
@@ -217,28 +226,29 @@ extern "C" {
 
 
 class _cupy_upfirdn_wrapper(object):
-
     def __init__(self, grid, block, stream, kernel):
         if isinstance(grid, int):
-            grid = (grid, )
+            grid = (grid,)
         if isinstance(block, int):
-            block = (block, )
+            block = (block,)
 
         self.grid = grid
         self.block = block
         self.stream = stream
         self.kernel = kernel
 
-    def __call__(self,
-                 x,
-                 h_trans_flip,
-                 up,
-                 down,
-                 axis,
-                 x_shape_a,
-                 h_per_phase,
-                 padded_len,
-                 out):
+    def __call__(
+        self,
+        x,
+        h_trans_flip,
+        up,
+        down,
+        axis,
+        x_shape_a,
+        h_per_phase,
+        padded_len,
+        out,
+    ):
 
         kernel_args = (
             out.shape[0],
@@ -249,7 +259,7 @@ class _cupy_upfirdn_wrapper(object):
             x_shape_a,
             h_per_phase,
             padded_len,
-            out
+            out,
         )
 
         self.stream.use()
@@ -258,12 +268,13 @@ class _cupy_upfirdn_wrapper(object):
 
 def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba):
     if ndim > 2:
-        raise NotImplementedError(
-            "upfirdn() requires ndim <= 2")
+        raise NotImplementedError("upfirdn() requires ndim <= 2")
     elif ndim > 1 and not use_numba:
         warnings.warn(
             "CuPy backend is only implemented for ndim == 1 \
-                Running with Numba CUDA backend", UserWarning)
+                Running with Numba CUDA backend",
+            UserWarning,
+        )
         use_numba = True
 
     if use_numba:
@@ -277,30 +288,66 @@ def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba):
             return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
 
     raise NotImplementedError(
-        "No kernel found for ndim {}, datatype {}".format(ndim, dtype.name))
+        "No kernel found for ndim {}, datatype {}".format(ndim, dtype.name)
+    )
 
 
-def _populate_kernel_cache():
-    for numba_type, c_type in _SUPPORTED_TYPES.items():
-        # JIT compile the numba kernels, both 1d and 2d
-        sig_1d = _numba_upfirdn_signature(numba_type, 1)
-        _numba_kernel_cache[(1, str(numba_type))] = \
-            cuda.jit(sig_1d, fastmath=True)(_numba_upfirdn_1d)
+def _populate_kernel_cache(np_type, use_numba):
 
-        sig_2d = _numba_upfirdn_signature(numba_type, 2)
-        _numba_kernel_cache[(2, str(numba_type))] = \
-            cuda.jit(sig_2d, fastmath=True)(_numba_upfirdn_2d)
+    try:
+        numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
+    except KeyError:
+        raise Exception("No kernel found for datatype {}".format(np_type))
+
+    if not use_numba:
+        if (1, str(numba_type)) in _cupy_kernel_cache:  # Not work
+            return
         # Instantiate the cupy kernel for this type and compile
         if isinstance(numba_type, Complex):
             header = "#include <cupy/complex.cuh>"
         else:
             header = ""
         src = loaded_from_source.substitute(datatype=c_type, header=header)
-        module2 = cp.RawModule(code=src,
-                               options=("-std=c++11", "-use_fast_math"))
-        _cupy_kernel_cache[(1, str(numba_type))] = \
-            module2.get_function("_cupy_upfirdn_1d")
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        _cupy_kernel_cache[(1, str(numba_type))] = module.get_function(
+            "_cupy_upfirdn_1d"
+        )
+
+    else:
+        if (1, str(numba_type)) in _numba_kernel_cache:
+            return
+        # JIT compile the numba kernels, both 1d and 2d
+        sig_1d = _numba_upfirdn_signature(numba_type, 1)
+        _numba_kernel_cache[(1, str(numba_type))] = cuda.jit(
+            sig_1d, fastmath=True
+        )(_numba_upfirdn_1d)
+
+        sig_2d = _numba_upfirdn_signature(numba_type, 2)
+        _numba_kernel_cache[(2, str(numba_type))] = cuda.jit(
+            sig_2d, fastmath=True
+        )(_numba_upfirdn_2d)
+
+
+def precompile_kernels(dtype=None, backend=None):
+    r"""
+    Precompile GPU kernels for later use.
+
+    Parameters
+    ----------
+    dtype : numpy datatype or list of datatypes, optional
+        Data types for which kernels should be precompiled. If not
+        specified, all supported data types will be precompiled.
+    backend : GPUBackend, optional
+        Which GPU backend to precompile for. If not specified,
+        all supported backends will be precompiled.
+    """
+    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+    backend = list(backend) if backend else list(GPUBackend)
+    for d, b in itertools.product(dtype, backend):
+        _populate_kernel_cache(d, b.value)
 
 
 class _UpFIRDn(object):
@@ -346,8 +393,8 @@ class _UpFIRDn(object):
 
         if out.ndim > 1:
             threadsperblock = (16, 16)
-            blockspergrid_x = math.ceil(out.shape[0] / threadsperblock[0])
-            blockspergrid_y = math.ceil(out.shape[1] / threadsperblock[1])
+            blockspergrid_x = ceil(out.shape[0] / threadsperblock[0])
+            blockspergrid_y = ceil(out.shape[1] / threadsperblock[1])
             blockspergrid = (blockspergrid_x, blockspergrid_y)
 
         else:
@@ -356,22 +403,28 @@ class _UpFIRDn(object):
             blockspergrid = numSM * 20
             threadsperblock = 512
 
-        kernel = _get_backend_kernel(out.ndim,
-                                     out.dtype,
-                                     blockspergrid,
-                                     threadsperblock,
-                                     cp_stream,
-                                     use_numba)
+        _populate_kernel_cache(out.dtype.type, use_numba)
 
-        kernel(cp.asarray(x, self._output_type),
-               self._h_trans_flip,
-               self._up,
-               self._down,
-               axis,
-               x_shape_a,
-               h_per_phase,
-               padded_len,
-               out)
+        kernel = _get_backend_kernel(
+            out.ndim,
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            cp_stream,
+            use_numba,
+        )
+
+        kernel(
+            cp.asarray(x, self._output_type),
+            self._h_trans_flip,
+            self._up,
+            self._down,
+            axis,
+            x_shape_a,
+            h_per_phase,
+            padded_len,
+            out,
+        )
 
         return out
 
@@ -470,10 +523,3 @@ def upfirdn(
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using np.apply_along_axis
     return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
-
-
-# Code executed at import time goes here to make it clear to future
-# maintainers the side-effects of importing this module.
-
-# 1) Load and compile upfirdn kernels for each supported data type.
-_populate_kernel_cache()

@@ -11,17 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cupy as cp
+import itertools
+import numpy as np
+
 from enum import Enum
 from math import sin, cos, atan2
-from string import Template
 from numba import (
     cuda,
     float64,
     void,
 )
-import itertools
-import cupy as cp
-import numpy as np
+from string import Template
 
 
 class GPUBackend(Enum):
@@ -29,6 +30,7 @@ class GPUBackend(Enum):
     NUMBA = 1
 
 
+# Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
     np.float64: [float64, "double"],
 }
@@ -36,8 +38,6 @@ _SUPPORTED_TYPES = {
 
 _numba_kernel_cache = {}
 _cupy_kernel_cache = {}
-
-# Numba type supported and corresponding C type
 
 
 # Use until functionality provided in Numba 0.49/0.50 available
@@ -334,8 +334,6 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     numSM = device_id.attributes["MultiProcessorCount"]
     threadsperblock = 256
     blockspergrid = numSM * 20
-
-    print(pgram.dtype.type)
 
     _populate_kernel_cache(pgram.dtype.type, use_numba)
 
