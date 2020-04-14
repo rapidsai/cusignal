@@ -1773,9 +1773,10 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         The signal to be downsampled, as an N-dimensional array.
     q : int
         The downsampling factor.
-    n : int, optional
-        The order of the filter (1 less than the length for FIR). Defaults to
-        20 times the downsampling factor.
+    n : int or array_like, optional
+        The order of the filter (1 less than the length for FIR) to calculate,
+        or the FIR filter coefficients to employ. Defaults to calculating the
+        coefficients for 20 times the downsampling factor.
     axis : int, optional
         The axis along which to decimate.
     zero_phase : bool, optional
@@ -1794,17 +1795,18 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
     -----
     Only FIR filter types are currently supported in cuSignal.
     """
-
-    x = cp.asarray(x)
-    if n is None:
-        half_len = 10 * q  # reasonable cutoff for our sinc-like function
-        n = 2 * half_len
-    b, a = firwin(n + 1, 1. / q, window='hamming'), 1.
+    
+    x = asarray(x)
+    if isinstance(n, (list, ndarray)):
+        b = asarray(n)
+    else:
+        if n is None:
+            half_len = 10 * q  # reasonable cutoff for our sinc-like function
+            n = 2 * half_len
+        b = firwin(n + 1, 1. / q, window='hamming')
 
     sl = [slice(None)] * x.ndim
-    a = cp.asarray(a)
 
-    b = b / a
     if zero_phase:
         y = resample_poly(x, 1, q, axis=axis, window=b)
     else:
