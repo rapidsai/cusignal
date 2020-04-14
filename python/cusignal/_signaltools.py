@@ -26,6 +26,7 @@ from numba import (
     int64,
     void,
 )
+
 try:
     # Numba <= 0.49
     from numba.types.scalars import Complex
@@ -736,11 +737,7 @@ def _convolve2d_gpu(
 
 
 def _convolve(
-    in1,
-    in2,
-    use_convolve,
-    mode="full",
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    in1, in2, use_convolve, mode, cp_stream=cp.cuda.stream.Stream(null=True),
 ):
 
     val = _valfrommode(mode)
