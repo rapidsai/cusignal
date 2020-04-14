@@ -12,6 +12,7 @@
 - PR #50 - Update README to reorganize install instructions
 - PR #55 - Update notebooks to use timeit instead of time
 - PR #60 - Updated decimate function to use an existing FIR window
+- PR #62 - Fix link in README
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
