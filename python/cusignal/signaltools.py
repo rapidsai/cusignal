@@ -205,7 +205,13 @@ def correlate(in1, in2, mode="full", method="auto"):
         return convolve(in1, _reverse_and_conj(in2), mode, method)
 
     elif method == "direct":
-        return _signaltools._convolve(in1, in2, 0, mode)
+
+        swapped_inputs = in2.size > in1.size
+
+        if swapped_inputs:
+            in1, in2 = in2, in1
+
+        return _signaltools._convolve(in1, in2, False, swapped_inputs, mode)
 
     else:
         raise ValueError(
@@ -464,11 +470,13 @@ def _fftconv_faster(x, h, mode):
     return big_O_constant * fft_time < direct_time
 
 
+#  TODO: Does this even work????
 def _reverse_and_conj(x):
     """
     Reverse array `x` in all dimensions and perform the complex conjugate
     """
     reverse = (slice(None, None, -1),) * x.ndim
+    # return cp.flip(x, 0)
     return x[reverse].conj()
 
 
@@ -760,14 +768,19 @@ def convolve(in1, in2, mode="full", method="auto"):
             out = cp.around(out)
         return out.astype(result_type)
     elif method == "direct":
-        # fastpath to faster numpy.convolve for 1d inputs when possible
-        if _np_conv_ok(volume, kernel, mode):
-            return _signaltools._convolve(volume, kernel, 1, mode)
-            # return cp.asarray(
-            #     np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode)
-            # )
 
-        return correlate(volume, _reverse_and_conj(kernel), mode, "direct")
+        swapped_inputs = (
+            (mode != "valid")
+            and (kernel.size > volume.size)
+        )
+
+        if swapped_inputs:
+            volume, kernel = kernel, volume
+
+        return _signaltools._convolve(
+            volume, kernel, True, swapped_inputs, mode
+        )
+
     else:
         raise ValueError(
             "Acceptable method flags are 'auto'," " 'direct', or 'fft'."

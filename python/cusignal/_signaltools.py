@@ -375,10 +375,13 @@ extern "C" {
 
     __global__ void _cupy_correlate_1d(
             const ${datatype} * __restrict__ inp,
+            const int inpW,
             const ${datatype} * __restrict__ kernel,
             const int kerW,
             const int P1,
             const int end,
+            const int mode,
+            const bool swapped_inputs,
             ${datatype} * __restrict__ out,
             const int outW) {
 
@@ -390,36 +393,79 @@ extern "C" {
 
             ${datatype} temp {};
 
-            if ( tid >= P1 && tid < outW - P1 ) {
-                for ( int j = 0; j < kerW; j++ ) {
+            // Valid
+            if ( mode == 0 ) {
+                if ( tid >= P1 && tid < outW - P1 ) {
+                    for ( int j = 0; j < kerW; j++ ) {
 
-                    temp += inp[tid - P1 + j] * kernel[j];
+                        temp += inp[tid - P1 + j] * kernel[j];
+                    }
                 }
-            } else if ( tid < P1 ) {
-                for ( int j = 0; j < kerW; j++ ) {
+            } else if ( mode == 1 ) {   // Same
+                if (!swapped_inputs){
+                    if ( tid < P1 ) {
+                        for ( int j = 0; j < kerW; j++ ) {
+                            ${datatype} input = (tid < P1 - j) ?
+                                0 : inp[tid - P1 + j];
 
-                    ${datatype} input = (tid < P1 - j) ? 0 : inp[tid - P1 + j];
-                    temp += input * kernel[j];
+                            temp += input * kernel[j];
+                        }
+                    } else {
+                        for ( int j = 0; j < kerW; j++ ) {
+                            ${datatype} input = ( tid - (end - P1) ) <
+                                (outW - end + (end - j)) ?
+                                inp[tid - P1 + j] : 0;
+
+                            temp += input * kernel[j];
+                        }
+                    }
+                } else {
+                    ${datatype} input {};
+                    int start {(inpW/2) - (kerW-1) + tid};
+                    for ( int j = 0; j < kerW; j++ ) {
+                        if ((start + j < 0) || (start + j > inpW)) {
+                            input = 0;
+                        } else {
+                            input = inp[start + j];
+                        }
+                        temp += input * kernel[j];
+                    }
                 }
-            } else {
-                for ( int j = 0; j < kerW; j++ ) {
+            } else {    // Full
+                if ( tid < P1 ) {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        ${datatype} input = (tid < P1 - j) ?
+                            0 : inp[tid - P1 + j];
 
-                    ${datatype} input = ( tid - (end - P1) ) <
-                        (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
-                    temp += input * kernel[j];
+                        temp += input * kernel[j];
+                    }
+                } else {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        ${datatype} input = ( tid - (end - P1) ) <
+                            (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
+
+                        temp += input * kernel[j];
+                    }
                 }
             }
 
-            out[tid] = temp;
+            if (swapped_inputs) {
+                out[outW - tid - 1] = temp; // TODO: Move to shared memory
+            } else {
+                out[tid] = temp;
+            }
         }
     }
 
     __global__ void _cupy_convolve_1d(
             const ${datatype} * __restrict__ inp,
+            const int inpW,
             const ${datatype} * __restrict__ kernel,
             const int kerW,
             const int P1,
             const int end,
+            const int mode,
+            const bool swapped_inputs,
             ${datatype} * __restrict__ out,
             const int outW) {
 
@@ -431,23 +477,57 @@ extern "C" {
 
             ${datatype} temp {};
 
-            if ( tid >= P1 && tid < outW - P1 ) {
-                for ( int j = 0; j < kerW; j++ ) {
+            // Valid
+            if ( mode == 0 ) {
+                if ( tid >= P1 && tid < outW - P1 ) {
+                    for ( int j = 0; j < kerW; j++ ) {
 
-                    temp += inp[tid - P1 + j] * kernel[( kerW - 1 ) - j];
+                        temp += inp[tid - P1 + j] * kernel[( kerW - 1 ) - j];
+                    }
                 }
-            } else if ( tid < P1 ) {
-                for ( int j = 0; j < kerW; j++ ) {
-
-                    ${datatype} input = (tid < P1 - j) ? 0 : inp[tid - P1 + j];
-                    temp += input * kernel[( kerW - 1 ) - j];
+            } else if ( mode == 1 ) {   // Same
+                if (!swapped_inputs){
+                    if ( tid < P1 ) {
+                        for ( int j = 0; j < kerW; j++ ) {
+                            ${datatype} input = (tid < P1 - j) ?
+                                0 : inp[tid - P1 + j];
+                            temp += input * kernel[( kerW - 1 ) - j];
+                        }
+                    } else {
+                        for ( int j = 0; j < kerW; j++ ) {
+                            ${datatype} input = ( tid - (end - P1) ) <
+                                (outW - end + (end - j)) ?
+                                inp[tid - P1 + j] : 0;
+                            temp += input * kernel[( kerW - 1 ) - j];
+                        }
+                    }
+                } else {
+                    ${datatype} input {};
+                    int start { (inpW/2) - (kerW-1) + tid };
+                    if ( inpW % 2 == 0) start--;
+                    for ( int j = 0; j < kerW; j++ ) {
+                        if ((start + j < 0) || (start + j > inpW)) {
+                            input = 0;
+                        } else {
+                            input = inp[start + j];
+                        }
+                        temp += input * kernel[( kerW - 1 ) - j];
+                    }
                 }
-            } else {
-                for ( int j = 0; j < kerW; j++ ) {
 
-                    ${datatype} input = ( tid - (end - P1) ) <
-                        (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
-                    temp += input * kernel[( kerW - 1 ) - j];
+            } else {    // Full
+                if ( tid < P1 ) {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        ${datatype} input = (tid < P1 - j) ?
+                            0 : inp[tid - P1 + j];
+                        temp += input * kernel[( kerW - 1 ) - j];
+                    }
+                } else {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        ${datatype} input = ( tid - (end - P1) ) <
+                            (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
+                        temp += input * kernel[( kerW - 1 ) - j];
+                    }
                 }
             }
 
@@ -472,15 +552,18 @@ class _cupy_convolve_1d_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, d_kernel, P1, end, out,
+        self, d_inp, d_kernel, P1, end, mode, swapped_inputs, out,
     ):
 
         kernel_args = (
             d_inp,
+            d_inp.shape[0],
             d_kernel,
             d_kernel.shape[0],
             P1,
             end,
+            mode,
+            swapped_inputs,
             out,
             out.shape[0],
         )
@@ -583,7 +666,7 @@ def _populate_kernel_cache():
 
 
 def _convolve1d_gpu(
-    inp, out, ker, mode, use_convolve, cp_stream,
+    inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
 ):
 
     # end is used to handle threads that compute last
@@ -613,6 +696,7 @@ def _convolve1d_gpu(
 
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]
+
     threadsperblock = 256
     blockspergrid = numSM * 20
 
@@ -625,7 +709,7 @@ def _convolve1d_gpu(
         use_numba=False,
     )
 
-    kernel(d_inp, d_kernel, P1, end, out)
+    kernel(d_inp, d_kernel, P1, end, mode, swapped_inputs, out)
 
     return out
 
@@ -737,7 +821,12 @@ def _convolve2d_gpu(
 
 
 def _convolve(
-    in1, in2, use_convolve, mode, cp_stream=cp.cuda.stream.Stream(null=True),
+    in1,
+    in2,
+    use_convolve,
+    swapped_inputs,
+    mode,
+    cp_stream=cp.cuda.stream.Stream(null=True),
 ):
 
     val = _valfrommode(mode)
@@ -751,7 +840,11 @@ def _convolve(
     out_dimens = np.empty(in1.ndim, np.int)
     if val == VALID:
         for i in range(in1.ndim):
-            out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
+            out_dimens[i] = (
+                max(in1.shape[i], in2.shape[i])
+                - min(in1.shape[i], in2.shape[i])
+                + 1
+            )
             if out_dimens[i] < 0:
                 raise Exception(
                     "no part of the output is valid, use option 1 (same) or 2 \
@@ -759,7 +852,10 @@ def _convolve(
                 )
     elif val == SAME:
         for i in range(in1.ndim):
-            out_dimens[i] = in1.shape[i]
+            if not swapped_inputs:
+                out_dimens[i] = in1.shape[i]  # Per scipy docs
+            else:
+                out_dimens[i] = min(in1.shape[i], in2.shape[i])
     elif val == FULL:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] + in2.shape[i] - 1
@@ -770,7 +866,7 @@ def _convolve(
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
     out = _convolve1d_gpu(
-        in1, out, in2, val, use_convolve, cp_stream=cp_stream,
+        in1, out, in2, val, use_convolve, swapped_inputs, cp_stream=cp_stream,
     )
 
     return out
