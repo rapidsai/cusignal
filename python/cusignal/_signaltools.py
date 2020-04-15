@@ -378,8 +378,6 @@ extern "C" {
             const int inpW,
             const ${datatype} * __restrict__ kernel,
             const int kerW,
-            const int P1,
-            const int end,
             const int mode,
             const bool swapped_inputs,
             ${datatype} * __restrict__ out,
@@ -395,56 +393,30 @@ extern "C" {
 
             // Valid
             if ( mode == 0 ) {
-                if ( tid >= P1 && tid < outW - P1 ) {
+                if ( tid >= 0 && tid < inpW ) {
                     for ( int j = 0; j < kerW; j++ ) {
-
-                        temp += inp[tid - P1 + j] * kernel[j];
+                        temp += inp[tid + j] * kernel[j];
                     }
                 }
             } else if ( mode == 1 ) {   // Same
-                if (!swapped_inputs){
-                    if ( tid < P1 ) {
-                        for ( int j = 0; j < kerW; j++ ) {
-                            ${datatype} input = (tid < P1 - j) ?
-                                0 : inp[tid - P1 + j];
-
-                            temp += input * kernel[j];
-                        }
-                    } else {
-                        for ( int j = 0; j < kerW; j++ ) {
-                            ${datatype} input = ( tid - (end - P1) ) <
-                                (outW - end + (end - j)) ?
-                                inp[tid - P1 + j] : 0;
-
-                            temp += input * kernel[j];
-                        }
-                    }
+                const int P1 { kerW / 2 };
+                int start {};
+                if ( !swapped_inputs ) {
+                    start = 0 - P1 + tid;
                 } else {
-                    ${datatype} input {};
-                    int start {(inpW/2) - (kerW-1) + tid};
-                    for ( int j = 0; j < kerW; j++ ) {
-                        if ((start + j < 0) || (start + j > inpW)) {
-                            input = 0;
-                        } else {
-                            input = inp[start + j];
-                        }
-                        temp += input * kernel[j];
+                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
+                }
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[j];
                     }
                 }
             } else {    // Full
-                if ( tid < P1 ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        ${datatype} input = (tid < P1 - j) ?
-                            0 : inp[tid - P1 + j];
-
-                        temp += input * kernel[j];
-                    }
-                } else {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        ${datatype} input = ( tid - (end - P1) ) <
-                            (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
-
-                        temp += input * kernel[j];
+                const int P1 { kerW - 1 };
+                int start { 0 - P1 + tid };
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[j];
                     }
                 }
             }
@@ -462,8 +434,6 @@ extern "C" {
             const int inpW,
             const ${datatype} * __restrict__ kernel,
             const int kerW,
-            const int P1,
-            const int end,
             const int mode,
             const bool swapped_inputs,
             ${datatype} * __restrict__ out,
@@ -479,54 +449,30 @@ extern "C" {
 
             // Valid
             if ( mode == 0 ) {
-                if ( tid >= P1 && tid < outW - P1 ) {
+                if ( tid >= 0 && tid < inpW ) {
                     for ( int j = 0; j < kerW; j++ ) {
-
-                        temp += inp[tid - P1 + j] * kernel[( kerW - 1 ) - j];
+                        temp += inp[tid + j] * kernel[( kerW - 1 ) - j];
                     }
                 }
             } else if ( mode == 1 ) {   // Same
-                if (!swapped_inputs){
-                    if ( tid < P1 ) {
-                        for ( int j = 0; j < kerW; j++ ) {
-                            ${datatype} input = (tid < P1 - j) ?
-                                0 : inp[tid - P1 + j];
-                            temp += input * kernel[( kerW - 1 ) - j];
-                        }
-                    } else {
-                        for ( int j = 0; j < kerW; j++ ) {
-                            ${datatype} input = ( tid - (end - P1) ) <
-                                (outW - end + (end - j)) ?
-                                inp[tid - P1 + j] : 0;
-                            temp += input * kernel[( kerW - 1 ) - j];
-                        }
-                    }
+                const int P1 { kerW / 2 };
+                int start {};
+                if ( !swapped_inputs ) {
+                    start = 0 - P1 + tid;
                 } else {
-                    ${datatype} input {};
-                    int start { (inpW/2) - (kerW-1) + tid };
-                    if ( inpW % 2 == 0) start--;
-                    for ( int j = 0; j < kerW; j++ ) {
-                        if ((start + j < 0) || (start + j > inpW)) {
-                            input = 0;
-                        } else {
-                            input = inp[start + j];
-                        }
-                        temp += input * kernel[( kerW - 1 ) - j];
+                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
+                }
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
                     }
                 }
-
             } else {    // Full
-                if ( tid < P1 ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        ${datatype} input = (tid < P1 - j) ?
-                            0 : inp[tid - P1 + j];
-                        temp += input * kernel[( kerW - 1 ) - j];
-                    }
-                } else {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        ${datatype} input = ( tid - (end - P1) ) <
-                            (outW - end + (end - j)) ? inp[tid - P1 + j] : 0;
-                        temp += input * kernel[( kerW - 1 ) - j];
+                const int P1 { kerW - 1 };
+                int start { 0 - P1 + tid };
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
                     }
                 }
             }
@@ -552,7 +498,7 @@ class _cupy_convolve_1d_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, d_kernel, P1, end, mode, swapped_inputs, out,
+        self, d_inp, d_kernel, mode, swapped_inputs, out,
     ):
 
         kernel_args = (
@@ -560,8 +506,6 @@ class _cupy_convolve_1d_wrapper(object):
             d_inp.shape[0],
             d_kernel,
             d_kernel.shape[0],
-            P1,
-            end,
             mode,
             swapped_inputs,
             out,
@@ -669,28 +613,6 @@ def _convolve1d_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
 ):
 
-    # end is used to handle threads that compute last
-    # elements in kernel
-    end = ker.shape[0] - 1
-
-    # P1 is the amount of padding required
-    if ker.shape[0] % 2 == 1:  # odd
-        if mode == 0:  # valid
-            P1 = 0
-        elif mode == 1:  # same
-            P1 = ker.shape[0] // 2
-        else:  # full
-            P1 = ker.shape[0] - 1
-
-    else:  # even
-        if mode == 0:  # valid
-            P1 = 0
-        elif mode == 1:  # same
-            P1 = ker.shape[0] // 2
-            end = ker.shape[0]
-        else:  # full
-            P1 = ker.shape[0] - 1
-
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
 
@@ -709,7 +631,7 @@ def _convolve1d_gpu(
         use_numba=False,
     )
 
-    kernel(d_inp, d_kernel, P1, end, mode, swapped_inputs, out)
+    kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
     return out
 

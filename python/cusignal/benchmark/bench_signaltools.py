@@ -135,21 +135,21 @@ class BenchFirWin:
 
 
 @pytest.mark.benchmark(group="Correlate")
-@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 14])
-@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 14])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["direct"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
 class BenchCorrelate:
     def cpu_version(self, cpu_sig, num_taps, mode, method):
         return signal.correlate(cpu_sig, num_taps, mode=mode, method=method)
 
-    def bench_correlate_cpu(
+    def bench_correlate1d_cpu(
         self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
     ):
         cpu_sig, _ = rand_data_gen(num_samps)
         benchmark(self.cpu_version, cpu_sig, np.ones(num_taps), mode, method)
 
-    def bench_correlate_gpu(
+    def bench_correlate1d_gpu(
         self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
     ):
 
@@ -167,15 +167,15 @@ class BenchCorrelate:
 
 
 @pytest.mark.benchmark(group="Convolve")
-@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 14])
-@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 14])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["direct"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
 class BenchConvolve:
     def cpu_version(self, cpu_sig, cpu_win, mode, method):
         return signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
 
-    def bench_convolve_cpu(
+    def bench_convolve1d_cpu(
         self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
     ):
         cpu_sig, _ = rand_data_gen(num_samps)
@@ -183,7 +183,7 @@ class BenchConvolve:
 
         benchmark(self.cpu_version, cpu_sig, cpu_win, mode, method)
 
-    def bench_convolve_gpu(
+    def bench_convolve1d_gpu(
         self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
     ):
 
@@ -275,64 +275,6 @@ class BenchHilbert2:
 
         key = self.cpu_version(cpu_sig)
         assert array_equal(cp.asnumpy(output), key)
-
-
-# @pytest.mark.benchmark(group="Convolve")
-# @pytest.mark.parametrize("num_samps", [2 ** 16, 2 ** 20])
-# @pytest.mark.parametrize("num_taps", [5, 100, 1024])
-# @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-# class BenchConvolve:
-#     def cpu_version(self, cpu_sig, cpu_filt, mode):
-#         return signal.convolve(cpu_sig, cpu_filt, mode=mode, method="direct")
-
-#     def bench_convolve_cpu(
-#         self, rand_data_gen, benchmark, num_samps, num_taps, mode
-#     ):
-#         cpu_sig, _ = rand_data_gen(num_samps)
-#         cpu_filt, _ = rand_data_gen(num_taps)
-#         benchmark(self.cpu_version, cpu_sig, cpu_filt, mode)
-
-#     def bench_convolve_gpu(
-#         self, rand_data_gen, benchmark, num_samps, num_taps, mode,
-#     ):
-
-#         cpu_sig, gpu_sig = rand_data_gen(num_samps)
-#         cpu_filt, gpu_filt = rand_data_gen(num_taps)
-#         output = benchmark(
-#             cusignal.convolve, gpu_sig, gpu_filt, mode=mode, method="direct",
-#         )
-
-#         key = self.cpu_version(cpu_sig, cpu_filt, mode)
-#         assert array_equal(cp.asnumpy(output), key)
-
-
-# @pytest.mark.benchmark(group="Correlate")
-# @pytest.mark.parametrize("num_samps", [2 ** 16, 2 ** 20])
-# @pytest.mark.parametrize("num_taps", [5, 100, 1024])
-# @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-# class BenchCorrelate:
-#     def cpu_version(self, cpu_sig, cpu_filt, mode):
-#         return signal.correlate(cpu_sig, cpu_filt, mode=mode, method="direct")
-
-#     def bench_correlate_cpu(
-#         self, rand_data_gen, benchmark, num_samps, num_taps, mode
-#     ):
-#         cpu_sig, _ = rand_data_gen(num_samps)
-#         cpu_filt, _ = rand_data_gen(num_taps)
-#         benchmark(self.cpu_version, cpu_sig, cpu_filt, mode)
-
-#     def bench_correlate_gpu(
-#         self, rand_data_gen, benchmark, num_samps, num_taps, mode,
-#     ):
-
-#         cpu_sig, gpu_sig = rand_data_gen(num_samps)
-#         cpu_filt, gpu_filt = rand_data_gen(num_taps)
-#         output = benchmark(
-#             cusignal.correlate, gpu_sig, gpu_filt, mode=mode, method="direct",
-#         )
-
-#         key = self.cpu_version(cpu_sig, cpu_filt, mode)
-#         assert array_equal(cp.asnumpy(output), key)
 
 
 @pytest.mark.benchmark(group="Convolve2d")
