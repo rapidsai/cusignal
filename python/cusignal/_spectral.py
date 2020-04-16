@@ -329,9 +329,19 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     dtype : numpy datatype or list of datatypes, optional
         Data types for which kernels should be precompiled. If not
         specified, all supported data types will be precompiled.
+        Specific to this unit
+            np.float64
     backend : GPUBackend, optional
         Which GPU backend to precompile for. If not specified,
         all supported backends will be precompiled.
+        Specific to this unit
+            GPUBackend.CUPY
+            GPUBackend.NUMBA
+    k_type : GPUKernel, optional
+        Which GPU kernel to compile for. If not specified,
+        all supported kernels will be precompiled.
+        Specific to this unit
+            GPUBackend.LOMBSCARGLE
     """
     dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
     backend = list(backend) if backend else list(GPUBackend)
