@@ -443,7 +443,6 @@ extern "C" {
     }
 
     __global__ void _cupy_convolve(
-
             const ${datatype} * __restrict__ inp,
             const int inpW,
             const ${datatype} * __restrict__ kernel,
@@ -499,7 +498,6 @@ extern "C" {
 
 
 class _cupy_convolve_wrapper(object):
-
     def __init__(self, grid, block, stream, kernel):
         if isinstance(grid, int):
             grid = (grid,)
@@ -708,39 +706,6 @@ def _convolve_gpu(
             False,
             GPUKernel.CORRELATE,
         )
-        _cupy_kernel_cache[(2, str(numba_type))] = module2.get_function(
-            "_cupy_correlate_1d"
-        )
-        _cupy_kernel_cache[(3, str(numba_type))] = module2.get_function(
-            "_cupy_convolve_1d"
-        )
-
-
-def _convolve1d_gpu(
-    inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
-):
-
-    d_inp = cp.array(inp)
-    d_kernel = cp.array(ker)
-
-    device_id = cp.cuda.Device()
-    numSM = device_id.attributes["MultiProcessorCount"]
-
-    threadsperblock = 256
-    blockspergrid = numSM * 20
-
-    kernel = _get_backend_kernel(
-        use_convolve + 2,
-        out.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        use_numba=False,
-    )
-
-    kernel(d_inp, d_kernel, mode, swapped_inputs, out)
-
-    return out
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
