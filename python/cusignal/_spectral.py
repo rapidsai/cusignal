@@ -25,6 +25,10 @@ from numba import (
 from string import Template
 
 
+class GPUKernel(Enum):
+    LOMBSCARGLE = 0
+
+
 class GPUBackend(Enum):
     CUPY = 0
     NUMBA = 1
@@ -260,25 +264,26 @@ class _cupy_lombscargle_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, stream, use_numba):
+def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
-    if use_numba:
+    if not use_numba:
+        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+        if kernel:
+            return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
+
+    else:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name)]
+        kernel = _numba_kernel_cache[(dtype.name, k_type)]
 
         if kernel:
             return kernel[grid, block, nb_stream]
-    else:
-        kernel = _cupy_kernel_cache[(dtype.name)]
-        if kernel:
-            return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
 
     raise NotImplementedError(
         "No kernel found for datatype {}".format(dtype.name)
     )
 
 
-def _populate_kernel_cache(np_type, use_numba):
+def _populate_kernel_cache(np_type, use_numba, k_type):
 
     try:
         numba_type, c_type = _SUPPORTED_TYPES[np_type]
@@ -288,28 +293,34 @@ def _populate_kernel_cache(np_type, use_numba):
 
     # JIT compile the numba kernels
     if not use_numba:
-        if str(numba_type) in _cupy_kernel_cache:
+        if (str(numba_type), k_type) in _cupy_kernel_cache:
             return
         # Instantiate the cupy kernel for this type and compile
         src = loaded_from_source.substitute(datatype=c_type)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[(str(numba_type))] = module.get_function(
-            "_cupy_lombscargle"
-        )
+        if k_type == GPUKernel.LOMBSCARGLE:
+            _cupy_kernel_cache[
+                (str(numba_type), k_type)
+            ] = module.get_function("_cupy_lombscargle")
+        else:
+            raise Exception("If you see this let the developers know.")
 
     else:
-        if str(numba_type) in _numba_kernel_cache:
+        if (str(numba_type), k_type) in _numba_kernel_cache:
             return
         # JIT compile the numba kernels
         sig = _numba_lombscargle_signature(numba_type)
-        _numba_kernel_cache[(str(numba_type))] = cuda.jit(sig, fastmath=True)(
-            _numba_lombscargle
-        )
+        if k_type == GPUKernel.LOMBSCARGLE:
+            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_lombscargle)
+        else:
+            raise Exception("If you see this let the developers know.")
 
 
-def precompile_kernels(dtype=None, backend=None):
+def precompile_kernels(dtype=None, backend=None, k_type=None):
     r"""
     Precompile GPU kernels for later use.
 
@@ -324,8 +335,9 @@ def precompile_kernels(dtype=None, backend=None):
     """
     dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
     backend = list(backend) if backend else list(GPUBackend)
-    for d, b in itertools.product(dtype, backend):
-        _populate_kernel_cache(d, b.value)
+    k_type = list(k_type) if k_type else list(GPUKernel)
+    for d, b, k in itertools.product(dtype, backend, k_type):
+        _populate_kernel_cache(d, b.value, k)
 
 
 def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
@@ -335,10 +347,15 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     threadsperblock = 256
     blockspergrid = numSM * 20
 
-    _populate_kernel_cache(pgram.dtype.type, use_numba)
+    _populate_kernel_cache(pgram.dtype.type, use_numba, GPUKernel.LOMBSCARGLE)
 
     kernel = _get_backend_kernel(
-        pgram.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
+        pgram.dtype,
+        blockspergrid,
+        threadsperblock,
+        cp_stream,
+        use_numba,
+        GPUKernel.LOMBSCARGLE,
     )
 
     kernel(x, y, freqs, pgram, y_dot)

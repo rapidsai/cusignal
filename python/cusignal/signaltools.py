@@ -205,7 +205,16 @@ def correlate(in1, in2, mode="full", method="auto"):
         return convolve(in1, _reverse_and_conj(in2), mode, method)
 
     elif method == "direct":
-        raise ValueError("Direct method is not yet implemented in cuSignal")
+
+        if in1.ndim > 1:
+            raise ValueError("Direct method is only implemented for 1D")
+
+        swapped_inputs = in2.size > in1.size
+
+        if swapped_inputs:
+            in1, in2 = in2, in1
+
+        return _signaltools._convolve(in1, in2, False, swapped_inputs, mode)
 
     else:
         raise ValueError(
@@ -744,11 +753,7 @@ def convolve(in1, in2, mode="full", method="auto"):
     if volume.ndim == kernel.ndim == 0:
         return volume * kernel
     elif volume.ndim != kernel.ndim:
-        raise ValueError(
-            "volume and kernel should have \
-                         the same "
-            "dimensionality"
-        )
+        raise ValueError("in1 and in2 should have the same dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
         # Convolution is commutative; order doesn't have any effect on output
@@ -764,18 +769,22 @@ def convolve(in1, in2, mode="full", method="auto"):
             out = cp.around(out)
         return out.astype(result_type)
     elif method == "direct":
-        # fastpath to faster numpy.convolve for 1d inputs when possible
-        if _np_conv_ok(volume, kernel, mode):
-            return cp.asarray(
-                np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode)
-            )
 
-        return correlate(volume, _reverse_and_conj(kernel), mode, "direct")
+        if volume.ndim > 1:
+            raise ValueError("Direct method is only implemented for 1D")
+
+        swapped_inputs = (mode != "valid") and (kernel.size > volume.size)
+
+        if swapped_inputs:
+            volume, kernel = kernel, volume
+
+        return _signaltools._convolve(
+            volume, kernel, True, swapped_inputs, mode
+        )
+
     else:
         raise ValueError(
-            "Acceptable method flags are \
-                         'auto',"
-            " 'direct', or 'fft'."
+            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
         )
 
 
@@ -914,14 +923,12 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    val = _signaltools._valfrommode(mode)
-    bval = _signaltools._bvalfromboundary(boundary)
     out = _signaltools._convolve2d(
         in1,
         in2,
         1,
-        val,
-        bval,
+        mode,
+        boundary,
         fillvalue,
         cp_stream=cp_stream,
         use_numba=use_numba,
@@ -1012,14 +1019,12 @@ def correlate2d(
     if swapped_inputs:
         in1, in2 = in2, in1
 
-    val = _signaltools._valfrommode(mode)
-    bval = _signaltools._bvalfromboundary(boundary)
     out = _signaltools._convolve2d(
         in1,
         in2.conj(),
         0,
-        val,
-        bval,
+        mode,
+        boundary,
         fillvalue,
         cp_stream=cp_stream,
         use_numba=use_numba,
@@ -1773,9 +1778,10 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         The signal to be downsampled, as an N-dimensional array.
     q : int
         The downsampling factor.
-    n : int, optional
-        The order of the filter (1 less than the length for FIR). Defaults to
-        20 times the downsampling factor.
+    n : int or array_like, optional
+        The order of the filter (1 less than the length for FIR) to calculate,
+        or the FIR filter coefficients to employ. Defaults to calculating the
+        coefficients for 20 times the downsampling factor.
     axis : int, optional
         The axis along which to decimate.
     zero_phase : bool, optional
@@ -1795,16 +1801,17 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
     Only FIR filter types are currently supported in cuSignal.
     """
 
-    x = cp.asarray(x)
-    if n is None:
-        half_len = 10 * q  # reasonable cutoff for our sinc-like function
-        n = 2 * half_len
-    b, a = firwin(n + 1, 1. / q, window='hamming'), 1.
+    x = asarray(x)
+    if isinstance(n, (list, ndarray)):
+        b = asarray(n)
+    else:
+        if n is None:
+            half_len = 10 * q  # reasonable cutoff for our sinc-like function
+            n = 2 * half_len
+        b = firwin(n + 1, 1.0 / q, window="hamming")
 
     sl = [slice(None)] * x.ndim
-    a = cp.asarray(a)
 
-    b = b / a
     if zero_phase:
         y = resample_poly(x, 1, q, axis=axis, window=b)
     else:
