@@ -27,8 +27,14 @@ from numba import (
     int64,
     void,
 )
-from numba.types.scalars import Complex
 from string import Template
+
+try:
+    # Numba <= 0.49
+    from numba.types.scalars import Complex
+except ImportError:
+    # Numba >= 0.49
+    from numba.core.types.scalars import Complex
 
 from .fir_filter_design import firwin
 

@@ -12,9 +12,11 @@
 - PR #50 - Update README to reorganize install instructions
 - PR #55 - Update notebooks to use timeit instead of time
 - PR #56 - Ability to precompile select Numba/CuPy kernel on import
+- PR #60 - Updated decimate function to use an existing FIR window
 
 ## Bug Fixes
-- PR #44 - Fix issues in pytests
+- PR #44 - Fix issues in pytests 
+- PR #52 - Mirror API change in Numba 0.49
 
 # cuSignal 0.13 (31 Mar 2020)
 
