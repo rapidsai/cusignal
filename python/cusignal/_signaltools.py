@@ -26,6 +26,7 @@ from numba import (
     int64,
     void,
 )
+
 try:
     # Numba <= 0.49
     from numba.types.scalars import Complex
@@ -371,9 +372,148 @@ extern "C" {
             out[oPixelPos.x * outW + oPixelPos.y] = temp;
         }
     }
+
+    __global__ void _cupy_correlate_1d(
+            const ${datatype} * __restrict__ inp,
+            const int inpW,
+            const ${datatype} * __restrict__ kernel,
+            const int kerW,
+            const int mode,
+            const bool swapped_inputs,
+            ${datatype} * __restrict__ out,
+            const int outW) {
+
+        const int tx {
+            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
+
+        for ( int tid = tx; tid < outW; tid += stride ) {
+
+            ${datatype} temp {};
+
+            // Valid
+            if ( mode == 0 ) {
+                if ( tid >= 0 && tid < inpW ) {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        temp += inp[tid + j] * kernel[j];
+                    }
+                }
+            } else if ( mode == 1 ) {   // Same
+                const int P1 { kerW / 2 };
+                int start {};
+                if ( !swapped_inputs ) {
+                    start = 0 - P1 + tid;
+                } else {
+                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
+                }
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[j];
+                    }
+                }
+            } else {    // Full
+                const int P1 { kerW - 1 };
+                int start { 0 - P1 + tid };
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[j];
+                    }
+                }
+            }
+
+            if (swapped_inputs) {
+                out[outW - tid - 1] = temp; // TODO: Move to shared memory
+            } else {
+                out[tid] = temp;
+            }
+        }
+    }
+
+    __global__ void _cupy_convolve_1d(
+            const ${datatype} * __restrict__ inp,
+            const int inpW,
+            const ${datatype} * __restrict__ kernel,
+            const int kerW,
+            const int mode,
+            const bool swapped_inputs,
+            ${datatype} * __restrict__ out,
+            const int outW) {
+
+        const int tx {
+            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
+
+        for ( int tid = tx; tid < outW; tid += stride ) {
+
+            ${datatype} temp {};
+
+            // Valid
+            if ( mode == 0 ) {
+                if ( tid >= 0 && tid < inpW ) {
+                    for ( int j = 0; j < kerW; j++ ) {
+                        temp += inp[tid + j] * kernel[( kerW - 1 ) - j];
+                    }
+                }
+            } else if ( mode == 1 ) {   // Same
+                const int P1 { kerW / 2 };
+                int start {};
+                if ( !swapped_inputs ) {
+                    start = 0 - P1 + tid;
+                } else {
+                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
+                }
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
+                    }
+                }
+            } else {    // Full
+                const int P1 { kerW - 1 };
+                int start { 0 - P1 + tid };
+                for ( int j = 0; j < kerW; j++ ) {
+                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
+                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
+                    }
+                }
+            }
+
+            out[tid] = temp;
+        }
+    }
 }
 """
 )
+
+
+class _cupy_convolve_1d_wrapper(object):
+    def __init__(self, grid, block, stream, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.stream = stream
+        self.kernel = kernel
+
+    def __call__(
+        self, d_inp, d_kernel, mode, swapped_inputs, out,
+    ):
+
+        kernel_args = (
+            d_inp,
+            d_inp.shape[0],
+            d_kernel,
+            d_kernel.shape[0],
+            mode,
+            swapped_inputs,
+            out,
+            out.shape[0],
+        )
+
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_convolve_2d_wrapper(object):
@@ -411,27 +551,33 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(flip, dtype, grid, block, stream, use_numba):
+def _get_backend_kernel(use_convolve, dtype, grid, block, stream, use_numba):
 
     if use_numba:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(flip, dtype.name)]
+        kernel = _numba_kernel_cache[(use_convolve, dtype.name)]
 
         if kernel:
             return kernel[grid, block, nb_stream]
     else:
-        kernel = _cupy_kernel_cache[(flip, dtype.name)]
+        kernel = _cupy_kernel_cache[(use_convolve, dtype.name)]
         if kernel:
-            return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
+            if use_convolve < 2:
+                return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
+            else:
+                return _cupy_convolve_1d_wrapper(grid, block, stream, kernel)
 
     raise NotImplementedError(
-        "No kernel found for flip {}, datatype {}".format(flip, dtype.name)
+        "No kernel found for use_convolve {}, datatype {}".format(
+            use_convolve, dtype.name
+        )
     )
 
 
 def _populate_kernel_cache():
     for numba_type, c_type in _SUPPORTED_TYPES.items():
-        # JIT compile the numba kernels, flip = 0/1 (correlate/convolve)
+        # JIT compile the numba kernels,
+        # use_convolve = 0/1 (correlate/convolve)
         sig = _numba_convolve_2d_signature(numba_type)
         _numba_kernel_cache[(0, str(numba_type))] = cuda.jit(
             sig, fastmath=True
@@ -455,10 +601,51 @@ def _populate_kernel_cache():
         _cupy_kernel_cache[(1, str(numba_type))] = module2.get_function(
             "_cupy_convolve_2d"
         )
+        _cupy_kernel_cache[(2, str(numba_type))] = module2.get_function(
+            "_cupy_correlate_1d"
+        )
+        _cupy_kernel_cache[(3, str(numba_type))] = module2.get_function(
+            "_cupy_convolve_1d"
+        )
+
+
+def _convolve1d_gpu(
+    inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
+):
+
+    d_inp = cp.array(inp)
+    d_kernel = cp.array(ker)
+
+    device_id = cp.cuda.Device()
+    numSM = device_id.attributes["MultiProcessorCount"]
+
+    threadsperblock = 256
+    blockspergrid = numSM * 20
+
+    kernel = _get_backend_kernel(
+        use_convolve + 2,
+        out.dtype,
+        blockspergrid,
+        threadsperblock,
+        cp_stream,
+        use_numba=False,
+    )
+
+    kernel(d_inp, d_kernel, mode, swapped_inputs, out)
+
+    return out
 
 
 def _convolve2d_gpu(
-    inp, out, kernel, mode, boundary, flip, fillvalue, cp_stream, use_numba,
+    inp,
+    out,
+    kernel,
+    mode,
+    boundary,
+    use_convolve,
+    fillvalue,
+    cp_stream,
+    use_numba,
 ):
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
@@ -481,7 +668,7 @@ def _convolve2d_gpu(
             if mode == 2:  # full
                 P1 = P2 = P3 = P4 = S[0] * 2 - 1
             else:  # same/valid
-                if flip:
+                if use_convolve:
                     P1 = P2 = P3 = P4 = S[0]
                 else:
                     P1 = P3 = S[0] - 1
@@ -496,7 +683,7 @@ def _convolve2d_gpu(
             P3 = S[1] - 1
             P4 = S[1] - 1
         else:  # same/valid
-            if flip:
+            if use_convolve:
                 P1 = S[0] // 2
                 P2 = S[0] // 2 if (S[0] % 2) else S[0] // 2 - 1
                 P3 = S[1] // 2
@@ -541,7 +728,12 @@ def _convolve2d_gpu(
     )
 
     kernell = _get_backend_kernel(
-        flip, out.dtype, blockspergrid, threadsperblock, cp_stream, use_numba,
+        use_convolve,
+        out.dtype,
+        blockspergrid,
+        threadsperblock,
+        cp_stream,
+        use_numba,
     )
 
     kernell(
@@ -550,10 +742,62 @@ def _convolve2d_gpu(
     return out
 
 
+def _convolve(
+    in1,
+    in2,
+    use_convolve,
+    swapped_inputs,
+    mode,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+):
+
+    val = _valfrommode(mode)
+
+    # Promote inputs
+    promType = cp.promote_types(in1.dtype, in2.dtype)
+    in1 = in1.astype(promType)
+    in2 = in2.astype(promType)
+
+    # Create empty array to hold number of aout dimensions
+    out_dimens = np.empty(in1.ndim, np.int)
+    if val == VALID:
+        for i in range(in1.ndim):
+            out_dimens[i] = (
+                max(in1.shape[i], in2.shape[i])
+                - min(in1.shape[i], in2.shape[i])
+                + 1
+            )
+            if out_dimens[i] < 0:
+                raise Exception(
+                    "no part of the output is valid, use option 1 (same) or 2 \
+                     (full) for third argument"
+                )
+    elif val == SAME:
+        for i in range(in1.ndim):
+            if not swapped_inputs:
+                out_dimens[i] = in1.shape[i]  # Per scipy docs
+            else:
+                out_dimens[i] = min(in1.shape[i], in2.shape[i])
+    elif val == FULL:
+        for i in range(in1.ndim):
+            out_dimens[i] = in1.shape[i] + in2.shape[i] - 1
+    else:
+        raise Exception("mode must be 0 (valid), 1 (same), or 2 (full)")
+
+    # Create empty array out on GPU
+    out = cp.empty(out_dimens.tolist(), in1.dtype)
+
+    out = _convolve1d_gpu(
+        in1, out, in2, val, use_convolve, swapped_inputs, cp_stream=cp_stream,
+    )
+
+    return out
+
+
 def _convolve2d(
     in1,
     in2,
-    flip,
+    use_convolve,
     mode="full",
     boundary="fill",
     fillvalue=0,
@@ -561,15 +805,18 @@ def _convolve2d(
     use_numba=False,
 ):
 
+    val = _valfrommode(mode)
+    bval = _bvalfromboundary(boundary)
+
     # Promote inputs
     promType = cp.promote_types(in1.dtype, in2.dtype)
     in1 = in1.astype(promType)
     in2 = in2.astype(promType)
 
-    if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
+    if (bval != PAD) and (bval != REFLECT) and (bval != CIRCULAR):
         raise Exception("Incorrect boundary value.")
 
-    if (boundary == PAD) and (fillvalue is not None):
+    if (bval == PAD) and (fillvalue is not None):
         fill = np.array(fillvalue, in1.dtype)
         if fill is None:
             raise Exception("If you see this let developers know.")
@@ -586,7 +833,7 @@ def _convolve2d(
 
     # Create empty array to hold number of aout dimensions
     out_dimens = np.empty(in1.ndim, np.int)
-    if mode == VALID:
+    if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
             if out_dimens[i] < 0:
@@ -594,10 +841,10 @@ def _convolve2d(
                     "no part of the output is valid, use option 1 (same) or 2 \
                      (full) for third argument"
                 )
-    elif mode == SAME:
+    elif val == SAME:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i]
-    elif mode == FULL:
+    elif val == FULL:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] + in2.shape[i] - 1
     else:
@@ -610,9 +857,9 @@ def _convolve2d(
         in1,
         out,
         in2,
-        mode,
-        boundary,
-        flip,
+        val,
+        bval,
+        use_convolve,
         fill,
         cp_stream=cp_stream,
         use_numba=use_numba,

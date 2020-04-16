@@ -205,7 +205,13 @@ def correlate(in1, in2, mode="full", method="auto"):
         return convolve(in1, _reverse_and_conj(in2), mode, method)
 
     elif method == "direct":
-        raise ValueError("Direct method is not yet implemented in cuSignal")
+
+        swapped_inputs = in2.size > in1.size
+
+        if swapped_inputs:
+            in1, in2 = in2, in1
+
+        return _signaltools._convolve(in1, in2, False, swapped_inputs, mode)
 
     else:
         raise ValueError(
@@ -464,11 +470,13 @@ def _fftconv_faster(x, h, mode):
     return big_O_constant * fft_time < direct_time
 
 
+#  TODO: Does this even work????
 def _reverse_and_conj(x):
     """
     Reverse array `x` in all dimensions and perform the complex conjugate
     """
     reverse = (slice(None, None, -1),) * x.ndim
+    # return cp.flip(x, 0)
     return x[reverse].conj()
 
 
@@ -744,11 +752,7 @@ def convolve(in1, in2, mode="full", method="auto"):
     if volume.ndim == kernel.ndim == 0:
         return volume * kernel
     elif volume.ndim != kernel.ndim:
-        raise ValueError(
-            "volume and kernel should have \
-                         the same "
-            "dimensionality"
-        )
+        raise ValueError("in1 and in2 should have the same dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
         # Convolution is commutative; order doesn't have any effect on output
@@ -764,18 +768,22 @@ def convolve(in1, in2, mode="full", method="auto"):
             out = cp.around(out)
         return out.astype(result_type)
     elif method == "direct":
-        # fastpath to faster numpy.convolve for 1d inputs when possible
-        if _np_conv_ok(volume, kernel, mode):
-            return cp.asarray(
-                np.convolve(cp.asnumpy(volume), cp.asnumpy(kernel), mode)
-            )
 
-        return correlate(volume, _reverse_and_conj(kernel), mode, "direct")
+        swapped_inputs = (
+            (mode != "valid")
+            and (kernel.size > volume.size)
+        )
+
+        if swapped_inputs:
+            volume, kernel = kernel, volume
+
+        return _signaltools._convolve(
+            volume, kernel, True, swapped_inputs, mode
+        )
+
     else:
         raise ValueError(
-            "Acceptable method flags are \
-                         'auto',"
-            " 'direct', or 'fft'."
+            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
         )
 
 
@@ -914,14 +922,12 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    val = _signaltools._valfrommode(mode)
-    bval = _signaltools._bvalfromboundary(boundary)
     out = _signaltools._convolve2d(
         in1,
         in2,
         1,
-        val,
-        bval,
+        mode,
+        boundary,
         fillvalue,
         cp_stream=cp_stream,
         use_numba=use_numba,
@@ -1012,14 +1018,12 @@ def correlate2d(
     if swapped_inputs:
         in1, in2 = in2, in1
 
-    val = _signaltools._valfrommode(mode)
-    bval = _signaltools._bvalfromboundary(boundary)
     out = _signaltools._convolve2d(
         in1,
         in2.conj(),
         0,
-        val,
-        bval,
+        mode,
+        boundary,
         fillvalue,
         cp_stream=cp_stream,
         use_numba=use_numba,
@@ -1795,7 +1799,7 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
     -----
     Only FIR filter types are currently supported in cuSignal.
     """
-    
+
     x = asarray(x)
     if isinstance(n, (list, ndarray)):
         b = asarray(n)
@@ -1803,7 +1807,7 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
-        b = firwin(n + 1, 1. / q, window='hamming')
+        b = firwin(n + 1, 1.0 / q, window="hamming")
 
     sl = [slice(None)] * x.ndim
 
