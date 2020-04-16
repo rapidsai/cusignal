@@ -473,11 +473,13 @@ def _fftconv_faster(x, h, mode):
     return big_O_constant * fft_time < direct_time
 
 
+#  TODO: Does this even work????
 def _reverse_and_conj(x):
     """
     Reverse array `x` in all dimensions and perform the complex conjugate
     """
     reverse = (slice(None, None, -1),) * x.ndim
+    # return cp.flip(x, 0)
     return x[reverse].conj()
 
 
