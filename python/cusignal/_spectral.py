@@ -391,18 +391,18 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     >>> cusignal._spectral.precompile_kernels( dtype=[np.float64],
         k_type=[GPUKernel.LOMBSCARGLE],)
     """
-    if not hasattr(dtype, "__iter__"):
+    if dtype is not None and not hasattr(dtype, "__iter__"):
         raise TypeError(
             "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
         )
 
-    elif not hasattr(backend, "__iter__"):
+    elif backend is not None and not hasattr(backend, "__iter__"):
         raise TypeError(
             "backend ({}) should be in list - e.g [{},]".format(
                 backend, backend
             )
         )
-    elif not hasattr(k_type, "__iter__"):
+    elif k_type is not None and not hasattr(k_type, "__iter__"):
         raise TypeError(
             "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
         )
@@ -410,6 +410,7 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
         dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
         backend = list(backend) if backend else list(GPUBackend)
         k_type = list(k_type) if k_type else list(GPUKernel)
+
         for d, b, k in itertools.product(dtype, backend, k_type):
             _populate_kernel_cache(d, b, k)
 
