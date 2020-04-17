@@ -277,12 +277,9 @@ class _cupy_upfirdn_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(
-    dtype, grid, block, stream, use_numba, k_type, ndim,
-):
-    if ndim > 2:
-        raise NotImplementedError("upfirdn() requires ndim <= 2")
-    elif ndim > 1 and not use_numba:
+def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
+
+    if k_type == GPUKernel.UPFIRDN2D and not use_numba:
         warnings.warn(
             "CuPy backend is only implemented for ndim == 1 \
                 Running with Numba CUDA backend",
@@ -294,25 +291,56 @@ def _get_backend_kernel(
         kernel = _cupy_kernel_cache[(dtype.name, k_type)]
         if kernel:
             return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+        else:
+            raise ValueError(
+                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            )
 
     else:
         nb_stream = stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(dtype.name, k_type)]
         if kernel:
             return kernel[grid, block, nb_stream]
+        else:
+            raise ValueError(
+                "Kernel {} not found in _numba_kernel_cache".format(k_type)
+            )
 
     raise NotImplementedError(
-        "No kernel found for ndim {}, datatype {}".format(ndim, dtype.name)
+        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
     )
 
 
 def _populate_kernel_cache(np_type, use_numba, k_type):
 
+    # Check in np_type is a supported option
     try:
         numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
-    except KeyError:
-        raise Exception("No kernel found for datatype {}".format(np_type))
+    except ValueError:
+        raise ValueError("No kernel found for datatype {}".format(np_type))
+
+    # Check if use_numba is support
+    try:
+        GPUBackend(use_numba)
+
+    except ValueError:
+        raise
+
+    # Check if use_numba is support
+    try:
+        GPUKernel(k_type)
+
+    except ValueError:
+        raise
+
+    if k_type == GPUKernel.UPFIRDN2D and not use_numba:
+        warnings.warn(
+            "CuPy backend is only implemented for ndim == 1 \
+                Running with Numba CUDA backend",
+            UserWarning,
+        )
+        use_numba = True
 
     if not use_numba:
         if (str(numba_type), k_type) in _cupy_kernel_cache:  # Not work
@@ -336,7 +364,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             # ] = module.get_function("_cupy_upfirdn_2d")
             return
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
     else:
         if (str(numba_type), k_type) in _numba_kernel_cache:
@@ -353,7 +385,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 sig_2d, fastmath=True
             )(_numba_upfirdn_2d)
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
 
 def precompile_kernels(dtype=None, backend=None, k_type=None):
@@ -380,14 +416,49 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
         Which GPU kernel to compile for. If not specified,
         all supported kernels will be precompiled.
         Specific to this unit
-            GPUBackend.UPFIRDN
-            GPUBackend.UPFIRDN2
+            GPUKernel.UPFIRDN
+            GPUKernel.UPFIRDN2
+    Examples
+    ----------
+    To precompile all kernels in this unit
+    >>> import cusignal
+    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
+    >>> cusignal._upfirdn.precompile_kernels()
+
+    To precompile a specific NumPy datatype, CuPy backend, and kernel type
+    >>> cusignal._upfirdn.precompile_kernels( [np.float64],
+        [GPUBackend.CUPY], [GPUKernel.UPFIRDN],)
+
+
+    To precompile a specific NumPy datatype and kernel type,
+    but both Numba and CuPY variations
+    >>> cusignal._upfirdn.precompile_kernels( dtype=[np.float64],
+        k_type=[GPUKernel.UPFIRDN],)
     """
-    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-    backend = list(backend) if backend else list(GPUBackend)
-    k_type = list(k_type) if k_type else list(GPUKernel)
-    for d, b, k in itertools.product(dtype, backend, k_type):
-        _populate_kernel_cache(d, b.value, k)
+
+    # Ensure inputs are a list, if inputs exist
+    if dtype is not None and not hasattr(dtype, "__iter__"):
+        raise TypeError(
+            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
+        )
+
+    elif backend is not None and not hasattr(backend, "__iter__"):
+        raise TypeError(
+            "backend ({}) should be in list - e.g [{},]".format(
+                backend, backend
+            )
+        )
+    elif k_type is not None and not hasattr(k_type, "__iter__"):
+        raise TypeError(
+            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
+        )
+    else:
+        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+        backend = list(backend) if backend else list(GPUBackend)
+        k_type = list(k_type) if k_type else list(GPUKernel)
+
+        for d, b, k in itertools.product(dtype, backend, k_type):
+            _populate_kernel_cache(d, b, k)
 
 
 class _UpFIRDn(object):
@@ -454,9 +525,8 @@ class _UpFIRDn(object):
                 cp_stream,
                 use_numba,
                 GPUKernel.UPFIRDN,
-                out.ndim,
             )
-        else:
+        elif out.ndim == 2:
             _populate_kernel_cache(
                 out.dtype.type, use_numba, GPUKernel.UPFIRDN2D
             )
@@ -467,8 +537,9 @@ class _UpFIRDn(object):
                 cp_stream,
                 use_numba,
                 GPUKernel.UPFIRDN2D,
-                out.ndim,
             )
+        else:
+            raise NotImplementedError("upfirdn() requires ndim <= 2")
 
         kernel(
             cp.asarray(x, self._output_type),

@@ -578,7 +578,15 @@ def _get_backend_kernel(
             ):
                 return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
             else:
-                raise Exception("If you see this let the developers know.")
+                raise NotImplementedError(
+                    "No CuPY kernel found for k_type {}, datatype {}".format(
+                        k_type, dtype
+                    )
+                )
+        else:
+            raise ValueError(
+                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            )
 
     else:
         nb_stream = stream_cupy_to_numba(stream)
@@ -586,6 +594,10 @@ def _get_backend_kernel(
 
         if kernel:
             return kernel[grid, block, nb_stream]
+        else:
+            raise ValueError(
+                "Kernel {} not found in _numba_kernel_cache".format(k_type)
+            )
 
     raise NotImplementedError(
         "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
@@ -594,13 +606,26 @@ def _get_backend_kernel(
 
 def _populate_kernel_cache(np_type, use_numba, k_type):
 
-    print(k_type, k_type.value)
-
+    # Check in np_type is a supported option
     try:
         numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
-    except KeyError:
-        raise Exception("No kernel found for datatype {}".format(np_type))
+    except ValueError:
+        raise ValueError("No kernel found for datatype {}".format(np_type))
+
+    # Check if use_numba is support
+    try:
+        GPUBackend(use_numba)
+
+    except ValueError:
+        raise
+
+    # Check if use_numba is support
+    try:
+        GPUKernel(k_type)
+
+    except ValueError:
+        raise
 
     if not use_numba:
         if (str(numba_type), k_type) in _cupy_kernel_cache:
@@ -631,7 +656,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 (str(numba_type), GPUKernel.CONVOLVE2D)
             ] = module.get_function("_cupy_convolve_2d")
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
     else:
         if (str(numba_type), k_type) in _numba_kernel_cache:
@@ -650,7 +679,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
         elif k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
             return
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
 
 def precompile_kernels(dtype=None, backend=None, k_type=None):
@@ -679,16 +712,48 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
         Which GPU kernel to compile for. If not specified,
         all supported kernels will be precompiled.
         Specific to this unit
-            GPUBackend.CORRELATE
-            GPUBackend.CONVOLVE
-            GPUBackend.CORRELATE2D
-            GPUBackend.CONVOLVE2D
+            GPUKernel.CORRELATE
+            GPUKernel.CONVOLVE
+            GPUKernel.CORRELATE2D
+            GPUKernel.CONVOLVE2D
+        Examples
+    ----------
+    To precompile all kernels in this unit
+    >>> import cusignal
+    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
+    >>> cusignal._signaltools.precompile_kernels()
+
+    To precompile a specific NumPy datatype, CuPy backend, and kernel type
+    >>> cusignal._signaltools.precompile_kernels( [np.float64],
+        [GPUBackend.CUPY], [GPUKernel.CORRELATE],)
+
+
+    To precompile a specific NumPy datatype and kernel type,
+    but both Numba and CuPY variations
+    >>> cusignal._signaltools.precompile_kernels( dtype=[np.float64],
+        k_type=[GPUKernel.CORRELATE],)
     """
-    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-    backend = list(backend) if backend else list(GPUBackend)
-    k_type = list(k_type) if k_type else list(GPUKernel)
-    for d, b, k in itertools.product(dtype, backend, k_type):
-        _populate_kernel_cache(d, b.value, k)
+    if not hasattr(dtype, "__iter__"):
+        raise TypeError(
+            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
+        )
+
+    elif not hasattr(backend, "__iter__"):
+        raise TypeError(
+            "backend ({}) should be in list - e.g [{},]".format(
+                backend, backend
+            )
+        )
+    elif not hasattr(k_type, "__iter__"):
+        raise TypeError(
+            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
+        )
+    else:
+        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+        backend = list(backend) if backend else list(GPUBackend)
+        k_type = list(k_type) if k_type else list(GPUKernel)
+        for d, b, k in itertools.product(dtype, backend, k_type):
+            _populate_kernel_cache(d, b, k)
 
 
 def _convolve_gpu(
@@ -927,7 +992,7 @@ def _convolve2d(
     if (bval == PAD) and (fillvalue is not None):
         fill = np.array(fillvalue, in1.dtype)
         if fill is None:
-            raise Exception("If you see this let developers know.")
+            raise Exception("fill must no be None.")
         if fill.size != 1:
             if fill.size == 0:
                 raise Exception("`fillvalue` cannot be an empty array.")

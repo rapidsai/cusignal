@@ -270,6 +270,10 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
         kernel = _cupy_kernel_cache[(dtype.name, k_type)]
         if kernel:
             return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
+        else:
+            raise ValueError(
+                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            )
 
     else:
         nb_stream = stream_cupy_to_numba(stream)
@@ -277,6 +281,10 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
         if kernel:
             return kernel[grid, block, nb_stream]
+        else:
+            raise ValueError(
+                "Kernel {} not found in _numba_kernel_cache".format(k_type)
+            )
 
     raise NotImplementedError(
         "No kernel found for datatype {}".format(dtype.name)
@@ -285,11 +293,26 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
 def _populate_kernel_cache(np_type, use_numba, k_type):
 
+    # Check in np_type is a supported option
     try:
         numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
-    except KeyError:
+    except ValueError:
         raise Exception("No kernel found for datatype {}".format(np_type))
+
+    # Check if use_numba is support
+    try:
+        GPUBackend(use_numba)
+
+    except ValueError:
+        raise
+
+    # Check if use_numba is support
+    try:
+        GPUKernel(k_type)
+
+    except ValueError:
+        raise
 
     # JIT compile the numba kernels
     if not use_numba:
@@ -305,7 +328,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 (str(numba_type), k_type)
             ] = module.get_function("_cupy_lombscargle")
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
     else:
         if (str(numba_type), k_type) in _numba_kernel_cache:
@@ -317,7 +344,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 sig, fastmath=True
             )(_numba_lombscargle)
         else:
-            raise Exception("If you see this let the developers know.")
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
 
 def precompile_kernels(dtype=None, backend=None, k_type=None):
@@ -342,12 +373,45 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
         all supported kernels will be precompiled.
         Specific to this unit
             GPUBackend.LOMBSCARGLE
+        Examples
+    ----------
+    To precompile all kernels in this unit
+    >>> import cusignal
+    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
+    >>> cusignal._spectral.precompile_kernels()
+
+    To precompile a specific NumPy datatype, CuPy backend, and kernel type
+    >>> cusignal._spectral.precompile_kernels( [np.float64],
+        [GPUBackend.CUPY],
+        [GPUKernel.LOMBSCARGLE],)
+
+
+    To precompile a specific NumPy datatype and kernel type,
+    but both Numba and CuPY variations
+    >>> cusignal._spectral.precompile_kernels( dtype=[np.float64],
+        k_type=[GPUKernel.LOMBSCARGLE],)
     """
-    dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-    backend = list(backend) if backend else list(GPUBackend)
-    k_type = list(k_type) if k_type else list(GPUKernel)
-    for d, b, k in itertools.product(dtype, backend, k_type):
-        _populate_kernel_cache(d, b.value, k)
+    if not hasattr(dtype, "__iter__"):
+        raise TypeError(
+            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
+        )
+
+    elif not hasattr(backend, "__iter__"):
+        raise TypeError(
+            "backend ({}) should be in list - e.g [{},]".format(
+                backend, backend
+            )
+        )
+    elif not hasattr(k_type, "__iter__"):
+        raise TypeError(
+            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
+        )
+    else:
+        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+        backend = list(backend) if backend else list(GPUBackend)
+        k_type = list(k_type) if k_type else list(GPUKernel)
+        for d, b, k in itertools.product(dtype, backend, k_type):
+            _populate_kernel_cache(d, b, k)
 
 
 def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
