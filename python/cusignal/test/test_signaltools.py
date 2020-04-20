@@ -67,9 +67,7 @@ def test_upfirdn(num_samps, up, down, use_numba):
 
     cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
     gpu_resample = cp.asnumpy(
-        cusignal.upfirdn(
-            h, gpu_sig, up, down, use_numba=use_numba
-        )
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
     )
 
     assert array_equal(cpu_resample, gpu_resample)
@@ -87,9 +85,7 @@ def test_upfirdn2d(num_samps, up, down, use_numba):
 
     cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
     gpu_resample = cp.asnumpy(
-        cusignal.upfirdn(
-            h, gpu_sig, up, down, use_numba=use_numba
-        )
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
     )
 
     assert array_equal(cpu_resample, gpu_resample)

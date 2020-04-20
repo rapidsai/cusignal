@@ -14,7 +14,6 @@
 import cupy as cp
 import itertools
 import numpy as np
-import warnings
 
 from enum import Enum
 from math import ceil
@@ -31,7 +30,6 @@ except ImportError:
 
 class GPUKernel(Enum):
     UPFIRDN = 0
-    # UPFIRDN2D = 1
 
 
 class GPUBackend(Enum):
@@ -199,8 +197,6 @@ $header
 extern "C" {
     __global__ void _cupy_upfirdn_1d(
             const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const int inpH,
             const ${datatype} * __restrict__ h_trans_flip,
             const int up,
             const int down,
@@ -209,8 +205,7 @@ extern "C" {
             const int h_per_phase,
             const int padded_len,
             ${datatype} * __restrict__ out,
-            const int outW,
-            const int outH) {
+            const int outW) {
 
         const int t {
             static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
@@ -240,7 +235,6 @@ extern "C" {
 
     __global__ void _cupy_upfirdn_2d(
             const ${datatype} * __restrict__ inp,
-            const int inpW,
             const int inpH,
             const ${datatype} * __restrict__ h_trans_flip,
             const int up,
@@ -323,20 +317,8 @@ class _cupy_upfirdn_wrapper(object):
         out,
     ):
 
-        if x.ndim < 2:
-            x_W = x.shape[0]
-            o_W = out.shape[0]
-            x_H = o_H = 0
-        else:
-            x_W = x.shape[0]
-            x_H = x.shape[1]
-            o_W = out.shape[0]
-            o_H = out.shape[1]
-
         kernel_args = (
             x,
-            x_W,
-            x_H,
             h_trans_flip,
             up,
             down,
@@ -345,20 +327,68 @@ class _cupy_upfirdn_wrapper(object):
             h_per_phase,
             padded_len,
             out,
-            o_W,
-            o_H,
+            out.shape[0],
         )
 
         self.stream.use()
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba, k_type, ):
+class _cupy_upfirdn2d_wrapper(object):
+    def __init__(self, grid, block, stream, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.stream = stream
+        self.kernel = kernel
+
+    def __call__(
+        self,
+        x,
+        h_trans_flip,
+        up,
+        down,
+        axis,
+        x_shape_a,
+        h_per_phase,
+        padded_len,
+        out,
+    ):
+
+        kernel_args = (
+            x,
+            x.shape[1],
+            h_trans_flip,
+            up,
+            down,
+            axis,
+            x_shape_a,
+            h_per_phase,
+            padded_len,
+            out,
+            out.shape[0],
+            out.shape[1],
+        )
+
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args)
+
+
+def _get_backend_kernel(
+    ndim, dtype, grid, block, stream, use_numba, k_type,
+):
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, ndim)]
         if kernel:
-            return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+            if ndim == 1:
+                return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+            else:
+                return _cupy_upfirdn2d_wrapper(grid, block, stream, kernel)
         else:
             raise ValueError(
                 "Kernel {} not found in _cupy_kernel_cache".format(k_type)
@@ -403,7 +433,7 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
         raise
 
     if not use_numba:
-        if (str(numba_type), k_type) in _cupy_kernel_cache:  # Not work
+        if (str(numba_type), 1) in _cupy_kernel_cache:  # Not work
             return
         # Instantiate the cupy kernel for this type and compile
         if isinstance(numba_type, Complex):
@@ -415,12 +445,12 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         if k_type == GPUKernel.UPFIRDN:
-            _cupy_kernel_cache[
-                (str(numba_type), 1)
-            ] = module.get_function("_cupy_upfirdn_1d")
-            _cupy_kernel_cache[
-                (str(numba_type), 2)
-            ] = module.get_function("_cupy_upfirdn_2d")
+            _cupy_kernel_cache[(str(numba_type), 1)] = module.get_function(
+                "_cupy_upfirdn_1d"
+            )
+            _cupy_kernel_cache[(str(numba_type), 2)] = module.get_function(
+                "_cupy_upfirdn_2d"
+            )
         else:
             raise NotImplementedError(
                 "No kernel found for k_type {}, datatype {}".format(
@@ -429,7 +459,7 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             )
 
     else:
-        if (str(numba_type), k_type) in _numba_kernel_cache:
+        if (str(numba_type), 1) in _numba_kernel_cache:
             return
         # JIT compile the numba kernels, both 1d and 2d
         if k_type == GPUKernel.UPFIRDN:
@@ -474,7 +504,6 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
         all supported kernels will be precompiled.
         Specific to this unit
             GPUKernel.UPFIRDN
-            GPUKernel.UPFIRDN2
     Examples
     ----------
     To precompile all kernels in this unit

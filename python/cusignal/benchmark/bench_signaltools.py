@@ -131,14 +131,7 @@ class BenchUpFirDn:
 
     @pytest.mark.parametrize("use_numba", [True, False])
     def bench_upfirdn_gpu(
-        self,
-        rand_data_gen,
-        benchmark,
-        num_samps,
-        up,
-        down,
-        axis,
-        use_numba,
+        self, rand_data_gen, benchmark, num_samps, up, down, axis, use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_data_gen(num_samps)
