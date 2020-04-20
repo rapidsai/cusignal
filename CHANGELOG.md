@@ -12,6 +12,7 @@
 - PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 - PR #50 - Update README to reorganize install instructions
 - PR #55 - Update notebooks to use timeit instead of time
+- PR #56 - Ability to precompile select Numba/CuPy kernel on import
 - PR #60 - Updated decimate function to use an existing FIR window
 
 ## Bug Fixes

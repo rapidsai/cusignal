@@ -11,11 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-from string import Template
-
-import numpy as np
 import cupy as cp
+import itertools
+import numpy as np
+
+from enum import Enum
+from math import gcd
 from numba import (
     complex64,
     complex128,
@@ -26,6 +27,7 @@ from numba import (
     int64,
     void,
 )
+from string import Template
 
 try:
     # Numba <= 0.49
@@ -36,18 +38,31 @@ except ImportError:
 
 from .fir_filter_design import firwin
 
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
+
+class GPUKernel(Enum):
+    CORRELATE = 0
+    CONVOLVE = 1
+    CORRELATE2D = 2
+    CONVOLVE2D = 3
+
+
+class GPUBackend(Enum):
+    CUPY = 0
+    NUMBA = 1
+
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
-    int32: "int",
-    int64: "long int",
-    float32: "float",
-    float64: "double",
-    complex64: "complex<float>",
-    complex128: "complex<double>",
+    np.int32: [int32, "int"],
+    np.int64: [int64, "long int"],
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+    np.complex64: [complex64, "complex<float>"],
+    np.complex128: [complex128, "complex<double>"],
 }
+
+_numba_kernel_cache = {}
+_cupy_kernel_cache = {}
 
 FULL = 2
 SAME = 1
@@ -373,7 +388,7 @@ extern "C" {
         }
     }
 
-    __global__ void _cupy_correlate_1d(
+    __global__ void _cupy_correlate(
             const ${datatype} * __restrict__ inp,
             const int inpW,
             const ${datatype} * __restrict__ kernel,
@@ -388,11 +403,9 @@ extern "C" {
         const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
 
         for ( int tid = tx; tid < outW; tid += stride ) {
-
             ${datatype} temp {};
 
-            // Valid
-            if ( mode == 0 ) {
+            if ( mode == 0 ) {  // Valid
                 if ( tid >= 0 && tid < inpW ) {
                     for ( int j = 0; j < kerW; j++ ) {
                         temp += inp[tid + j] * kernel[j];
@@ -429,7 +442,7 @@ extern "C" {
         }
     }
 
-    __global__ void _cupy_convolve_1d(
+    __global__ void _cupy_convolve(
             const ${datatype} * __restrict__ inp,
             const int inpW,
             const ${datatype} * __restrict__ kernel,
@@ -447,8 +460,7 @@ extern "C" {
 
             ${datatype} temp {};
 
-            // Valid
-            if ( mode == 0 ) {
+            if ( mode == 0 ) {  // Valid
                 if ( tid >= 0 && tid < inpW ) {
                     for ( int j = 0; j < kerW; j++ ) {
                         temp += inp[tid + j] * kernel[( kerW - 1 ) - j];
@@ -485,7 +497,7 @@ extern "C" {
 )
 
 
-class _cupy_convolve_1d_wrapper(object):
+class _cupy_convolve_wrapper(object):
     def __init__(self, grid, block, stream, kernel):
         if isinstance(grid, int):
             grid = (grid,)
@@ -551,65 +563,201 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(use_convolve, dtype, grid, block, stream, use_numba):
+def _get_backend_kernel(
+    dtype, grid, block, stream, use_numba, k_type,
+):
 
-    if use_numba:
+    if not use_numba:
+        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+        if kernel:
+            if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
+                return _cupy_convolve_wrapper(grid, block, stream, kernel)
+            elif (
+                k_type == GPUKernel.CONVOLVE2D
+                or k_type == GPUKernel.CORRELATE2D
+            ):
+                return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
+            else:
+                raise NotImplementedError(
+                    "No CuPY kernel found for k_type {}, datatype {}".format(
+                        k_type, dtype
+                    )
+                )
+        else:
+            raise ValueError(
+                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            )
+
+    else:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(use_convolve, dtype.name)]
+        kernel = _numba_kernel_cache[(dtype.name, k_type)]
 
         if kernel:
             return kernel[grid, block, nb_stream]
-    else:
-        kernel = _cupy_kernel_cache[(use_convolve, dtype.name)]
-        if kernel:
-            if use_convolve < 2:
-                return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
-            else:
-                return _cupy_convolve_1d_wrapper(grid, block, stream, kernel)
+        else:
+            raise ValueError(
+                "Kernel {} not found in _numba_kernel_cache".format(k_type)
+            )
 
     raise NotImplementedError(
-        "No kernel found for use_convolve {}, datatype {}".format(
-            use_convolve, dtype.name
-        )
+        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
     )
 
 
-def _populate_kernel_cache():
-    for numba_type, c_type in _SUPPORTED_TYPES.items():
-        # JIT compile the numba kernels,
-        # use_convolve = 0/1 (correlate/convolve)
-        sig = _numba_convolve_2d_signature(numba_type)
-        _numba_kernel_cache[(0, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_numba_correlate_2d)
-        _numba_kernel_cache[(1, str(numba_type))] = cuda.jit(
-            sig, fastmath=True
-        )(_numba_convolve_2d)
+def _populate_kernel_cache(np_type, use_numba, k_type):
 
+    # Check in np_type is a supported option
+    try:
+        numba_type, c_type = _SUPPORTED_TYPES[np_type]
+
+    except ValueError:
+        raise ValueError("No kernel found for datatype {}".format(np_type))
+
+    # Check if use_numba is support
+    try:
+        GPUBackend(use_numba)
+
+    except ValueError:
+        raise
+
+    # Check if use_numba is support
+    try:
+        GPUKernel(k_type)
+
+    except ValueError:
+        raise
+
+    if not use_numba:
+        if (str(numba_type), k_type) in _cupy_kernel_cache:
+            return
         # Instantiate the cupy kernel for this type and compile
         if isinstance(numba_type, Complex):
             header = "#include <cupy/complex.cuh>"
         else:
             header = ""
         src = loaded_from_source.substitute(datatype=c_type, header=header)
-        module2 = cp.RawModule(
+        module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[(0, str(numba_type))] = module2.get_function(
-            "_cupy_correlate_2d"
-        )
-        _cupy_kernel_cache[(1, str(numba_type))] = module2.get_function(
-            "_cupy_convolve_2d"
-        )
-        _cupy_kernel_cache[(2, str(numba_type))] = module2.get_function(
-            "_cupy_correlate_1d"
-        )
-        _cupy_kernel_cache[(3, str(numba_type))] = module2.get_function(
-            "_cupy_convolve_1d"
-        )
+        if k_type == GPUKernel.CORRELATE:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.CORRELATE)
+            ] = module.get_function("_cupy_correlate")
+        elif k_type == GPUKernel.CONVOLVE:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.CONVOLVE)
+            ] = module.get_function("_cupy_convolve")
+        elif k_type == GPUKernel.CORRELATE2D:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.CORRELATE2D)
+            ] = module.get_function("_cupy_correlate_2d")
+        elif k_type == GPUKernel.CONVOLVE2D:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.CONVOLVE2D)
+            ] = module.get_function("_cupy_convolve_2d")
+        else:
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
+
+    else:
+        if (str(numba_type), k_type) in _numba_kernel_cache:
+            return
+        # JIT compile the numba kernels
+        # k_type = 0/1 (correlate/convolve)
+        sig = _numba_convolve_2d_signature(numba_type)
+        if k_type == GPUKernel.CORRELATE2D:
+            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_correlate_2d)
+        elif k_type == GPUKernel.CONVOLVE2D:
+            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_convolve_2d)
+        elif k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
+            return
+        else:
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
 
 
-def _convolve1d_gpu(
+def precompile_kernels(dtype=None, backend=None, k_type=None):
+    r"""
+    Precompile GPU kernels for later use.
+
+    Parameters
+    ----------
+    dtype : numpy datatype or list of datatypes, optional
+        Data types for which kernels should be precompiled. If not
+        specified, all supported data types will be precompiled.
+        Specific to this unit
+            np.int32
+            np.int64
+            np.float32
+            np.float64
+            np.complex64
+            np.complex128
+    backend : GPUBackend, optional
+        Which GPU backend to precompile for. If not specified,
+        all supported backends will be precompiled.
+        Specific to this unit
+            GPUBackend.CUPY
+            GPUBackend.NUMBA
+    k_type : GPUKernel, optional
+        Which GPU kernel to compile for. If not specified,
+        all supported kernels will be precompiled.
+        Specific to this unit
+            GPUKernel.CORRELATE
+            GPUKernel.CONVOLVE
+            GPUKernel.CORRELATE2D
+            GPUKernel.CONVOLVE2D
+        Examples
+    ----------
+    To precompile all kernels in this unit
+    >>> import cusignal
+    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
+    >>> cusignal._signaltools.precompile_kernels()
+
+    To precompile a specific NumPy datatype, CuPy backend, and kernel type
+    >>> cusignal._signaltools.precompile_kernels( [np.float64],
+        [GPUBackend.CUPY], [GPUKernel.CORRELATE],)
+
+
+    To precompile a specific NumPy datatype and kernel type,
+    but both Numba and CuPY variations
+    >>> cusignal._signaltools.precompile_kernels( dtype=[np.float64],
+        k_type=[GPUKernel.CORRELATE],)
+    """
+    if dtype is not None and not hasattr(dtype, "__iter__"):
+        raise TypeError(
+            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
+        )
+
+    elif backend is not None and not hasattr(backend, "__iter__"):
+        raise TypeError(
+            "backend ({}) should be in list - e.g [{},]".format(
+                backend, backend
+            )
+        )
+    elif k_type is not None and not hasattr(k_type, "__iter__"):
+        raise TypeError(
+            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
+        )
+    else:
+        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
+        backend = list(backend) if backend else list(GPUBackend)
+        k_type = list(k_type) if k_type else list(GPUKernel)
+
+        for d, b, k in itertools.product(dtype, backend, k_type):
+            _populate_kernel_cache(d, b, k)
+
+
+def _convolve_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
 ):
 
@@ -622,14 +770,26 @@ def _convolve1d_gpu(
     threadsperblock = 256
     blockspergrid = numSM * 20
 
-    kernel = _get_backend_kernel(
-        use_convolve + 2,
-        out.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        use_numba=False,
-    )
+    if use_convolve:
+        _populate_kernel_cache(out.dtype.type, False, GPUKernel.CONVOLVE)
+        kernel = _get_backend_kernel(
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            cp_stream,
+            False,
+            GPUKernel.CONVOLVE,
+        )
+    else:
+        _populate_kernel_cache(out.dtype.type, False, GPUKernel.CORRELATE)
+        kernel = _get_backend_kernel(
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            cp_stream,
+            False,
+            GPUKernel.CORRELATE,
+        )
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
@@ -639,7 +799,7 @@ def _convolve1d_gpu(
 def _convolve2d_gpu(
     inp,
     out,
-    kernel,
+    ker,
     mode,
     boundary,
     use_convolve,
@@ -654,17 +814,17 @@ def _convolve2d_gpu(
     S = np.zeros(2, dtype=int)
 
     # If kernel is square and odd
-    if kernel.shape[0] == kernel.shape[1]:  # square
-        if kernel.shape[0] % 2 == 1:  # odd
+    if ker.shape[0] == ker.shape[1]:  # square
+        if ker.shape[0] % 2 == 1:  # odd
             pick = 1
-            S[0] = (kernel.shape[0] - 1) // 2
+            S[0] = (ker.shape[0] - 1) // 2
             if mode == 2:  # full
                 P1 = P2 = P3 = P4 = S[0] * 2
             else:  # same/valid
                 P1 = P2 = P3 = P4 = S[0]
         else:  # even
             pick = 2
-            S[0] = kernel.shape[0] // 2
+            S[0] = ker.shape[0] // 2
             if mode == 2:  # full
                 P1 = P2 = P3 = P4 = S[0] * 2 - 1
             else:  # same/valid
@@ -675,8 +835,8 @@ def _convolve2d_gpu(
                     P2 = P4 = S[0]
     else:  # Non-square
         pick = 3
-        S[0] = kernel.shape[0]
-        S[1] = kernel.shape[1]
+        S[0] = ker.shape[0]
+        S[1] = ker.shape[1]
         if mode == 2:  # full
             P1 = S[0] - 1
             P2 = S[0] - 1
@@ -719,7 +879,7 @@ def _convolve2d_gpu(
     outH = out.shape[0]
 
     d_inp = cp.array(inp)
-    d_kernel = cp.array(kernel)
+    d_kernel = cp.array(ker)
 
     threadsperblock = (16, 16)
     blockspergrid = (
@@ -727,16 +887,30 @@ def _convolve2d_gpu(
         _iDivUp(outH, threadsperblock[1]),
     )
 
-    kernell = _get_backend_kernel(
-        use_convolve,
-        out.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        use_numba,
-    )
+    if use_convolve:
+        _populate_kernel_cache(out.dtype.type, use_numba, GPUKernel.CONVOLVE2D)
+        kernel = _get_backend_kernel(
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            cp_stream,
+            use_numba,
+            GPUKernel.CONVOLVE2D,
+        )
+    else:
+        _populate_kernel_cache(
+            out.dtype.type, use_numba, GPUKernel.CORRELATE2D
+        )
+        kernel = _get_backend_kernel(
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            cp_stream,
+            use_numba,
+            GPUKernel.CORRELATE2D,
+        )
 
-    kernell(
+    kernel(
         d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
     return out
@@ -787,7 +961,7 @@ def _convolve(
     # Create empty array out on GPU
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
-    out = _convolve1d_gpu(
+    out = _convolve_gpu(
         in1, out, in2, val, use_convolve, swapped_inputs, cp_stream=cp_stream,
     )
 
@@ -819,7 +993,7 @@ def _convolve2d(
     if (bval == PAD) and (fillvalue is not None):
         fill = np.array(fillvalue, in1.dtype)
         if fill is None:
-            raise Exception("If you see this let developers know.")
+            raise Exception("fill must no be None.")
         if fill.size != 1:
             if fill.size == 0:
                 raise Exception("`fillvalue` cannot be an empty array.")
@@ -908,7 +1082,7 @@ def _design_resample_poly(up, down, window):
     # Determine our up and down factors
     # Use a rational approimation to save computation time on really long
     # signals
-    g_ = math.gcd(up, down)
+    g_ = gcd(up, down)
     up //= g_
     down //= g_
 
@@ -921,7 +1095,3 @@ def _design_resample_poly(up, down, window):
 
     h = firwin(2 * half_len + 1, f_c, window=window)
     return h
-
-
-# 1) Load and compile upfirdn kernels for each supported data type.
-_populate_kernel_cache()

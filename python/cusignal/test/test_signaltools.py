@@ -66,7 +66,7 @@ def test_firwin(num_samps, f1, f2):
     assert array_equal(cpu_window, gpu_window)
 
 
-@pytest.mark.parametrize("num_samps", [2 ** 15])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
 @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
 @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
@@ -85,7 +85,7 @@ def test_correlate(num_samps, num_taps, mode, method):
     assert array_equal(cpu_corr, gpu_corr)
 
 
-@pytest.mark.parametrize("num_samps", [2 ** 15])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
 @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
 @pytest.mark.parametrize("method", ["direct", "fft", "auto"])

@@ -206,6 +206,9 @@ def correlate(in1, in2, mode="full", method="auto"):
 
     elif method == "direct":
 
+        if in1.ndim > 1:
+            raise ValueError("Direct method is only implemented for 1D")
+
         swapped_inputs = in2.size > in1.size
 
         if swapped_inputs:
@@ -769,10 +772,10 @@ def convolve(in1, in2, mode="full", method="auto"):
         return out.astype(result_type)
     elif method == "direct":
 
-        swapped_inputs = (
-            (mode != "valid")
-            and (kernel.size > volume.size)
-        )
+        if volume.ndim > 1:
+            raise ValueError("Direct method is only implemented for 1D")
+
+        swapped_inputs = (mode != "valid") and (kernel.size > volume.size)
 
         if swapped_inputs:
             volume, kernel = kernel, volume
@@ -1807,7 +1810,8 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
-        b = firwin(n + 1, 1.0 / q, window="hamming")
+
+        b = firwin(n + 1, 1.0 / q, window='hamming')
 
     sl = [slice(None)] * x.ndim
 
