@@ -109,48 +109,43 @@ def _output_len(len_h, in_len, up, down):
 # Custom Numba kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 def _numba_upfirdn_2d(
-    x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
+    inp, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
 ):
 
-    num_loops = 1
-    for i in range(out.ndim - 1):
-        if i != axis:
-            num_loops *= out.shape[i]
+    y, x = cuda.grid(2)
 
-    X, Y = cuda.grid(2)
+    if y == 0 and x == 0:
+        print(x_shape_a)
 
-    if X < out.shape[0] and Y < out.shape[1]:
-
-        i = X
-        y_idx = Y
+    if x < out.shape[1] and y < out.shape[0]:
 
         if axis == 1:
-            x_idx = ((Y * down) // up) % padded_len
-            h_idx = (Y * down) % up * h_per_phase
+            x_idx = ((x * down) // up) % padded_len
+            h_idx = (x * down) % up * h_per_phase
         else:
-            x_idx = ((i * down) // up) % padded_len
-            h_idx = (i * down) % up * h_per_phase
+            x_idx = ((y * down) // up) % padded_len
+            h_idx = (y * down) % up * h_per_phase
 
         x_conv_idx = x_idx - h_per_phase + 1
         if x_conv_idx < 0:
             h_idx -= x_conv_idx
             x_conv_idx = 0
 
+        temp: out.dtype = 0
+
         # If axis = 0, we need to know each column in x.
-        for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
+        for x_c in range(x_conv_idx, x_idx + 1):
+            if x_c < x_shape_a and x_c >= 0:  # If inside input
                 # if multi-dimenstional array
-                if num_loops > 1:  # a loop is an additional column
-                    out[i, y_idx] += x[i, x_conv_idx] * h_trans_flip[h_idx]
-                else:
-                    if axis == 1:
-                        out[i, y_idx] += x[i, x_conv_idx] * h_trans_flip[h_idx]
-                    else:
-                        out[i, y_idx] += (
-                            x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
-                        )
+                if axis == 1:  # process columns
+                    temp += inp[y, x_c] * h_trans_flip[h_idx]
+                else:  # process rows
+                    temp += inp[x_c, x] * h_trans_flip[h_idx]
+                    # temp = 99
 
             h_idx += 1
+
+        out[y, x] = temp
 
 
 def _numba_upfirdn_1d(
@@ -170,11 +165,15 @@ def _numba_upfirdn_1d(
             h_idx -= x_conv_idx
             x_conv_idx = 0
 
+        temp: out.dtype = 0
+
         # If axis = 0, we need to know each column in x.
-        for x_conv_idx in range(x_conv_idx, x_idx + 1):
-            if x_conv_idx < x_shape_a and x_conv_idx >= 0:
-                out[i] += x[x_conv_idx] * h_trans_flip[h_idx]
+        for x_c in range(x_conv_idx, x_idx + 1):
+            if x_c < x_shape_a and x_c >= 0:
+                temp += x[x_c] * h_trans_flip[h_idx]
             h_idx += 1
+
+        out[i] = temp
 
 
 def _numba_upfirdn_signature(ty, ndim):
@@ -202,25 +201,31 @@ loaded_from_source = Template(
 $header
 
 extern "C" {
-    __global__ void _cupy_upfirdn_1d(const int n,
-            const ${datatype} * __restrict__ x,
+    __global__ void _cupy_upfirdn_1d(
+            const ${datatype} * __restrict__ inp,
+            const int inpW,
+            const int inpH,
             const ${datatype} * __restrict__ h_trans_flip,
             const int up,
             const int down,
+            const int axis,
             const int x_shape_a,
             const int h_per_phase,
             const int padded_len,
-            ${datatype} * __restrict__ out) {
+            ${datatype} * __restrict__ out,
+            const int outW,
+            const int outH) {
 
-        const int t { blockIdx.x * blockDim.x + threadIdx.x };
-        const int stride { blockDim.x * gridDim.x };
+        const int t {
+            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
+        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
 
-        for (int tid = t; tid < n; tid += stride) {
+        for ( int tid = t; tid < outW; tid += stride ) {
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
 
-            if (x_conv_idx < 0) {
+            if ( x_conv_idx < 0 ) {
                 h_idx -= x_conv_idx;
                 x_conv_idx = 0;
             }
@@ -228,13 +233,71 @@ extern "C" {
             ${datatype} temp {};
 
             for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if (x_c < x_shape_a && x_c >= 0) {
-                    temp += x[x_c] * h_trans_flip[h_idx];
+                if ( x_c < x_shape_a && x_c >= 0 ) {
+                    temp += inp[x_c] * h_trans_flip[h_idx];
                 }
-                out[tid] = temp;
                 h_idx += 1;
             }
+            out[tid] = temp;
         }
+    }
+
+    __global__ void _cupy_upfirdn_2d(
+            const ${datatype} * __restrict__ inp,
+            const int inpW,
+            const int inpH,
+            const ${datatype} * __restrict__ h_trans_flip,
+            const int up,
+            const int down,
+            const int axis,
+            const int x_shape_a,
+            const int h_per_phase,
+            const int padded_len,
+            ${datatype} * __restrict__ out,
+            const int outW,
+            const int outH) {
+
+
+        const int ty {
+            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
+        const int tx {
+            static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y) };
+
+        if ( (tx < outH) && (ty < outW) ) {
+            int x_idx {};
+            int h_idx {};
+
+            if ( axis == 1 ) {
+                x_idx = ( static_cast<int>(tx * down) / up ) % padded_len;
+                h_idx = (tx * down) % up * h_per_phase;
+            } else {
+                x_idx = ( static_cast<int>(ty * down) / up ) % padded_len;
+                h_idx = (ty * down) % up * h_per_phase;
+            }
+
+            int x_conv_idx { x_idx - h_per_phase + 1 };
+            if ( x_conv_idx < 0 ) {
+                h_idx -= x_conv_idx;
+                x_conv_idx = 0;
+            }
+
+            ${datatype} temp {};
+
+            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
+                if ( x_c < x_shape_a && x_c >= 0 ) {
+                    if (axis == 1) {
+                        temp += inp[ty * inpH + x_c] * h_trans_flip[h_idx];
+                    } else {
+                        temp += inp[x_c * inpH + tx] * h_trans_flip[h_idx];
+                        //temp = 99;
+                    }
+                }
+                h_idx += 1;
+            }
+            out[ty * outH + tx] = temp; // axis = 0
+            //out[tx * outW + ty] = temp;
+        }
+
     }
 }
 """
@@ -266,16 +329,31 @@ class _cupy_upfirdn_wrapper(object):
         out,
     ):
 
+        print(x.shape, out.shape)
+        if x.ndim < 2:
+            x_W = x.shape[0]
+            o_W = out.shape[0]
+            x_H = o_H = 0
+        else:
+            x_W = x.shape[0]
+            x_H = x.shape[1]
+            o_W = out.shape[0]
+            o_H = out.shape[1]
+
         kernel_args = (
-            out.shape[0],
             x,
+            x_W,
+            x_H,
             h_trans_flip,
             up,
             down,
+            axis,
             x_shape_a,
             h_per_phase,
             padded_len,
             out,
+            o_W,
+            o_H,
         )
 
         self.stream.use()
@@ -283,14 +361,6 @@ class _cupy_upfirdn_wrapper(object):
 
 
 def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
-
-    if k_type == GPUKernel.UPFIRDN2D and not use_numba:
-        warnings.warn(
-            "CuPy backend is only implemented for ndim == 1 \
-                Running with Numba CUDA backend",
-            UserWarning,
-        )
-        use_numba = True
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type)]
@@ -339,14 +409,6 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
     except ValueError:
         raise
 
-    if k_type == GPUKernel.UPFIRDN2D and not use_numba:
-        warnings.warn(
-            "CuPy backend is only implemented for ndim == 1 \
-                Running with Numba CUDA backend",
-            UserWarning,
-        )
-        use_numba = True
-
     if not use_numba:
         if (str(numba_type), k_type) in _cupy_kernel_cache:  # Not work
             return
@@ -364,10 +426,9 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 (str(numba_type), k_type)
             ] = module.get_function("_cupy_upfirdn_1d")
         elif k_type == GPUKernel.UPFIRDN2D:
-            # _cupy_kernel_cache[
-            #     (str(numba_type), k_type)
-            # ] = module.get_function("_cupy_upfirdn_2d")
-            return
+            _cupy_kernel_cache[
+                (str(numba_type), k_type)
+            ] = module.get_function("_cupy_upfirdn_2d")
         else:
             raise NotImplementedError(
                 "No kernel found for k_type {}, datatype {}".format(
