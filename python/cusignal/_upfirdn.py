@@ -31,7 +31,7 @@ except ImportError:
 
 class GPUKernel(Enum):
     UPFIRDN = 0
-    UPFIRDN2D = 1
+    # UPFIRDN2D = 1
 
 
 class GPUBackend(Enum):
@@ -113,9 +113,6 @@ def _numba_upfirdn_2d(
 ):
 
     y, x = cuda.grid(2)
-
-    # if y == 0 and x == 0:
-    #     print(x_shape_a)
 
     if x < out.shape[1] and y < out.shape[0]:
 
@@ -356,10 +353,10 @@ class _cupy_upfirdn_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
+def _get_backend_kernel(ndim, dtype, grid, block, stream, use_numba, k_type, ):
 
     if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+        kernel = _cupy_kernel_cache[(dtype.name, ndim)]
         if kernel:
             return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
         else:
@@ -369,7 +366,7 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
     else:
         nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type)]
+        kernel = _numba_kernel_cache[(dtype.name, ndim)]
         if kernel:
             return kernel[grid, block, nb_stream]
         else:
@@ -419,11 +416,10 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
         )
         if k_type == GPUKernel.UPFIRDN:
             _cupy_kernel_cache[
-                (str(numba_type), k_type)
+                (str(numba_type), 1)
             ] = module.get_function("_cupy_upfirdn_1d")
-        elif k_type == GPUKernel.UPFIRDN2D:
             _cupy_kernel_cache[
-                (str(numba_type), k_type)
+                (str(numba_type), 2)
             ] = module.get_function("_cupy_upfirdn_2d")
         else:
             raise NotImplementedError(
@@ -437,14 +433,13 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             return
         # JIT compile the numba kernels, both 1d and 2d
         if k_type == GPUKernel.UPFIRDN:
-            sig_1d = _numba_upfirdn_signature(numba_type, 1)
-            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
-                sig_1d, fastmath=True
+            sig = _numba_upfirdn_signature(numba_type, 1)
+            _numba_kernel_cache[(str(numba_type), 1)] = cuda.jit(
+                sig, fastmath=True
             )(_numba_upfirdn_1d)
-        elif k_type == GPUKernel.UPFIRDN2D:
-            sig_2d = _numba_upfirdn_signature(numba_type, 2)
-            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
-                sig_2d, fastmath=True
+            sig = _numba_upfirdn_signature(numba_type, 2)
+            _numba_kernel_cache[(str(numba_type), 2)] = cuda.jit(
+                sig, fastmath=True
             )(_numba_upfirdn_2d)
         else:
             raise NotImplementedError(
@@ -576,29 +571,18 @@ class _UpFIRDn(object):
             blockspergrid = numSM * 20
             threadsperblock = 512
 
-        if out.ndim == 1:
+        if out.ndim <= 2:
             _populate_kernel_cache(
                 out.dtype.type, use_numba, GPUKernel.UPFIRDN
             )
             kernel = _get_backend_kernel(
+                out.ndim,
                 out.dtype,
                 blockspergrid,
                 threadsperblock,
                 cp_stream,
                 use_numba,
                 GPUKernel.UPFIRDN,
-            )
-        elif out.ndim == 2:
-            _populate_kernel_cache(
-                out.dtype.type, use_numba, GPUKernel.UPFIRDN2D
-            )
-            kernel = _get_backend_kernel(
-                out.dtype,
-                blockspergrid,
-                threadsperblock,
-                cp_stream,
-                use_numba,
-                GPUKernel.UPFIRDN2D,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")
