@@ -114,19 +114,19 @@ def _numba_upfirdn_2d(
 
     y, x = cuda.grid(2)
 
-    if y == 0 and x == 0:
-        print(x_shape_a)
+    # if y == 0 and x == 0:
+    #     print(x_shape_a)
 
     if x < out.shape[1] and y < out.shape[0]:
 
         if axis == 1:
-            x_idx = ((x * down) // up) % padded_len
-            h_idx = (x * down) % up * h_per_phase
+            x_idx = cp.int32(cp.int32(cp.int32(x * down) // up) % padded_len)
+            h_idx = cp.int32(cp.int32(cp.int32(x * down) % up) * h_per_phase)
         else:
-            x_idx = ((y * down) // up) % padded_len
-            h_idx = (y * down) % up * h_per_phase
+            x_idx = cp.int32(cp.int32(cp.int32(y * down) // up) % padded_len)
+            h_idx = cp.int32(cp.int32(cp.int32(y * down) % up) * h_per_phase)
 
-        x_conv_idx = x_idx - h_per_phase + 1
+        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
         if x_conv_idx < 0:
             h_idx -= x_conv_idx
             x_conv_idx = 0
@@ -134,14 +134,13 @@ def _numba_upfirdn_2d(
         temp: out.dtype = 0
 
         # If axis = 0, we need to know each column in x.
-        for x_c in range(x_conv_idx, x_idx + 1):
+        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
             if x_c < x_shape_a and x_c >= 0:  # If inside input
                 # if multi-dimenstional array
                 if axis == 1:  # process columns
                     temp += inp[y, x_c] * h_trans_flip[h_idx]
                 else:  # process rows
                     temp += inp[x_c, x] * h_trans_flip[h_idx]
-                    # temp = 99
 
             h_idx += 1
 
@@ -160,7 +159,7 @@ def _numba_upfirdn_1d(
         x_idx = cp.int32(cp.int32(cp.int32(i * down) // up) % padded_len)
         h_idx = cp.int32(cp.int32(cp.int32(i * down) % up) * h_per_phase)
 
-        x_conv_idx = x_idx - h_per_phase + 1
+        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
         if x_conv_idx < 0:
             h_idx -= x_conv_idx
             x_conv_idx = 0
@@ -168,7 +167,7 @@ def _numba_upfirdn_1d(
         temp: out.dtype = 0
 
         # If axis = 0, we need to know each column in x.
-        for x_c in range(x_conv_idx, x_idx + 1):
+        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
             if x_c < x_shape_a and x_c >= 0:
                 temp += x[x_c] * h_trans_flip[h_idx]
             h_idx += 1
@@ -289,13 +288,11 @@ extern "C" {
                         temp += inp[ty * inpH + x_c] * h_trans_flip[h_idx];
                     } else {
                         temp += inp[x_c * inpH + tx] * h_trans_flip[h_idx];
-                        //temp = 99;
                     }
                 }
                 h_idx += 1;
             }
-            out[ty * outH + tx] = temp; // axis = 0
-            //out[tx * outW + ty] = temp;
+            out[ty * outH + tx] = temp;
         }
 
     }
@@ -329,7 +326,6 @@ class _cupy_upfirdn_wrapper(object):
         out,
     ):
 
-        print(x.shape, out.shape)
         if x.ndim < 2:
             x_W = x.shape[0]
             o_W = out.shape[0]
