@@ -143,7 +143,12 @@ def _numba_upfirdn_2d(
                 if num_loops > 1:  # a loop is an additional column
                     out[i, y_idx] += x[i, x_conv_idx] * h_trans_flip[h_idx]
                 else:
-                    out[i, y_idx] += x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
+                    if axis == 1:
+                        out[i, y_idx] += x[i, x_conv_idx] * h_trans_flip[h_idx]
+                    else:
+                        out[i, y_idx] += (
+                            x[x_conv_idx, y_idx] * h_trans_flip[h_idx]
+                        )
 
             h_idx += 1
 
