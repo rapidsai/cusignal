@@ -26,7 +26,7 @@ from math import gcd
 from .. import _signaltools
 from ..window_functions.windows import get_window
 from .._upfirdn import _UpFIRDn, _output_len
-from ..fir_filter_design import firwin
+from ..filter_design.fir_filter_design import firwin
 
 
 def decimate(x, q, n=None, axis=-1, zero_phase=True):

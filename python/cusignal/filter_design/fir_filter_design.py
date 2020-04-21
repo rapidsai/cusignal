@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from .window_functions.windows import get_window
+from ..window_functions.windows import get_window
 
 
 def _get_fs(fs, nyq):
@@ -273,3 +273,37 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         h /= s
 
     return h
+
+
+def cmplx_sort(p):
+    """Sort roots based on magnitude.
+
+    Parameters
+    ----------
+    p : array_like
+        The roots to sort, as a 1-D array.
+
+    Returns
+    -------
+    p_sorted : ndarray
+        Sorted roots.
+    indx : ndarray
+        Array of indices needed to sort the input `p`.
+
+    Examples
+    --------
+    >>> from scipy import signal
+    >>> vals = [1, 4, 1+1.j, 3]
+    >>> p_sorted, indx = signal.cmplx_sort(vals)
+    >>> p_sorted
+    array([1.+0.j, 1.+1.j, 3.+0.j, 4.+0.j])
+    >>> indx
+    array([0, 2, 3, 1])
+
+    """
+    p = cp.asarray(p)
+    if cp.iscomplexobj(p):
+        indx = cp.argsort(abs(p))
+    else:
+        indx = cp.argsort(p)
+    return cp.take(p, indx, 0), indx

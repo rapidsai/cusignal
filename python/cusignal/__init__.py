@@ -40,9 +40,12 @@ from cusignal.convolution.convolve import (
     convolve,
     convolve2d
 )
-from cusignal.signaltools import (
-    cmplx_sort,
-)
+from cusignal.filter_design.fir_filter_design import (
+    kaiser_beta,
+    kaiser_atten,
+    firwin,
+    cmplx_sort
+) 
 from cusignal.window_functions.windows import (
     general_cosine,
     boxcar,
@@ -67,7 +70,6 @@ from cusignal.window_functions.windows import (
     exponential,
     get_window
 )
-from cusignal.fir_filter_design import kaiser_beta, kaiser_atten, firwin
 from cusignal.fftpack_helper import next_fast_len 
 from cusignal.spectral_analysis.spectral import (
     lombscargle,
@@ -85,11 +87,28 @@ from cusignal.bsplines.bsplines import (
     quadratic,
     cspline1d
 )
-from cusignal.waveforms.waveforms import square, gausspulse, chirp, unit_impulse
-from cusignal.wavelets.wavelets import qmf, morlet, ricker, cwt
-from cusignal.peak_finding.peak_finding import argrelmin, argrelmax, argrelextrema
+from cusignal.waveforms.waveforms import (
+    square,
+    gausspulse,
+    chirp,
+    unit_impulse
+)
+from cusignal.wavelets.wavelets import (
+    qmf,
+    morlet,
+    ricker,
+    cwt
+)
+from cusignal.peak_finding.peak_finding import (
+    argrelmin,
+    argrelmax,
+    argrelextrema
+)
 from cusignal._upfirdn import upfirdn
-from cusignal.utils.arraytools import get_shared_array, get_shared_mem
+from cusignal.utils.arraytools import (
+    get_shared_array,
+    get_shared_mem
+)
 from cusignal.cupy_helper import polyval, toeplitz, hankel
 
 # Versioneer

@@ -36,7 +36,7 @@ except ImportError:
     # Numba >= 0.49
     from numba.core.types.scalars import Complex
 
-from .fir_filter_design import firwin
+from .filter_design.fir_filter_design import firwin
 
 
 class GPUKernel(Enum):
