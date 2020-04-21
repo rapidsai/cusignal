@@ -335,7 +335,7 @@ def _as_strided(x, shape=None, strides=None):
     Returns
     -------
     view : ndarray
-    
+
     Notes
     -----
     ``as_strided`` creates a view into the array given the exact strides
