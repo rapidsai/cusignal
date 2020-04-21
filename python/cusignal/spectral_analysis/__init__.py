@@ -11,27 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.window_functions.windows import (
-    general_cosine,
-    boxcar,
-    triang,
-    parzen,
-    bohman,
-    blackman,
-    nuttall,
-    blackmanharris,
-    flattop,
-    bartlett,
-    hann,
-    tukey,
-    barthann,
-    general_hamming,
-    hamming,
-    kaiser,
-    gaussian,
-    general_gaussian,
-    chebwin,
-    cosine,
-    exponential,
-    get_window
+from cusignal.spectral_analysis.spectral import (
+    periodogram,
+    welch,
+    csd,
+    coherence,
+    spectrogram,
+    lombscargle,
+    vectorstrength,
+    stft
 )

@@ -30,7 +30,6 @@ from cusignal.signaltools import (
     cmplx_sort,
     resample,
     resample_poly,
-    vectorstrength,
     detrend,
     freq_shift,
     decimate
@@ -61,13 +60,14 @@ from cusignal.window_functions.windows import (
 )
 from cusignal.fir_filter_design import kaiser_beta, kaiser_atten, firwin
 from cusignal.fftpack_helper import next_fast_len 
-from cusignal.spectral import (
+from cusignal.spectral_analysis.spectral import (
     lombscargle,
     periodogram,
     welch,
     csd,
     spectrogram,
     stft,
+    vectorstrength,
     coherence
 )
 from cusignal.bsplines.bsplines import (
