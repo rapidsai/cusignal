@@ -38,6 +38,8 @@ from cupy import (
 from cupyx.scipy import fftpack
 from cupy import linalg
 
+import numpy as np
+
 from ..convolution.correlate import correlate
 
 
@@ -69,10 +71,10 @@ def wiener(im, mysize=None, noise=None):
     im = asarray(im)
     if mysize is None:
         mysize = [3] * im.ndim
-    mysize = cp.asarray(mysize)
+    mysize = np.asarray(mysize)
     if mysize.shape == ():
         mysize = cp.repeat(mysize.item(), im.ndim)
-        mysize = cp.asarray(mysize)
+        mysize = np.asarray(mysize)
 
     # Estimate the local mean
     lMean = correlate(im, ones(mysize), "same") / prod(mysize, axis=0)
