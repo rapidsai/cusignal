@@ -6,13 +6,15 @@ cuSignal API Reference
 Convolution
 ============
 
-Convolution
+Convolve
 ------------
 
 .. automodule:: cusignal.convolution.convolve
     :members:
     :undoc-members:
 
+Correlate
+------------
 .. automodule:: cusignal.convolution.correlate
     :members:
     :undoc-members:
