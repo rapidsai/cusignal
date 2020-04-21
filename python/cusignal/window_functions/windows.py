@@ -1748,9 +1748,11 @@ def get_window(window, Nx, fftbins=True):
     - `~cusignal.window_functions.windows.barthann`
     - `~cusignal.window_functions.windows.kaiser` (needs beta)
     - `~cusignal.window_functions.windows.gaussian` (needs standard deviation)
-    - `~cusignal.window_functions.windows.general_gaussian` (needs power, width)
+    - `~cusignal.window_functions.windows.general_gaussian` \
+            (needs power, width)
     - `~cusignal.window_functions.windows.slepian` (needs width)
-    - `~cusignal.window_functions.windows.dpss` (needs normalized half-bandwidth)
+    - `~cusignal.window_functions.windows.dpss` \
+            (needs normalized half-bandwidth)
     - `~cusignal.window_functions.windows.chebwin` (needs attenuation)
     - `~cusignal.window_functions.windows.exponential` (needs decay scale)
     - `~cusignal.window_functions.windows.tukey` (needs taper fraction)
