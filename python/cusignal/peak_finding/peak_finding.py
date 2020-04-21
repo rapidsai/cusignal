@@ -45,13 +45,6 @@ def _boolrelextrema(data, comparator, axis=0, order=1):
     See also
     --------
     argrelmax, argrelmin
-
-    Examples
-    --------
-    >>> testdata = np.array([1,2,3,2,1])
-    >>> _boolrelextrema(testdata, np.greater, axis=0)
-    array([False, False,  True, False, False], dtype=bool)
-
     """
     data = cp.asarray(data)
     if((int(order) != order) or (order < 1)):
@@ -106,15 +99,14 @@ def argrelmin(data, axis=0, order=1):
     detect all local minima, including flat ones, by calling it with negated
     `data`.
 
-    .. versionadded:: 0.11.0
-
     Examples
     --------
-    >>> from scipy.signal import argrelmin
-    >>> x = np.array([2, 1, 2, 3, 2, 0, 1, 0])
+    >>> from cusignal import argrelmin
+    >>> import cupy as cp
+    >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmin(x)
     (array([1, 5]),)
-    >>> y = np.array([[1, 2, 1, 2],
+    >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
@@ -159,15 +151,14 @@ def argrelmax(data, axis=0, order=1):
     detected. In case of one-dimensional `data` `find_peaks` can be used to
     detect all local maxima, including flat ones.
 
-    .. versionadded:: 0.11.0
-
     Examples
     --------
-    >>> from scipy.signal import argrelmax
-    >>> x = np.array([2, 1, 2, 3, 2, 0, 1, 0])
+    >>> from cusignal import argrelmax
+    >>> import cupy as cp
+    >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmax(x)
     (array([3, 6]),)
-    >>> y = np.array([[1, 2, 1, 2],
+    >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
@@ -206,22 +197,18 @@ def argrelextrema(data, comparator, axis=0, order=1):
     --------
     argrelmin, argrelmax
 
-    Notes
-    -----
-
-    .. versionadded:: 0.11.0
-
     Examples
     --------
-    >>> from scipy.signal import argrelextrema
-    >>> x = np.array([2, 1, 2, 3, 2, 0, 1, 0])
+    >>> from cusignal import argrelextrema
+    >>> import cupy as cp
+    >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelextrema(x, np.greater)
     (array([3, 6]),)
-    >>> y = np.array([[1, 2, 1, 2],
+    >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
-    >>> argrelextrema(y, np.less, axis=1)
+    >>> argrelextrema(y, cp.less, axis=1)
     (array([0, 2]), array([2, 1]))
 
     """

@@ -78,19 +78,9 @@ from cusignal.bsplines.bsplines import (
 )
 from cusignal.waveforms.waveforms import square, gausspulse, chirp, unit_impulse
 from cusignal.wavelets.wavelets import qmf, morlet, ricker, cwt
-from cusignal._peak_finding import argrelmin, argrelmax, argrelextrema
+from cusignal.peak_finding.peak_finding import argrelmin, argrelmax, argrelextrema
 from cusignal._upfirdn import upfirdn
-from cusignal._arraytools import (
-    get_shared_array,
-    get_shared_mem,
-    axis_slice,
-    axis_reverse,
-    odd_ext,
-    even_ext,
-    const_ext,
-    zero_ext,
-    as_strided
-)
+from cusignal.utils.arraytools import get_shared_array, get_shared_mem
 from cusignal.cupy_helper import polyval, toeplitz, hankel
 
 # Versioneer

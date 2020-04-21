@@ -18,7 +18,8 @@ from scipy._lib.six import string_types
 import numpy as np
 
 from .window_functions.windows import get_window
-from ._arraytools import even_ext, odd_ext, const_ext, zero_ext, as_strided
+from .utils.arraytools import _even_ext, _odd_ext, _const_ext, \
+    _zero_ext, _as_strided
 from . import signaltools
 from ._spectral import _lombscargle
 
@@ -1306,10 +1307,10 @@ def _spectral_helper(
         )
 
     boundary_funcs = {
-        "even": even_ext,
-        "odd": odd_ext,
-        "constant": const_ext,
-        "zeros": zero_ext,
+        "even": _even_ext,
+        "odd": _odd_ext,
+        "constant": _const_ext,
+        "zeros": _zero_ext,
         None: None,
     }
 
@@ -1551,7 +1552,7 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
         shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
         strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
         # Need to optimize this in cuSignal
-        result = as_strided(x, shape=shape, strides=strides)
+        result = _as_strided(x, shape=shape, strides=strides)
 
     # Detrend each data segment individually
     result = detrend_func(result)

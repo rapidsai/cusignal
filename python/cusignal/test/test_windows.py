@@ -15,8 +15,8 @@ import cupy as cp
 import pytest
 from scipy import signal
 
-import cusignal
 from cusignal.test.utils import array_equal
+import cusignal.window_functions.windows as cuwindows
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -24,7 +24,7 @@ def test_general_cosine(num_samps):
     HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
     cpu_window = signal.windows.general_cosine(num_samps, HFT90D, sym=False)
     gpu_window = cp.asnumpy(
-        cusignal.windows.general_cosine(num_samps, HFT90D, sym=False)
+        cuwindows.general_cosine(num_samps, HFT90D, sym=False)
     )
     assert array_equal(cpu_window, gpu_window)
 
@@ -32,63 +32,63 @@ def test_general_cosine(num_samps):
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_boxcar(num_samps):
     cpu_window = signal.windows.boxcar(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.boxcar(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.boxcar(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_triang(num_samps):
     cpu_window = signal.windows.triang(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.triang(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.triang(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_bohman(num_samps):
     cpu_window = signal.windows.bohman(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.bohman(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.bohman(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_blackman(num_samps):
     cpu_window = signal.windows.blackman(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.blackman(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.blackman(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_nuttall(num_samps):
     cpu_window = signal.windows.nuttall(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.nuttall(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.nuttall(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_blackmanharris(num_samps):
     cpu_window = signal.windows.blackmanharris(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.blackmanharris(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.blackmanharris(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_flattop(num_samps):
     cpu_window = signal.windows.flattop(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.flattop(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.flattop(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_barlett(num_samps):
     cpu_window = signal.windows.bartlett(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.bartlett(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.bartlett(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_hann(num_samps):
     cpu_window = signal.windows.hann(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.hann(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.hann(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -96,14 +96,14 @@ def test_hann(num_samps):
 @pytest.mark.parametrize("alpha", [0.25, 0.5])
 def test_tukey(num_samps, alpha):
     cpu_window = signal.windows.tukey(num_samps, alpha, sym=True)
-    gpu_window = cp.asnumpy(cusignal.windows.tukey(num_samps, alpha, sym=True))
+    gpu_window = cp.asnumpy(cuwindows.tukey(num_samps, alpha, sym=True))
     assert array_equal(cpu_window, gpu_window)
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_barthann(num_samps):
     cpu_window = signal.windows.barthann(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.barthann(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.barthann(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -112,7 +112,7 @@ def test_barthann(num_samps):
 def test_general_hamming(num_samps, alpha):
     cpu_window = signal.windows.general_hamming(num_samps, alpha, sym=True)
     gpu_window = cp.asnumpy(
-        cusignal.windows.general_hamming(num_samps, alpha, sym=True)
+        cuwindows.general_hamming(num_samps, alpha, sym=True)
     )
     assert array_equal(cpu_window, gpu_window)
 
@@ -120,7 +120,7 @@ def test_general_hamming(num_samps, alpha):
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_hamming(num_samps):
     cpu_window = signal.windows.hamming(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.hamming(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.hamming(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -128,7 +128,7 @@ def test_hamming(num_samps):
 @pytest.mark.parametrize("beta", [0.25, 0.5])
 def test_kaiser(num_samps, beta):
     cpu_window = signal.windows.kaiser(num_samps, beta, sym=True)
-    gpu_window = cp.asnumpy(cusignal.windows.kaiser(num_samps, beta, sym=True))
+    gpu_window = cp.asnumpy(cuwindows.kaiser(num_samps, beta, sym=True))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -136,7 +136,7 @@ def test_kaiser(num_samps, beta):
 @pytest.mark.parametrize("std", [3, 7])
 def test_gaussian(num_samps, std):
     cpu_window = signal.windows.gaussian(num_samps, std)
-    gpu_window = cp.asnumpy(cusignal.windows.gaussian(num_samps, std))
+    gpu_window = cp.asnumpy(cuwindows.gaussian(num_samps, std))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -146,7 +146,7 @@ def test_gaussian(num_samps, std):
 def test_general_gaussian(num_samps, p, std):
     cpu_window = signal.windows.general_gaussian(num_samps, p, std)
     gpu_window = cp.asnumpy(
-        cusignal.windows.general_gaussian(num_samps, p, std)
+        cuwindows.general_gaussian(num_samps, p, std)
     )
     assert array_equal(cpu_window, gpu_window)
 
@@ -154,7 +154,7 @@ def test_general_gaussian(num_samps, p, std):
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_cosine(num_samps):
     cpu_window = signal.windows.cosine(num_samps)
-    gpu_window = cp.asnumpy(cusignal.windows.cosine(num_samps))
+    gpu_window = cp.asnumpy(cuwindows.cosine(num_samps))
     assert array_equal(cpu_window, gpu_window)
 
 
@@ -162,5 +162,5 @@ def test_cosine(num_samps):
 @pytest.mark.parametrize("tau", [1.5, 3.0])
 def test_exponential(num_samps, tau):
     cpu_window = signal.windows.exponential(num_samps, tau=tau)
-    gpu_window = cp.asnumpy(cusignal.windows.exponential(num_samps, tau=tau))
+    gpu_window = cp.asnumpy(cuwindows.exponential(num_samps, tau=tau))
     assert array_equal(cpu_window, gpu_window)

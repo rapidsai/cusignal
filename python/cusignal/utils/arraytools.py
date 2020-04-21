@@ -16,16 +16,28 @@ from numba import cuda
 import numpy as np
 
 
-# Return shared memory array -- necessary for zero copy between CPU and GPU on
-# NVIDIA embedded platforms
-# Confirmed working with Numba 0.45 and NVIDIA TX2, Nano, and Xavier
 def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
                      wc=True):
+    """Return populated shared memory between GPU and CPU.
+
+    Parameters
+    ----------
+    data : cupy.ndarray or numpy.ndarray
+        The array to be copied to shared buffer
+    strides: int or None
+    order: char
+    stream : int
+        Stream number (0 for default)
+    portable : bool
+    wc : bool
+    """
+
     shape = data.shape
     dtype = data.dtype
 
     # Allocate mapped, shared memory in Numba
-    shared_mem_array = cuda.mapped_array(shape, dtype=dtype, strides=strides,
+    shared_mem_array = cuda.mapped_array(shape, dtype=dtype,
+                                         strides=strides,
                                          order=order, stream=stream,
                                          portable=portable, wc=wc)
 
@@ -38,16 +50,32 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
 # Return shared memory array - similar to np.zeros
 def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
                    portable=False, wc=True):
+    """Return shared memory between GPU and CPU. Similar to numpy.zeros
+
+    Parameters
+    ----------
+    shape : ndarray.shape
+        Size of shared memory allocation
+    dtype : cupy.dtype or numpy.dtype
+        Data type of allocation
+    strides: int or None
+    order: char
+    stream : int
+        Stream number (0 for default)
+    portable : bool
+    wc : bool
+    """
+
     return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order,
                              stream=stream, portable=portable, wc=wc)
 
 
-def axis_slice(a, start=None, stop=None, step=None, axis=-1):
+def _axis_slice(a, start=None, stop=None, step=None, axis=-1):
     """Take a slice along axis 'axis' from 'a'.
 
     Parameters
     ----------
-    a : numpy.ndarray
+    a : cupy.ndarray
         The array to be sliced.
     start, stop, step : int or None
         The slice parameters.
@@ -56,6 +84,7 @@ def axis_slice(a, start=None, stop=None, step=None, axis=-1):
 
     Examples
     --------
+    >>> from cupy import array
     >>> a = array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     >>> axis_slice(a, start=0, stop=1, axis=1)
     array([[1],
@@ -83,15 +112,15 @@ def axis_slice(a, start=None, stop=None, step=None, axis=-1):
     return b
 
 
-def axis_reverse(a, axis=-1):
+def _axis_reverse(a, axis=-1):
     """Reverse the 1-d slices of `a` along axis `axis`.
 
     Returns axis_slice(a, step=-1, axis=axis).
     """
-    return axis_slice(a, step=-1, axis=axis)
+    return _axis_slice(a, step=-1, axis=axis)
 
 
-def odd_ext(x, n, axis=-1):
+def _odd_ext(x, n, axis=-1):
     """
     Odd extension at the boundaries of an array
 
@@ -108,21 +137,23 @@ def odd_ext(x, n, axis=-1):
 
     Examples
     --------
-    >>> from scipy.signal._arraytools import odd_ext
-    >>> a = np.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
-    >>> odd_ext(a, 2)
+    >>> from cusignal.utils.arraytools import _odd_ext
+    >>> import cupy as cp
+    >>> a = cp.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
+    >>> _odd_ext(a, 2)
     array([[-1,  0,  1,  2,  3,  4,  5,  6,  7],
            [-4, -1,  0,  1,  4,  9, 16, 23, 28]])
 
     Odd extension is a "180 degree rotation" at the endpoints of the original
     array:
 
-    >>> t = np.linspace(0, 1.5, 100)
-    >>> a = 0.9 * np.sin(2 * np.pi * t**2)
-    >>> b = odd_ext(a, 40)
+    >>> t = cp.linspace(0, 1.5, 100)
+    >>> a = 0.9 * cp.sin(2 * cp.pi * t**2)
+    >>> b = _odd_ext(a, 40)
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(arange(-40, 140), b, 'b', lw=1, label='odd extension')
-    >>> plt.plot(arange(100), a, 'r', lw=2, label='original')
+    >>> plt.plot(arange(-40, 140), cp.asnumpy(b), 'b', lw=1, \
+                 label='odd extension')
+    >>> plt.plot(arange(100), cp.asnumpy(a), 'r', lw=2, label='original')
     >>> plt.legend(loc='best')
     >>> plt.show()
     """
@@ -133,10 +164,10 @@ def odd_ext(x, n, axis=-1):
         raise ValueError(("The extension length n (%d) is too big. " +
                          "It must not exceed x.shape[axis]-1, which is %d.")
                          % (n, x.shape[axis] - 1))
-    left_end = axis_slice(x, start=0, stop=1, axis=axis)
-    left_ext = axis_slice(x, start=n, stop=0, step=-1, axis=axis)
-    right_end = axis_slice(x, start=-1, axis=axis)
-    right_ext = axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
+    left_end = _axis_slice(x, start=0, stop=1, axis=axis)
+    left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
+    right_end = _axis_slice(x, start=-1, axis=axis)
+    right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
     ext = cp.concatenate((2 * left_end - left_ext,
                           x,
                           2 * right_end - right_ext),
@@ -144,7 +175,7 @@ def odd_ext(x, n, axis=-1):
     return ext
 
 
-def even_ext(x, n, axis=-1):
+def _even_ext(x, n, axis=-1):
     """
     Even extension at the boundaries of an array
 
@@ -161,20 +192,22 @@ def even_ext(x, n, axis=-1):
 
     Examples
     --------
-    >>> from scipy.signal._arraytools import even_ext
-    >>> a = np.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
-    >>> even_ext(a, 2)
+    >>> from cusignal.utils.arraytools import _even_ext
+    >>> from cupy import cp
+    >>> a = cp.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
+    >>> _even_ext(a, 2)
     array([[ 3,  2,  1,  2,  3,  4,  5,  4,  3],
            [ 4,  1,  0,  1,  4,  9, 16,  9,  4]])
 
     Even extension is a "mirror image" at the boundaries of the original array:
 
-    >>> t = np.linspace(0, 1.5, 100)
-    >>> a = 0.9 * np.sin(2 * np.pi * t**2)
-    >>> b = even_ext(a, 40)
+    >>> t = cp.linspace(0, 1.5, 100)
+    >>> a = 0.9 * cp.sin(2 * cp.pi * t**2)
+    >>> b = _even_ext(a, 40)
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(arange(-40, 140), b, 'b', lw=1, label='even extension')
-    >>> plt.plot(arange(100), a, 'r', lw=2, label='original')
+    >>> plt.plot(arange(-40, 140), cp.asnumpy(b), 'b', lw=1, \
+                 label='even extension')
+    >>> plt.plot(arange(100), cp.asnumpy(a), 'r', lw=2, label='original')
     >>> plt.legend(loc='best')
     >>> plt.show()
     """
@@ -185,8 +218,8 @@ def even_ext(x, n, axis=-1):
         raise ValueError(("The extension length n (%d) is too big. " +
                          "It must not exceed x.shape[axis]-1, which is %d.")
                          % (n, x.shape[axis] - 1))
-    left_ext = axis_slice(x, start=n, stop=0, step=-1, axis=axis)
-    right_ext = axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
+    left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
+    right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
     ext = cp.concatenate((left_ext,
                           x,
                           right_ext),
@@ -194,7 +227,7 @@ def even_ext(x, n, axis=-1):
     return ext
 
 
-def const_ext(x, n, axis=-1):
+def _const_ext(x, n, axis=-1):
     """
     Constant extension at the boundaries of an array
 
@@ -214,33 +247,35 @@ def const_ext(x, n, axis=-1):
 
     Examples
     --------
-    >>> from scipy.signal._arraytools import const_ext
-    >>> a = np.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
-    >>> const_ext(a, 2)
+    >>> from cusignal.utils.arraytools import _const_ext
+    >>> import cupy as cp
+    >>> a = cp.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
+    >>> _const_ext(a, 2)
     array([[ 1,  1,  1,  2,  3,  4,  5,  5,  5],
            [ 0,  0,  0,  1,  4,  9, 16, 16, 16]])
 
     Constant extension continues with the same values as the endpoints of the
     array:
 
-    >>> t = np.linspace(0, 1.5, 100)
-    >>> a = 0.9 * np.sin(2 * np.pi * t**2)
-    >>> b = const_ext(a, 40)
+    >>> t = cp.linspace(0, 1.5, 100)
+    >>> a = 0.9 * cp.sin(2 * cp.pi * t**2)
+    >>> b = _const_ext(a, 40)
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(arange(-40, 140), b, 'b', lw=1, label='constant extension')
-    >>> plt.plot(arange(100), a, 'r', lw=2, label='original')
+    >>> plt.plot(arange(-40, 140), cp.asnumpy(b), 'b', lw=1, \
+                 label='constant extension')
+    >>> plt.plot(arange(100), cp.asnumpy(a), 'r', lw=2, label='original')
     >>> plt.legend(loc='best')
     >>> plt.show()
     """
     x = cp.asarray(x)
     if n < 1:
         return x
-    left_end = axis_slice(x, start=0, stop=1, axis=axis)
+    left_end = _axis_slice(x, start=0, stop=1, axis=axis)
     ones_shape = [1] * x.ndim
     ones_shape[axis] = n
     ones = cp.ones(ones_shape, dtype=x.dtype)
     left_ext = ones * left_end
-    right_end = axis_slice(x, start=-1, axis=axis)
+    right_end = _axis_slice(x, start=-1, axis=axis)
     right_ext = ones * right_end
     ext = cp.concatenate((left_ext,
                           x,
@@ -249,7 +284,7 @@ def const_ext(x, n, axis=-1):
     return ext
 
 
-def zero_ext(x, n, axis=-1):
+def _zero_ext(x, n, axis=-1):
     """
     Zero padding at the boundaries of an array
 
@@ -268,9 +303,10 @@ def zero_ext(x, n, axis=-1):
 
     Examples
     --------
-    >>> from scipy.signal._arraytools import zero_ext
-    >>> a = np.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
-    >>> zero_ext(a, 2)
+    >>> from cusignal.utils.arraytools import _zero_ext
+    >>> import cupy as cp
+    >>> a = cp.array([[1, 2, 3, 4, 5], [0, 1, 4, 9, 16]])
+    >>> _zero_ext(a, 2)
     array([[ 0,  0,  1,  2,  3,  4,  5,  0,  0],
            [ 0,  0,  0,  1,  4,  9, 16,  0,  0]])
     """
@@ -284,7 +320,7 @@ def zero_ext(x, n, axis=-1):
     return ext
 
 
-def as_strided(x, shape=None, strides=None):
+def _as_strided(x, shape=None, strides=None):
     """
     Create a view into the array with the given shape and strides.
     .. warning:: This function has to be used with extreme care, see notes.
@@ -299,10 +335,7 @@ def as_strided(x, shape=None, strides=None):
     Returns
     -------
     view : ndarray
-    See also
-    --------
-    numpy.lib.stride_tricks.as_strided
-    reshape : reshape an array.
+    
     Notes
     -----
     ``as_strided`` creates a view into the array given the exact strides
