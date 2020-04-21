@@ -17,7 +17,7 @@ from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
 import numpy as np
 
-from .windows import get_window
+from .window_functions.windows import get_window
 from ._arraytools import even_ext, odd_ext, const_ext, zero_ext, as_strided
 from . import signaltools
 from ._spectral import _lombscargle
