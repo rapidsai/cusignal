@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.acoustics import (
+from cusignal.acoustics.cepstrum import (
     rceps,
     cceps,
     cceps_unwrap
@@ -35,7 +35,7 @@ from cusignal.signaltools import (
     freq_shift,
     decimate
 )
-from cusignal.windows import (
+from cusignal.window_functions.windows import (
     general_cosine,
     boxcar,
     triang,
@@ -70,14 +70,14 @@ from cusignal.spectral import (
     stft,
     coherence
 )
-from cusignal.bsplines import (
+from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
     cspline1d
 )
-from cusignal.waveforms import square, gausspulse, chirp, unit_impulse
-from cusignal.wavelets import qmf, morlet, ricker, cwt
+from cusignal.waveforms.waveforms import square, gausspulse, chirp, unit_impulse
+from cusignal.wavelets.wavelets import qmf, morlet, ricker, cwt
 from cusignal._peak_finding import argrelmin, argrelmax, argrelextrema
 from cusignal._upfirdn import upfirdn
 from cusignal._arraytools import (

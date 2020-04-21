@@ -90,22 +90,23 @@ def general_cosine(M, a, sym=True):
     Figure 42 by plotting the window and its frequency response, and confirm
     the sidelobe level in red:
 
-    >>> from scipy.signal.windows import general_cosine
-    >>> from scipy.fftpack import fft, fftshift
+    >>> from cusignal.window_functions.windows import general_cosine
+    >>> from cupy.fft import fft, fftshift
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     >>> window = general_cosine(1000, HFT90D, sym=False)
-    >>> plt.plot(window)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("HFT90D window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 10000) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = np.abs(fftshift(A / abs(A).max()))
-    >>> response = 20 * np.log10(np.maximum(response, 1e-10))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = cp.abs(fftshift(A / cp.abs(A).max()))
+    >>> response = 20 * cp.log10(cp.maximum(response, 1e-10))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-50/1000, 50/1000, -140, 0])
     >>> plt.title("Frequency response of the HFT90D window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -148,21 +149,22 @@ def boxcar(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.boxcar(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.boxcar(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Boxcar window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the boxcar window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -205,22 +207,23 @@ def triang(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.triang(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.triang(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Triangular window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = np.abs(fftshift(A / abs(A).max()))
-    >>> response = 20 * np.log10(np.maximum(response, 1e-10))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = cp.abs(fftshift(A / cp.abs(A).max()))
+    >>> response = 20 * cp.log10(cp.maximum(response, 1e-10))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the triangular window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -270,21 +273,22 @@ def parzen(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.parzen(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.parzen(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Parzen window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Parzen window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -329,21 +333,22 @@ def bohman(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.bohman(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.bohman(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Bohman window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Bohman window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -420,22 +425,23 @@ def blackman(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.blackman(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.blackman(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Blackman window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = np.abs(fftshift(A / abs(A).max()))
-    >>> response = 20 * np.log10(np.maximum(response, 1e-10))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = cp.abs(fftshift(A / cp.abs(A).max()))
+    >>> response = 20 * cp.log10(cp.maximum(response, 1e-10))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Blackman window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -481,21 +487,22 @@ def nuttall(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.nuttall(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.nuttall(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Nuttall window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Nuttall window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -528,21 +535,22 @@ def blackmanharris(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.blackmanharris(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.blackmanharris(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Blackman-Harris window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Blackman-Harris window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -589,21 +597,22 @@ def flattop(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.flattop(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.flattop(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Flat top window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the flat top window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -679,21 +688,22 @@ def bartlett(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.bartlett(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.bartlett(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Bartlett window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Bartlett window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -768,22 +778,23 @@ def hann(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.hann(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.hann(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Hann window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = np.abs(fftshift(A / abs(A).max()))
-    >>> response = 20 * np.log10(np.maximum(response, 1e-10))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = cp.abs(fftshift(A / cp.abs(A).max()))
+    >>> response = 20 * cp.log10(np.maximum(response, 1e-10))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Hann window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -830,12 +841,13 @@ def tukey(M, alpha=0.5, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.tukey(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.tukey(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Tukey window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
@@ -843,9 +855,9 @@ def tukey(M, alpha=0.5, sym=True):
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Tukey window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -900,21 +912,22 @@ def barthann(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.barthann(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.barthann(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Bartlett-Hann window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Bartlett-Hann window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -981,8 +994,9 @@ def general_hamming(M, alpha, sym=True):
     :math:`\alpha` values include 0.75, 0.7 and 0.52 [4]_. As an example, we
     plot these different windows.
 
-    >>> from scipy.signal.windows import general_hamming
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
     >>> fig1, spatial_plot = plt.subplots()
@@ -999,8 +1013,8 @@ def general_hamming(M, alpha, sym=True):
     ...     window = general_hamming(41, alpha)
     ...     spatial_plot.plot(window, label="{:.2f}".format(alpha))
     ...     A = fft(window, 2048) / (len(window)/2.0)
-    ...     freq = np.linspace(-0.5, 0.5, len(A))
-    ...     response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
+    ...     freq = cp.linspace(-0.5, 0.5, len(A))
+    ...     response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
     ...     freq_plot.plot(freq, response, label="{:.2f}".format(alpha))
     >>> freq_plot.legend(loc="upper right")
     >>> spatial_plot.legend(loc="upper right")
@@ -1074,21 +1088,22 @@ def hamming(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.hamming(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.hamming(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Hamming window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Hamming window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1194,21 +1209,22 @@ def kaiser(M, beta, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.kaiser(51, beta=14)
-    >>> plt.plot(window)
+    >>> window = cusignal.kaiser(51, beta=14)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title(r"Kaiser window ($\beta$=14)")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title(r"Frequency response of the Kaiser window ($\beta$=14)")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1262,21 +1278,22 @@ def gaussian(M, std, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.gaussian(51, std=7)
-    >>> plt.plot(window)
+    >>> window = cusignal.gaussian(51, std=7)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title(r"Gaussian window ($\sigma$=7)")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title(r"Frequency response of the Gaussian window ($\sigma$=7)")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1332,21 +1349,22 @@ def general_gaussian(M, p, sig, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.general_gaussian(51, p=1.5, sig=7)
-    >>> plt.plot(window)
+    >>> window = cusignal.general_gaussian(51, p=1.5, sig=7)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title(r"Generalized Gaussian window (p=1.5, $\sigma$=7)")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title(r"Freq. resp. of the gen. Gaussian "
     ...           r"window (p=1.5, $\sigma$=7)")
@@ -1429,21 +1447,22 @@ def chebwin(M, at, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.chebwin(51, at=100)
-    >>> plt.plot(window)
+    >>> window = cusignal.chebwin(51, at=100)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Dolph-Chebyshev window (100 dB)")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the Dolph-Chebyshev window (100 dB)")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1519,21 +1538,22 @@ def cosine(M, sym=True):
     --------
     Plot the window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
-    >>> window = signal.cosine(51)
-    >>> plt.plot(window)
+    >>> window = cusignal.cosine(51)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Cosine window")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -120, 0])
     >>> plt.title("Frequency response of the cosine window")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1592,23 +1612,24 @@ def exponential(M, center=None, tau=1., sym=True):
     --------
     Plot the symmetric window and its frequency response:
 
-    >>> from scipy import signal
-    >>> from scipy.fftpack import fft, fftshift
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> from cupy.fft import fft, fftshift
     >>> import matplotlib.pyplot as plt
 
     >>> M = 51
     >>> tau = 3.0
-    >>> window = signal.exponential(M, tau=tau)
-    >>> plt.plot(window)
+    >>> window = cusignal.exponential(M, tau=tau)
+    >>> plt.plot(cp.asnumpy(window))
     >>> plt.title("Exponential Window (tau=3.0)")
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
 
     >>> plt.figure()
     >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = np.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * np.log10(np.abs(fftshift(A / abs(A).max())))
-    >>> plt.plot(freq, response)
+    >>> freq = cp.linspace(-0.5, 0.5, len(A))
+    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
+    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
     >>> plt.axis([-0.5, 0.5, -35, 0])
     >>> plt.title("Frequency response of the Exponential window (tau=3.0)")
     >>> plt.ylabel("Normalized magnitude [dB]")
@@ -1713,26 +1734,26 @@ def get_window(window, Nx, fftbins=True):
     -----
     Window types:
 
-    - `~scipy.signal.windows.boxcar`
-    - `~scipy.signal.windows.triang`
-    - `~scipy.signal.windows.blackman`
-    - `~scipy.signal.windows.hamming`
-    - `~scipy.signal.windows.hann`
-    - `~scipy.signal.windows.bartlett`
-    - `~scipy.signal.windows.flattop`
-    - `~scipy.signal.windows.parzen`
-    - `~scipy.signal.windows.bohman`
-    - `~scipy.signal.windows.blackmanharris`
-    - `~scipy.signal.windows.nuttall`
-    - `~scipy.signal.windows.barthann`
-    - `~scipy.signal.windows.kaiser` (needs beta)
-    - `~scipy.signal.windows.gaussian` (needs standard deviation)
-    - `~scipy.signal.windows.general_gaussian` (needs power, width)
-    - `~scipy.signal.windows.slepian` (needs width)
-    - `~scipy.signal.windows.dpss` (needs normalized half-bandwidth)
-    - `~scipy.signal.windows.chebwin` (needs attenuation)
-    - `~scipy.signal.windows.exponential` (needs decay scale)
-    - `~scipy.signal.windows.tukey` (needs taper fraction)
+    - `~cusignal.window_functions.windows.boxcar`
+    - `~cusignal.window_functions.windows.triang`
+    - `~cusignal.window_functions.windows.blackman`
+    - `~cusignal.window_functions.windows.hamming`
+    - `~cusignal.window_functions.windows.hann`
+    - `~cusignal.window_functions.windows.bartlett`
+    - `~cusignal.window_functions.windows.flattop`
+    - `~cusignal.window_functions.windows.parzen`
+    - `~cusignal.window_functions.windows.bohman`
+    - `~cusignal.window_functions.windows.blackmanharris`
+    - `~cusignal.window_functions.windows.nuttall`
+    - `~cusignal.window_functions.windows.barthann`
+    - `~cusignal.window_functions.windows.kaiser` (needs beta)
+    - `~cusignal.window_functions.windows.gaussian` (needs standard deviation)
+    - `~cusignal.window_functions.windows.general_gaussian` (needs power, width)
+    - `~cusignal.window_functions.windows.slepian` (needs width)
+    - `~cusignal.window_functions.windows.dpss` (needs normalized half-bandwidth)
+    - `~cusignal.window_functions.windows.chebwin` (needs attenuation)
+    - `~cusignal.window_functions.windows.exponential` (needs decay scale)
+    - `~cusignal.window_functions.windows.tukey` (needs taper fraction)
 
     If the window requires no parameters, then `window` can be a string.
 
@@ -1741,7 +1762,7 @@ def get_window(window, Nx, fftbins=True):
     arguments the needed parameters.
 
     If `window` is a floating point number, it is interpreted as the beta
-    parameter of the `~scipy.signal.windows.kaiser` window.
+    parameter of the `~cusignal.window_functions.windows.kaiser` window.
 
     Each of the window types listed above is also the name of
     a function that can be called directly to create a window of
@@ -1749,13 +1770,13 @@ def get_window(window, Nx, fftbins=True):
 
     Examples
     --------
-    >>> from scipy import signal
-    >>> signal.get_window('triang', 7)
+    >>> import cusignal
+    >>> cusignal.get_window('triang', 7)
     array([ 0.125,  0.375,  0.625,  0.875,  0.875,  0.625,  0.375])
-    >>> signal.get_window(('kaiser', 4.0), 9)
+    >>> cusignal.get_window(('kaiser', 4.0), 9)
     array([ 0.08848053,  0.29425961,  0.56437221,  0.82160913,  0.97885093,
             0.97885093,  0.82160913,  0.56437221,  0.29425961])
-    >>> signal.get_window(4.0, 9)
+    >>> cusignal.get_window(4.0, 9)
     array([ 0.08848053,  0.29425961,  0.56437221,  0.82160913,  0.97885093,
             0.97885093,  0.82160913,  0.56437221,  0.29425961])
 
