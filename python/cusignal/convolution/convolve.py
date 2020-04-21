@@ -16,7 +16,8 @@ from cupyx.scipy import fftpack
 import sys
 
 from .. import _signaltools
-from ..fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
+from ..utils.fftpack_helper import _init_nd_shape_and_axes_sorted, \
+    next_fast_len
 from .convolution_utils import _inputs_swap_needed, _numeric_arrays, \
     _centered, _fftconv_faster, _timeit_fast
 

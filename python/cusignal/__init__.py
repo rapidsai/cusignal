@@ -70,7 +70,6 @@ from cusignal.window_functions.windows import (
     exponential,
     get_window
 )
-from cusignal.fftpack_helper import next_fast_len 
 from cusignal.spectral_analysis.spectral import (
     lombscargle,
     periodogram,
@@ -109,7 +108,6 @@ from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem
 )
-from cusignal.cupy_helper import polyval, toeplitz, hankel
 
 # Versioneer
 from ._version import get_versions
