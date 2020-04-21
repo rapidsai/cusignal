@@ -20,7 +20,7 @@ Waveforms
 Waveform Generation
 ------------
 
-.. automodule:: cusignal.waveforms
+.. automodule:: cusignal.waveforms.waveforms
     :members:
     :undoc-members:
 
@@ -42,7 +42,7 @@ Window Functions
 Windows
 ------------
 
-.. automodule:: cusignal.windows
+.. automodule:: cusignal.window_functions.windows
     :members:
     :undoc-members:
 
@@ -53,14 +53,14 @@ Spectrum Analysis
 Spectral
 ------------
 
-.. automodule:: cusignal.spectral
+.. automodule:: cusignal.spectral_analysis.spectral
     :members:
     :undoc-members:
 
 Acoustics
 ------------
 
-.. automodule:: cusignal.acoustics
+.. automodule:: cusignal.acoustics.cepstrum
     :members:
     :undoc-members:
 
@@ -71,7 +71,7 @@ Wavelets
 Wavelets
 ------------
 
-.. automodule:: cusignal.wavelets
+.. automodule:: cusignal.wavelets.wavelets
     :members:
     :undoc-members:
 
@@ -82,6 +82,6 @@ B-splines
 B-splines
 ------------
 
-.. automodule:: cusignal.bsplines
+.. automodule:: cusignal.bsplines.bsplines
     :members:
     :undoc-members:
