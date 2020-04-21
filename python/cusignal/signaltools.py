@@ -49,7 +49,7 @@ import timeit
 import sys
 
 from . import _signaltools
-from .windows import get_window
+from .window_functions.windows import get_window
 from .fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from ._upfirdn import upfirdn, _output_len
 from .fir_filter_design import firwin
