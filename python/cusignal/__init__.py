@@ -16,6 +16,12 @@ from cusignal.acoustics.cepstrum import (
     cceps,
     cceps_unwrap
 )
+from cusignal.filtering.resample import (
+    decimate,
+    resample,
+    resample_poly,
+    upfirdn
+)
 from cusignal.signaltools import (
     correlate,
     fftconvolve,
@@ -28,11 +34,8 @@ from cusignal.signaltools import (
     hilbert,
     hilbert2,
     cmplx_sort,
-    resample,
-    resample_poly,
     detrend,
     freq_shift,
-    decimate
 )
 from cusignal.window_functions.windows import (
     general_cosine,

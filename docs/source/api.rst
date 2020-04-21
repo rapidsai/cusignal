@@ -25,8 +25,15 @@ Waveform Generation
     :undoc-members:
 
 
-Filter Design
+Filtering
 ============
+
+Resample
+------------
+
+.. automodule::cusignal.filtering.resample
+    :members:
+    :undoc-members:
 
 FIR Filters
 ------------
