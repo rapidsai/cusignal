@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+from .window_functions.windows import get_window
 
 
 def _get_fs(fs, nyq):
@@ -254,7 +255,6 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         h -= left * cp.sinc(left * m)
 
     # Get and apply the window function.
-    from .signaltools import get_window
     win = get_window(window, numtaps, fftbins=False)
     h *= win
 

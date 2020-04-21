@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from ..signaltools import convolve
+from ..convolution.convolve import convolve
 
 
 def qmf(hk):

@@ -28,8 +28,6 @@ from ..window_functions.windows import get_window
 from .._upfirdn import _UpFIRDn, _output_len
 from ..fir_filter_design import firwin
 
-_modedict = {"valid": 0, "same": 1, "full": 2}
-
 
 def decimate(x, q, n=None, axis=-1, zero_phase=True):
     """
@@ -85,17 +83,6 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         sl[axis] = slice(None, n_out, None)
 
     return y[tuple(sl)]
-
-
-def _prod(iterable):
-    """
-    Product of a list of numbers.
-    Faster than cp.prod for short lists like array shapes.
-    """
-    product = 1
-    for x in iterable:
-        product *= x
-    return product
 
 
 def resample(x, num, t=None, axis=0, window=None, domain="time"):

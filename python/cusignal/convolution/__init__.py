@@ -11,17 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.filtering.resample import (
-    decimate,
-    resample,
-    resample_poly,
-    upfirdn
+from cusignal.convolution.convolve import (
+    convolve,
+    fftconvolve,
+    convolve2d,
+    choose_conv_method
 )
-from cusignal.filtering.filtering import (
-    wiener,
-    lfiltic,
-    hilbert,
-    hilbert2,
-    detrend,
-    freq_shift
+from cusignal.convolution.correlate import (
+    correlate,
+    correlate2d
 )

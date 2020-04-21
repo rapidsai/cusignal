@@ -19,7 +19,7 @@ from scipy._lib.six import string_types
 from ..window_functions.windows import get_window
 from ..utils.arraytools import _even_ext, _odd_ext, _const_ext, \
     _zero_ext, _as_strided
-from .. import signaltools
+from ..filtering import filtering
 from .._spectral import _lombscargle
 
 import warnings
@@ -1505,7 +1505,7 @@ def _spectral_helper(
     elif not hasattr(detrend, "__call__"):
 
         def detrend_func(d):
-            return signaltools.detrend(d, type=detrend, axis=-1)
+            return filtering.detrend(d, type=detrend, axis=-1)
 
     elif axis != -1:
         # Wrap this function so that it receives a shape that it could

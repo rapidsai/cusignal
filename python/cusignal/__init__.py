@@ -22,20 +22,26 @@ from cusignal.filtering.resample import (
     resample_poly,
     upfirdn
 )
-from cusignal.signaltools import (
-    correlate,
-    fftconvolve,
-    choose_conv_method,
-    convolve,
+from cusignal.filtering.filtering import (
     wiener,
-    convolve2d,
-    correlate2d,
     lfiltic,
     hilbert,
     hilbert2,
-    cmplx_sort,
     detrend,
-    freq_shift,
+    freq_shift
+)
+from cusignal.convolution.correlate import (
+    correlate,
+    correlate2d
+)
+from cusignal.convolution.convolve import (
+    fftconvolve,
+    choose_conv_method,
+    convolve,
+    convolve2d
+)
+from cusignal.signaltools import (
+    cmplx_sort,
 )
 from cusignal.window_functions.windows import (
     general_cosine,
