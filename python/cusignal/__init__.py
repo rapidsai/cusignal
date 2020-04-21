@@ -103,7 +103,6 @@ from cusignal.peak_finding.peak_finding import (
     argrelmax,
     argrelextrema
 )
-from cusignal._upfirdn import upfirdn
 from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem

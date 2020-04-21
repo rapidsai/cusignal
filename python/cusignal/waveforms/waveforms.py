@@ -138,7 +138,7 @@ def gausspulse(t, fc=1000, bw=0.5, bwr=-6, tpr=-60, retquad=False,
 
     See Also
     --------
-    scipy.signal.morlet
+    cusignal.morlet
 
     Examples
     --------
@@ -250,7 +250,7 @@ def chirp(t, f0, t1, f1, method='linear', phi=0, vertex_zero=True):
     >>> plt.show()
 
     For the remaining examples, we'll use higher frequency ranges,
-    and demonstrate the result using `scipy.signal.spectrogram`.
+    and demonstrate the result using `cusignal.spectrogram`.
     We'll use a 10 second interval sampled at 8000 Hz.
 
     >>> fs = 8000

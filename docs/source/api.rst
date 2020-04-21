@@ -3,24 +3,17 @@ cuSignal API Reference
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
-Core Signal Processing Functions
+Convolution
 ============
 
-Signal Tools
+Convolution
 ------------
 
-.. automodule:: cusignal.signaltools
+.. automodule:: cusignal.convolution.convolve
     :members:
     :undoc-members:
 
-
-Waveforms
-============
-
-Waveform Generation
-------------
-
-.. automodule:: cusignal.waveforms.waveforms
+.. automodule:: cusignal.convolution.correlate
     :members:
     :undoc-members:
 
@@ -38,7 +31,29 @@ Resample
 FIR Filters
 ------------
 
-.. automodule:: cusignal.fir_filter_design
+.. automodule:: cusignal.filtering.fir_filter_design
+    :members:
+    :undoc-members:
+
+
+Filter Design
+============
+
+Resample
+------------
+
+.. automodule::cusignal.filter_design.fir_filter_design
+    :members:
+    :undoc-members:
+
+
+Peak Finding
+============
+
+Peak Finding
+------------
+
+.. automodule::cusignal.peak_finding.peak_finding
     :members:
     :undoc-members:
 
@@ -50,6 +65,17 @@ Windows
 ------------
 
 .. automodule:: cusignal.window_functions.windows
+    :members:
+    :undoc-members:
+
+
+Waveforms
+============
+
+Waveform Generation
+------------
+
+.. automodule:: cusignal.waveforms.waveforms
     :members:
     :undoc-members:
 
@@ -90,5 +116,23 @@ B-splines
 ------------
 
 .. automodule:: cusignal.bsplines.bsplines
+    :members:
+    :undoc-members:
+
+
+Utilities
+============
+
+Array Tools
+------------
+
+.. automodule:: cusignal.utils.arraytools
+    :members:
+    :undoc-members:
+
+FFTPack Helper
+------------
+
+.. automodule:: cusignal.utils.fftpack_helper
     :members:
     :undoc-members:

@@ -119,7 +119,7 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         for use in Kaiser FIR filter design.  In this case, the `window`
         argument is ignored.
     window : string or tuple of string and parameter values, optional
-        Desired window to use. See `scipy.signal.get_window` for a list
+        Desired window to use. See `cusignal.get_window` for a list
         of windows and required parameters.
     pass_zero : {True, False, 'bandpass', 'lowpass', 'highpass', 'bandstop'},
         optional

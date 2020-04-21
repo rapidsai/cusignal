@@ -11,4 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.waveforms.waveforms import square, gausspulse, chirp, unit_impulse
+from cusignal.waveforms.waveforms import (
+    square,
+    gausspulse,
+    chirp,
+    unit_impulse
+)
