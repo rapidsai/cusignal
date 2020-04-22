@@ -14,6 +14,7 @@
 import cupy as cp
 import itertools
 import numpy as np
+import warnings
 
 from enum import Enum
 from math import sin, cos, atan2
@@ -23,6 +24,9 @@ from numba import (
     void,
 )
 from string import Template
+
+# Display FutureWarnings only once per module
+warnings.simplefilter("once", FutureWarning)
 
 
 class GPUKernel(Enum):
@@ -276,6 +280,12 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
             )
 
     else:
+        warnings.warn(
+            "Numba kernels will be removed in a later release",
+            FutureWarning,
+            stacklevel=4,
+        )
+
         nb_stream = stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(dtype.name, k_type)]
 
