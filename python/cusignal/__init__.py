@@ -11,31 +11,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.acoustics import (
+from cusignal.acoustics.cepstrum import (
     rceps,
     cceps,
     cceps_unwrap
 )
-from cusignal.signaltools import (
-    correlate,
-    fftconvolve,
-    choose_conv_method,
-    convolve,
+from cusignal.filtering.resample import (
+    decimate,
+    resample,
+    resample_poly,
+    upfirdn
+)
+from cusignal.filtering.filtering import (
     wiener,
-    convolve2d,
-    correlate2d,
     lfiltic,
     hilbert,
     hilbert2,
-    cmplx_sort,
-    resample,
-    resample_poly,
-    vectorstrength,
     detrend,
-    freq_shift,
-    decimate
+    freq_shift
 )
-from cusignal.windows import (
+from cusignal.convolution.correlate import (
+    correlate,
+    correlate2d
+)
+from cusignal.convolution.convolve import (
+    fftconvolve,
+    choose_conv_method,
+    convolve,
+    convolve2d
+)
+from cusignal.filter_design.fir_filter_design import (
+    kaiser_beta,
+    kaiser_atten,
+    firwin,
+    cmplx_sort
+) 
+from cusignal.windows.windows import (
     general_cosine,
     boxcar,
     triang,
@@ -59,39 +70,43 @@ from cusignal.windows import (
     exponential,
     get_window
 )
-from cusignal.fir_filter_design import kaiser_beta, kaiser_atten, firwin
-from cusignal.fftpack_helper import next_fast_len 
-from cusignal.spectral import (
+from cusignal.spectral_analysis.spectral import (
     lombscargle,
     periodogram,
     welch,
     csd,
     spectrogram,
     stft,
+    vectorstrength,
     coherence
 )
-from cusignal.bsplines import (
+from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
     cspline1d
 )
-from cusignal.waveforms import square, gausspulse, chirp, unit_impulse
-from cusignal.wavelets import qmf, morlet, ricker, cwt
-from cusignal._peak_finding import argrelmin, argrelmax, argrelextrema
-from cusignal._upfirdn import upfirdn
-from cusignal._arraytools import (
-    get_shared_array,
-    get_shared_mem,
-    axis_slice,
-    axis_reverse,
-    odd_ext,
-    even_ext,
-    const_ext,
-    zero_ext,
-    as_strided
+from cusignal.waveforms.waveforms import (
+    square,
+    gausspulse,
+    chirp,
+    unit_impulse
 )
-from cusignal.cupy_helper import polyval, toeplitz, hankel
+from cusignal.wavelets.wavelets import (
+    qmf,
+    morlet,
+    ricker,
+    cwt
+)
+from cusignal.peak_finding.peak_finding import (
+    argrelmin,
+    argrelmax,
+    argrelextrema
+)
+from cusignal.utils.arraytools import (
+    get_shared_array,
+    get_shared_mem
+)
 
 # Versioneer
 from ._version import get_versions
