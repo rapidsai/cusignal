@@ -18,11 +18,6 @@ from cusignal.test.utils import array_equal
 import cusignal
 from scipy import signal
 
-# Precompile Numba/CuPy kernels
-cusignal._spectral.precompile_kernels()
-cusignal._signaltools.precompile_kernels()
-cusignal._upfirdn.precompile_kernels()
-
 
 @pytest.mark.benchmark(group="Resample")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -116,6 +111,89 @@ class BenchResamplePoly:
         assert array_equal(cp.asnumpy(output), key)
 
 
+@pytest.mark.benchmark(group="UpFirDn")
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("axis", [-1, 0])
+class BenchUpFirDn:
+    # This function will ensure the GPU version is getting the correct answer
+    def cpu_version(self, cpu_sig, up, down, axis):
+        return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+
+    def bench_upfirdn_cpu(
+        self, rand_data_gen, benchmark, num_samps, up, down, axis
+    ):
+        cpu_sig, _ = rand_data_gen(num_samps)
+        benchmark(
+            self.cpu_version, cpu_sig, up, down, axis,
+        )
+
+    @pytest.mark.parametrize("use_numba", [True, False])
+    def bench_upfirdn_gpu(
+        self, rand_data_gen, benchmark, num_samps, up, down, axis, use_numba,
+    ):
+
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+        output = benchmark(
+            cusignal.upfirdn,
+            [1, 1, 1],
+            gpu_sig,
+            up,
+            down,
+            axis,
+            use_numba=use_numba,
+        )
+
+        key = self.cpu_version(cpu_sig, up, down, axis)
+        assert array_equal(cp.asnumpy(output), key)
+
+
+@pytest.mark.benchmark(group="UpFirDn2d")
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("axis", [-1, 0])
+class BenchUpFirDn2d:
+    # This function will ensure the GPU version is getting the correct answer
+    def cpu_version(self, cpu_sig, up, down, axis):
+        return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+
+    def bench_upfirdn2d_cpu(
+        self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
+    ):
+        cpu_sig, _ = rand_2d_data_gen(num_samps)
+        benchmark(
+            self.cpu_version, cpu_sig, up, down, axis,
+        )
+
+    @pytest.mark.parametrize("use_numba", [True, False])
+    def bench_upfirdn2d_gpu(
+        self,
+        rand_2d_data_gen,
+        benchmark,
+        num_samps,
+        up,
+        down,
+        axis,
+        use_numba,
+    ):
+
+        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+        output = benchmark(
+            cusignal.upfirdn,
+            [1, 1, 1],
+            gpu_sig,
+            up,
+            down,
+            axis,
+            use_numba=use_numba,
+        )
+
+        key = self.cpu_version(cpu_sig, up, down, axis)
+        assert array_equal(cp.asnumpy(output), key)
+
+
 @pytest.mark.benchmark(group="FirWin")
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("f1", [0.1, 0.15])
@@ -140,10 +218,10 @@ class BenchFirWin:
 
 
 @pytest.mark.benchmark(group="Correlate")
-@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["direct"])
+@pytest.mark.parametrize("method", ["fft", "auto"])
 class BenchCorrelate:
     def cpu_version(self, cpu_sig, num_taps, mode, method):
         return signal.correlate(cpu_sig, num_taps, mode=mode, method=method)
@@ -172,10 +250,10 @@ class BenchCorrelate:
 
 
 @pytest.mark.benchmark(group="Convolve")
-@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+@pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["direct"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
 class BenchConvolve:
     def cpu_version(self, cpu_sig, cpu_win, mode, method):
         return signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)

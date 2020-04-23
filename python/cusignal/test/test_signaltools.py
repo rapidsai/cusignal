@@ -55,6 +55,42 @@ def test_resample_poly(num_samps, up, down, window, use_numba):
     assert array_equal(cpu_resample, gpu_resample)
 
 
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("use_numba", [True, False])
+def test_upfirdn(num_samps, up, down, use_numba):
+    cpu_sig = np.random.rand(num_samps)
+    gpu_sig = cp.asarray(cpu_sig)
+
+    h = [1, 1, 1]
+
+    cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
+    gpu_resample = cp.asnumpy(
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+    )
+
+    assert array_equal(cpu_resample, gpu_resample)
+
+
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("use_numba", [True, False])
+def test_upfirdn2d(num_samps, up, down, use_numba):
+    cpu_sig = np.random.rand(num_samps, num_samps)
+    gpu_sig = cp.asarray(cpu_sig)
+
+    h = [1, 1, 1]
+
+    cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
+    gpu_resample = cp.asnumpy(
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+    )
+
+    assert array_equal(cpu_resample, gpu_resample)
+
+
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("f1", [0.1, 0.15])
 @pytest.mark.parametrize("f2", [0.2, 0.4])
