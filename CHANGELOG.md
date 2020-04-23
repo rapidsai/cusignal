@@ -14,6 +14,7 @@
 - PR #55 - Update notebooks to use timeit instead of time
 - PR #56 - Ability to precompile select Numba/CuPy kernel on import
 - PR #60 - Updated decimate function to use an existing FIR window
+- PR #65 - Added deprecation warning for Numba kernels
 - PR #67 - cuSignal code refactor and documentation update
 
 ## Bug Fixes

@@ -28,6 +28,9 @@ except ImportError:
     # Numba >= 0.49
     from numba.core.types.scalars import Complex
 
+# Display FutureWarnings only once per module
+warnings.simplefilter("once", FutureWarning)
+
 
 class GPUKernel(Enum):
     UPFIRDN = 0
@@ -281,9 +284,10 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
     if k_type == GPUKernel.UPFIRDN2D and not use_numba:
         warnings.warn(
-            "CuPy backend is only implemented for ndim == 1 \
-                Running with Numba CUDA backend",
+            """CuPy backend is only implemented for ndim == 1:
+            ***Running with Numba CUDA backend***""",
             UserWarning,
+            stacklevel=4,
         )
         use_numba = True
 
@@ -297,6 +301,12 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
             )
 
     else:
+        warnings.warn(
+            "Numba kernels will be removed in a later release",
+            FutureWarning,
+            stacklevel=4,
+        )
+
         nb_stream = stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(dtype.name, k_type)]
         if kernel:
@@ -336,9 +346,10 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
 
     if k_type == GPUKernel.UPFIRDN2D and not use_numba:
         warnings.warn(
-            "CuPy backend is only implemented for ndim == 1 \
-                Running with Numba CUDA backend",
+            """CuPy backend is only implemented for ndim == 1:
+            ***Running with Numba CUDA backend***""",
             UserWarning,
+            stacklevel=4,
         )
         use_numba = True
 
