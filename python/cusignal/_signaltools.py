@@ -37,7 +37,7 @@ except ImportError:
     # Numba >= 0.49
     from numba.core.types.scalars import Complex
 
-from .fir_filter_design import firwin
+from .filter_design.fir_filter_design import firwin
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
@@ -1079,7 +1079,7 @@ def _design_resample_poly(up, down, window):
     Notes
     -----
     The argument `window` specifies the FIR low-pass filter design.
-    The functions `scipy.signal.get_window` and `scipy.signal.firwin`
+    The functions `cusignal.get_window` and `cusignal.firwin`
     are called to generate the appropriate filter coefficients.
 
     The returned array of coefficients will always be of data type

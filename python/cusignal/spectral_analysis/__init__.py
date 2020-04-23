@@ -11,5 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.cupy_helper.polynomial import polyval
-from cusignal.cupy_helper.linalg_extended import toeplitz, hankel
+from cusignal.spectral_analysis.spectral import (
+    periodogram,
+    welch,
+    csd,
+    coherence,
+    spectrogram,
+    lombscargle,
+    vectorstrength,
+    stft
+)
