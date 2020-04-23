@@ -27,6 +27,9 @@ except ImportError:
     # Numba >= 0.49
     from numba.core.types.scalars import Complex
 
+# Display FutureWarnings only once per module
+warnings.simplefilter("once", FutureWarning)
+
 
 class GPUKernel(Enum):
     UPFIRDN = 0
@@ -395,6 +398,12 @@ def _get_backend_kernel(
             )
 
     else:
+        warnings.warn(
+            "Numba kernels will be removed in a later release",
+            FutureWarning,
+            stacklevel=4,
+        )
+
         nb_stream = stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(dtype.name, ndim)]
         if kernel:
