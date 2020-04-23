@@ -55,6 +55,42 @@ def test_resample_poly(num_samps, up, down, window, use_numba):
     assert array_equal(cpu_resample, gpu_resample)
 
 
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("use_numba", [True, False])
+def test_upfirdn(num_samps, up, down, use_numba):
+    cpu_sig = np.random.rand(num_samps)
+    gpu_sig = cp.asarray(cpu_sig)
+
+    h = [1, 1, 1]
+
+    cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
+    gpu_resample = cp.asnumpy(
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+    )
+
+    assert array_equal(cpu_resample, gpu_resample)
+
+
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+@pytest.mark.parametrize("up", [2, 3, 7])
+@pytest.mark.parametrize("down", [1, 2, 9])
+@pytest.mark.parametrize("use_numba", [True, False])
+def test_upfirdn2d(num_samps, up, down, use_numba):
+    cpu_sig = np.random.rand(num_samps, num_samps)
+    gpu_sig = cp.asarray(cpu_sig)
+
+    h = [1, 1, 1]
+
+    cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
+    gpu_resample = cp.asnumpy(
+        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+    )
+
+    assert array_equal(cpu_resample, gpu_resample)
+
+
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 @pytest.mark.parametrize("f1", [0.1, 0.15])
 @pytest.mark.parametrize("f2", [0.2, 0.4])
@@ -66,30 +102,40 @@ def test_firwin(num_samps, f1, f2):
     assert array_equal(cpu_window, gpu_window)
 
 
-@pytest.mark.parametrize("num_samps", [2 ** 15])
-@pytest.mark.parametrize("num_taps", [128, 2 ** 8, 2 ** 15])
-def test_correlate(num_samps, num_taps, mode="same"):
+@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+@pytest.mark.parametrize("mode", ["full", "valid", "same"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
+def test_correlate(num_samps, num_taps, mode, method):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
-    cpu_corr = signal.correlate(cpu_sig, np.ones(num_taps), mode=mode)
+    cpu_corr = signal.correlate(
+        cpu_sig, np.ones(num_taps), mode=mode, method=method
+    )
     gpu_corr = cp.asnumpy(
-        cusignal.correlate(gpu_sig, cp.ones(num_taps), mode=mode)
+        cusignal.correlate(
+            gpu_sig, cp.ones(num_taps), mode=mode, method=method
+        )
     )
     assert array_equal(cpu_corr, gpu_corr)
 
 
-@pytest.mark.parametrize("num_samps", [2 ** 15])
-@pytest.mark.parametrize("num_taps", [128, 2 ** 8, 2 ** 15])
-def test_convolve(num_samps, num_taps, mode="same"):
+@pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
+@pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+@pytest.mark.parametrize("mode", ["full", "valid", "same"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
+def test_convolve(num_samps, num_taps, mode, method):
     cpu_sig = np.random.rand(num_samps)
     cpu_win = signal.windows.hann(num_taps)
 
     gpu_sig = cp.asarray(cpu_sig)
     gpu_win = cusignal.windows.hann(num_taps)
 
-    cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode)
-    gpu_conv = cp.asnumpy(cusignal.convolve(gpu_sig, gpu_win, mode=mode))
+    cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
+    gpu_conv = cp.asnumpy(
+        cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
+    )
     assert array_equal(cpu_conv, gpu_conv)
 
 
@@ -187,16 +233,17 @@ def test_correlate2d(num_samps, num_taps, boundary, mode, use_numba):
     assert array_equal(cpu_correlate2d, gpu_correlate2d)
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('downsample_factor', [2, 3, 4, 8, 64])
-@pytest.mark.parametrize('zero_phase', [True, False])
+@pytest.mark.parametrize("num_samps", [2 ** 14])
+@pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
+@pytest.mark.parametrize("zero_phase", [True, False])
 def test_decimate(num_samps, downsample_factor, zero_phase):
     cpu_time = np.linspace(0, 10, num_samps, endpoint=False)
-    cpu_sig = np.cos(-cpu_time ** 2 / 6.0)
+    cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)
     gpu_sig = cp.asarray(cpu_sig)
 
-    cpu_decimate = signal.decimate(cpu_sig, downsample_factor,
-                                   ftype='fir', zero_phase=zero_phase)
+    cpu_decimate = signal.decimate(
+        cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
+    )
     gpu_decimate = cp.asnumpy(
         cusignal.decimate(gpu_sig, downsample_factor, zero_phase=zero_phase)
     )

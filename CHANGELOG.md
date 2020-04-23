@@ -5,14 +5,19 @@
 - PR #48 - Addition of decimate for FIR ftypes
 - PR #49 - Add CuPy Module for convolve2d and correlate2d
 - PR #51 - Add CuPy Module for lombscargle, along with tests/benchmarks
+- PR #62 - Add CuPy Module for 1d convolve and correlate, along with tests/benchmarks
+- PR #66 - Add CuPy Module for 2d upfirdn, along with tests/benchmarks
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
 - PR #45 - Refactor `_signaltools.py` to use new Numba/CuPy framework
 - PR #50 - Update README to reorganize install instructions
 - PR #55 - Update notebooks to use timeit instead of time
+- PR #56 - Ability to precompile select Numba/CuPy kernel on import
 - PR #60 - Updated decimate function to use an existing FIR window
 - PR #61 - Fix link in README
+- PR #65 - Added deprecation warning for Numba kernels
+- PR #67 - cuSignal code refactor and documentation update
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 

@@ -1,0 +1,10 @@
+bin
+dist
+eggs
+lib
+lib64
+*.pyo
+*.pyc
+*.egg-info
+docs/build
+*.ipynb_checkpoints

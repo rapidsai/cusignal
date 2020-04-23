@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+from ..windows.windows import get_window
 
 
 def _get_fs(fs, nyq):
@@ -118,7 +119,7 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         for use in Kaiser FIR filter design.  In this case, the `window`
         argument is ignored.
     window : string or tuple of string and parameter values, optional
-        Desired window to use. See `scipy.signal.get_window` for a list
+        Desired window to use. See `cusignal.get_window` for a list
         of windows and required parameters.
     pass_zero : {True, False, 'bandpass', 'lowpass', 'highpass', 'bandstop'},
         optional
@@ -254,7 +255,6 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         h -= left * cp.sinc(left * m)
 
     # Get and apply the window function.
-    from .signaltools import get_window
     win = get_window(window, numtaps, fftbins=False)
     h *= win
 
@@ -273,3 +273,37 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
         h /= s
 
     return h
+
+
+def cmplx_sort(p):
+    """Sort roots based on magnitude.
+
+    Parameters
+    ----------
+    p : array_like
+        The roots to sort, as a 1-D array.
+
+    Returns
+    -------
+    p_sorted : ndarray
+        Sorted roots.
+    indx : ndarray
+        Array of indices needed to sort the input `p`.
+
+    Examples
+    --------
+    >>> from scipy import signal
+    >>> vals = [1, 4, 1+1.j, 3]
+    >>> p_sorted, indx = signal.cmplx_sort(vals)
+    >>> p_sorted
+    array([1.+0.j, 1.+1.j, 3.+0.j, 4.+0.j])
+    >>> indx
+    array([0, 2, 3, 1])
+
+    """
+    p = cp.asarray(p)
+    if cp.iscomplexobj(p):
+        indx = cp.argsort(abs(p))
+    else:
+        indx = cp.argsort(p)
+    return cp.take(p, indx, 0), indx
