@@ -97,7 +97,7 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Installation
 
 ### Conda, Linux OS
-cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel). If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda-jetson-nano-tk1-tx2-xavier-linux-os)
+cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
 For `cusignal version == 0.13`:
 
