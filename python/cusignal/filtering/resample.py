@@ -24,7 +24,7 @@ from cupy.fft import ifftshift
 from math import gcd
 
 from .. import _signaltools
-from ..window_functions.windows import get_window
+from ..windows.windows import get_window
 from .._upfirdn import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
 

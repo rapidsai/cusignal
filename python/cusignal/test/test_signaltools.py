@@ -94,7 +94,7 @@ def test_convolve(num_samps, num_taps, mode, method):
     cpu_win = signal.windows.hann(num_taps)
 
     gpu_sig = cp.asarray(cpu_sig)
-    gpu_win = cusignal.window_functions.windows.hann(num_taps)
+    gpu_win = cusignal.windows.hann(num_taps)
 
     cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
     gpu_conv = cp.asnumpy(

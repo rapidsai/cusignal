@@ -90,7 +90,7 @@ def general_cosine(M, a, sym=True):
     Figure 42 by plotting the window and its frequency response, and confirm
     the sidelobe level in red:
 
-    >>> from cusignal.window_functions.windows import general_cosine
+    >>> from cusignal.windows import general_cosine
     >>> from cupy.fft import fft, fftshift
     >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
@@ -1734,28 +1734,28 @@ def get_window(window, Nx, fftbins=True):
     -----
     Window types:
 
-    - `~cusignal.window_functions.windows.boxcar`
-    - `~cusignal.window_functions.windows.triang`
-    - `~cusignal.window_functions.windows.blackman`
-    - `~cusignal.window_functions.windows.hamming`
-    - `~cusignal.window_functions.windows.hann`
-    - `~cusignal.window_functions.windows.bartlett`
-    - `~cusignal.window_functions.windows.flattop`
-    - `~cusignal.window_functions.windows.parzen`
-    - `~cusignal.window_functions.windows.bohman`
-    - `~cusignal.window_functions.windows.blackmanharris`
-    - `~cusignal.window_functions.windows.nuttall`
-    - `~cusignal.window_functions.windows.barthann`
-    - `~cusignal.window_functions.windows.kaiser` (needs beta)
-    - `~cusignal.window_functions.windows.gaussian` (needs standard deviation)
-    - `~cusignal.window_functions.windows.general_gaussian` \
+    - `~cusignal.windows.windows.boxcar`
+    - `~cusignal.windows.windows.triang`
+    - `~cusignal.windows.windows.blackman`
+    - `~cusignal.windows.windows.hamming`
+    - `~cusignal.windows.windows.hann`
+    - `~cusignal.windows.windows.bartlett`
+    - `~cusignal.windows.windows.flattop`
+    - `~cusignal.windows.windows.parzen`
+    - `~cusignal.windows.windows.bohman`
+    - `~cusignal.windows.windows.blackmanharris`
+    - `~cusignal.windows.windows.nuttall`
+    - `~cusignal.windows.windows.barthann`
+    - `~cusignal.windows.windows.kaiser` (needs beta)
+    - `~cusignal.windows.windows.gaussian` (needs standard deviation)
+    - `~cusignal.windows.windows.general_gaussian` \
             (needs power, width)
-    - `~cusignal.window_functions.windows.slepian` (needs width)
-    - `~cusignal.window_functions.windows.dpss` \
+    - `~cusignal.windows.windows.slepian` (needs width)
+    - `~cusignal.windows.windows.dpss` \
             (needs normalized half-bandwidth)
-    - `~cusignal.window_functions.windows.chebwin` (needs attenuation)
-    - `~cusignal.window_functions.windows.exponential` (needs decay scale)
-    - `~cusignal.window_functions.windows.tukey` (needs taper fraction)
+    - `~cusignal.windows.windows.chebwin` (needs attenuation)
+    - `~cusignal.windows.windows.exponential` (needs decay scale)
+    - `~cusignal.windows.windows.tukey` (needs taper fraction)
 
     If the window requires no parameters, then `window` can be a string.
 
@@ -1764,7 +1764,7 @@ def get_window(window, Nx, fftbins=True):
     arguments the needed parameters.
 
     If `window` is a floating point number, it is interpreted as the beta
-    parameter of the `~cusignal.window_functions.windows.kaiser` window.
+    parameter of the `~cusignal.windows.windows.kaiser` window.
 
     Each of the window types listed above is also the name of
     a function that can be called directly to create a window of

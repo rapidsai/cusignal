@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from ..window_functions.windows import get_window
+from ..windows.windows import get_window
 
 
 def _get_fs(fs, nyq):

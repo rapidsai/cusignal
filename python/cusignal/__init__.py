@@ -46,7 +46,7 @@ from cusignal.filter_design.fir_filter_design import (
     firwin,
     cmplx_sort
 ) 
-from cusignal.window_functions.windows import (
+from cusignal.windows.windows import (
     general_cosine,
     boxcar,
     triang,

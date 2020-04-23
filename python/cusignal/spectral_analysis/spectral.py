@@ -16,7 +16,7 @@ from cupy import angle, arange, asarray, reshape, zeros
 from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
 
-from ..window_functions.windows import get_window
+from ..windows.windows import get_window
 from ..utils.arraytools import _even_ext, _odd_ext, _const_ext, \
     _zero_ext, _as_strided
 from ..filtering import filtering

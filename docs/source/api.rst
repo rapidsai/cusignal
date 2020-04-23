@@ -66,7 +66,7 @@ Window Functions
 Windows
 ------------
 
-.. automodule:: cusignal.window_functions.windows
+.. automodule:: cusignal.windows.windows
     :members:
     :undoc-members:
 
