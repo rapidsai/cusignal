@@ -108,27 +108,27 @@ conda install -c rapidsai -c nvidia -c conda-forge \
 
 # or, for CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.1
+    cusignal=0.13 python=3.6 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.2
+    cusignal=0.13 python=3.6 cudatoolkit=10.2
 ```
 
-For the nightly verison of `cusignal`:
+For the nightly verison of `cusignal`, currently 0.14a:
 
 ```
 # For CUDA 10.0
 conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    -c defaults cusignal=0.13 python=3.6 cudatoolkit=10.0
+    -c defaults cusignal python=3.6 cudatoolkit=10.0
 
 # or, for CUDA 10.1.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.1
+    cusignal python=3.6 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.2
+    cusignal python=3.6 cudatoolkit=10.2
 ```
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
@@ -252,7 +252,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
     pytest -v -k <function name>  # for more select testing
     ```
 
-### Source, Windows OS [Expiremental]
+### Source, Windows OS [Experimental]
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 

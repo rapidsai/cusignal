@@ -18,6 +18,7 @@
 - PR #61 - Fix link in README
 - PR #65 - Added deprecation warning for Numba kernels
 - PR #67 - cuSignal code refactor and documentation update
+- PR #71 - README spelling and conda install fixes
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
