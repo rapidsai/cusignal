@@ -16,6 +16,9 @@ from cusignal.acoustics.cepstrum import (
     cceps,
     cceps_unwrap
 )
+from cusignal.estimation.filters import (
+    KalmanFilter
+)
 from cusignal.filtering.resample import (
     decimate,
     resample,
