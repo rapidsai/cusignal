@@ -62,15 +62,16 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
 
 
 @cuda.jit(fastmath=True)
-def _numba_update(
-    num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in
-):
+def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
 
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
 
-    s_data = cuda.shared.array(shape=0, dtype=float32)
+    s_buffer = cuda.shared.array(shape=0, dtype=float32)
+
+    s_A = s_buffer[: (dim_x * dim_x * cuda.blockDim.z)]
+    s_I_KH = s_buffer[(dim_x * dim_x * cuda.blockDim.z) :]
 
     #  Each i is a different point
     for z_idx in range(z, num, strideZ):
@@ -89,7 +90,7 @@ def _numba_update(
             for j in range(dim_x):
                 temp += P[x, j, z_idx] * H[y, j, z_idx]
 
-            s_data[(dim_x * dim_x * tz) + (x * dim_z + y)] = temp
+            s_A[(dim_x * dim_x * tz) + (x * dim_z + y)] = temp
 
         cuda.syncthreads()
 
@@ -99,7 +100,7 @@ def _numba_update(
             for j in range(dim_x):
                 temp += (
                     H[x, j, z_idx]
-                    * s_data[(dim_x * dim_x * tz) + (j * dim_z + y)]
+                    * s_A[(dim_x * dim_x * tz) + (j * dim_z + y)]
                 )
 
             S[x, y, z_idx] = temp + R[x, y, z_idx]
@@ -118,7 +119,7 @@ def _numba_update(
         if y < 2:
             for j in range(dim_z):
                 temp += (
-                    s_data[(dim_x * dim_x * tz) + (x * dim_z + j)]
+                    s_A[(dim_x * dim_x * tz) + (x * dim_z + j)]
                     * SI[j, y, z_idx]
                 )
 
@@ -136,19 +137,11 @@ def _numba_update(
         for j in range(dim_z):
             temp += K[x, j, z_idx] * H[j, y, z_idx]
 
-        s_data[
-            (dim_x * dim_x * cuda.blockDim.z)
-            + (dim_x * dim_x * tz)
-            + (x * dim_x + y)
-        ] = (1.0 if x == y else 0.0) - temp
+        s_I_KH[(dim_x * dim_x * tz) + (x * dim_x + y)] = (
+            1.0 if x == y else 0.0
+        ) - temp
 
         cuda.syncthreads()
-
-        # I_KH[x, y, z_idx] = s_data[
-        #     (dim_x * dim_x * cuda.blockDim.z)
-        #     + (dim_x * dim_x * tz)
-        #     + (x * dim_x + y)
-        # ]
 
         #  Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
         #  dot(dot(self.K, self.R), self.K.T)
@@ -157,15 +150,11 @@ def _numba_update(
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
-                s_data[
-                    (dim_x * dim_x * cuda.blockDim.z)
-                    + (dim_x * dim_x * tz)
-                    + (x * dim_x + j)
-                ]
+                s_I_KH[(dim_x * dim_x * tz) + (x * dim_x + j)]
                 * P[j, y, z_idx]
             )
 
-        s_data[(dim_x * dim_x * tz) + (x * dim_x + y)] = temp
+        s_A[(dim_x * dim_x * tz) + (x * dim_x + y)] = temp
 
         cuda.syncthreads()
 
@@ -175,12 +164,8 @@ def _numba_update(
         temp2: x_in.dtype = 0.0
         for j in range(dim_x):
             temp2 += (
-                s_data[(dim_x * dim_x * tz) + (x * dim_x + j)]
-                * s_data[
-                    (dim_x * dim_x * cuda.blockDim.z)
-                    + (dim_x * dim_x * tz)
-                    + (y * dim_x + j)
-                ]
+                s_A[(dim_x * dim_x * tz) + (x * dim_x + j)]
+                * s_I_KH[(dim_x * dim_x * tz) + (y * dim_x + j)]
             )
 
         #  Compute dot(self.K, self.R)
@@ -189,11 +174,7 @@ def _numba_update(
             for j in range(dim_z):
                 temp += K[x, j, z_idx] * R[j, y, z_idx]
 
-        s_data[
-            (dim_x * dim_x * cuda.blockDim.z)
-            + (dim_x * dim_x * tz)
-            + (x * dim_z + y)
-        ] = temp
+        s_A[(dim_x * dim_x * tz) + (x * dim_z + y)] = temp
 
         cuda.syncthreads()
 
@@ -201,11 +182,7 @@ def _numba_update(
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
-                s_data[
-                    (dim_x * dim_x * cuda.blockDim.z)
-                    + (dim_x * dim_x * tz)
-                    + (x * dim_z + j)
-                ]
+                s_A[(dim_x * dim_x * tz) + (x * dim_z + j)]
                 * K[y, j, z_idx]
             )
 
@@ -291,7 +268,6 @@ class KalmanFilter(object):
         )  # inverse system uncertainty
 
     def predict(self):
-        print("predict")
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = (self.dim_x, self.dim_x, 16)
@@ -315,7 +291,6 @@ class KalmanFilter(object):
         )
 
     def update(self):
-        print("update")
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = (self.dim_x, self.dim_x, 16)
