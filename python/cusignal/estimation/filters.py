@@ -61,8 +61,10 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
         P[x, y, z_idx] = temp + Q[x, y, z_idx]
 
 
-@cuda.jit(fastmath=False)
-def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
+@cuda.jit(fastmath=True)
+def _numba_update(
+    num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in
+):
 
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
@@ -74,7 +76,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
     for z_idx in range(z, num, strideZ):
 
         #  Compute self.y : z = dot(self.H, self.x)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if x < dim_z and y == 0:
             for j in range(dim_x):
                 temp += H[x, j, z_idx] * x_in[j, y, z_idx]
@@ -82,7 +84,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
             y_in[x, y, z_idx] = z_in[x, y, z_idx] - temp
 
         #  Compute PHT : dot(self.P, self.H.T)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if y < 2:
             for j in range(dim_x):
                 temp += P[x, j, z_idx] * H[y, j, z_idx]
@@ -92,7 +94,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
         cuda.syncthreads()
 
         #  Compute self.S : dot(self.H, PHT) + self.R
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if x < dim_z and y < dim_z:
             for j in range(dim_x):
                 temp += (
@@ -109,10 +111,10 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
             )
             sign = 1 if (x + y) % 2 == 0 else -1
 
-            SI[x, y, z_idx] = S[x, y, z_idx] / (sign * det)
+            SI[x, y, z_idx] = S[1 - x, 1 - y, z_idx] / (sign * det)
 
         #  Compute self.K : dot(PHT, self.SI)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if y < 2:
             for j in range(dim_z):
                 temp += (
@@ -123,14 +125,14 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
             K[x, y, z_idx] = temp
 
         #  Compute self.x : self.x + cp.dot(self.K, self.y)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if y == 0:
             for j in range(dim_z):
                 temp += K[x, j, z_idx] * y_in[j, y, z_idx]
             x_in[x, y, z_idx] += temp
 
         #  Compute I_KH = self_I - dot(self.K, self.H)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += K[x, j, z_idx] * H[j, y, z_idx]
 
@@ -142,11 +144,17 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
 
         cuda.syncthreads()
 
+        # I_KH[x, y, z_idx] = s_data[
+        #     (dim_x * dim_x * cuda.blockDim.z)
+        #     + (dim_x * dim_x * tz)
+        #     + (x * dim_x + y)
+        # ]
+
         #  Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
         #  dot(dot(self.K, self.R), self.K.T)
 
         #  Compute dot(I_KH, self.P)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
                 s_data[
@@ -161,12 +169,10 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
 
         cuda.syncthreads()
 
-        P[x, y, z_idx] = temp  # DELETE
-
         #  Compute dot(dot(I_KH, self.P), I_KH.T)
         #  Where dot(I_KH, self.P) equals
         #  s_data[(dim_x * dim_x * tz) + (x * dim_x + y)]
-        temp2: x_in.dtype = 0
+        temp2: x_in.dtype = 0.0
         for j in range(dim_x):
             temp2 += (
                 s_data[(dim_x * dim_x * tz) + (x * dim_x + j)]
@@ -178,7 +184,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
             )
 
         #  Compute dot(self.K, self.R)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         if y < dim_z:
             for j in range(dim_z):
                 temp += K[x, j, z_idx] * R[j, y, z_idx]
@@ -192,7 +198,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, S, SI, K, y_in):
         cuda.syncthreads()
 
         #  Compute dot(dot(self.K, self.R), self.K.T)
-        temp: x_in.dtype = 0
+        temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
                 s_data[
