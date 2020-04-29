@@ -26,17 +26,30 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
+    xx_block_size = dim_x * dim_x * cuda.blockDim.z
+    xx_idx = dim_x * dim_x * tz
 
-    s_A = cuda.shared.array(shape=0, dtype=float32)
+    s_buffer = cuda.shared.array(shape=0, dtype=float32)
+
+    s_A = s_buffer[: (xx_block_size * 1)]
+    s_F = s_buffer[(xx_block_size * 1) :]
 
     #  Each i is a different point
     for z_idx in range(z, num, strideZ):
+
+        s_F[xx_idx + (x * dim_x + y)] = F[x, y, z_idx]
+
+        cuda.syncthreads()
+
+        #  Load alpha_sq and Q into registers
+        alpha_sq = alpha[0, 0, z_idx]
+        local_Q = Q[x, y, z_idx]
 
         #  Compute new self.x
         temp: x_in.dtype = 0
         if y == 0:
             for j in range(dim_x):
-                temp += F[x, j, z_idx] * x_in[j, y, z_idx]
+                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[j, y, z_idx]
 
             x_in[x, 0, z_idx] = temp
 
@@ -45,7 +58,7 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
         for j in range(dim_x):
             temp += F[x, j, z_idx] * P[j, y, z_idx]
 
-        s_A[(dim_x * dim_x * tz) + (x * dim_x + y)] = temp
+        s_A[xx_idx + (x * dim_x + y)] = temp
 
         cuda.syncthreads()
 
@@ -53,22 +66,18 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
         temp: x_in.dtype = 0
         for j in range(dim_x):
             temp += (
-                s_A[(dim_x * dim_x * tz) + (x * dim_x + j)] * F[y, j, z_idx]
+                s_A[xx_idx + (x * dim_x + j)] * s_F[xx_idx + (y * dim_x + j)]
             )
 
-        #  Compute (alpha * alpha) * dot(dot(self.F, self.P), self.F.T)
-        temp *= alpha[0, 0, z_idx] * alpha[0, 0, z_idx]
-
-        #  Compute
-        #  (alpha * alpha) * dot(dot(self.F, self.P), self.F.T) + self.Q
-        P[x, y, z_idx] = temp + Q[x, y, z_idx]
+        #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
+        P[x, y, z_idx] = alpha_sq * temp + local_Q
 
 
 @cuda.jit(
-    "(int64, int64, int64, float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:] )",
+    "(int64, int64, int64, float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:] )",
     fastmath=True,
 )
-def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, y_in):
+def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
 
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
@@ -119,8 +128,6 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R, y_in):
                 temp += s_H[xz_idx + (x * dim_x + j)] * x_in[j, y, z_idx]
 
             s_y[(dim_z * tz) + x] = temp_z - temp
-
-        cuda.syncthreads()
 
         #  Compute PHT : dot(self.P, self.H.T)
         temp: x_in.dtype = 0.0
@@ -318,19 +325,19 @@ class KalmanFilter(object):
 
         self.z = cp.empty((dim_z, 1, self.num_points), dtype=cp.float32)
 
-        self.y = cp.zeros((dim_z, 1, self.num_points), dtype=cp.float32)
-
     def predict(self):
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = (self.dim_x, self.dim_x, 16)
         blockspergrid = (1, 1, numSM * 20)
 
+        A_size = self.dim_x * self.dim_x
+        F_size = self.dim_x * self.dim_x
+
+        total_size = A_size + F_size
+
         shared_mem_size = (
-            self.dim_x
-            * self.dim_x
-            * threadsperblock[2]
-            * self.x.dtype.itemsize
+            total_size * threadsperblock[2] * self.x.dtype.itemsize
         )
 
         _numba_predict[blockspergrid, threadsperblock, 0, shared_mem_size](
@@ -376,23 +383,4 @@ class KalmanFilter(object):
             self.H,
             self.P,
             self.R,
-            self.y,
         )
-
-        # print(blockspergrid, threadsperblock)
-        # print(_numba_update.definitions)
-        # print(_numba_update._func.get().attrs)
-
-        # kernel = cuda.jit(_numba_update, fastmath=True)
-
-        # kernel[blockspergrid, threadsperblock, 0, shared_mem_size](
-        #     self.num_points,
-        #     self.dim_x,
-        #     self.dim_z,
-        #     self.x,
-        #     self.z,
-        #     self.H,
-        #     self.P,
-        #     self.R,
-        #     self.y,
-        # )
