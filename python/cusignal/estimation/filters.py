@@ -34,10 +34,12 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
     s_A = s_buffer[: (xx_block_size * 1)]
     s_F = s_buffer[(xx_block_size * 1) :]
 
+    x_key = x * dim_x + y
+
     #  Each i is a different point
     for z_idx in range(z, num, strideZ):
 
-        s_F[xx_idx + (x * dim_x + y)] = F[x, y, z_idx]
+        s_F[xx_idx + x_key] = F[x, y, z_idx]
 
         cuda.syncthreads()
 
@@ -56,9 +58,9 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += F[x, j, z_idx] * P[j, y, z_idx]
+            temp += s_F[xx_idx + (x * dim_x + j)] * P[j, y, z_idx]
 
-        s_A[xx_idx + (x * dim_x + y)] = temp
+        s_A[xx_idx + x_key] = temp
 
         cuda.syncthreads()
 
@@ -107,16 +109,19 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
     ]
     s_y = s_buffer[(xx_block_size * 3 + xz_block_size * 2 + zz_block_size) :]
 
+    x_key = x * dim_x + y
+    z_key = x * dim_z + y
+
     #  Each i is a different point
     for z_idx in range(z, num, strideZ):
 
-        s_P[xx_idx + (x * dim_x + y)] = P[x, y, z_idx]
+        s_P[xx_idx + x_key] = P[x, y, z_idx]
 
         if x < dim_z:
-            s_H[xz_idx + (x * dim_x + y)] = H[x, y, z_idx]
+            s_H[xz_idx + x_key] = H[x, y, z_idx]
 
         if x < dim_z and y < dim_z:
-            s_R[zz_idx + (x * dim_z + y)] = R[x, y, z_idx]
+            s_R[zz_idx + z_key] = R[x, y, z_idx]
 
         cuda.syncthreads()
 
@@ -139,7 +144,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
                 )
 
             #  s_A holds PHT
-            s_A[xx_idx + (x * dim_z + y)] = temp
+            s_A[xx_idx + z_key] = temp
 
         cuda.syncthreads()
 
@@ -153,8 +158,8 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
                 )
 
             #  s_B holds S - system uncertainty
-            s_B[xx_idx + (x * dim_z + y)] = (
-                temp + s_R[zz_idx + (x * dim_z + y)]
+            s_B[xx_idx + z_key] = (
+                temp + s_R[zz_idx + z_key]
             )
 
         cuda.syncthreads()
@@ -176,7 +181,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
 
             #  s_B hold SI - inverse system uncertainty
             temp = s_B[xx_idx + ((1 - x) * dim_z + (1 - y))] / sign_det
-            s_B[xx_idx + (x * dim_z + y)] = temp
+            s_B[xx_idx + z_key] = temp
 
         cuda.syncthreads()
 
@@ -190,7 +195,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
                     * s_B[xx_idx + (y * dim_z + j)]
                 )
 
-            s_K[xz_idx + (x * dim_z + y)] = temp
+            s_K[xz_idx + z_key] = temp
 
         cuda.syncthreads()
 
@@ -198,7 +203,6 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         if y == 0:
             for j in range(dim_z):
-                # temp += s_K[xz_idx + (x * dim_z + j)] * y_in[j, y, z_idx]
                 temp += s_K[xz_idx + (x * dim_z + j)] * s_y[(dim_z * tz) + j]
 
             x_in[x, y, z_idx] += temp
@@ -211,7 +215,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
             )
 
         #  s_A holds I_KH
-        s_A[xx_idx + (x * dim_x + y)] = (1.0 if x == y else 0.0) - temp
+        s_A[xx_idx + x_key] = (1.0 if x == y else 0.0) - temp
 
         cuda.syncthreads()
 
@@ -226,7 +230,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
             )
 
         #  s_A holds dot(I_KH, self.P)
-        s_B[xx_idx + (x * dim_x + y)] = temp
+        s_B[xx_idx + x_key] = temp
 
         cuda.syncthreads()
 
@@ -247,7 +251,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
                 )
 
         #  s_A holds dot(self.K, self.R)
-        s_A[xx_idx + (x * dim_z + y)] = temp2
+        s_A[xx_idx + z_key] = temp2
 
         cuda.syncthreads()
 
