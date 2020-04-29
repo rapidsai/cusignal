@@ -53,7 +53,7 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
             for j in range(dim_x):
                 temp += s_F[xx_idx + (x * dim_x + j)] * x_in[j, y, z_idx]
 
-            x_in[x, 0, z_idx] = temp
+            x_in[x, y, z_idx] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
