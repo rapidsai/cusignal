@@ -12,20 +12,72 @@
 # limitations under the License.
 
 import cupy as cp
+import itertools
 import numpy as np
 
-from numba import cuda, float32
+from enum import Enum
+from numba import cuda, void, float32, float64
 
 
-@cuda.jit(
-    "(int64, int64, float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:] )",
-    fastmath=True,
-)
-def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
+class GPUKernel(Enum):
+    PREDICT = 0
+    UPDATE = 1
+
+
+class GPUBackend(Enum):
+    CUPY = 0
+    NUMBA = 1
+
+
+# Numba type supported and corresponding C type
+_SUPPORTED_TYPES = {
+    np.float32: [float32, "double"],
+    np.float64: [float64, "double"],
+}
+
+
+_numba_kernel_cache = {}
+_cupy_kernel_cache = {}
+
+
+# Use until functionality provided in Numba 0.49/0.50 available
+def stream_cupy_to_numba(cp_stream):
+    """
+    Notes:
+        1. The lifetime of the returned Numba stream should be as
+           long as the CuPy one, which handles the deallocation
+           of the underlying CUDA stream.
+        2. The returned Numba stream is assumed to live in the same
+           CUDA context as the CuPy one.
+        3. The implementation here closely follows that of
+           cuda.stream() in Numba.
+    """
+    from ctypes import c_void_p
+    import weakref
+
+    # get the pointer to actual CUDA stream
+    raw_str = cp_stream.ptr
+
+    # gather necessary ingredients
+    ctx = cuda.devices.get_context()
+    handle = c_void_p(raw_str)
+
+    # create a Numba stream
+    nb_stream = cuda.cudadrv.driver.Stream(
+        weakref.proxy(ctx), handle, finalizer=None
+    )
+
+    return nb_stream
+
+
+def _numba_predict(alpha, x_in, F, P, Q):
 
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
+
+    dim_x = P.shape[0]
+
     xx_block_size = dim_x * dim_x * cuda.blockDim.z
     xx_idx = dim_x * dim_x * tz
 
@@ -37,7 +89,7 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
     x_key = x * dim_x + y
 
     #  Each i is a different point
-    for z_idx in range(z, num, strideZ):
+    for z_idx in range(z, x_in.shape[2], strideZ):
 
         s_F[xx_idx + x_key] = F[x, y, z_idx]
 
@@ -75,15 +127,15 @@ def _numba_predict(num, dim_x, alpha, x_in, F, P, Q):
         P[x, y, z_idx] = alpha_sq * temp + local_Q
 
 
-@cuda.jit(
-    "(int64, int64, int64, float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:], float32[:,:,:] )",
-    fastmath=True,
-)
-def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
+def _numba_update(x_in, z_in, H, P, R):
 
     x, y, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
+
+    dim_x = P.shape[0]
+    dim_z = R.shape[0]
+
     xx_block_size = dim_x * dim_x * cuda.blockDim.z
     xz_block_size = dim_x * dim_z * cuda.blockDim.z
     zz_block_size = dim_z * dim_z * cuda.blockDim.z
@@ -113,7 +165,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
     z_key = x * dim_z + y
 
     #  Each i is a different point
-    for z_idx in range(z, num, strideZ):
+    for z_idx in range(z, x_in.shape[2], strideZ):
 
         s_P[xx_idx + x_key] = P[x, y, z_idx]
 
@@ -158,9 +210,7 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
                 )
 
             #  s_B holds S - system uncertainty
-            s_B[xx_idx + z_key] = (
-                temp + s_R[zz_idx + z_key]
-            )
+            s_B[xx_idx + z_key] = temp + s_R[zz_idx + z_key]
 
         cuda.syncthreads()
 
@@ -265,6 +315,48 @@ def _numba_update(num, dim_x, dim_z, x_in, z_in, H, P, R):
         P[x, y, z_idx] = temp + temp2
 
 
+def _numba_kalman_signature(ty):
+    return void(
+        ty[:, :, :], ty[:, :, :], ty[:, :, :], ty[:, :, :], ty[:, :, :],
+    )
+
+
+def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
+
+    nb_stream = stream_cupy_to_numba(stream)
+    kernel = _numba_kernel_cache[(dtype.name, k_type)]
+
+    if kernel:
+        return kernel[grid, block, nb_stream, smem]
+    else:
+        raise ValueError(
+            "Kernel {} not found in _numba_kernel_cache".format(k_type)
+        )
+
+
+def _populate_kernel_cache(np_type, use_numba, k_type):
+
+    # Check in np_type is a supported option
+    try:
+        numba_type, _ = _SUPPORTED_TYPES[np_type]
+
+    except ValueError:
+        raise Exception("No kernel found for datatype {}".format(np_type))
+
+    if (str(numba_type), k_type) in _numba_kernel_cache:
+        return
+
+    sig = _numba_kalman_signature(numba_type)
+    if k_type == GPUKernel.PREDICT:
+        _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+            sig, fastmath=True
+        )(_numba_predict)
+    else:
+        _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+            sig, fastmath=True
+        )(_numba_update)
+
+
 class KalmanFilter(object):
 
     #  documentation
@@ -329,6 +421,9 @@ class KalmanFilter(object):
 
         self.z = cp.empty((dim_z, 1, self.num_points), dtype=cp.float32)
 
+        _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.PREDICT)
+        _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.UPDATE)
+
     def predict(self):
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
@@ -344,17 +439,17 @@ class KalmanFilter(object):
             total_size * threadsperblock[2] * self.x.dtype.itemsize
         )
 
-        _numba_predict[blockspergrid, threadsperblock, 0, shared_mem_size](
-            self.num_points,
-            self.dim_x,
-            self._alpha_sq,
-            self.x,
-            self.F,
-            self.P,
-            self.Q,
+        kernel = _get_backend_kernel(
+            self.x.dtype,
+            blockspergrid,
+            threadsperblock,
+            shared_mem_size,
+            cp.cuda.stream.Stream(null=True),
+            True,
+            GPUKernel.PREDICT,
         )
 
-        # print(_numba_predict.definitions)
+        kernel(self._alpha_sq, self.x, self.F, self.P, self.Q,)
 
     def update(self):
         d = cp.cuda.device.Device(0)
@@ -378,13 +473,14 @@ class KalmanFilter(object):
             total_size * threadsperblock[2] * self.x.dtype.itemsize
         )
 
-        _numba_update[blockspergrid, threadsperblock, 0, shared_mem_size](
-            self.num_points,
-            self.dim_x,
-            self.dim_z,
-            self.x,
-            self.z,
-            self.H,
-            self.P,
-            self.R,
+        kernel = _get_backend_kernel(
+            self.x.dtype,
+            blockspergrid,
+            threadsperblock,
+            shared_mem_size,
+            cp.cuda.stream.Stream(null=True),
+            True,
+            GPUKernel.UPDATE,
         )
+
+        kernel(self.x, self.z, self.H, self.P, self.R,)
