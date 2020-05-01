@@ -78,7 +78,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
 
-    dim_x = P.shape[0]
+    dim_x = P.shape[1]
 
     xx_block_size = dim_x * dim_x * cuda.blockDim.z
     xx_idx = dim_x * dim_x * tz
@@ -91,28 +91,28 @@ def _numba_predict(alpha, x_in, F, P, Q):
     x_key = x * dim_x + y
 
     #  Each i is a different point
-    for z_idx in range(z, x_in.shape[2], strideZ):
+    for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_F[xx_idx + x_key] = F[x, y, z_idx]
+        s_F[xx_idx + x_key] = F[z_idx, x, y, ]
 
         cuda.syncthreads()
 
         #  Load alpha_sq and Q into registers
-        alpha_sq = alpha[0, 0, z_idx]
-        local_Q = Q[x, y, z_idx]
+        alpha_sq = alpha[z_idx, 0, 0, ]
+        local_Q = Q[z_idx, x, y, ]
 
         #  Compute new self.x
         temp: x_in.dtype = 0
         if y == 0:
             for j in range(dim_x):
-                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[j, y, z_idx]
+                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y, ]
 
-            x_in[x, y, z_idx] = temp
+            x_in[z_idx, x, y, ] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += s_F[xx_idx + (x * dim_x + j)] * P[j, y, z_idx]
+            temp += s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y, ]
 
         s_A[xx_idx + x_key] = temp
 
@@ -126,7 +126,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
             )
 
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
-        P[x, y, z_idx] = alpha_sq * temp + local_Q
+        P[z_idx, x, y, ] = alpha_sq * temp + local_Q
 
 
 def _numba_update(x_in, z_in, H, P, R):
@@ -135,8 +135,8 @@ def _numba_update(x_in, z_in, H, P, R):
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
 
-    dim_x = P.shape[0]
-    dim_z = R.shape[0]
+    dim_x = P.shape[1]
+    dim_z = R.shape[1]
 
     xx_block_size = dim_x * dim_x * cuda.blockDim.z
     xz_block_size = dim_x * dim_z * cuda.blockDim.z
@@ -167,24 +167,24 @@ def _numba_update(x_in, z_in, H, P, R):
     z_key = x * dim_z + y
 
     #  Each i is a different point
-    for z_idx in range(z, x_in.shape[2], strideZ):
+    for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_P[xx_idx + x_key] = P[x, y, z_idx]
+        s_P[xx_idx + x_key] = P[z_idx, x, y, ]
 
         if x < dim_z:
-            s_H[xz_idx + x_key] = H[x, y, z_idx]
+            s_H[xz_idx + x_key] = H[z_idx, x, y]
 
         if x < dim_z and y < dim_z:
-            s_R[zz_idx + z_key] = R[x, y, z_idx]
+            s_R[zz_idx + z_key] = R[z_idx, x, y]
 
         cuda.syncthreads()
 
         #  Compute self.y : z = dot(self.H, self.x)
         temp: x_in.dtype = 0.0
         if x < dim_z and y == 0:
-            temp_z: x_in.dtype = z_in[x, y, z_idx]
+            temp_z: x_in.dtype = z_in[z_idx, x, y]
             for j in range(dim_x):
-                temp += s_H[xz_idx + (x * dim_x + j)] * x_in[j, y, z_idx]
+                temp += s_H[xz_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
 
             s_y[(dim_z * tz) + x] = temp_z - temp
 
@@ -257,7 +257,7 @@ def _numba_update(x_in, z_in, H, P, R):
             for j in range(dim_z):
                 temp += s_K[xz_idx + (x * dim_z + j)] * s_y[(dim_z * tz) + j]
 
-            x_in[x, y, z_idx] += temp
+            x_in[z_idx, x, y] += temp
 
         #  Compute I_KH = self_I - dot(self.K, self.H)
         temp: x_in.dtype = 0.0
@@ -314,7 +314,7 @@ def _numba_update(x_in, z_in, H, P, R):
                 s_A[xx_idx + (x * dim_z + j)] * s_K[xz_idx + (y * dim_z + j)]
             )
 
-        P[x, y, z_idx] = temp + temp2
+        P[z_idx, x, y] = temp + temp2
 
 
 def _numba_kalman_signature(ty):
@@ -421,10 +421,10 @@ class _cupy_predict_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, alpha_sq, x,  F, P, Q,
+        self, alpha_sq, x, F, P, Q,
     ):
 
-        print(x.shape)
+        # print(x.shape)
         kernel_args = (x.shape[0], P.shape[0], alpha_sq, x, F, P, Q)
 
         self.stream.use()
@@ -554,48 +554,48 @@ class KalmanFilter(object):
         # 1. if read-only and same initial, we can have one copy
         # 2. if not read-only and same initial, use broadcasting
         self.x = cp.zeros(
-            (dim_x, 1, self.num_points), dtype=cp.float32
+            (self.num_points, dim_x, 1,), dtype=cp.float32
         )  # state
 
         self.P = cp.repeat(
-            np.identity(dim_x, dtype=np.float32)[:, :, cp.newaxis],
+            np.identity(dim_x, dtype=np.float32)[cp.newaxis, :, :, ],
             self.num_points,
-            axis=2,
+            axis=0,
         )  # uncertainty covariance
 
         self.Q = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[:, :, cp.newaxis],
+            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :, ],
             self.num_points,
-            axis=2,
+            axis=0,
         )  # process uncertainty
 
         # self.B = None  # control transition matrix
 
         self.F = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[:, :, cp.newaxis],
+            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :, ],
             self.num_points,
-            axis=2,
+            axis=0,
         )  # state transition matrix
 
         self.H = cp.zeros(
-            (dim_z, dim_z, self.num_points), dtype=cp.float32
+            (self.num_points, dim_z, dim_z,), dtype=cp.float32
         )  # Measurement function
 
         self.R = cp.repeat(
-            cp.identity(dim_z, dtype=cp.float32)[:, :, cp.newaxis],
+            cp.identity(dim_z, dtype=cp.float32)[cp.newaxis, :, :, ],
             self.num_points,
-            axis=2,
+            axis=0,
         )  # process uncertainty
 
         self._alpha_sq = cp.ones(
-            (1, 1, self.num_points), dtype=cp.float32
+            (self.num_points, 1, 1,), dtype=cp.float32
         )  # fading memory control
 
         self.M = cp.zeros(
-            (dim_z, dim_z, self.num_points), dtype=cp.float32
+            (self.num_points, dim_z, dim_z,), dtype=cp.float32
         )  # process-measurement cross correlation
 
-        self.z = cp.empty((dim_z, 1, self.num_points), dtype=cp.float32)
+        self.z = cp.empty((self.num_points, dim_z, 1,), dtype=cp.float32)
 
         # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.PREDICT)
         # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.UPDATE)
@@ -606,11 +606,11 @@ class KalmanFilter(object):
     def predict(self):
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
-        # threadsperblock = (self.dim_x, self.dim_x, 16)
-        # blockspergrid = (1, 1, numSM * 20)
+        threadsperblock = (self.dim_x, self.dim_x, 16)
+        blockspergrid = (1, 1, numSM * 20)
 
-        threadsperblock = (self.dim_x, self.dim_x, 4)
-        blockspergrid = (1, 1, 1)
+        # threadsperblock = (self.dim_x, self.dim_x, 4)
+        # blockspergrid = (1, 1, 1)
 
         A_size = self.dim_x * self.dim_x
         F_size = self.dim_x * self.dim_x
@@ -632,13 +632,8 @@ class KalmanFilter(object):
             GPUKernel.PREDICT,
         )
 
-
         kernel(
-            self._alpha_sq,
-            self.x,
-            self.F,
-            self.P,
-            self.Q,
+            self._alpha_sq, self.x, self.F, self.P, self.Q,
         )
 
     def update(self):
