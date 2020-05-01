@@ -93,26 +93,36 @@ def _numba_predict(alpha, x_in, F, P, Q):
     #  Each i is a different point
     for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_F[xx_idx + x_key] = F[z_idx, x, y, ]
+        s_F[xx_idx + x_key] = F[
+            z_idx, x, y,
+        ]
 
         cuda.syncthreads()
 
         #  Load alpha_sq and Q into registers
-        alpha_sq = alpha[z_idx, 0, 0, ]
-        local_Q = Q[z_idx, x, y, ]
+        alpha_sq = alpha[
+            z_idx, 0, 0,
+        ]
+        local_Q = Q[
+            z_idx, x, y,
+        ]
 
         #  Compute new self.x
         temp: x_in.dtype = 0
         if y == 0:
             for j in range(dim_x):
-                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y, ]
+                temp += (
+                    s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
+                )
 
-            x_in[z_idx, x, y, ] = temp
+            x_in[z_idx, x, y,] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y, ]
+            temp += (
+                s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y]
+            )
 
         s_A[xx_idx + x_key] = temp
 
@@ -126,7 +136,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
             )
 
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
-        P[z_idx, x, y, ] = alpha_sq * temp + local_Q
+        P[z_idx, x, y] = alpha_sq * temp + local_Q
 
 
 def _numba_update(x_in, z_in, H, P, R):
@@ -169,7 +179,9 @@ def _numba_update(x_in, z_in, H, P, R):
     #  Each i is a different point
     for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_P[xx_idx + x_key] = P[z_idx, x, y, ]
+        s_P[xx_idx + x_key] = P[
+            z_idx, x, y,
+        ]
 
         if x < dim_z:
             s_H[xz_idx + x_key] = H[z_idx, x, y]
@@ -246,7 +258,6 @@ def _numba_update(x_in, z_in, H, P, R):
                     s_A[xx_idx + (x * dim_z + j)]
                     * s_B[xx_idx + (y * dim_z + j)]
                 )
-
             s_K[xz_idx + z_key] = temp
 
         cuda.syncthreads()
@@ -340,10 +351,10 @@ extern "C" {
 
         extern __shared__ ${datatype} s_buffer[];
 
-        ${datatype} *s_A = s_buffer;
-        ${datatype} *s_F = (${datatype}*)&s_A[dim_x * dim_x * blockDim.z];
+        ${datatype} *s_A { s_buffer };
+        ${datatype} *s_F {
+            reinterpret_cast<${datatype}*>(&s_A[dim_x * dim_x * blockDim.z]) };
 
-        // tx and ty are swapped
         const int tx {
             static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
         const int ty {
@@ -353,18 +364,12 @@ extern "C" {
 
         const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
 
-        const int xx_idx { dim_x * dim_x * threadIdx.x };
+        const int xx_idx { static_cast<int>( dim_x * dim_x * threadIdx.z ) };
 
-        const int x_value { tx * dim_x + ty };
+        const int x_value { ty * dim_x + tx };
 
         for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
-            if ( ty == 0)
-            printf("x_in = %f: %d, %d, %d\\n",
-                x_in[tid_z * dim_x * 1 + ty * 1 + tx], tx, ty, tz);
-
-            // x_in[0] = 33;
-            /*
             s_F[xx_idx + x_value] = F[tid_z * dim_x * dim_x + ty * dim_x + tx];
 
             __syncthreads();
@@ -374,17 +379,30 @@ extern "C" {
 
             ${datatype} temp {};
 
-            if ( ty == 0 ) {
+            if ( tx == 0 ) {
                 for ( int j = 0; j < dim_x; j++ ) {
-                    temp += s_F[xx_idx + (tx * dim_x + j)] *
-                        x_in[tid_z * dim_x * dim_x + ty * dim_x + j];
+                    temp += s_F[xx_idx + (ty * dim_x + j)] *
+                        x_in[tid_z * dim_x * 1 + j * 1 + tx];
                 }
-
-                x_in[tid_z * dim_x * dim_x + ty * dim_x + tx] = 33;
+                x_in[tid_z * dim_x * 1 + ty * 1 + tx] = temp;
             }
 
-            x_in[0] = 33;
-            */
+            temp = 0.0f;
+            for ( int j = 0; j < dim_x; j++ ) {
+                temp += s_F[xx_idx + (ty * dim_x + j)] *
+                    P[tid_z * dim_x * dim_x + j * dim_x + tx];
+            }
+            s_A[xx_idx + x_value] = temp;
+
+            __syncthreads();
+
+            temp = 0.0f;
+            for ( int j = 0; j < dim_x; j++ ) {
+                temp += s_A[xx_idx + (ty * dim_x + j)] *
+                    s_F[xx_idx + (tx * dim_x + j)];
+            }
+            P[tid_z * dim_x * dim_x + ty * dim_x + tx] =
+                alpha2 * temp + localQ;
         }
     }
 
@@ -401,6 +419,188 @@ extern "C" {
             ) {
 
         extern __shared__ ${datatype} s_buffer[];
+
+        ${datatype} *s_A { s_buffer };
+        ${datatype} *s_B {
+            reinterpret_cast<${datatype}*>(&s_A[dim_x * dim_x * blockDim.z]) };
+        ${datatype} *s_P {
+            reinterpret_cast<${datatype}*>(&s_B[dim_x * dim_x * blockDim.z]) };
+        ${datatype} *s_H {
+            reinterpret_cast<${datatype}*>(&s_P[dim_x * dim_x * blockDim.z]) };
+        ${datatype} *s_K {
+            reinterpret_cast<${datatype}*>(&s_H[dim_z * dim_x * blockDim.z]) };
+        ${datatype} *s_R {
+            reinterpret_cast<${datatype}*>(&s_K[dim_x * dim_z * blockDim.z]) };
+        ${datatype} *s_y {
+            reinterpret_cast<${datatype}*>(&s_R[dim_z * dim_z * blockDim.z]) };
+
+        const int tx {
+            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+        const int ty {
+            static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+        const int tz {
+            static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
+
+        const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
+
+        const int xx_idx { static_cast<int>( dim_x * dim_x * threadIdx.z ) };
+        const int xz_idx { static_cast<int>( dim_x * dim_z * threadIdx.z ) };
+        const int zz_idx { static_cast<int>( dim_z * dim_z * threadIdx.z ) };
+
+        const int x_value { ty * dim_x + tx };
+        const int z_value { ty * dim_z + tx };
+
+        for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
+
+            s_P[xx_idx + x_value] = P[tid_z * dim_x * dim_x + ty * dim_x + tx];
+
+            if ( ty < dim_z ) {
+                s_H[xz_idx + x_value] =
+                    H[tid_z * dim_z * dim_x + ty * dim_x + tx];
+            }
+
+            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
+                s_R[zz_idx + z_value] =
+                    R[tid_z * dim_z * dim_z + ty * dim_z + tx];
+            }
+            __syncthreads();
+
+            ${datatype} temp {};
+
+            // Compute self.y : z = dot(self.H, self.x)
+            if ( ( ty < dim_z ) && ( tx == 0 ) ) {
+                ${datatype} temp_z { z_in[tid_z * dim_z * 1 + ty * 1 + tx] };
+
+                for ( int j = 0; j < dim_x; j++ ) {
+                    temp += s_H[xz_idx + (ty * dim_x + j)] *
+                        x_in[tid_z * dim_x * 1 + j * 1 + tx];
+                }
+
+                s_y[threadIdx.z * dim_z * 1 + ty * 1 + tx] = temp_z - temp;
+            }
+
+            // Compute PHT : dot(self.P, self.H.T)
+            temp = 0.0f;
+            if ( tx < dim_z ) {
+                for ( int j = 0; j < dim_x; j++ ) {
+                    temp += s_P[xx_idx + (ty * dim_x + j)] *
+                        s_H[xz_idx + (tx * dim_x + j)];
+                }
+                // s_A holds PHT
+                s_A[xx_idx + z_value] = temp;
+            }
+
+            __syncthreads();
+
+            // Compute self.S : dot(self.H, PHT) + self.R
+            temp = 0.0f;
+            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
+                for ( int j = 0; j < dim_x; j++ ) {
+                    temp += s_H[xz_idx + (ty * dim_x + j)] *
+                        s_A[xx_idx + (j * dim_z + tx)];
+                }
+                // s_B holds S - system uncertainty
+                s_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
+            }
+
+            __syncthreads();
+
+            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
+
+                // Compute linalg.inv(S)
+                // Hardcoded for 2x2
+                const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
+
+                // sign * determinant
+                const ${datatype} sign_det { sign *
+                    ( ( s_B[xx_idx + (0 * dim_z + 0)] *
+                    s_B[xx_idx + (1 * dim_z + 1)] ) -
+                    ( s_B[xx_idx + (1 * dim_z + 0)] *
+                    s_B[xx_idx + (0 * dim_z + 1)] ) ) };
+
+                temp = s_B[xx_idx + ( ( 1 - ty ) * dim_z + ( 1 - tx ) )] /
+                    sign_det;
+                // s_B hold SI - inverse system uncertainty
+                s_B[xx_idx + z_value] = temp;
+            }
+
+            __syncthreads();
+
+            //  Compute self.K : dot(PHT, self.SI)
+            //  kalman gain
+            temp = 0.0f;
+            if ( tx < 2 ) {
+                for ( int j = 0; j < dim_z; j++ ) {
+                    temp += s_A[xx_idx + (ty * dim_z + j)] *
+                        s_B[xx_idx + (tx * dim_z + j)];
+                }
+                s_K[xz_idx + z_value] = temp;
+            }
+
+            __syncthreads();
+
+            //  Compute self.x : self.x + cp.dot(self.K, self.y)
+            temp = 0.0;
+            if ( tx == 0 ) {
+                for ( int j = 0; j < dim_z; j++ ) {
+                    temp += s_K[xz_idx + (ty * dim_z + j)] *
+                        s_y[threadIdx.z * dim_z + j];
+                }
+                x_in[tid_z * dim_x * 1 + ty * 1 + tx] += temp;
+            }
+
+            // Compute I_KH = self_I - dot(self.K, self.H)
+            temp = 0.0f;
+            for ( int j = 0; j < dim_z; j++ ) {
+                temp += s_K[xz_idx + (ty * dim_z + j)] *
+                    s_H[xz_idx + (j * dim_x + tx)];
+            }
+            // s_A holds I_KH
+            s_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
+
+            __syncthreads();
+
+            // Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
+            // dot(dot(self.K, self.R), self.K.T)
+
+            // Compute dot(I_KH, self.P)
+            temp = 0.0f;
+            for ( int j = 0; j < dim_x; j++ ) {
+                temp += s_A[xx_idx + (ty * dim_x + j)] *
+                    s_P[xx_idx + (j * dim_x + tx)];
+            }
+            s_B[xx_idx + x_value] = temp;
+
+            __syncthreads();
+
+            // Compute dot(dot(I_KH, self.P), I_KH.T)
+            temp = 0.0f;
+            for ( int j = 0; j < dim_x; j++ ) {
+                temp += s_B[xx_idx + (ty * dim_x + j)] *
+                    s_A[xx_idx + (tx * dim_x + j)];
+            }
+
+            ${datatype} temp2 {};
+            if ( tx < dim_z ) {
+                for ( int j = 0; j < dim_z; j++ ) {
+                    temp2 += s_K[xz_idx + (ty * dim_z + j)] *
+                        s_R[zz_idx + (j * dim_z + tx)];
+                }
+            }
+
+            // s_A holds dot(self.K, self.R)
+            s_A[xx_idx + z_value] = temp2;
+
+            __syncthreads();
+
+            temp2 = 0.0f;
+            for ( int j = 0; j < dim_z; j++ ) {
+                temp2 += s_A[xx_idx + (ty * dim_z + j)] *
+                    s_K[xz_idx + (tx * dim_z + j)];
+            }
+
+            P[tid_z * dim_x * dim_x + ty * dim_x + tx] = temp + temp2;
+        }
     }
 }
 """
@@ -424,8 +624,7 @@ class _cupy_predict_wrapper(object):
         self, alpha_sq, x, F, P, Q,
     ):
 
-        # print(x.shape)
-        kernel_args = (x.shape[0], P.shape[0], alpha_sq, x, F, P, Q)
+        kernel_args = (x.shape[0], P.shape[1], alpha_sq, x, F, P, Q)
 
         self.stream.use()
         self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
@@ -446,7 +645,7 @@ class _cupy_update_wrapper(object):
 
     def __call__(self, x, z, H, P, R):
 
-        kernel_args = (x.shape[2], P.shape[0], R.shape[0], x, z, H, P, R)
+        kernel_args = (x.shape[0], P.shape[1], R.shape[1], x, z, H, P, R)
 
         self.stream.use()
         self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
@@ -558,13 +757,13 @@ class KalmanFilter(object):
         )  # state
 
         self.P = cp.repeat(
-            np.identity(dim_x, dtype=np.float32)[cp.newaxis, :, :, ],
+            np.identity(dim_x, dtype=np.float32)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # uncertainty covariance
 
         self.Q = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :, ],
+            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # process uncertainty
@@ -572,7 +771,7 @@ class KalmanFilter(object):
         # self.B = None  # control transition matrix
 
         self.F = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :, ],
+            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # state transition matrix
@@ -582,7 +781,7 @@ class KalmanFilter(object):
         )  # Measurement function
 
         self.R = cp.repeat(
-            cp.identity(dim_z, dtype=cp.float32)[cp.newaxis, :, :, ],
+            cp.identity(dim_z, dtype=cp.float32)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # process uncertainty
@@ -597,20 +796,17 @@ class KalmanFilter(object):
 
         self.z = cp.empty((self.num_points, dim_z, 1,), dtype=cp.float32)
 
-        # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.PREDICT)
-        # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.UPDATE)
+        _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.PREDICT)
+        _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.UPDATE)
 
-        _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.PREDICT)
-        _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.UPDATE)
+        # _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.PREDICT)
+        # _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.UPDATE)
 
     def predict(self):
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = (self.dim_x, self.dim_x, 16)
         blockspergrid = (1, 1, numSM * 20)
-
-        # threadsperblock = (self.dim_x, self.dim_x, 4)
-        # blockspergrid = (1, 1, 1)
 
         A_size = self.dim_x * self.dim_x
         F_size = self.dim_x * self.dim_x
@@ -627,8 +823,8 @@ class KalmanFilter(object):
             threadsperblock,
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
-            True,
-            # False,
+            # True,
+            False,
             GPUKernel.PREDICT,
         )
 
@@ -664,8 +860,8 @@ class KalmanFilter(object):
             threadsperblock,
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
-            True,
-            # False,
+            # True,
+            False,
             GPUKernel.UPDATE,
         )
 
