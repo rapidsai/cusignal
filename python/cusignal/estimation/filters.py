@@ -12,11 +12,13 @@
 # limitations under the License.
 
 import cupy as cp
-import itertools
+
+# import itertools
 import numpy as np
 
 from enum import Enum
 from numba import cuda, void, float32, float64
+from string import Template
 
 
 class GPUKernel(Enum):
@@ -31,8 +33,8 @@ class GPUBackend(Enum):
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES = {
-    np.float32: [float32, "double"],
-    np.float64: [float64, "double"],
+    cp.float32: [float32, "float"],
+    cp.float64: [float64, "double"],
 }
 
 
@@ -321,24 +323,174 @@ def _numba_kalman_signature(ty):
     )
 
 
+# Custom Cupy raw kernel implementing lombscargle operation
+# Matthew Nicely - mnicely@nvidia.com
+loaded_from_source = Template(
+    """
+extern "C" {
+    __global__ void _cupy_predict(
+            const int num_points,
+            const int dim_x,
+            const ${datatype} * __restrict__ alpha_sq,
+            ${datatype} * __restrict__ x_in,
+            const ${datatype} * __restrict__ F,
+            ${datatype} * __restrict__ P,
+            const ${datatype} * __restrict__ Q
+            ) {
+
+        extern __shared__ ${datatype} s_buffer[];
+
+        ${datatype} *s_A = s_buffer;
+        ${datatype} *s_F = (${datatype}*)&s_A[dim_x * dim_x * blockDim.z];
+
+        // tx and ty are swapped
+        const int tx {
+            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+        const int ty {
+            static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+        const int tz {
+            static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
+
+        const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
+
+        const int xx_idx { dim_x * dim_x * threadIdx.x };
+
+        const int x_value { tx * dim_x + ty };
+
+        for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
+
+            if ( ty == 0)
+            printf("x_in = %f: %d, %d, %d\\n",
+                x_in[tid_z * dim_x * 1 + ty * 1 + tx], tx, ty, tz);
+
+            // x_in[0] = 33;
+            /*
+            s_F[xx_idx + x_value] = F[tid_z * dim_x * dim_x + ty * dim_x + tx];
+
+            __syncthreads();
+
+            ${datatype} alpha2 { alpha_sq[tid_z] };
+            ${datatype} localQ { Q[tid_z * dim_x * dim_x + ty * dim_x + tx] };
+
+            ${datatype} temp {};
+
+            if ( ty == 0 ) {
+                for ( int j = 0; j < dim_x; j++ ) {
+                    temp += s_F[xx_idx + (tx * dim_x + j)] *
+                        x_in[tid_z * dim_x * dim_x + ty * dim_x + j];
+                }
+
+                x_in[tid_z * dim_x * dim_x + ty * dim_x + tx] = 33;
+            }
+
+            x_in[0] = 33;
+            */
+        }
+    }
+
+
+    __global__ void _cupy_update(
+            const int num_points,
+            const int dim_x,
+            const int dim_z,
+            ${datatype} * __restrict__ x_in,
+            const ${datatype} * __restrict__ z_in,
+            const ${datatype} * __restrict__ H,
+            ${datatype} * __restrict__ P,
+            const ${datatype} * __restrict__ R
+            ) {
+
+        extern __shared__ ${datatype} s_buffer[];
+    }
+}
+"""
+)
+
+
+class _cupy_predict_wrapper(object):
+    def __init__(self, grid, block, stream, smem, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.stream = stream
+        self.smem = smem
+        self.kernel = kernel
+
+    def __call__(
+        self, alpha_sq, x,  F, P, Q,
+    ):
+
+        print(x.shape)
+        kernel_args = (x.shape[0], P.shape[0], alpha_sq, x, F, P, Q)
+
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
+
+
+class _cupy_update_wrapper(object):
+    def __init__(self, grid, block, stream, smem, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.stream = stream
+        self.smem = smem
+        self.kernel = kernel
+
+    def __call__(self, x, z, H, P, R):
+
+        kernel_args = (x.shape[2], P.shape[0], R.shape[0], x, z, H, P, R)
+
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
+
+
 def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
 
-    nb_stream = stream_cupy_to_numba(stream)
-    kernel = _numba_kernel_cache[(dtype.name, k_type)]
-
-    if kernel:
-        return kernel[grid, block, nb_stream, smem]
+    if not use_numba:
+        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+        if kernel:
+            if k_type == GPUKernel.PREDICT:
+                return _cupy_predict_wrapper(grid, block, stream, smem, kernel)
+            elif k_type == GPUKernel.UPDATE:
+                return _cupy_update_wrapper(grid, block, stream, smem, kernel)
+            else:
+                raise NotImplementedError(
+                    "No CuPY kernel found for k_type {}, datatype {}".format(
+                        k_type, dtype
+                    )
+                )
+        else:
+            raise ValueError(
+                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            )
     else:
-        raise ValueError(
-            "Kernel {} not found in _numba_kernel_cache".format(k_type)
-        )
+        nb_stream = stream_cupy_to_numba(stream)
+        kernel = _numba_kernel_cache[(dtype.name, k_type)]
+
+        if kernel:
+            return kernel[grid, block, nb_stream, smem]
+        else:
+            raise ValueError(
+                "Kernel {} not found in _numba_kernel_cache".format(k_type)
+            )
+    raise NotImplementedError(
+        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
+    )
 
 
 def _populate_kernel_cache(np_type, use_numba, k_type):
 
     # Check in np_type is a supported option
     try:
-        numba_type, _ = _SUPPORTED_TYPES[np_type]
+        numba_type, c_type = _SUPPORTED_TYPES[np_type]
 
     except ValueError:
         raise Exception("No kernel found for datatype {}".format(np_type))
@@ -346,15 +498,39 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
     if (str(numba_type), k_type) in _numba_kernel_cache:
         return
 
-    sig = _numba_kalman_signature(numba_type)
-    if k_type == GPUKernel.PREDICT:
-        _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
-            sig, fastmath=True
-        )(_numba_predict)
+    if not use_numba:
+        if (str(numba_type), k_type) in _cupy_kernel_cache:
+            return
+        # Instantiate the cupy kernel for this type and compile
+        src = loaded_from_source.substitute(datatype=c_type)
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        if k_type == GPUKernel.PREDICT:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.PREDICT)
+            ] = module.get_function("_cupy_predict")
+        elif k_type == GPUKernel.UPDATE:
+            _cupy_kernel_cache[
+                (str(numba_type), GPUKernel.UPDATE)
+            ] = module.get_function("_cupy_update")
+        else:
+            raise NotImplementedError(
+                "No kernel found for k_type {}, datatype {}".format(
+                    k_type, str(numba_type)
+                )
+            )
+
     else:
-        _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
-            sig, fastmath=True
-        )(_numba_update)
+        sig = _numba_kalman_signature(numba_type)
+        if k_type == GPUKernel.PREDICT:
+            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_predict)
+        else:
+            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_update)
 
 
 class KalmanFilter(object):
@@ -382,13 +558,13 @@ class KalmanFilter(object):
         )  # state
 
         self.P = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[:, :, np.newaxis],
+            np.identity(dim_x, dtype=np.float32)[:, :, cp.newaxis],
             self.num_points,
             axis=2,
         )  # uncertainty covariance
 
         self.Q = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[:, :, np.newaxis],
+            cp.identity(dim_x, dtype=cp.float32)[:, :, cp.newaxis],
             self.num_points,
             axis=2,
         )  # process uncertainty
@@ -396,7 +572,7 @@ class KalmanFilter(object):
         # self.B = None  # control transition matrix
 
         self.F = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[:, :, np.newaxis],
+            cp.identity(dim_x, dtype=cp.float32)[:, :, cp.newaxis],
             self.num_points,
             axis=2,
         )  # state transition matrix
@@ -406,7 +582,7 @@ class KalmanFilter(object):
         )  # Measurement function
 
         self.R = cp.repeat(
-            cp.identity(dim_z, dtype=cp.float32)[:, :, np.newaxis],
+            cp.identity(dim_z, dtype=cp.float32)[:, :, cp.newaxis],
             self.num_points,
             axis=2,
         )  # process uncertainty
@@ -421,14 +597,20 @@ class KalmanFilter(object):
 
         self.z = cp.empty((dim_z, 1, self.num_points), dtype=cp.float32)
 
+        # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.PREDICT)
+        # _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.UPDATE)
+
         _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.PREDICT)
         _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.UPDATE)
 
     def predict(self):
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
-        threadsperblock = (self.dim_x, self.dim_x, 16)
-        blockspergrid = (1, 1, numSM * 20)
+        # threadsperblock = (self.dim_x, self.dim_x, 16)
+        # blockspergrid = (1, 1, numSM * 20)
+
+        threadsperblock = (self.dim_x, self.dim_x, 4)
+        blockspergrid = (1, 1, 1)
 
         A_size = self.dim_x * self.dim_x
         F_size = self.dim_x * self.dim_x
@@ -446,10 +628,18 @@ class KalmanFilter(object):
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
             True,
+            # False,
             GPUKernel.PREDICT,
         )
 
-        kernel(self._alpha_sq, self.x, self.F, self.P, self.Q,)
+
+        kernel(
+            self._alpha_sq,
+            self.x,
+            self.F,
+            self.P,
+            self.Q,
+        )
 
     def update(self):
         d = cp.cuda.device.Device(0)
@@ -480,7 +670,10 @@ class KalmanFilter(object):
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
             True,
+            # False,
             GPUKernel.UPDATE,
         )
 
-        kernel(self.x, self.z, self.H, self.P, self.R,)
+        kernel(
+            self.x, self.z, self.H, self.P, self.R,
+        )
