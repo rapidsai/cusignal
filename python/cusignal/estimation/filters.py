@@ -111,18 +111,14 @@ def _numba_predict(alpha, x_in, F, P, Q):
         temp: x_in.dtype = 0
         if y == 0:
             for j in range(dim_x):
-                temp += (
-                    s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
-                )
+                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
 
             x_in[z_idx, x, y,] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += (
-                s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y]
-            )
+            temp += s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y]
 
         s_A[xx_idx + x_key] = temp
 
@@ -202,7 +198,7 @@ def _numba_update(x_in, z_in, H, P, R):
 
         #  Compute PHT : dot(self.P, self.H.T)
         temp: x_in.dtype = 0.0
-        if y < 2:
+        if y < dim_z:
             for j in range(dim_x):
                 temp += (
                     s_P[xx_idx + (x * dim_x + j)]
@@ -244,7 +240,10 @@ def _numba_update(x_in, z_in, H, P, R):
             )
 
             #  s_B hold SI - inverse system uncertainty
-            temp = s_B[xx_idx + ((1 - x) * dim_z + (1 - y))] / sign_det
+            temp = (
+                s_B[xx_idx + ((dim_z - 1 - x) * dim_z + (dim_z - 1 - y))]
+                / sign_det
+            )
             s_B[xx_idx + z_key] = temp
 
         cuda.syncthreads()
@@ -518,7 +517,8 @@ extern "C" {
                     ( s_B[xx_idx + (1 * dim_z + 0)] *
                     s_B[xx_idx + (0 * dim_z + 1)] ) ) };
 
-                temp = s_B[xx_idx + ( ( 1 - ty ) * dim_z + ( 1 - tx ) )] /
+                temp = s_B[xx_idx + ( ( dim_z - 1 - ty ) *
+                    dim_z + ( dim_z - 1 - tx ) )] /
                     sign_det;
                 // s_B hold SI - inverse system uncertainty
                 s_B[xx_idx + z_value] = temp;
@@ -580,26 +580,29 @@ extern "C" {
                     s_A[xx_idx + (tx * dim_x + j)];
             }
 
-            ${datatype} temp2 {};
+            s_P[xx_idx + (ty * dim_x + tx)] = temp;
+
+            temp = 0.0f;
             if ( tx < dim_z ) {
                 for ( int j = 0; j < dim_z; j++ ) {
-                    temp2 += s_K[xz_idx + (ty * dim_z + j)] *
+                    temp += s_K[xz_idx + (ty * dim_z + j)] *
                         s_R[zz_idx + (j * dim_z + tx)];
                 }
             }
 
             // s_A holds dot(self.K, self.R)
-            s_A[xx_idx + z_value] = temp2;
+            s_A[xx_idx + z_value] = temp;
 
             __syncthreads();
 
-            temp2 = 0.0f;
+            temp = 0.0f;
             for ( int j = 0; j < dim_z; j++ ) {
-                temp2 += s_A[xx_idx + (ty * dim_z + j)] *
+                temp += s_A[xx_idx + (ty * dim_z + j)] *
                     s_K[xz_idx + (tx * dim_z + j)];
             }
 
-            P[tid_z * dim_x * dim_x + ty * dim_x + tx] = temp + temp2;
+            P[tid_z * dim_x * dim_x + ty * dim_x + tx] =
+                s_P[xx_idx + (ty * dim_x + tx)] + temp;
         }
     }
 }
@@ -735,9 +738,10 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
 class KalmanFilter(object):
 
     #  documentation
-    def __init__(self, num_points, dim_x, dim_z, dim_u=0):
+    def __init__(self, num_points, dim_x, dim_z, dim_u=0, use_numba=False):
 
         self.num_points = num_points
+        self.use_numba = use_numba
 
         if dim_x < 1:
             raise ValueError("dim_x must be 1 or greater")
@@ -796,11 +800,12 @@ class KalmanFilter(object):
 
         self.z = cp.empty((self.num_points, dim_z, 1,), dtype=cp.float32)
 
-        _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.PREDICT)
-        _populate_kernel_cache(self.x.dtype.type, False, GPUKernel.UPDATE)
-
-        # _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.PREDICT)
-        # _populate_kernel_cache(self.x.dtype.type, True, GPUKernel.UPDATE)
+        _populate_kernel_cache(
+            self.x.dtype.type, self.use_numba, GPUKernel.PREDICT
+        )
+        _populate_kernel_cache(
+            self.x.dtype.type, self.use_numba, GPUKernel.UPDATE
+        )
 
     def predict(self):
         d = cp.cuda.device.Device(0)
@@ -823,8 +828,7 @@ class KalmanFilter(object):
             threadsperblock,
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
-            # True,
-            False,
+            self.use_numba,
             GPUKernel.PREDICT,
         )
 
@@ -860,8 +864,7 @@ class KalmanFilter(object):
             threadsperblock,
             shared_mem_size,
             cp.cuda.stream.Stream(null=True),
-            # True,
-            False,
+            self.use_numba,
             GPUKernel.UPDATE,
         )
 
