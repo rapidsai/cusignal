@@ -1,0 +1,119 @@
+# Test a kalman filter class
+
+import cupy as cp
+import numpy as np
+import filterpy.kalman
+import cusignal
+import time
+
+dim_x = 4
+dim_z = 2
+num_points = 4096
+iterations = 10
+
+print("num_points", num_points)
+print("iterations", iterations)
+
+cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, use_numba=False)
+
+f_fpy = filterpy.kalman.KalmanFilter(dim_x=4, dim_z=2)
+
+dt = np.float32
+
+initial_location = np.array(
+    [[10.0, 10.0, 0.0, 0.0]], dtype=dt
+).T  # x, y, v_x, v_y
+
+# State Space Equations
+F = np.array(
+    [
+        [1.0, 0.0, 1.0, 0.0],  # x = x0 + v_x*dt
+        [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
+        [0.0, 0.0, 1.0, 0.0],  # dx = v_x
+        [1.0, 0.0, 0.0, 1.0],
+    ],  # dy = v_y
+    dtype=dt,
+)
+
+# Observability Input
+H = np.array(
+    [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
+)
+
+initial_estimate_error = np.eye(dim_x, dtype=dt) * np.array(
+    [1.0, 1.0, 2.0, 2.0], dtype=dt
+)
+measurement_noise = np.eye(dim_z, dtype=dt) * 0.01
+motion_noise = np.eye(dim_x, dtype=dt) * np.array(
+    [10.0, 10.0, 10.0, 10.0], dtype=dt
+)
+
+f_fpy.x = initial_location
+cuS.x = cp.repeat(
+    cp.asarray(initial_location[cp.newaxis, :, :]), num_points, axis=0
+)
+
+# State space equation to estimate position and velocity
+f_fpy.F = F
+cuS.F = cp.repeat(cp.asarray(F[cp.newaxis, :, :]), num_points, axis=0)
+
+# only observable input is the x and y coordinates
+f_fpy.H = H
+cuS.H = cp.repeat(cp.asarray(H[cp.newaxis, :, :]), num_points, axis=0)
+
+# Covariance Matrix
+f_fpy.P = initial_estimate_error
+cuS.P = cp.repeat(
+    cp.asarray(initial_estimate_error[cp.newaxis, :, :]), num_points, axis=0
+)
+
+f_fpy.R = measurement_noise
+cuS.R = cp.repeat(
+    cp.asarray(measurement_noise[cp.newaxis, :, :]), num_points, axis=0
+)
+
+f_fpy.Q = motion_noise
+cuS.Q = cp.repeat(
+    cp.asarray(motion_noise[cp.newaxis, :, :]), num_points, axis=0
+)
+
+start = time.time()
+for _ in range(num_points):
+    for i in range(iterations):
+
+        f_fpy.predict()
+
+        z = np.array([i, i], dtype=dt).T  # must be 2d for cuSignal.filter
+
+        f_fpy.update(z)
+
+print("CPU:", time.time() - start)
+
+z = cp.asarray([0, 0], dtype=dt).T  # must be 2d for cuSignal.filter
+z = cp.atleast_2d(z)
+if z.shape[1] == dim_z:
+    z = z.T
+
+start = time.time()
+for i in range(iterations):
+
+    cuS.predict()
+
+    z[0] = i
+    z[1] = i
+
+    cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
+
+    cuS.update()
+
+
+print("GPU:", time.time() - start)
+
+print()
+print("Final")
+print("predicted filterpy")
+print(f_fpy.x)
+print("predicted cusignal (First)")
+print(cuS.x[0, :, :])
+print("predicted cusignal (Last)")
+print(cuS.x[-1, :, :])

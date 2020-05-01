@@ -113,7 +113,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
             for j in range(dim_x):
                 temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
 
-            x_in[z_idx, x, y,] = temp
+            x_in[z_idx, x, y] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
@@ -749,6 +749,11 @@ class KalmanFilter(object):
             raise ValueError("dim_z must be 1 or greater")
         if dim_u < 0:
             raise ValueError("dim_u must be 0 or greater")
+
+        if dim_z > 2:
+            raise ValueError(
+                "cuSignal KalmanFilter only works with dim_z = 2 currently"
+            )
 
         self.dim_x = dim_x
         self.dim_z = dim_z
