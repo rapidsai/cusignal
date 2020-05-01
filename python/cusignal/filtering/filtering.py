@@ -165,6 +165,74 @@ def lfiltic(b, a, y, x=None):
     return zi
 
 
+def lfilter(b, a, x):
+    """
+    Perform an IIR filter by evaluating difference equation.
+
+    Parameters
+    ----------
+    b : array_like
+        The numerator coefficient vector in a 1-D sequence.
+    a : array_like
+        The denominator coefficient vector in a 1-D sequence.  If ``a[0]``
+        is not 1, then both `a` and `b` are normalized by ``a[0]``.
+    x : array_like
+        An N-dimensional input array. Must be normalized to -1 to 1.
+
+    Returns
+    -------
+    y : array
+        The output of the digital filter. Output will be clipped to -1 to 1.
+
+    """
+    # pack batch
+    shape = x.shape
+    x = x.reshape(-1, shape[-1])
+
+    assert (a.shape[0] == b.shape[0])
+    assert (len(x.shape) == 2)
+
+    dtype = x.dtype
+    n_channel, n_sample = x.shape
+    n_order = a.shape[0]
+    n_sample_padded = n_sample + n_order - 1
+    assert (n_order > 0)
+
+    # Pad the input and create output
+    padded_x = cp.zeros((n_channel, n_sample_padded), dtype=dtype)
+    padded_x[:, (n_order - 1):] = x
+    padded_output_x = cp.zeros((n_channel, n_sample_padded), dtype=dtype)
+
+    # Set up the coefficients matrix
+    # Flip coefficients' order
+    a_flipped = cp.flip(a, 0)
+    b_flipped = cp.flip(b, 0)
+
+    # calculate windowed_input_signal in parallel
+    # create indices of original with shape (n_channel, n_order, n_sample)
+    window_idxs = cp.expand_dims(
+        cp.arange(n_sample), 0) + cp.expand_dims(cp.arange(n_order), 1)
+    window_idxs = cp.tile(window_idxs, (n_channel, 1, 1))
+    window_idxs += (
+        cp.expand_dims(cp.expand_dims(cp.arange(n_channel), -1), -1) *
+        n_sample_padded
+    )
+    input_signal_windows = cp.matmul(b_flipped, cp.take(padded_x, window_idxs))
+
+    for i, o0 in enumerate(input_signal_windows[0, :]):
+        windowed_output_signal = padded_output_x[:, i:(i + n_order)]
+        o0 = cp.subtract(o0, windowed_output_signal.dot(a_flipped))
+        o0 = cp.divide(o0, a[0])
+        padded_output_x[:, i + n_order - 1] = o0
+
+    output = cp.clip(padded_output_x[:, (n_order - 1):], a_min=-1., a_max=1.)
+
+    # unpack batch
+    output = output.reshape(shape[:-1] + output.shape[-1:])
+
+    return output
+
+
 def hilbert(x, N=None, axis=-1):
     """
     Compute the analytic signal, using the Hilbert transform.
