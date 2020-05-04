@@ -18,6 +18,9 @@ from cusignal.test.utils import array_equal
 import cusignal
 from scipy import signal
 
+import torchaudio
+import torch
+
 
 @pytest.mark.benchmark(group="Resample")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -320,6 +323,68 @@ class BenchWiener:
 
         key = self.cpu_version(cpu_sig)
         assert array_equal(cp.asnumpy(output), key)
+
+
+@pytest.mark.benchmark(group="Lfilter")
+@pytest.mark.parametrize("num_samps", [2 ** 16])
+class BenchLfilter:
+    def cpu_version(self, b, a, cpu_sig):
+        return signal.lfilter(b, a, cpu_sig)
+
+    def bench_lfilter_cpu(self, rand_data_gen, benchmark, num_samps):
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        benchmark(self.cpu_version, b, a, cpu_sig)
+
+    def bench_lfilter_gpu(self, rand_data_gen, benchmark, num_samps):
+
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        gpu_sig = cp.asarray(cpu_sig)
+        d_a = cp.asarray(a)
+        d_b = cp.asarray(b)
+
+        output = benchmark(cusignal.lfilter, d_b, d_a, gpu_sig)
+
+        key = self.cpu_version(b, a, cpu_sig)
+        assert array_equal(cp.asnumpy(output), key)
+
+
+@pytest.mark.benchmark(group="LfilterTorch")
+@pytest.mark.parametrize("num_samps", [2 ** 16])
+class BenchLfilterTorch:
+    def cpu_version(self, b, a, cpu_sig):
+        return signal.lfilter(b, a, cpu_sig)
+
+    def bench_lfiltertorch_cpu(self, rand_data_gen, benchmark, num_samps):
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        benchmark(self.cpu_version, b, a, cpu_sig)
+
+    def bench_lfiltertorch_gpu(self, rand_data_gen, benchmark, num_samps):
+
+        torch.set_default_tensor_type('torch.cuda.DoubleTensor')
+
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        torch_sig = torch.as_tensor(cpu_sig)
+        torch_a = torch.as_tensor(a)
+        torch_b = torch.as_tensor(b)
+
+        output = benchmark(
+            torchaudio.functional.lfilter, torch_sig, torch_a, torch_b
+        )
+
+        key = self.cpu_version(b, a, cpu_sig)
+        assert array_equal(output.cpu().numpy(), key)
 
 
 @pytest.mark.benchmark(group="Hilbert")

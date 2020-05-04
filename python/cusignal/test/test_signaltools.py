@@ -18,6 +18,9 @@ import cusignal
 import numpy as np
 from scipy import signal
 
+import torchaudio
+import torch
+
 
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
@@ -159,6 +162,41 @@ def test_wiener(num_samps):
     cpu_wfilt = signal.wiener(cpu_sig)
     gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
     assert array_equal(cpu_wfilt, gpu_wfilt)
+
+
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+def test_lfilter(num_samps):
+    cpu_sig = np.arange(num_samps) / num_samps
+    gpu_sig = cp.asarray(cpu_sig)
+
+    a = [1.0, 0.25, 0.5]
+    b = [1.0, 0.0, 0.0]
+
+    d_a = cp.asarray(a)
+    d_b = cp.asarray(b)
+
+    cpu_lfilter = signal.lfilter(b, a, cpu_sig)
+    gpu_lfilter = cp.asnumpy(cusignal.lfilter(d_b, d_a, gpu_sig, ))
+    assert array_equal(cpu_lfilter, gpu_lfilter)
+
+
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+def test_lfilter_torch(num_samps):
+
+    torch.set_default_tensor_type('torch.cuda.DoubleTensor')
+
+    cpu_sig = np.arange(num_samps) / num_samps
+
+    a = [1.0, 0.25, 0.5]
+    b = [1.0, 0.0, 0.0]
+
+    torch_sig = torch.as_tensor(cpu_sig)
+    torch_a = torch.as_tensor(a)
+    torch_b = torch.as_tensor(b)
+
+    cpu_lfilter = signal.lfilter(b, a, cpu_sig)
+    gpu_lfilter = torchaudio.functional.lfilter(torch_sig, torch_a, torch_b)
+    assert array_equal(cpu_lfilter, gpu_lfilter.cpu().numpy())
 
 
 @pytest.mark.parametrize("num_samps", [2 ** 15])
