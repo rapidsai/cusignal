@@ -7,6 +7,7 @@
 - PR #51 - Add CuPy Module for lombscargle, along with tests/benchmarks
 - PR #62 - Add CuPy Module for 1d convolve and correlate, along with tests/benchmarks
 - PR #66 - Add CuPy Module for 2d upfirdn, along with tests/benchmarks
+- PR #73 - Local gpuCI build script
 - PR #75 - Add accelerated `lfilter` method.
 
 ## Improvements
