@@ -161,6 +161,22 @@ def test_wiener(num_samps):
     assert array_equal(cpu_wfilt, gpu_wfilt)
 
 
+@pytest.mark.parametrize("num_samps", [2 ** 8])
+def test_lfilter(num_samps):
+    cpu_sig = np.arange(num_samps) / num_samps
+    gpu_sig = cp.asarray(cpu_sig)
+
+    a = [1.0, 0.25, 0.5]
+    b = [1.0, 0.0, 0.0]
+
+    d_a = cp.asarray(a)
+    d_b = cp.asarray(b)
+
+    cpu_lfilter = signal.lfilter(b, a, cpu_sig)
+    gpu_lfilter = cp.asnumpy(cusignal.lfilter(d_b, d_a, gpu_sig, ))
+    assert array_equal(cpu_lfilter, gpu_lfilter)
+
+
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_hilbert(num_samps):
     cpu_sig = np.random.rand(num_samps)
