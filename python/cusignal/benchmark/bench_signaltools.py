@@ -18,9 +18,6 @@ from cusignal.test.utils import array_equal
 import cusignal
 from scipy import signal
 
-import torchaudio
-import torch
-
 
 @pytest.mark.benchmark(group="Resample")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -354,39 +351,6 @@ class BenchLfilter:
         assert array_equal(cp.asnumpy(output), key)
 
 
-@pytest.mark.benchmark(group="LfilterTorch")
-@pytest.mark.parametrize("num_samps", [2 ** 16])
-class BenchLfilterTorch:
-    def cpu_version(self, b, a, cpu_sig):
-        return signal.lfilter(b, a, cpu_sig)
-
-    def bench_lfiltertorch_cpu(self, rand_data_gen, benchmark, num_samps):
-        cpu_sig = np.arange(num_samps) / num_samps
-        a = [1.0, 0.25, 0.5]
-        b = [1.0, 0.0, 0.0]
-
-        benchmark(self.cpu_version, b, a, cpu_sig)
-
-    def bench_lfiltertorch_gpu(self, rand_data_gen, benchmark, num_samps):
-
-        torch.set_default_tensor_type('torch.cuda.DoubleTensor')
-
-        cpu_sig = np.arange(num_samps) / num_samps
-        a = [1.0, 0.25, 0.5]
-        b = [1.0, 0.0, 0.0]
-
-        torch_sig = torch.as_tensor(cpu_sig)
-        torch_a = torch.as_tensor(a)
-        torch_b = torch.as_tensor(b)
-
-        output = benchmark(
-            torchaudio.functional.lfilter, torch_sig, torch_a, torch_b
-        )
-
-        key = self.cpu_version(b, a, cpu_sig)
-        assert array_equal(output.cpu().numpy(), key)
-
-
 @pytest.mark.benchmark(group="Hilbert")
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 class BenchHilbert:
@@ -502,14 +466,14 @@ class BenchCorrelate2d:
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
         cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
-        output = benchmark(
+        output = cp.asnumpy(benchmark(
             cusignal.correlate2d,
             gpu_sig,
             gpu_filt,
             boundary=boundary,
             mode=mode,
             use_numba=use_numba,
-        )
+        ))
 
         key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
-        assert array_equal(cp.asnumpy(output), key)
+        assert array_equal(output, key)

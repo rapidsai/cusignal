@@ -180,25 +180,6 @@ def test_lfilter(num_samps):
     assert array_equal(cpu_lfilter, gpu_lfilter)
 
 
-@pytest.mark.parametrize("num_samps", [2 ** 8])
-def test_lfilter_torch(num_samps):
-
-    torch.set_default_tensor_type('torch.cuda.DoubleTensor')
-
-    cpu_sig = np.arange(num_samps) / num_samps
-
-    a = [1.0, 0.25, 0.5]
-    b = [1.0, 0.0, 0.0]
-
-    torch_sig = torch.as_tensor(cpu_sig)
-    torch_a = torch.as_tensor(a)
-    torch_b = torch.as_tensor(b)
-
-    cpu_lfilter = signal.lfilter(b, a, cpu_sig)
-    gpu_lfilter = torchaudio.functional.lfilter(torch_sig, torch_a, torch_b)
-    assert array_equal(cpu_lfilter, gpu_lfilter.cpu().numpy())
-
-
 @pytest.mark.parametrize("num_samps", [2 ** 15])
 def test_hilbert(num_samps):
     cpu_sig = np.random.rand(num_samps)

@@ -74,7 +74,7 @@ def stream_cupy_to_numba(cp_stream):
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 loaded_from_source = Template(
-"""
+    """
 extern "C" {
     __global__ void _cupy_lfilter(
             const int x_len,
@@ -124,9 +124,7 @@ class _cupy_lfilter_wrapper(object):
         self.stream = stream
         self.kernel = kernel
 
-    def __call__(
-        self, b, a, x, out
-    ):
+    def __call__(self, b, a, x, out):
 
         kernel_args = (
             x.shape[0],
@@ -295,6 +293,7 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream):
 
     kernel(b, a, x, out)
 
-    cp_stream.synchronize()
+    # Turn on in a different PR
+    # cp_stream.synchronize()
 
     return out
