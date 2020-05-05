@@ -191,8 +191,13 @@ def lfilter(
     a = cp.asarray(a)
     b = cp.asarray(b)
 
-    assert a.shape[0] == b.shape[0]
-    assert len(x.shape) == 1
+    if a.shape[0] != b.shape[0] or len(a.shape) > 1 or len(b.shape) > 1:
+        raise ValueError("Inputs a and b must both be 1D arrays")
+
+    if len(x.shape) != 1:
+        raise NotImplementedError(
+            "Only functionality for 1D arrays are implemented at the moment"
+        )
 
     out = _lfilter_gpu(b, a, x, clamp, cp_stream)
 
