@@ -17,8 +17,13 @@ from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
 
 from ..windows.windows import get_window
-from ..utils.arraytools import _even_ext, _odd_ext, _const_ext, \
-    _zero_ext, _as_strided
+from ..utils.arraytools import (
+    _even_ext,
+    _odd_ext,
+    _const_ext,
+    _zero_ext,
+    _as_strided,
+)
 from ..filtering import filtering
 from .._spectral import _lombscargle
 
@@ -32,6 +37,7 @@ def lombscargle(
     precenter=False,
     normalize=False,
     cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
     use_numba=False,
 ):
     """
@@ -63,9 +69,16 @@ def lombscargle(
         of multiple non-default streams allow multiple kernels to
         run concurrently. Default is cp.cuda.stream.Stream(null=True)
         or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
+        
     Returns
     -------
     pgram : array_like
@@ -152,9 +165,7 @@ def lombscargle(
     else:
         y_in = y
 
-    _lombscargle(
-        x, y_in, freqs, pgram, y_dot, cp_stream=cp_stream, use_numba=use_numba
-    )
+    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream, autosync, use_numba)
 
     return pgram
 
