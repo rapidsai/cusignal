@@ -23,6 +23,7 @@
 - PR #67 - cuSignal code refactor and documentation update
 - PR #71 - README spelling and conda install fixes
 - PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
+- PR #84 - Update minimum versions of CuPy and Numba and associated conda envs
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
