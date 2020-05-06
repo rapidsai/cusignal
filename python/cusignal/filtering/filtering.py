@@ -167,7 +167,12 @@ def lfiltic(b, a, y, x=None):
 
 
 def lfilter(
-    b, a, x, clip=False, cp_stream=cp.cuda.stream.Stream(null=True),
+    b,
+    a,
+    x,
+    clip=False,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
 ):
     """
     Perform an IIR filter by evaluating difference equation.
@@ -188,6 +193,12 @@ def lfilter(
         of multiple non-default streams allow multiple kernels to
         run concurrently. Default is cp.cuda.stream.Stream(null=True)
         or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
 
     Returns
     -------
@@ -219,7 +230,7 @@ def lfilter(
         else:
             b = cp.pad(b, (0, len_array - b.shape[0]))
 
-    out = _lfilter_gpu(b, a, x, clip, cp_stream)
+    out = _lfilter_gpu(b, a, x, clip, cp_stream, autosync)
 
     return out
 

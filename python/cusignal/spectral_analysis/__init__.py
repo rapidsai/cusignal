@@ -19,5 +19,5 @@ from cusignal.spectral_analysis.spectral import (
     spectrogram,
     lombscargle,
     vectorstrength,
-    stft
+    stft,
 )
