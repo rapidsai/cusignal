@@ -78,7 +78,7 @@ def lombscargle(
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
-        
+
     Returns
     -------
     pgram : array_like
