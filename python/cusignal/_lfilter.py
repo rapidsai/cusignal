@@ -19,6 +19,8 @@ from enum import Enum
 from numba import float32, float64
 from string import Template
 
+# from ._precompile import _cupy_kernel_cache
+
 
 class GPUKernel(Enum):
     LFILTER = 0
@@ -259,7 +261,6 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream):
 
     kernel(b, a, x, out)
 
-    # Turn on in a different PR
-    # cp_stream.synchronize()
+    cp_stream.synchronize()
 
     return out
