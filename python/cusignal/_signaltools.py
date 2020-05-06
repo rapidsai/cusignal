@@ -30,7 +30,7 @@ from numba import (
 )
 from string import Template
 
-from _precompile import _stream_cupy_to_numba
+from ._precompile import _stream_cupy_to_numba
 
 try:
     # Numba <= 0.49

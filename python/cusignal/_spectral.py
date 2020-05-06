@@ -21,7 +21,7 @@ from math import sin, cos, atan2
 from numba import cuda, float64, void
 from string import Template
 
-from _precompile import _stream_cupy_to_numba
+from ._precompile import _stream_cupy_to_numba
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)

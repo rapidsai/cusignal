@@ -21,7 +21,7 @@ from math import ceil
 from numba import complex64, complex128, cuda, float32, float64, int64, void
 from string import Template
 
-from _precompile import _stream_cupy_to_numba
+from ._precompile import _stream_cupy_to_numba
 
 try:
     # Numba <= 0.49
