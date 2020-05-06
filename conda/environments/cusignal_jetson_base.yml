@@ -8,13 +8,7 @@ channels:
 dependencies:
   - scipy
   - numpy
-  - matplotlib
-  - numba
-  - pytest
-  - sphinx
-  - sphinx_rtd_theme
-  - numpydoc
-  - ipython
+  - numba>=0.49
   - pip
   - pip:
-    - cupy>=6.2.0
+    - cupy>=7.2.0

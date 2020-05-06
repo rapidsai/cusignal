@@ -21,12 +21,7 @@ from math import ceil
 from numba import complex64, complex128, cuda, float32, float64, int64, void
 from string import Template
 
-try:
-    # Numba <= 0.49
-    from numba.types.scalars import Complex
-except ImportError:
-    # Numba >= 0.49
-    from numba.core.types.scalars import Complex
+from numba.core.types.scalars import Complex
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
