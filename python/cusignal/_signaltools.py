@@ -932,7 +932,8 @@ def _convolve(
     use_convolve,
     swapped_inputs,
     mode,
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream,
+    autosync,
 ):
 
     val = _valfrommode(mode)
@@ -972,8 +973,11 @@ def _convolve(
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
     out = _convolve_gpu(
-        in1, out, in2, val, use_convolve, swapped_inputs, cp_stream=cp_stream,
+        in1, out, in2, val, use_convolve, swapped_inputs, cp_stream,
     )
+
+    if autosync is True:
+        cp_stream.synchronize()
 
     return out
 
@@ -982,11 +986,12 @@ def _convolve2d(
     in1,
     in2,
     use_convolve,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    use_numba=False,
+    mode,
+    boundary,
+    fillvalue,
+    cp_stream,
+    autosync,
+    use_numba,
 ):
 
     val = _valfrommode(mode)
@@ -1045,9 +1050,12 @@ def _convolve2d(
         bval,
         use_convolve,
         fill,
-        cp_stream=cp_stream,
-        use_numba=use_numba,
+        cp_stream,
+        use_numba,
     )
+
+    if autosync is True:
+        cp_stream.synchronize()
 
     return out
 

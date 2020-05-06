@@ -197,7 +197,8 @@ def lfilter(
         Option to automatically synchronize cp_stream. This will block
         the host code until kernel is finished on the GPU. Setting to
         false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
 
     Returns
     -------

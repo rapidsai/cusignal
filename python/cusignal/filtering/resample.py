@@ -66,7 +66,8 @@ def decimate(
         Option to automatically synchronize cp_stream. This will block
         the host code until kernel is finished on the GPU. Setting to
         false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
@@ -281,7 +282,8 @@ def resample_poly(
         Option to automatically synchronize cp_stream. This will block
         the host code until kernel is finished on the GPU. Setting to
         false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
@@ -429,7 +431,8 @@ def upfirdn(
         Option to automatically synchronize cp_stream. This will block
         the host code until kernel is finished on the GPU. Setting to
         false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
