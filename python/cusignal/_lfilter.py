@@ -274,7 +274,7 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
             _populate_kernel_cache(d, b, k)
 
 
-def _lfilter_gpu(b, a, x, clamp, cp_stream):
+def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
 
     out = cp.zeros_like(x)
 
@@ -293,7 +293,7 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream):
 
     kernel(b, a, x, out)
 
-    # Turn on in a different PR
-    # cp_stream.synchronize()
+    if autosync is True:
+        cp_stream.synchronize()
 
     return out

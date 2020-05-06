@@ -15,7 +15,7 @@ from cusignal.filtering.resample import (
     decimate,
     resample,
     resample_poly,
-    upfirdn
+    upfirdn,
 )
 from cusignal.filtering.filtering import (
     wiener,
@@ -24,5 +24,5 @@ from cusignal.filtering.filtering import (
     hilbert,
     hilbert2,
     detrend,
-    freq_shift
+    freq_shift,
 )
