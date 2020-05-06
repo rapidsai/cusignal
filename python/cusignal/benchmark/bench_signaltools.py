@@ -221,7 +221,7 @@ class BenchFirWin:
 @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
 @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["fft", "auto"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
 class BenchCorrelate:
     def cpu_version(self, cpu_sig, num_taps, mode, method):
         return signal.correlate(cpu_sig, num_taps, mode=mode, method=method)
@@ -319,6 +319,35 @@ class BenchWiener:
         output = benchmark(cusignal.wiener, gpu_sig)
 
         key = self.cpu_version(cpu_sig)
+        assert array_equal(cp.asnumpy(output), key)
+
+
+@pytest.mark.benchmark(group="Lfilter")
+@pytest.mark.parametrize("num_samps", [2 ** 16])
+class BenchLfilter:
+    def cpu_version(self, b, a, cpu_sig):
+        return signal.lfilter(b, a, cpu_sig)
+
+    def bench_lfilter_cpu(self, rand_data_gen, benchmark, num_samps):
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        benchmark(self.cpu_version, b, a, cpu_sig)
+
+    def bench_lfilter_gpu(self, rand_data_gen, benchmark, num_samps):
+
+        cpu_sig = np.arange(num_samps) / num_samps
+        a = [1.0, 0.25, 0.5]
+        b = [1.0, 0.0, 0.0]
+
+        gpu_sig = cp.asarray(cpu_sig)
+        d_a = cp.asarray(a)
+        d_b = cp.asarray(b)
+
+        output = benchmark(cusignal.lfilter, d_b, d_a, gpu_sig)
+
+        key = self.cpu_version(b, a, cpu_sig)
         assert array_equal(cp.asnumpy(output), key)
 
 

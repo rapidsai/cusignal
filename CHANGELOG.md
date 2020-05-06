@@ -21,6 +21,7 @@
 - PR #65 - Added deprecation warning for Numba kernels
 - PR #67 - cuSignal code refactor and documentation update
 - PR #71 - README spelling and conda install fixes
+- PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
