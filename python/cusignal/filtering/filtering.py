@@ -41,6 +41,7 @@ from cupy import linalg
 import numpy as np
 
 from ..convolution.correlate import correlate
+from .._lfilter import _lfilter_gpu
 
 
 def wiener(im, mysize=None, noise=None):
@@ -165,10 +166,11 @@ def lfiltic(b, a, y, x=None):
     return zi
 
 
-def lfilter(b, a, x):
+def lfilter(
+    b, a, x, clip=False, cp_stream=cp.cuda.stream.Stream(null=True),
+):
     """
     Perform an IIR filter by evaluating difference equation.
-
     Parameters
     ----------
     b : array_like
@@ -178,59 +180,48 @@ def lfilter(b, a, x):
         is not 1, then both `a` and `b` are normalized by ``a[0]``.
     x : array_like
         An N-dimensional input array. Must be normalized to -1 to 1.
+    clip : bool, optional
+        Option allows clipping results greater than 1 and
+        less than -1
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
 
     Returns
     -------
     y : array
         The output of the digital filter. Output will be clipped to -1 to 1.
-
     """
-    # pack batch
-    shape = x.shape
-    x = x.reshape(-1, shape[-1])
 
-    assert (a.shape[0] == b.shape[0])
-    assert (len(x.shape) == 2)
+    if len(a.shape) > 1 or len(b.shape) > 1:
+        raise ValueError("Inputs a and b must both be 1D arrays")
 
-    dtype = x.dtype
-    n_channel, n_sample = x.shape
-    n_order = a.shape[0]
-    n_sample_padded = n_sample + n_order - 1
-    assert (n_order > 0)
+    if len(x.shape) != 1:
+        raise NotImplementedError(
+            "Only functionality for 1D arrays are implemented at the moment"
+        )
 
-    # Pad the input and create output
-    padded_x = cp.zeros((n_channel, n_sample_padded), dtype=dtype)
-    padded_x[:, (n_order - 1):] = x
-    padded_output_x = cp.zeros((n_channel, n_sample_padded), dtype=dtype)
+    if a[0] == 0:
+        raise NotImplementedError(
+            "filter coefficient a[0] == 0 not supported yet"
+        )
 
-    # Set up the coefficients matrix
-    # Flip coefficients' order
-    a_flipped = cp.flip(a, 0)
-    b_flipped = cp.flip(b, 0)
+    x = cp.asarray(x)
+    a = cp.asarray(a)
+    b = cp.asarray(b)
 
-    # calculate windowed_input_signal in parallel
-    # create indices of original with shape (n_channel, n_order, n_sample)
-    window_idxs = cp.expand_dims(
-        cp.arange(n_sample), 0) + cp.expand_dims(cp.arange(n_order), 1)
-    window_idxs = cp.tile(window_idxs, (n_channel, 1, 1))
-    window_idxs += (
-        cp.expand_dims(cp.expand_dims(cp.arange(n_channel), -1), -1) *
-        n_sample_padded
-    )
-    input_signal_windows = cp.matmul(b_flipped, cp.take(padded_x, window_idxs))
+    if a.shape[0] != b.shape[0]:
+        len_array = max(a.shape[0], b.shape[0])
+        if a.shape[0] < b.shape[0]:
+            a = cp.pad(a, (0, len_array - a.shape[0]))
+        else:
+            b = cp.pad(b, (0, len_array - b.shape[0]))
 
-    for i, o0 in enumerate(input_signal_windows[0, :]):
-        windowed_output_signal = padded_output_x[:, i:(i + n_order)]
-        o0 = cp.subtract(o0, windowed_output_signal.dot(a_flipped))
-        o0 = cp.divide(o0, a[0])
-        padded_output_x[:, i + n_order - 1] = o0
+    out = _lfilter_gpu(b, a, x, clip, cp_stream)
 
-    output = cp.clip(padded_output_x[:, (n_order - 1):], a_min=-1., a_max=1.)
-
-    # unpack batch
-    output = output.reshape(shape[:-1] + output.shape[-1:])
-
-    return output
+    return out
 
 
 def hilbert(x, N=None, axis=-1):
