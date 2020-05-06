@@ -221,7 +221,7 @@ class BenchFirWin:
 @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
 @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
 @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-@pytest.mark.parametrize("method", ["fft", "auto"])
+@pytest.mark.parametrize("method", ["direct", "fft", "auto"])
 class BenchCorrelate:
     def cpu_version(self, cpu_sig, num_taps, mode, method):
         return signal.correlate(cpu_sig, num_taps, mode=mode, method=method)

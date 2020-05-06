@@ -167,7 +167,7 @@ def lfiltic(b, a, y, x=None):
 
 
 def lfilter(
-    b, a, x, clamp=False, cp_stream=cp.cuda.stream.Stream(null=True),
+    b, a, x, clip=False, cp_stream=cp.cuda.stream.Stream(null=True),
 ):
     """
     Perform an IIR filter by evaluating difference equation.
@@ -180,6 +180,14 @@ def lfilter(
         is not 1, then both `a` and `b` are normalized by ``a[0]``.
     x : array_like
         An N-dimensional input array. Must be normalized to -1 to 1.
+    clip : bool, optional
+        Option allows clipping results greater than 1 and
+        less than -1
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
 
     Returns
     -------
@@ -187,11 +195,7 @@ def lfilter(
         The output of the digital filter. Output will be clipped to -1 to 1.
     """
 
-    x = cp.asarray(x)
-    a = cp.asarray(a)
-    b = cp.asarray(b)
-
-    if a.shape[0] != b.shape[0] or len(a.shape) > 1 or len(b.shape) > 1:
+    if len(a.shape) > 1 or len(b.shape) > 1:
         raise ValueError("Inputs a and b must both be 1D arrays")
 
     if len(x.shape) != 1:
@@ -199,7 +203,23 @@ def lfilter(
             "Only functionality for 1D arrays are implemented at the moment"
         )
 
-    out = _lfilter_gpu(b, a, x, clamp, cp_stream)
+    if a[0] == 0:
+        raise NotImplementedError(
+            "filter coefficient a[0] == 0 not supported yet"
+        )
+
+    x = cp.asarray(x)
+    a = cp.asarray(a)
+    b = cp.asarray(b)
+
+    if a.shape[0] != b.shape[0]:
+        len_array = max(a.shape[0], b.shape[0])
+        if a.shape[0] < b.shape[0]:
+            a = cp.pad(a, (0, len_array - a.shape[0]))
+        else:
+            b = cp.pad(b, (0, len_array - b.shape[0]))
+
+    out = _lfilter_gpu(b, a, x, clip, cp_stream)
 
     return out
 
