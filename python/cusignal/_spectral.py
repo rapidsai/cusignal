@@ -18,12 +18,10 @@ import warnings
 
 from enum import Enum
 from math import sin, cos, atan2
-from numba import (
-    cuda,
-    float64,
-    void,
-)
+from numba import cuda, float64, void
 from string import Template
+
+from _precompile import _stream_cupy_to_numba
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
@@ -46,36 +44,6 @@ _SUPPORTED_TYPES = {
 
 _numba_kernel_cache = {}
 _cupy_kernel_cache = {}
-
-
-# Use until functionality provided in Numba 0.49/0.50 available
-def stream_cupy_to_numba(cp_stream):
-    """
-    Notes:
-        1. The lifetime of the returned Numba stream should be as
-           long as the CuPy one, which handles the deallocation
-           of the underlying CUDA stream.
-        2. The returned Numba stream is assumed to live in the same
-           CUDA context as the CuPy one.
-        3. The implementation here closely follows that of
-           cuda.stream() in Numba.
-    """
-    from ctypes import c_void_p
-    import weakref
-
-    # get the pointer to actual CUDA stream
-    raw_str = cp_stream.ptr
-
-    # gather necessary ingredients
-    ctx = cuda.devices.get_context()
-    handle = c_void_p(raw_str)
-
-    # create a Numba stream
-    nb_stream = cuda.cudadrv.driver.Stream(
-        weakref.proxy(ctx), handle, finalizer=None
-    )
-
-    return nb_stream
 
 
 def _numba_lombscargle(x, y, freqs, pgram, y_dot):
@@ -286,7 +254,7 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
             stacklevel=4,
         )
 
-        nb_stream = stream_cupy_to_numba(stream)
+        nb_stream = _stream_cupy_to_numba(stream)
         kernel = _numba_kernel_cache[(dtype.name, k_type)]
 
         if kernel:

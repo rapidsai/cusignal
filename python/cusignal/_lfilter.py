@@ -16,11 +16,7 @@ import itertools
 import numpy as np
 
 from enum import Enum
-from numba import (
-    cuda,
-    float32,
-    float64,
-)
+from numba import float32, float64
 from string import Template
 
 
@@ -39,36 +35,6 @@ _SUPPORTED_TYPES = {
 }
 
 _cupy_kernel_cache = {}
-
-
-# Use until functionality provided in Numba 0.49/0.50 available
-def stream_cupy_to_numba(cp_stream):
-    """
-    Notes:
-        1. The lifetime of the returned Numba stream should be as
-           long as the CuPy one, which handles the deallocation
-           of the underlying CUDA stream.
-        2. The returned Numba stream is assumed to live in the same
-           CUDA context as the CuPy one.
-        3. The implementation here closely follows that of
-           cuda.stream() in Numba.
-    """
-    from ctypes import c_void_p
-    import weakref
-
-    # get the pointer to actual CUDA stream
-    raw_str = cp_stream.ptr
-
-    # gather necessary ingredients
-    ctx = cuda.devices.get_context()
-    handle = c_void_p(raw_str)
-
-    # create a Numba stream
-    nb_stream = cuda.cudadrv.driver.Stream(
-        weakref.proxy(ctx), handle, finalizer=None
-    )
-
-    return nb_stream
 
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
@@ -238,16 +204,16 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     To precompile all kernels in this unit
     >>> import cusignal
     >>> from cusignal._upfirdn import GPUBackend, GPUKernel
-    >>> cusignal._signaltools.precompile_kernels()
+    >>> cusignal._lfilter.precompile_kernels()
 
     To precompile a specific NumPy datatype, CuPy backend, and kernel type
-    >>> cusignal._signaltools.precompile_kernels( [np.float64],
+    >>> cusignal._lfilter.precompile_kernels( [np.float64],
         [GPUBackend.CUPY], [GPUKernel.LFILTER],)
 
 
     To precompile a specific NumPy datatype and kernel type,
     but both Numba and CuPY variations
-    >>> cusignal._signaltools.precompile_kernels( dtype=[np.float64],
+    >>> cusignal._lfilter.precompile_kernels( dtype=[np.float64],
         k_type=[GPUKernel.LFILTER],)
     """
     if dtype is not None and not hasattr(dtype, "__iter__"):
