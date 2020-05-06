@@ -29,7 +29,16 @@ from .._upfirdn import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
 
 
-def decimate(x, q, n=None, axis=-1, zero_phase=True):
+def decimate(
+    x,
+    q,
+    n=None,
+    axis=-1,
+    zero_phase=True,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+    use_numba=False,
+):
     """
     Downsample the signal after applying an anti-aliasing filter.
     Parameters
@@ -48,6 +57,19 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
         Prevent shifting the outputs back by the filter's
         group delay when using an FIR filter. The default value of ``True`` is
         recommended, since a phase shift is generally not desired.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
     Returns
     -------
     y : ndarray
@@ -69,7 +91,7 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True):
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
 
-        b = firwin(n + 1, 1.0 / q, window='hamming')
+        b = firwin(n + 1, 1.0 / q, window="hamming")
 
     sl = [slice(None)] * x.ndim
 
@@ -219,7 +241,14 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
 
 
 def resample_poly(
-    x, up, down, axis=0, window=("kaiser", 5.0), use_numba=False
+    x,
+    up,
+    down,
+    axis=0,
+    window=("kaiser", 5.0),
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+    use_numba=False,
 ):
     """
     Resample `x` along the given axis using polyphase filtering.
@@ -243,6 +272,16 @@ def resample_poly(
     window : string, tuple, or array_like, optional
         Desired window to use to design the low-pass filter, or the FIR filter
         coefficients to employ. See below for details.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
@@ -363,6 +402,7 @@ def upfirdn(
     down=1,
     axis=-1,
     cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
     use_numba=False,
 ):
     """Upsample, FIR filter, and downsample
@@ -385,6 +425,11 @@ def upfirdn(
         of multiple non-default streams allow multiple kernels to
         run concurrently. Default is cp.cuda.stream.Stream(null=True)
         or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`
     use_numba : bool, optional
         Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
         can yield performance gains over Numba. Default is False.
@@ -449,4 +494,6 @@ def upfirdn(
     x = cp.asarray(x)
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using cp.apply_along_axis
-    return ufd.apply_filter(x, axis, cp_stream=cp_stream, use_numba=use_numba)
+    return ufd.apply_filter(
+        x, axis, cp_stream=cp_stream, autosync=autosync, use_numba=use_numba
+    )
