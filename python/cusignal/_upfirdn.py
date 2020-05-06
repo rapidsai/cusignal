@@ -577,7 +577,7 @@ class _UpFIRDn(object):
     def apply_filter(
         self,
         x,
-        axis=-1,
+        axis,
         cp_stream,
         autosync,
         use_numba,
