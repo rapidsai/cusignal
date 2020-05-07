@@ -204,6 +204,13 @@ def lfilter(
     -------
     y : array
         The output of the digital filter. Output will be clipped to -1 to 1.
+
+    Notes
+    -------
+    cuSignal's implementation of the linear filter is SINGLE THREADED and is
+    outperformed by `scipy.signal`. Please keep this in mind when using the
+    filter and profile end-to-end performance. For your data sizes, it may be
+    faster to migrate data from GPU <-> CPU.
     """
 
     if len(a.shape) > 1 or len(b.shape) > 1:
