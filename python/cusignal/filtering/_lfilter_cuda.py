@@ -13,7 +13,52 @@
 
 import cupy as cp
 
-from .utils._caches import _cupy_kernel_cache
+from string import Template
+
+from ..utils._caches import _cupy_kernel_cache
+
+
+# Custom Cupy raw kernel implementing upsample, filter, downsample operation
+# Matthew Nicely - mnicely@nvidia.com
+_cupy_lfilter_src = Template(
+    """
+$header
+
+extern "C" {
+    __global__ void _cupy_lfilter(
+            const int x_len,
+            const int a_len,
+            const ${datatype} * __restrict__ x,
+            const ${datatype} * __restrict__ a,
+            const ${datatype} * __restrict__ b,
+            ${datatype} * __restrict__ out) {
+
+        for ( int tid = 0; tid < x_len; tid++) {
+
+            ${datatype} isw {};
+            ${datatype} wos {};
+
+            // Create input_signal_windows
+            if( tid > ( a_len ) ) {
+                for ( int i = 0; i < a_len; i++ ) {
+                    isw += x[tid - i] * b[i];
+                    wos += out[tid - i] * a[i];
+                }
+            } else {
+                for ( int i = 0; i <= tid; i++ ) {
+                    isw += x[tid - i] * b[i];
+                    wos += out[tid - i] * a[i];
+                }
+            }
+
+            isw -= wos;
+
+            out[tid] = isw / a[0];
+        }
+    }
+}
+"""
+)
 
 
 class _cupy_lfilter_wrapper(object):
@@ -46,7 +91,8 @@ class _cupy_lfilter_wrapper(object):
 def _get_backend_kernel(
     dtype, grid, block, stream, use_numba, k_type,
 ):
-    from .utils._compile_kernels import GPUKernel
+    from ..utils._compile_kernels import GPUKernel
+
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
         if kernel:
@@ -69,7 +115,7 @@ def _get_backend_kernel(
 
 
 def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
-    from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
+    from ..utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
     out = cp.zeros_like(x)
 
