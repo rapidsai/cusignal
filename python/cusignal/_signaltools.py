@@ -17,11 +17,9 @@ import warnings
 
 from math import gcd
 
-from _caches import _cupy_kernel_cache, _numba_kernel_cache
-from _precompile import (
+from ._caches import _cupy_kernel_cache, _numba_kernel_cache
+from ._precompile import (
     _stream_cupy_to_numba,
-    # _cupy_kernel_cache,
-    # _numba_kernel_cache,
     _populate_kernel_cache,
     GPUKernel,
 )

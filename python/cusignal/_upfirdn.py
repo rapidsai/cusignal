@@ -12,47 +12,52 @@
 # limitations under the License.
 
 import cupy as cp
-import itertools
-import numpy as np
+# import itertools
+# import numpy as np
 import warnings
 
-from enum import Enum
+# from enum import Enum
 from math import ceil
-from numba import complex64, complex128, cuda, float32, float64, int64, void
-from string import Template
+# from numba import complex64, complex128, cuda, float32, float64, int64, void
+# from string import Template
 
-from ._precompile import _stream_cupy_to_numba
+from ._caches import _cupy_kernel_cache, _numba_kernel_cache
+from ._precompile import (
+    _stream_cupy_to_numba,
+    _populate_kernel_cache,
+    GPUKernel,
+)
 
-try:
-    # Numba <= 0.49
-    from numba.types.scalars import Complex
-except ImportError:
-    # Numba >= 0.49
-    from numba.core.types.scalars import Complex
+# try:
+#     # Numba <= 0.49
+#     from numba.types.scalars import Complex
+# except ImportError:
+#     # Numba >= 0.49
+#     from numba.core.types.scalars import Complex
 
-# Display FutureWarnings only once per module
-warnings.simplefilter("once", FutureWarning)
-
-
-class GPUKernel(Enum):
-    UPFIRDN = 0
-
-
-class GPUBackend(Enum):
-    CUPY = 0
-    NUMBA = 1
+# # Display FutureWarnings only once per module
+# warnings.simplefilter("once", FutureWarning)
 
 
-# Numba type supported and corresponding C type
-_SUPPORTED_TYPES = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
-    np.complex64: [complex64, "complex<float>"],
-    np.complex128: [complex128, "complex<double>"],
-}
+# class GPUKernel(Enum):
+#     UPFIRDN = 0
 
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
+
+# class GPUBackend(Enum):
+#     CUPY = 0
+#     NUMBA = 1
+
+
+# # Numba type supported and corresponding C type
+# _SUPPORTED_TYPES = {
+#     np.float32: [float32, "float"],
+#     np.float64: [float64, "double"],
+#     np.complex64: [complex64, "complex<float>"],
+#     np.complex128: [complex128, "complex<double>"],
+# }
+
+# _numba_kernel_cache = {}
+# _cupy_kernel_cache = {}
 
 
 def _pad_h(h, up):
@@ -78,194 +83,6 @@ def _output_len(len_h, in_len, up, down):
     if nt % down > 0:
         need += 1
     return need
-
-
-# Custom Numba kernel implementing upsample, filter, downsample operation
-# Matthew Nicely - mnicely@nvidia.com
-def _numba_upfirdn_2d(
-    inp, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
-):
-
-    y, x = cuda.grid(2)
-
-    if x < out.shape[1] and y < out.shape[0]:
-
-        if axis == 1:
-            x_idx = cp.int32(cp.int32(cp.int32(x * down) // up) % padded_len)
-            h_idx = cp.int32(cp.int32(cp.int32(x * down) % up) * h_per_phase)
-        else:
-            x_idx = cp.int32(cp.int32(cp.int32(y * down) // up) % padded_len)
-            h_idx = cp.int32(cp.int32(cp.int32(y * down) % up) * h_per_phase)
-
-        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        temp: out.dtype = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
-            if x_c < x_shape_a and x_c >= 0:  # If inside input
-                # if multi-dimenstional array
-                if axis == 1:  # process columns
-                    temp += inp[y, x_c] * h_trans_flip[h_idx]
-                else:  # process rows
-                    temp += inp[x_c, x] * h_trans_flip[h_idx]
-
-            h_idx += 1
-
-        out[y, x] = temp
-
-
-def _numba_upfirdn_1d(
-    x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
-):
-
-    X = cuda.grid(1)
-    strideX = cuda.gridsize(1)
-
-    for i in range(X, cp.int32(out.shape[0]), strideX):
-
-        x_idx = cp.int32(cp.int32(cp.int32(i * down) // up) % padded_len)
-        h_idx = cp.int32(cp.int32(cp.int32(i * down) % up) * h_per_phase)
-
-        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        temp: out.dtype = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
-            if x_c < x_shape_a and x_c >= 0:
-                temp += x[x_c] * h_trans_flip[h_idx]
-            h_idx += 1
-
-        out[i] = temp
-
-
-def _numba_upfirdn_signature(ty, ndim):
-    if ndim == 1:
-        arr_ty = ty[:]
-    elif ndim == 2:
-        arr_ty = ty[:, :]
-    return void(
-        arr_ty,  # x
-        ty[:],  # h_trans_flip
-        int64,  # up
-        int64,  # down
-        int64,  # axis
-        int64,  # x_shape_a
-        int64,  # h_per_phase
-        int64,  # padded_len
-        arr_ty,  # out
-    )
-
-
-# Custom Cupy raw kernel implementing upsample, filter, downsample operation
-# Matthew Nicely - mnicely@nvidia.com
-loaded_from_source = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_upfirdn_1d(
-            const ${datatype} * __restrict__ inp,
-            const ${datatype} * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int axis,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int t {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
-
-        for ( int tid = t; tid < outW; tid += stride ) {
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-
-            if ( x_conv_idx < 0 ) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            ${datatype} temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if ( x_c < x_shape_a && x_c >= 0 ) {
-                    temp += inp[x_c] * h_trans_flip[h_idx];
-                }
-                h_idx += 1;
-            }
-            out[tid] = temp;
-        }
-    }
-
-    __global__ void _cupy_upfirdn_2d(
-            const ${datatype} * __restrict__ inp,
-            const int inpH,
-            const ${datatype} * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int axis,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            ${datatype} * __restrict__ out,
-            const int outW,
-            const int outH) {
-
-
-        const int ty {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int tx {
-            static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y) };
-
-        if ( (tx < outH) && (ty < outW) ) {
-            int x_idx {};
-            int h_idx {};
-
-            if ( axis == 1 ) {
-                x_idx = ( static_cast<int>(tx * down) / up ) % padded_len;
-                h_idx = (tx * down) % up * h_per_phase;
-            } else {
-                x_idx = ( static_cast<int>(ty * down) / up ) % padded_len;
-                h_idx = (ty * down) % up * h_per_phase;
-            }
-
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-            if ( x_conv_idx < 0 ) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            ${datatype} temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if ( x_c < x_shape_a && x_c >= 0 ) {
-                    if (axis == 1) {
-                        temp += inp[ty * inpH + x_c] * h_trans_flip[h_idx];
-                    } else {
-                        temp += inp[x_c * inpH + tx] * h_trans_flip[h_idx];
-                    }
-                }
-                h_idx += 1;
-            }
-            out[ty * outH + tx] = temp;
-        }
-
-    }
-}
-"""
-)
 
 
 class _cupy_upfirdn_wrapper(object):
@@ -355,15 +172,15 @@ class _cupy_upfirdn2d_wrapper(object):
 
 
 def _get_backend_kernel(
-    ndim, dtype, grid, block, stream, use_numba, k_type,
+    dtype, grid, block, stream, use_numba, k_type,
 ):
 
     if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, ndim)]
+        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
         if kernel:
-            if ndim == 1:
+            if k_type == GPUKernel.UPFIRDN:
                 return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
-            else:
+            elif k_type == GPUKernel.UPFIRDN2D:
                 return _cupy_upfirdn2d_wrapper(grid, block, stream, kernel)
         else:
             raise ValueError(
@@ -378,7 +195,7 @@ def _get_backend_kernel(
         )
 
         nb_stream = _stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, ndim)]
+        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
         if kernel:
             return kernel[grid, block, nb_stream]
         else:
@@ -389,144 +206,6 @@ def _get_backend_kernel(
     raise NotImplementedError(
         "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
     )
-
-
-def _populate_kernel_cache(np_type, use_numba, k_type):
-
-    # Check in np_type is a supported option
-    try:
-        numba_type, c_type = _SUPPORTED_TYPES[np_type]
-
-    except ValueError:
-        raise ValueError("No kernel found for datatype {}".format(np_type))
-
-    # Check if use_numba is support
-    try:
-        GPUBackend(use_numba)
-
-    except ValueError:
-        raise
-
-    # Check if use_numba is support
-    try:
-        GPUKernel(k_type)
-
-    except ValueError:
-        raise
-
-    if not use_numba:
-        if (str(numba_type), 1) in _cupy_kernel_cache:  # Not work
-            return
-        # Instantiate the cupy kernel for this type and compile
-        if isinstance(numba_type, Complex):
-            header = "#include <cupy/complex.cuh>"
-        else:
-            header = ""
-        src = loaded_from_source.substitute(datatype=c_type, header=header)
-        module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
-        )
-        if k_type == GPUKernel.UPFIRDN:
-            _cupy_kernel_cache[(str(numba_type), 1)] = module.get_function(
-                "_cupy_upfirdn_1d"
-            )
-            _cupy_kernel_cache[(str(numba_type), 2)] = module.get_function(
-                "_cupy_upfirdn_2d"
-            )
-        else:
-            raise NotImplementedError(
-                "No kernel found for k_type {}, datatype {}".format(
-                    k_type, str(numba_type)
-                )
-            )
-
-    else:
-        if (str(numba_type), 1) in _numba_kernel_cache:
-            return
-        # JIT compile the numba kernels, both 1d and 2d
-        if k_type == GPUKernel.UPFIRDN:
-            sig = _numba_upfirdn_signature(numba_type, 1)
-            _numba_kernel_cache[(str(numba_type), 1)] = cuda.jit(
-                sig, fastmath=True
-            )(_numba_upfirdn_1d)
-            sig = _numba_upfirdn_signature(numba_type, 2)
-            _numba_kernel_cache[(str(numba_type), 2)] = cuda.jit(
-                sig, fastmath=True
-            )(_numba_upfirdn_2d)
-        else:
-            raise NotImplementedError(
-                "No kernel found for k_type {}, datatype {}".format(
-                    k_type, str(numba_type)
-                )
-            )
-
-
-def precompile_kernels(dtype=None, backend=None, k_type=None):
-    r"""
-    Precompile GPU kernels for later use.
-
-    Parameters
-    ----------
-    dtype : numpy datatype or list of datatypes, optional
-        Data types for which kernels should be precompiled. If not
-        specified, all supported data types will be precompiled.
-        Specific to this unit
-            np.float32
-            np.float64
-            np.complex64
-            np.complex128
-    backend : GPUBackend, optional
-        Which GPU backend to precompile for. If not specified,
-        all supported backends will be precompiled.
-        Specific to this unit
-            GPUBackend.CUPY
-            GPUBackend.NUMBA
-    k_type : GPUKernel, optional
-        Which GPU kernel to compile for. If not specified,
-        all supported kernels will be precompiled.
-        Specific to this unit
-            GPUKernel.UPFIRDN
-    Examples
-    ----------
-    To precompile all kernels in this unit
-    >>> import cusignal
-    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
-    >>> cusignal._upfirdn.precompile_kernels()
-
-    To precompile a specific NumPy datatype, CuPy backend, and kernel type
-    >>> cusignal._upfirdn.precompile_kernels( [np.float64],
-        [GPUBackend.CUPY], [GPUKernel.UPFIRDN],)
-
-
-    To precompile a specific NumPy datatype and kernel type,
-    but both Numba and CuPY variations
-    >>> cusignal._upfirdn.precompile_kernels( dtype=[np.float64],
-        k_type=[GPUKernel.UPFIRDN],)
-    """
-
-    # Ensure inputs are a list, if inputs exist
-    if dtype is not None and not hasattr(dtype, "__iter__"):
-        raise TypeError(
-            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
-        )
-
-    elif backend is not None and not hasattr(backend, "__iter__"):
-        raise TypeError(
-            "backend ({}) should be in list - e.g [{},]".format(
-                backend, backend
-            )
-        )
-    elif k_type is not None and not hasattr(k_type, "__iter__"):
-        raise TypeError(
-            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
-        )
-    else:
-        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-        backend = list(backend) if backend else list(GPUBackend)
-        k_type = list(k_type) if k_type else list(GPUKernel)
-
-        for d, b, k in itertools.product(dtype, backend, k_type):
-            _populate_kernel_cache(d, b, k)
 
 
 class _UpFIRDn(object):
@@ -587,7 +266,6 @@ class _UpFIRDn(object):
                 out.dtype.type, use_numba, GPUKernel.UPFIRDN
             )
             kernel = _get_backend_kernel(
-                out.ndim,
                 out.dtype,
                 blockspergrid,
                 threadsperblock,
