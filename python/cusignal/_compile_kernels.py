@@ -415,17 +415,17 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     To precompile all kernels in this unit
     >>> import cusignal
     >>> from cusignal._upfirdn import GPUBackend, GPUKernel
-    >>> cusignal._lfilter.precompile_kernels()
+    >>> cusignal.precompile_kernels()
 
     To precompile a specific NumPy data type [list of data types],
     CuPy backend, and kernel type
-    >>> cusignal._lfilter.precompile_kernels( [np.float32, np.float64],
+    >>> cusignal.precompile_kernels([np.float32, np.float64],
         GPUBackend.CUPY, GPUKernel.LFILTER,)
 
 
     To precompile a specific NumPy data type and kernel type,
     but both Numba and CuPY variations
-    >>> cusignal._lfilter.precompile_kernels( dtype=[np.float64],
+    >>> cusignal.precompile_kernels(dtype=[np.float64],
         k_type=GPUKernel.LFILTER,)
     """
 
