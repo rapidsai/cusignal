@@ -345,19 +345,63 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     dtype : numpy datatype or list of datatypes, optional
         Data types for which kernels should be precompiled. If not
         specified, all supported data types will be precompiled.
-        Specific to this unit
-            np.float32
-            np.float64
+            GPUKernel.CORRELATE
+            GPUKernel.CONVOLVE
+            GPUKernel.CORRELATE2D
+            GPUKernel.CONVOLVE2D
+            {
+                np.int32
+                np.int64
+                np.float32
+                np.float64
+                np.complex64
+                np.complex128
+            }
+            GPUKernel.LFILTER
+            GPUKernel.LOMBSCARGLE
+            {
+                np.float32
+                np.float64
+            }
+            GPUKernel.UPFIRDN
+            GPUKernel.UPFIRDN2D
+            {
+                np.float32
+                np.float64
+                np.complex64
+                np.complex128
+            }
     backend : GPUBackend, optional
         Which GPU backend to precompile for. If not specified,
         all supported backends will be precompiled.
-        Specific to this unit
-            GPUBackend.CUPY
+            GPUKernel.CORRELATE2D
+            GPUKernel.CONVOLVE2D
+            GPUKernel.UPFIRDN
+            GPUKernel.UPFIRDN2D
+            {
+                GPUBackend.CUPY
+                GPUBackend.NUMBA
+            }
+
+            GPUKernel.CORRELATE
+            GPUKernel.CONVOLVE
+            GPUKernel.LFILTER
+            GPUKernel.LOMBSCARGLE
+            {
+                GPUBackend.CUPY
+            }
+
     k_type : GPUKernel, optional
         Which GPU kernel to compile for. If not specified,
         all supported kernels will be precompiled.
-        Specific to this unit
+            GPUKernel.CORRELATE
+            GPUKernel.CONVOLVE
+            GPUKernel.CORRELATE2D
+            GPUKernel.CONVOLVE2D
             GPUKernel.LFILTER
+            GPUKernel.LOMBSCARGLE
+            GPUKernel.UPFIRDN
+            GPUKernel.UPFIRDN2D
         Examples
     ----------
     To precompile all kernels in this unit
@@ -375,6 +419,7 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     >>> cusignal._lfilter.precompile_kernels( dtype=[np.float64],
         k_type=[GPUKernel.LFILTER],)
     """
+
     if dtype is not None and not hasattr(dtype, "__iter__"):
         raise TypeError(
             "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
