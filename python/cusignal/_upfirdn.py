@@ -228,9 +228,10 @@ class _UpFIRDn(object):
     def apply_filter(
         self,
         x,
-        axis=-1,
-        cp_stream=cp.cuda.stream.Stream(null=True),
-        use_numba=False,
+        axis,
+        cp_stream,
+        autosync,
+        use_numba,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
 
@@ -287,5 +288,8 @@ class _UpFIRDn(object):
             padded_len,
             out,
         )
+
+        if autosync is True:
+            cp_stream.synchronize()
 
         return out

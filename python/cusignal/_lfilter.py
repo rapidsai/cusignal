@@ -69,7 +69,7 @@ def _get_backend_kernel(
     )
 
 
-def _lfilter_gpu(b, a, x, clamp, cp_stream):
+def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
 
     out = cp.zeros_like(x)
 
@@ -88,6 +88,7 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream):
 
     kernel(b, a, x, out)
 
-    cp_stream.synchronize()
+    if autosync is True:
+        cp_stream.synchronize()
 
     return out

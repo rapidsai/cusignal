@@ -88,7 +88,7 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
     )
 
 
-def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
+def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync, use_numba):
 
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]
@@ -107,3 +107,6 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     )
 
     kernel(x, y, freqs, pgram, y_dot)
+
+    if autosync is True:
+        cp_stream.synchronize()
