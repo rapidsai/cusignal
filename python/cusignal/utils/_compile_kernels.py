@@ -21,14 +21,16 @@ from enum import Enum
 from ._caches import _cupy_kernel_cache, _numba_kernel_cache
 
 from ..filtering._lfilter_kernels import _cupy_lfilter_src
-from ..convolution._signaltools_kernels import (
-    _cupy_correlate_src,
+from ..convolution._convolve_kernels import (
     _cupy_convolve_src,
-    _cupy_correlate_2d_src,
     _cupy_convolve_2d_src,
-    _numba_correlate_2d,
     _numba_convolve_2d,
     _numba_convolve_2d_signature,
+)
+from ..convolution._correlate_kernels import (
+    _cupy_correlate_src,
+    _cupy_correlate_2d_src,
+    _numba_correlate_2d,
 )
 from ..spectral_analysis._spectral_kernels import (
     _cupy_lombscargle_src,
