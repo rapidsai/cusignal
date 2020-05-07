@@ -14,12 +14,7 @@
 import cupy as cp
 import warnings
 
-from ._caches import _cupy_kernel_cache, _numba_kernel_cache
-from ._compile_kernels import (
-    _stream_cupy_to_numba,
-    _populate_kernel_cache,
-    GPUKernel,
-)
+from .utils._caches import _cupy_kernel_cache, _numba_kernel_cache
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
@@ -56,6 +51,7 @@ class _cupy_lombscargle_wrapper(object):
 
 
 def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
+    from .utils._compile_kernels import _stream_cupy_to_numba
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
@@ -89,6 +85,7 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
 
 def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync, use_numba):
+    from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]

@@ -16,12 +16,7 @@ import warnings
 
 from math import ceil
 
-from ._caches import _cupy_kernel_cache, _numba_kernel_cache
-from ._compile_kernels import (
-    _stream_cupy_to_numba,
-    _populate_kernel_cache,
-    GPUKernel,
-)
+from .utils._caches import _cupy_kernel_cache, _numba_kernel_cache
 
 
 def _pad_h(h, up):
@@ -138,6 +133,7 @@ class _cupy_upfirdn2d_wrapper(object):
 def _get_backend_kernel(
     dtype, grid, block, stream, use_numba, k_type,
 ):
+    from .utils._compile_kernels import _stream_cupy_to_numba, GPUKernel
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
@@ -198,6 +194,7 @@ class _UpFIRDn(object):
         use_numba,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
+        from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
         output_len = _output_len(
             len(self._h_trans_flip), x.shape[axis], self._up, self._down

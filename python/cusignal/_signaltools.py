@@ -17,12 +17,7 @@ import warnings
 
 from math import gcd
 
-from ._caches import _cupy_kernel_cache, _numba_kernel_cache
-from ._compile_kernels import (
-    _stream_cupy_to_numba,
-    _populate_kernel_cache,
-    GPUKernel,
-)
+from .utils._caches import _cupy_kernel_cache, _numba_kernel_cache
 
 from .filter_design.fir_filter_design import firwin
 
@@ -143,6 +138,7 @@ class _cupy_convolve_2d_wrapper(object):
 def _get_backend_kernel(
     dtype, grid, block, stream, use_numba, k_type,
 ):
+    from .utils._compile_kernels import _stream_cupy_to_numba, GPUKernel
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
@@ -190,6 +186,7 @@ def _get_backend_kernel(
 def _convolve_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
 ):
+    from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
@@ -237,6 +234,7 @@ def _convolve2d_gpu(
     cp_stream,
     use_numba,
 ):
+    from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
         raise Exception("Invalid boundary flag")

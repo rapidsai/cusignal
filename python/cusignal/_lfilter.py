@@ -13,8 +13,7 @@
 
 import cupy as cp
 
-from ._caches import _cupy_kernel_cache
-from ._compile_kernels import _populate_kernel_cache, GPUKernel
+from .utils._caches import _cupy_kernel_cache
 
 
 class _cupy_lfilter_wrapper(object):
@@ -47,7 +46,7 @@ class _cupy_lfilter_wrapper(object):
 def _get_backend_kernel(
     dtype, grid, block, stream, use_numba, k_type,
 ):
-
+    from .utils._compile_kernels import GPUKernel
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
         if kernel:
@@ -70,6 +69,7 @@ def _get_backend_kernel(
 
 
 def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
+    from .utils._compile_kernels import _populate_kernel_cache, GPUKernel
 
     out = cp.zeros_like(x)
 

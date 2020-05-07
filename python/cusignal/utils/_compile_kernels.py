@@ -20,8 +20,8 @@ from enum import Enum
 
 from ._caches import _cupy_kernel_cache, _numba_kernel_cache
 
-from ._lfilter_kernels import _cupy_lfilter_src
-from ._signaltools_kernels import (
+from ..filtering._lfilter_kernels import _cupy_lfilter_src
+from ..convolution._signaltools_kernels import (
     _cupy_correlate_src,
     _cupy_convolve_src,
     _cupy_correlate_2d_src,
@@ -30,13 +30,13 @@ from ._signaltools_kernels import (
     _numba_convolve_2d,
     _numba_convolve_2d_signature,
 )
-from ._spectral_kernels import (
+from ..spectral_analysis._spectral_kernels import (
     _cupy_lombscargle_src,
     _numba_lombscargle,
     _numba_lombscargle_signature,
 )
 
-from ._upfirdn_kernels import (
+from ..filtering._upfirdn_kernels import (
     _cupy_upfirdn_1d_src,
     _cupy_upfirdn_2d_src,
     _numba_upfirdn_1d,

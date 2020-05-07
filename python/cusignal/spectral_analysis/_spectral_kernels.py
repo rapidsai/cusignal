@@ -11,8 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import cupy as cp
-
 from math import sin, cos, atan2
 from numba import cuda, void
 from string import Template
