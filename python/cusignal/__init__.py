@@ -109,7 +109,9 @@ from cusignal.utils.arraytools import (
     get_shared_mem
 )
 from cusignal._compile_kernels import (
-    precompile_kernels
+    precompile_kernels,
+    GPUKernel,
+    GPUBackend
 )
 
 # Versioneer

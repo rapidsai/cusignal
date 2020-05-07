@@ -153,8 +153,11 @@ def _get_supported_types(k_type):
 
 def _validate_input(dtype, backend, k_type):
 
-    backend = list(backend) if backend else list(GPUBackend)
-    k_type = list(k_type) if k_type else list(GPUKernel)
+    k_list = [k_type]
+    b_list = [backend]
+
+    backend = list(b_list) if backend else list(GPUBackend)
+    k_type = list(k_list) if k_type else list(GPUKernel)
 
     for b, k in itertools.product(backend, k_type):
         # Check if use_numba is support
@@ -181,9 +184,9 @@ def _validate_input(dtype, backend, k_type):
             try:
                 numba_type, c_type = SUPPORTED_TYPES[np_type]
 
-            except ValueError:
-                raise ValueError(
-                    "No kernel found for datatype {}".format(np_type)
+            except KeyError:
+                raise KeyError(
+                    "Datatype {} not found for {}".format(np_type, k)
                 )
 
             _populate_kernel_cache(np_type, b.value, k)
@@ -298,7 +301,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             return
         # JIT compile the numba kernels
         if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
-            return  # raise NotImplementedError
+            raise NotImplementedError(
+                "{} Numba has no Numba Implementation".format(
+                    k_type
+                )
+            )
         if k_type == GPUKernel.CORRELATE2D:
             sig = _numba_convolve_2d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
@@ -317,7 +324,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
                 sig, fastmath=True
             )(_numba_lombscargle)
         elif k_type == GPUKernel.LFILTER:
-            return  # raise NotImplementedError
+            raise NotImplementedError(
+                "{} Numba has no Numba Implementation".format(
+                    k_type
+                )
+            )
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
@@ -409,15 +420,16 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
     >>> from cusignal._upfirdn import GPUBackend, GPUKernel
     >>> cusignal._lfilter.precompile_kernels()
 
-    To precompile a specific NumPy datatype, CuPy backend, and kernel type
-    >>> cusignal._lfilter.precompile_kernels( [np.float64],
-        [GPUBackend.CUPY], [GPUKernel.LFILTER],)
+    To precompile a specific NumPy data type [list of data types],
+    CuPy backend, and kernel type
+    >>> cusignal._lfilter.precompile_kernels( [np.float32, np.float64],
+        GPUBackend.CUPY, GPUKernel.LFILTER,)
 
 
-    To precompile a specific NumPy datatype and kernel type,
+    To precompile a specific NumPy data type and kernel type,
     but both Numba and CuPY variations
     >>> cusignal._lfilter.precompile_kernels( dtype=[np.float64],
-        k_type=[GPUKernel.LFILTER],)
+        k_type=GPUKernel.LFILTER,)
     """
 
     if dtype is not None and not hasattr(dtype, "__iter__"):
@@ -425,15 +437,18 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
             "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
         )
 
-    elif backend is not None and not hasattr(backend, "__iter__"):
+    elif backend is not None and not isinstance(backend, GPUBackend):
         raise TypeError(
-            "backend ({}) should be in list - e.g [{},]".format(
-                backend, backend
+            "backend is type ({}), should be (GPUBackend) - e.g {}".format(
+                type(k_type), GPUBackend.CUPY
             )
         )
-    elif k_type is not None and not hasattr(k_type, "__iter__"):
+
+    elif k_type is not None and not isinstance(k_type, GPUKernel):
         raise TypeError(
-            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
+            "k_type is type ({}), should be (GPUKernel) - e.g {}".format(
+                type(k_type), GPUKernel.CORRELATE
+            )
         )
     else:
         _validate_input(dtype, backend, k_type)
