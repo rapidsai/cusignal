@@ -12,14 +12,9 @@
 # limitations under the License.
 
 import cupy as cp
-# import itertools
-# import numpy as np
 import warnings
 
-# from enum import Enum
 from math import ceil
-# from numba import complex64, complex128, cuda, float32, float64, int64, void
-# from string import Template
 
 from ._caches import _cupy_kernel_cache, _numba_kernel_cache
 from ._precompile import (
@@ -27,37 +22,6 @@ from ._precompile import (
     _populate_kernel_cache,
     GPUKernel,
 )
-
-# try:
-#     # Numba <= 0.49
-#     from numba.types.scalars import Complex
-# except ImportError:
-#     # Numba >= 0.49
-#     from numba.core.types.scalars import Complex
-
-# # Display FutureWarnings only once per module
-# warnings.simplefilter("once", FutureWarning)
-
-
-# class GPUKernel(Enum):
-#     UPFIRDN = 0
-
-
-# class GPUBackend(Enum):
-#     CUPY = 0
-#     NUMBA = 1
-
-
-# # Numba type supported and corresponding C type
-# _SUPPORTED_TYPES = {
-#     np.float32: [float32, "float"],
-#     np.float64: [float64, "double"],
-#     np.complex64: [complex64, "complex<float>"],
-#     np.complex128: [complex128, "complex<double>"],
-# }
-
-# _numba_kernel_cache = {}
-# _cupy_kernel_cache = {}
 
 
 def _pad_h(h, up):
@@ -262,7 +226,7 @@ class _UpFIRDn(object):
             blockspergrid = numSM * 20
             threadsperblock = 512
 
-        if out.ndim <= 2:
+        if out.ndim == 1:
             _populate_kernel_cache(
                 out.dtype.type, use_numba, GPUKernel.UPFIRDN
             )
@@ -273,6 +237,18 @@ class _UpFIRDn(object):
                 cp_stream,
                 use_numba,
                 GPUKernel.UPFIRDN,
+            )
+        elif out.ndim == 2:
+            _populate_kernel_cache(
+                out.dtype.type, use_numba, GPUKernel.UPFIRDN2D
+            )
+            kernel = _get_backend_kernel(
+                out.dtype,
+                blockspergrid,
+                threadsperblock,
+                cp_stream,
+                use_numba,
+                GPUKernel.UPFIRDN2D,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")
