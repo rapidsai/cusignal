@@ -58,8 +58,8 @@ class GPUKernel(Enum):
     CONVOLVE = 1
     CORRELATE2D = 2
     CONVOLVE2D = 3
-    LOMBSCARGLE = 4
-    LFILTER = 5
+    LFILTER = 4
+    LOMBSCARGLE = 5
     UPFIRDN = 6
     UPFIRDN2D = 7
 
@@ -70,29 +70,31 @@ class GPUBackend(Enum):
 
 
 # Numba type supported and corresponding C type
-_SUPPORTED_TYPES = {
+_SUPPORTED_TYPES_CONVOLVE = {
+    np.int32: [int32, "int"],
+    np.int64: [int64, "long int"],
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+    np.complex64: [complex64, "complex<float>"],
+    np.complex128: [complex128, "complex<double>"],
+}
+
+_SUPPORTED_TYPES_LFILTER = {
     np.float32: [float32, "float"],
     np.float64: [float64, "double"],
 }
 
-# _SUPPORTED_TYPES_CONVOLVE = {
-#     np.int32: [int32, "int"],
-#     np.int64: [int64, "long int"],
-#     np.float32: [float32, "float"],
-#     np.float64: [float64, "double"],
-#     np.complex64: [complex64, "complex<float>"],
-#     np.complex128: [complex128, "complex<double>"],
-# }
+_SUPPORTED_TYPES_LOMBSCARGLE = {
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+}
 
-# _SUPPORTED_TYPES_LOMBSCARGLE = {
-#     np.float32: [float32, "float"],
-#     np.float64: [float64, "double"],
-# }
-
-
-# # Kernel caches
-# _cupy_kernel_cache = {}
-# _numba_kernel_cache = {}
+_SUPPORTED_TYPES_UPFIRDN = {
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+    np.complex64: [complex64, "complex<float>"],
+    np.complex128: [complex128, "complex<double>"],
+}
 
 
 # Use until functionality provided in Numba 0.50 available
@@ -125,28 +127,73 @@ def _stream_cupy_to_numba(cp_stream):
     return nb_stream
 
 
+def _get_supported_types(k_type):
+    if (
+        k_type == GPUKernel.CORRELATE
+        or k_type == GPUKernel.CONVOLVE
+        or k_type == GPUKernel.CORRELATE2D
+        or k_type == GPUKernel.CONVOLVE2D
+    ):
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_CONVOLVE
+
+    elif k_type == GPUKernel.LFILTER:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_LFILTER
+
+    elif k_type == GPUKernel.LOMBSCARGLE:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
+
+    elif k_type == GPUKernel.UPFIRDN or k_type == GPUKernel.UPFIRDN2D:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_UPFIRDN
+
+    else:
+        raise ValueError("Support not found for {}".format(k_type))
+
+    return SUPPORTED_TYPES
+
+
+def _validate_input(dtype, backend, k_type):
+
+    backend = list(backend) if backend else list(GPUBackend)
+    k_type = list(k_type) if k_type else list(GPUKernel)
+
+    for b, k in itertools.product(backend, k_type):
+        # Check if use_numba is support
+        try:
+            GPUBackend(b.value)
+
+        except ValueError:
+            raise
+
+        # Check if use_numba is support
+        try:
+            GPUKernel(k)
+
+        except ValueError:
+            raise
+
+        # Point to types allowed for kernel
+        SUPPORTED_TYPES = _get_supported_types(k)
+
+        d = list(dtype) if dtype else SUPPORTED_TYPES.keys()
+
+        for np_type in d:
+
+            try:
+                numba_type, c_type = SUPPORTED_TYPES[np_type]
+
+            except ValueError:
+                raise ValueError(
+                    "No kernel found for datatype {}".format(np_type)
+                )
+
+            _populate_kernel_cache(np_type, b.value, k)
+
+
 def _populate_kernel_cache(np_type, use_numba, k_type):
 
-    # Check in np_type is a supported option
-    try:
-        numba_type, c_type = _SUPPORTED_TYPES[np_type]
+    SUPPORTED_TYPES = _get_supported_types(k_type)
 
-    except ValueError:
-        raise ValueError("No kernel found for datatype {}".format(np_type))
-
-    # Check if use_numba is support
-    try:
-        GPUBackend(use_numba)
-
-    except ValueError:
-        raise
-
-    # Check if use_numba is support
-    try:
-        GPUKernel(k_type)
-
-    except ValueError:
-        raise
+    numba_type, c_type = SUPPORTED_TYPES[np_type]
 
     if not use_numba:
         if (str(numba_type), k_type.value) in _cupy_kernel_cache:
@@ -269,7 +316,7 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_lombscargle)
-        elif k_type == GPUKernel.LOMBSCARGLE:
+        elif k_type == GPUKernel.LFILTER:
             return  # raise NotImplementedError
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
@@ -344,9 +391,4 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
             "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
         )
     else:
-        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-        backend = list(backend) if backend else list(GPUBackend)
-        k_type = list(k_type) if k_type else list(GPUKernel)
-
-        for d, b, k in itertools.product(dtype, backend, k_type):
-            _populate_kernel_cache(d, b.value, k)
+        _validate_input(dtype, backend, k_type)

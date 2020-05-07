@@ -118,21 +118,21 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, paddedW, paddedH, d_kernel, S0, S1, out, outW, outH, pick,
+        self, d_inp, d_kernel, S, out, pick,
     ):
 
         kernel_args = (
             d_inp,
-            paddedW,
-            paddedH,
+            d_inp.shape[1],
+            d_inp.shape[0],
             d_kernel,
             d_kernel.shape[0],
             d_kernel.shape[1],
-            S0,
-            S1,
+            S[0],
+            S[1],
             out,
-            outW,
-            outH,
+            out.shape[1],
+            out.shape[0],
             pick,
         )
 
@@ -302,19 +302,13 @@ def _convolve2d_gpu(
         if boundary == PAD:
             inp = cp.pad(inp, pad, "constant", constant_values=(fillvalue))
 
-    paddedW = inp.shape[1]
-    paddedH = inp.shape[0]
-
-    outW = out.shape[1]
-    outH = out.shape[0]
-
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
 
     threadsperblock = (16, 16)
     blockspergrid = (
-        _iDivUp(outW, threadsperblock[0]),
-        _iDivUp(outH, threadsperblock[1]),
+        _iDivUp(out.shape[1], threadsperblock[0]),
+        _iDivUp(out.shape[0], threadsperblock[1]),
     )
 
     if use_convolve:
@@ -341,7 +335,7 @@ def _convolve2d_gpu(
         )
 
     kernel(
-        d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
+        d_inp, d_kernel, S, out, pick
     )
     return out
 
