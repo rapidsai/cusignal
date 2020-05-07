@@ -118,21 +118,21 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, d_kernel, S, out, pick,
+        self, d_inp, paddedW, paddedH, d_kernel, S0, S1, out, outW, outH, pick,
     ):
 
         kernel_args = (
             d_inp,
-            d_inp.shape[1],
-            d_inp.shape[0],
+            paddedW,
+            paddedH,
             d_kernel,
             d_kernel.shape[0],
             d_kernel.shape[1],
-            S[0],
-            S[1],
+            S0,
+            S1,
             out,
-            out.shape[1],
-            out.shape[0],
+            outW,
+            outH,
             pick,
         )
 
@@ -302,6 +302,12 @@ def _convolve2d_gpu(
         if boundary == PAD:
             inp = cp.pad(inp, pad, "constant", constant_values=(fillvalue))
 
+    paddedW = inp.shape[1]
+    paddedH = inp.shape[0]
+
+    outW = out.shape[1]
+    outH = out.shape[0]
+
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
 
@@ -335,19 +341,14 @@ def _convolve2d_gpu(
         )
 
     kernel(
-        d_inp, d_kernel, S, out, pick
+        d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
+
     return out
 
 
 def _convolve(
-    in1,
-    in2,
-    use_convolve,
-    swapped_inputs,
-    mode,
-    cp_stream,
-    autosync,
+    in1, in2, use_convolve, swapped_inputs, mode, cp_stream, autosync,
 ):
 
     val = _valfrommode(mode)
@@ -457,15 +458,7 @@ def _convolve2d(
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
     out = _convolve2d_gpu(
-        in1,
-        out,
-        in2,
-        val,
-        bval,
-        use_convolve,
-        fill,
-        cp_stream,
-        use_numba,
+        in1, out, in2, val, bval, use_convolve, fill, cp_stream, use_numba,
     )
 
     if autosync is True:
