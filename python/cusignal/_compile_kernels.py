@@ -153,11 +153,8 @@ def _get_supported_types(k_type):
 
 def _validate_input(dtype, backend, k_type):
 
-    k_list = [k_type]
-    b_list = [backend]
-
-    backend = list(b_list) if backend else list(GPUBackend)
-    k_type = list(k_list) if k_type else list(GPUKernel)
+    backend = list([backend]) if backend else list(GPUBackend)
+    k_type = list([k_type]) if k_type else list(GPUKernel)
 
     for b, k in itertools.product(backend, k_type):
         # Check if use_numba is support
