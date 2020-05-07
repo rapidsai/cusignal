@@ -17,7 +17,7 @@ import warnings
 from math import ceil
 
 from ._caches import _cupy_kernel_cache, _numba_kernel_cache
-from ._precompile import (
+from ._compile_kernels import (
     _stream_cupy_to_numba,
     _populate_kernel_cache,
     GPUKernel,

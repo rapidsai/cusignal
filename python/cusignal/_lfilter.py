@@ -14,7 +14,7 @@
 import cupy as cp
 
 from ._caches import _cupy_kernel_cache
-from ._precompile import _populate_kernel_cache, GPUKernel
+from ._compile_kernels import _populate_kernel_cache, GPUKernel
 
 
 class _cupy_lfilter_wrapper(object):

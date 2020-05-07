@@ -108,7 +108,7 @@ from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem
 )
-from cusignal._precompile import (
+from cusignal._compile_kernels import (
     precompile_kernels
 )
 
