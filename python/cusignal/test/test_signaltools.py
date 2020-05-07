@@ -173,7 +173,7 @@ def test_lfilter(num_samps):
     d_b = cp.asarray(b)
 
     cpu_lfilter = signal.lfilter(b, a, cpu_sig)
-    gpu_lfilter = cp.asnumpy(cusignal.lfilter(d_b, d_a, gpu_sig, ))
+    gpu_lfilter = cp.asnumpy(cusignal.lfilter(d_b, d_a, gpu_sig,))
     assert array_equal(cpu_lfilter, gpu_lfilter)
 
 

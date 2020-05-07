@@ -20,8 +20,8 @@ from scipy import signal
 
 
 class TestWaveforms:
-    @pytest.mark.parametrize('num_samps', [2**14])
-    @pytest.mark.parametrize('duty', [0.25, 0.5])
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("duty", [0.25, 0.5])
     def test_square(self, time_data_gen, num_samps, duty):
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
@@ -30,8 +30,8 @@ class TestWaveforms:
 
         assert array_equal(cpu_pwm, gpu_pwm)
 
-    @pytest.mark.parametrize('num_samps', [2**14])
-    @pytest.mark.parametrize('fc', [0.75, 5])
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fc", [0.75, 5])
     def test_gausspulse(self, time_data_gen, num_samps, fc):
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
@@ -42,11 +42,11 @@ class TestWaveforms:
 
         assert array_equal(cpu_pwm, gpu_pwm)
 
-    @pytest.mark.parametrize('num_samps', [2**14])
-    @pytest.mark.parametrize('f0', [6])
-    @pytest.mark.parametrize('t1', [1])
-    @pytest.mark.parametrize('f1', [10])
-    @pytest.mark.parametrize('method', ['linear', 'quadratic'])
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("f0", [6])
+    @pytest.mark.parametrize("t1", [1])
+    @pytest.mark.parametrize("f1", [10])
+    @pytest.mark.parametrize("method", ["linear", "quadratic"])
     def test_chirp(self, time_data_gen, num_samps, f0, t1, f1, method):
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
@@ -55,8 +55,8 @@ class TestWaveforms:
 
         assert array_equal(cpu_chirp, gpu_chirp)
 
-    @pytest.mark.parametrize('num_samps', [2**14])
-    @pytest.mark.parametrize('idx', ['mid'])
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("idx", ["mid"])
     def test_unit_impulse(self, num_samps, idx):
         cpu_uimp = signal.unit_impulse(num_samps, idx)
         gpu_uimp = cp.asnumpy(cusignal.unit_impulse(num_samps, idx))
