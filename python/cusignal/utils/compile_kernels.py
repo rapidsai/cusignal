@@ -381,7 +381,7 @@ def precompile_kernels(k_type=None, dtype=None):
 
     Examples
     ----------
-    To precompile all kernels in this unit
+    To precompile all kernels
     >>> import cusignal
     >>> cusignal.precompile_kernels()
 
