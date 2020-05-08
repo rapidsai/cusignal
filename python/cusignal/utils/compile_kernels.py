@@ -14,7 +14,6 @@
 import cupy as cp
 import numpy as np
 
-from numba import int32, int64, float32, float64, complex64, complex128
 from enum import Enum
 
 from ._caches import _cupy_kernel_cache
@@ -39,9 +38,6 @@ from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_2d_src,
 )
 
-from numba.core.types.scalars import Complex
-
-
 class GPUKernel(Enum):
     CORRELATE = 'correlate'
     CONVOLVE = 'convolve'
@@ -55,29 +51,29 @@ class GPUKernel(Enum):
 
 # Numba type supported and corresponding C type
 _SUPPORTED_TYPES_CONVOLVE = {
-    np.int32: [int32, "int"],
-    np.int64: [int64, "long int"],
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
-    np.complex64: [complex64, "complex<float>"],
-    np.complex128: [complex128, "complex<double>"],
+    np.int32: ["int32", "int"],
+    np.int64: ["int64", "long int"],
+    np.float32: ["float32", "float"],
+    np.float64: ["float64", "double"],
+    np.complex64: ["complex64", "complex<float>"],
+    np.complex128: ["complex128", "complex<double>"],
 }
 
 _SUPPORTED_TYPES_LFILTER = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
+    np.float32: ["float32", "float"],
+    np.float64: ["float64", "double"],
 }
 
 _SUPPORTED_TYPES_LOMBSCARGLE = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
+    np.float32: ["float32", "float"],
+    np.float64: ["float64", "double"],
 }
 
 _SUPPORTED_TYPES_UPFIRDN = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
-    np.complex64: [complex64, "complex<float>"],
-    np.complex128: [complex128, "complex<double>"],
+    np.float32: ["float32", "float"],
+    np.float64: ["float64", "double"],
+    np.complex64: ["complex64", "complex<float>"],
+    np.complex128: ["complex128", "complex<double>"],
 }
 
 
@@ -137,11 +133,11 @@ def _populate_kernel_cache(np_type, k_type):
 
     numba_type, c_type = SUPPORTED_TYPES[np_type]
 
-    if (str(numba_type), k_type.value) in _cupy_kernel_cache:
+    if (numba_type, k_type.value) in _cupy_kernel_cache:
         return
 
     # Instantiate the cupy kernel for this type and compile
-    if isinstance(numba_type, Complex):
+    if (c_type.find('complex') != -1):
         header = "#include <cupy/complex.cuh>"
     else:
         header = ""
@@ -154,7 +150,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_correlate")
 
     elif k_type == GPUKernel.CONVOLVE:
@@ -163,7 +159,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_convolve")
 
     elif k_type == GPUKernel.CORRELATE2D:
@@ -174,7 +170,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_correlate_2d")
 
     elif k_type == GPUKernel.CONVOLVE2D:
@@ -185,7 +181,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_convolve_2d")
 
     elif k_type == GPUKernel.LOMBSCARGLE:
@@ -196,7 +192,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_lombscargle")
     elif k_type == GPUKernel.LFILTER:
         src = _cupy_lfilter_src.substitute(datatype=c_type, header=header)
@@ -204,7 +200,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_lfilter")
     elif k_type == GPUKernel.UPFIRDN:
         src = _cupy_upfirdn_1d_src.substitute(
@@ -214,7 +210,7 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_upfirdn_1d")
     elif k_type == GPUKernel.UPFIRDN2D:
         src = _cupy_upfirdn_2d_src.substitute(
@@ -224,13 +220,13 @@ def _populate_kernel_cache(np_type, k_type):
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
-            (str(numba_type), k_type.value)
+            (numba_type, k_type.value)
         ] = module.get_function("_cupy_upfirdn_2d")
 
     else:
         raise NotImplementedError(
             "No kernel found for k_type {}, datatype {}".format(
-                k_type, str(numba_type)
+                k_type, numba_type
             )
         )
 
