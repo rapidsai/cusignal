@@ -246,7 +246,7 @@ def _get_backend_kernel(
 ):
     from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    kernel = _cupy_kernel_cache[(dtype, k_type.value)]
     if kernel:
         if k_type == GPUKernel.UPFIRDN:
             return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
@@ -313,7 +313,7 @@ class _UpFIRDn(object):
                 out.dtype.type, GPUKernel.UPFIRDN
             )
             kernel = _get_backend_kernel(
-                out.dtype,
+                out.dtype.type,
                 blockspergrid,
                 threadsperblock,
                 cp_stream,
@@ -324,7 +324,7 @@ class _UpFIRDn(object):
                 out.dtype.type, GPUKernel.UPFIRDN2D
             )
             kernel = _get_backend_kernel(
-                out.dtype,
+                out.dtype.type,
                 blockspergrid,
                 threadsperblock,
                 cp_stream,

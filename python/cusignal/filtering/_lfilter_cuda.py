@@ -93,7 +93,7 @@ def _get_backend_kernel(
 ):
     from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    kernel = _cupy_kernel_cache[(dtype, k_type.value)]
     if kernel:
         if k_type == GPUKernel.LFILTER:
             return _cupy_lfilter_wrapper(grid, block, stream, kernel)
@@ -119,7 +119,7 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
 
     _populate_kernel_cache(out.dtype.type, GPUKernel.LFILTER)
     kernel = _get_backend_kernel(
-        out.dtype,
+        out.dtype.type,
         blockspergrid,
         threadsperblock,
         cp_stream,

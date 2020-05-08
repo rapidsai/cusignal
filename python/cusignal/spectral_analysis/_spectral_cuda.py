@@ -129,7 +129,7 @@ class _cupy_lombscargle_wrapper(object):
 
 def _get_backend_kernel(dtype, grid, block, stream, k_type):
 
-    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    kernel = _cupy_kernel_cache[(dtype, k_type.value)]
     if kernel:
         return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
     else:
@@ -149,7 +149,7 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
     _populate_kernel_cache(pgram.dtype.type, GPUKernel.LOMBSCARGLE)
 
     kernel = _get_backend_kernel(
-        pgram.dtype,
+        pgram.dtype.type,
         blockspergrid,
         threadsperblock,
         cp_stream,
