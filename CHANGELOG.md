@@ -23,6 +23,7 @@
 - PR #67 - cuSignal code refactor and documentation update
 - PR #71 - README spelling and conda install fixes
 - PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
+- PR #83 - Implement code refactor
 - PR #87 - Update lfilter documentation to clarifiy single-threaded perf
 
 ## Bug Fixes

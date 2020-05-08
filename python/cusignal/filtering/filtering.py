@@ -41,7 +41,7 @@ from cupy import linalg
 import numpy as np
 
 from ..convolution.correlate import correlate
-from .._lfilter import _lfilter_gpu
+from ._lfilter_cuda import _lfilter_gpu
 
 
 def wiener(im, mysize=None, noise=None):
