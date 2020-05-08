@@ -39,12 +39,7 @@ from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_2d_src,
 )
 
-try:
-    # Numba <= 0.49
-    from numba.types.scalars import Complex
-except ImportError:
-    # Numba >= 0.49
-    from numba.core.types.scalars import Complex
+from numba.core.types.scalars import Complex
 
 
 class GPUKernel(Enum):
