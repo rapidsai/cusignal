@@ -376,9 +376,7 @@ def _get_backend_kernel(
 ):
     from ..utils.compile_kernels import GPUKernel
 
-    print("dtype", str(dtype))
-
-    kernel = _cupy_kernel_cache[(dtype, k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
     if kernel:
         if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
             return _cupy_convolve_wrapper(grid, block, stream, kernel)
@@ -413,21 +411,19 @@ def _convolve_gpu(
     threadsperblock = 256
     blockspergrid = numSM * 20
 
-    print("o", out.dtype, out.dtype.type)
-
     if use_convolve:
-        _populate_kernel_cache(out.dtype.type, GPUKernel.CONVOLVE)
+        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE)
         kernel = _get_backend_kernel(
-            out.dtype.type,
+            out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
             GPUKernel.CONVOLVE,
         )
     else:
-        _populate_kernel_cache(out.dtype.type, GPUKernel.CORRELATE)
+        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE)
         kernel = _get_backend_kernel(
-            out.dtype.type,
+            out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
@@ -531,9 +527,9 @@ def _convolve2d_gpu(
     )
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype.type, GPUKernel.CONVOLVE2D)
+        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE2D)
         kernel = _get_backend_kernel(
-            out.dtype.type,
+            out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
@@ -541,10 +537,10 @@ def _convolve2d_gpu(
         )
     else:
         _populate_kernel_cache(
-            out.dtype.type, GPUKernel.CORRELATE2D
+            out.dtype, GPUKernel.CORRELATE2D
         )
         kernel = _get_backend_kernel(
-            out.dtype.type,
+            out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
