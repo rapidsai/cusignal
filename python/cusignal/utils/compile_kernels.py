@@ -332,6 +332,10 @@ def precompile_kernels(k_type=None, dtype=None):
     r"""
     Precompile GPU kernels for later use.
 
+    Note: If a specified kernel + data type combination at runtime
+    does not match any precompiled kernels, it will be compile at
+    first call (if kernel and data type combination exist)
+
     Parameters
     ----------
     k_type : {str}, optional
@@ -383,6 +387,12 @@ def precompile_kernels(k_type=None, dtype=None):
 
     To precompile a specific kernel and dtype [list of dtype],
     >>> cusignal.precompile_kernels('lfilter', [np.float32, np.float64])
+
+    To precompile a specific kernel and all data types
+    >>> cusignal.precompile_kernels('lfilter')
+
+    To precompile a specific data type and all kernels
+    >>> cusignal.precompile_kernels(dtype=[np.float64])
 
     To precompile a multiple kernels
     >>> cusignal.precompile_kernels('lfilter', [np.float64])
