@@ -579,7 +579,7 @@ def _convolve2d_gpu(
     cp_stream,
     use_numba,
 ):
-    from ..utils._compile_kernels import _populate_kernel_cache, GPUKernel
+    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
         raise Exception("Invalid boundary flag")
