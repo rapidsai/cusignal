@@ -73,11 +73,6 @@ _SUPPORTED_TYPES_CONVOLVE = {
     np.complex128: [complex128, "complex<double>"],
 }
 
-_SUPPORTED_TYPES_LFILTER = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
-}
-
 _SUPPORTED_TYPES_LOMBSCARGLE = {
     np.float32: [float32, "float"],
     np.float64: [float64, "double"],
@@ -130,9 +125,6 @@ def _get_supported_types(k_type):
         or k_type == GPUKernel.CONVOLVE2D
     ):
         SUPPORTED_TYPES = _SUPPORTED_TYPES_CONVOLVE
-
-    elif k_type == GPUKernel.LFILTER:
-        SUPPORTED_TYPES = _SUPPORTED_TYPES_LFILTER
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
@@ -294,12 +286,6 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_lombscargle)
-        elif k_type == GPUKernel.LFILTER:
-            raise NotImplementedError(
-                "{} Numba has no Numba Implementation".format(
-                    k_type
-                )
-            )
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
