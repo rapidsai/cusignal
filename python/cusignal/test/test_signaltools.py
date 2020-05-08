@@ -39,8 +39,7 @@ def test_resample(num_samps, resample_num_samps, window):
 @pytest.mark.parametrize("up", [2, 3, 7])
 @pytest.mark.parametrize("down", [1, 2, 9])
 @pytest.mark.parametrize("window", [("kaiser", 0.5)])
-@pytest.mark.parametrize("use_numba", [True, False])
-def test_resample_poly(num_samps, up, down, window, use_numba):
+def test_resample_poly(num_samps, up, down, window):
     cpu_time = np.linspace(0, 10, num_samps, endpoint=False)
     cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)
     gpu_sig = cp.asarray(cpu_sig)
@@ -48,7 +47,7 @@ def test_resample_poly(num_samps, up, down, window, use_numba):
     cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
     gpu_resample = cp.asnumpy(
         cusignal.resample_poly(
-            gpu_sig, up, down, window=window, use_numba=use_numba
+            gpu_sig, up, down, window=window
         )
     )
 
@@ -58,8 +57,7 @@ def test_resample_poly(num_samps, up, down, window, use_numba):
 @pytest.mark.parametrize("num_samps", [2 ** 14])
 @pytest.mark.parametrize("up", [2, 3, 7])
 @pytest.mark.parametrize("down", [1, 2, 9])
-@pytest.mark.parametrize("use_numba", [True, False])
-def test_upfirdn(num_samps, up, down, use_numba):
+def test_upfirdn(num_samps, up, down):
     cpu_sig = np.random.rand(num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
@@ -67,7 +65,7 @@ def test_upfirdn(num_samps, up, down, use_numba):
 
     cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
     gpu_resample = cp.asnumpy(
-        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+        cusignal.upfirdn(h, gpu_sig, up, down)
     )
 
     assert array_equal(cpu_resample, gpu_resample)
@@ -76,8 +74,7 @@ def test_upfirdn(num_samps, up, down, use_numba):
 @pytest.mark.parametrize("num_samps", [2 ** 8])
 @pytest.mark.parametrize("up", [2, 3, 7])
 @pytest.mark.parametrize("down", [1, 2, 9])
-@pytest.mark.parametrize("use_numba", [True, False])
-def test_upfirdn2d(num_samps, up, down, use_numba):
+def test_upfirdn2d(num_samps, up, down):
     cpu_sig = np.random.rand(num_samps, num_samps)
     gpu_sig = cp.asarray(cpu_sig)
 
@@ -85,7 +82,7 @@ def test_upfirdn2d(num_samps, up, down, use_numba):
 
     cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
     gpu_resample = cp.asnumpy(
-        cusignal.upfirdn(h, gpu_sig, up, down, use_numba=use_numba)
+        cusignal.upfirdn(h, gpu_sig, up, down)
     )
 
     assert array_equal(cpu_resample, gpu_resample)
@@ -201,8 +198,7 @@ def test_hilbert2(num_samps):
 @pytest.mark.parametrize("num_taps", [5, 100])
 @pytest.mark.parametrize("boundary", ["symm"])
 @pytest.mark.parametrize("mode", ["same"])
-@pytest.mark.parametrize("use_numba", [True, False])
-def test_convolve2d(num_samps, num_taps, boundary, mode, use_numba):
+def test_convolve2d(num_samps, num_taps, boundary, mode):
     cpu_sig = np.random.rand(num_samps, num_samps)
     cpu_filt = np.random.rand(num_taps, num_taps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -217,7 +213,6 @@ def test_convolve2d(num_samps, num_taps, boundary, mode, use_numba):
             gpu_filt,
             boundary=boundary,
             mode=mode,
-            use_numba=use_numba,
         )
     )
     assert array_equal(cpu_convolve2d, gpu_convolve2d)
@@ -227,8 +222,7 @@ def test_convolve2d(num_samps, num_taps, boundary, mode, use_numba):
 @pytest.mark.parametrize("num_taps", [5, 100])
 @pytest.mark.parametrize("boundary", ["symm"])
 @pytest.mark.parametrize("mode", ["same"])
-@pytest.mark.parametrize("use_numba", [True, False])
-def test_correlate2d(num_samps, num_taps, boundary, mode, use_numba):
+def test_correlate2d(num_samps, num_taps, boundary, mode):
     cpu_sig = np.random.rand(num_samps, num_samps)
     cpu_filt = np.random.rand(num_taps, num_taps)
     gpu_sig = cp.asarray(cpu_sig)
@@ -243,7 +237,6 @@ def test_correlate2d(num_samps, num_taps, boundary, mode, use_numba):
             gpu_filt,
             boundary=boundary,
             mode=mode,
-            use_numba=use_numba,
         )
     )
     assert array_equal(cpu_correlate2d, gpu_correlate2d)

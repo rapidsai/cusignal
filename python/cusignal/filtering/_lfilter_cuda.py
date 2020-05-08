@@ -89,29 +89,24 @@ class _cupy_lfilter_wrapper(object):
 
 
 def _get_backend_kernel(
-    dtype, grid, block, stream, use_numba, k_type,
+    dtype, grid, block, stream, k_type,
 ):
     from ..utils.compile_kernels import GPUKernel
 
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            if k_type == GPUKernel.LFILTER:
-                return _cupy_lfilter_wrapper(grid, block, stream, kernel)
-            else:
-                raise NotImplementedError(
-                    "No CuPY kernel found for k_type {}, datatype {}".format(
-                        k_type, dtype
-                    )
-                )
+    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    if kernel:
+        if k_type == GPUKernel.LFILTER:
+            return _cupy_lfilter_wrapper(grid, block, stream, kernel)
         else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            raise NotImplementedError(
+                "No CuPY kernel found for k_type {}, datatype {}".format(
+                    k_type, dtype
+                )
             )
-
-    raise NotImplementedError(
-        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
-    )
+    else:
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+        )
 
 
 def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
@@ -122,13 +117,12 @@ def _lfilter_gpu(b, a, x, clamp, cp_stream, autosync):
     threadsperblock = 1
     blockspergrid = 1
 
-    _populate_kernel_cache(out.dtype.type, False, GPUKernel.LFILTER)
+    _populate_kernel_cache(out.dtype.type, GPUKernel.LFILTER)
     kernel = _get_backend_kernel(
         out.dtype,
         blockspergrid,
         threadsperblock,
         cp_stream,
-        False,
         GPUKernel.LFILTER,
     )
 

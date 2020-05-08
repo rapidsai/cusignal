@@ -204,9 +204,8 @@ def test_stft_complex(num_samps, fs, nperseg):
 @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
 @pytest.mark.parametrize("precenter", [True, False])
 @pytest.mark.parametrize("normalize", [True, False])
-@pytest.mark.parametrize("use_numba", [True, False])
 def test_lombscargle(
-    num_in_samps, num_out_samps, precenter, normalize, use_numba
+    num_in_samps, num_out_samps, precenter, normalize
 ):
     A = 2.0
     w = 1.0
@@ -229,7 +228,7 @@ def test_lombscargle(
 
     gpu_lombscargle = cp.asnumpy(
         cusignal.lombscargle(
-            d_x, d_y, d_f, precenter, normalize, use_numba=use_numba,
+            d_x, d_y, d_f, precenter, normalize,
         )
     )
 

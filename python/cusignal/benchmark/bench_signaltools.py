@@ -81,9 +81,6 @@ class BenchResamplePoly:
             self.cpu_version, cpu_sig, up, down, window,
         )
 
-    # Add parameter 'use_numba' to GPU test. It is not needed on CPU test.
-    # This reduces redundant executions and runtime
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_resample_poly_gpu(
         self,
         linspace_data_gen,
@@ -92,7 +89,6 @@ class BenchResamplePoly:
         up,
         down,
         window,
-        use_numba,
     ):
 
         cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
@@ -104,7 +100,6 @@ class BenchResamplePoly:
             up,
             down,
             window=window,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, up, down, window)
@@ -129,9 +124,8 @@ class BenchUpFirDn:
             self.cpu_version, cpu_sig, up, down, axis,
         )
 
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_upfirdn_gpu(
-        self, rand_data_gen, benchmark, num_samps, up, down, axis, use_numba,
+        self, rand_data_gen, benchmark, num_samps, up, down, axis,
     ):
 
         cpu_sig, gpu_sig = rand_data_gen(num_samps)
@@ -142,7 +136,6 @@ class BenchUpFirDn:
             up,
             down,
             axis,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, up, down, axis)
@@ -167,7 +160,6 @@ class BenchUpFirDn2d:
             self.cpu_version, cpu_sig, up, down, axis,
         )
 
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_upfirdn2d_gpu(
         self,
         rand_2d_data_gen,
@@ -176,7 +168,6 @@ class BenchUpFirDn2d:
         up,
         down,
         axis,
-        use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -187,7 +178,6 @@ class BenchUpFirDn2d:
             up,
             down,
             axis,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, up, down, axis)
@@ -407,7 +397,6 @@ class BenchConvolve2d:
         cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_convolve2d_gpu(
         self,
         rand_2d_data_gen,
@@ -416,7 +405,6 @@ class BenchConvolve2d:
         num_taps,
         boundary,
         mode,
-        use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -427,7 +415,6 @@ class BenchConvolve2d:
             gpu_filt,
             boundary=boundary,
             mode=mode,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
@@ -452,7 +439,6 @@ class BenchCorrelate2d:
         cpu_filt, _ = rand_2d_data_gen(num_taps)
         benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_correlate2d_gpu(
         self,
         rand_2d_data_gen,
@@ -461,7 +447,6 @@ class BenchCorrelate2d:
         num_taps,
         boundary,
         mode,
-        use_numba,
     ):
 
         cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -472,7 +457,6 @@ class BenchCorrelate2d:
             gpu_filt,
             boundary=boundary,
             mode=mode,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)

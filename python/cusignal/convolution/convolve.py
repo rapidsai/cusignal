@@ -349,7 +349,6 @@ def convolve2d(
     fillvalue=0,
     cp_stream=cp.cuda.stream.Stream(null=True),
     autosync=True,
-    use_numba=False,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -394,9 +393,6 @@ def convolve2d(
         false will allow asynchronous operation but might required
         manual synchronize later `cp_stream.synchronize()`.
         Default is True.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
@@ -441,7 +437,7 @@ def convolve2d(
         in1, in2 = in2, in1
 
     out = _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync, use_numba,
+        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync,
     )
     return out
 

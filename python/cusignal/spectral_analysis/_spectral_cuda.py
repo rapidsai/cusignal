@@ -12,99 +12,10 @@
 # limitations under the License.
 
 import cupy as cp
-import warnings
 
-from math import sin, cos, atan2
-from numba import cuda, void
 from string import Template
 
-from ..utils._caches import _cupy_kernel_cache, _numba_kernel_cache
-
-# Display FutureWarnings only once per module
-warnings.simplefilter("once", FutureWarning)
-
-
-def _numba_lombscargle(x, y, freqs, pgram, y_dot):
-    """
-    _lombscargle(x, y, freqs)
-    Computes the Lomb-Scargle periodogram.
-    Parameters
-    ----------
-    x : array_like
-        Sample times.
-    y : array_like
-        Measurement values (must be registered so the mean is zero).
-    freqs : array_like
-        Angular frequencies for output periodogram.
-    Returns
-    -------
-    pgram : array_like
-        Lomb-Scargle periodogram.
-    Raises
-    ------
-    ValueError
-        If the input arrays `x` and `y` do not have the same shape.
-    See also
-    --------
-    lombscargle
-    """
-
-    F = cuda.grid(1)
-    strideF = cuda.gridsize(1)
-
-    if not y_dot[0]:
-        yD = 1.0
-    else:
-        yD = 2.0 / y_dot[0]
-
-    for i in range(F, freqs.shape[0], strideF):
-
-        # Copy data to registers
-        freq = freqs[i]
-
-        xc = 0.0
-        xs = 0.0
-        cc = 0.0
-        ss = 0.0
-        cs = 0.0
-
-        for j in range(x.shape[0]):
-
-            c = cos(freq * x[j])
-            s = sin(freq * x[j])
-
-            xc += y[j] * c
-            xs += y[j] * s
-            cc += c * c
-            ss += s * s
-            cs += c * s
-
-        tau = atan2(2.0 * cs, cc - ss) / (2.0 * freq)
-        c_tau = cos(freq * tau)
-        s_tau = sin(freq * tau)
-        c_tau2 = c_tau * c_tau
-        s_tau2 = s_tau * s_tau
-        cs_tau = 2.0 * c_tau * s_tau
-
-        pgram[i] = (
-            0.5
-            * (
-                (
-                    (c_tau * xc + s_tau * xs) ** 2
-                    / (c_tau2 * cc + cs_tau * cs + s_tau2 * ss)
-                )
-                + (
-                    (c_tau * xs - s_tau * xc) ** 2
-                    / (c_tau2 * ss - cs_tau * cs + s_tau2 * cc)
-                )
-            )
-        ) * yD
-
-
-def _numba_lombscargle_signature(ty):
-    return void(
-        ty[:], ty[:], ty[:], ty[:], ty[:],  # x  # y  # freqs  # pgram  # y_dot
-    )
+from ..utils._caches import _cupy_kernel_cache
 
 
 # Custom Cupy raw kernel implementing lombscargle operation
@@ -216,41 +127,18 @@ class _cupy_lombscargle_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
-    from ..utils.compile_kernels import _stream_cupy_to_numba
+def _get_backend_kernel(dtype, grid, block, stream, k_type):
 
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
-        else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-            )
-
+    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    if kernel:
+        return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
     else:
-        warnings.warn(
-            "Numba kernels will be removed in a later release",
-            FutureWarning,
-            stacklevel=4,
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
-        nb_stream = _stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
 
-        if kernel:
-            return kernel[grid, block, nb_stream]
-        else:
-            raise ValueError(
-                "Kernel {} not found in _numba_kernel_cache".format(k_type)
-            )
-
-    raise NotImplementedError(
-        "No kernel found for datatype {}".format(dtype.name)
-    )
-
-
-def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync, use_numba):
+def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     device_id = cp.cuda.Device()
@@ -258,14 +146,13 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync, use_numba):
     threadsperblock = 256
     blockspergrid = numSM * 20
 
-    _populate_kernel_cache(pgram.dtype.type, use_numba, GPUKernel.LOMBSCARGLE)
+    _populate_kernel_cache(pgram.dtype.type, GPUKernel.LOMBSCARGLE)
 
     kernel = _get_backend_kernel(
         pgram.dtype,
         blockspergrid,
         threadsperblock,
         cp_stream,
-        use_numba,
         GPUKernel.LOMBSCARGLE,
     )
 

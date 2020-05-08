@@ -13,4 +13,3 @@
 
 # Kernel caches
 _cupy_kernel_cache = {}
-_numba_kernel_cache = {}

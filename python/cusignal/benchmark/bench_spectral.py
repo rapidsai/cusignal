@@ -372,7 +372,6 @@ class BenchLombScargle:
 
         benchmark(self.cpu_version, x, y, f, precenter, normalize)
 
-    @pytest.mark.parametrize("use_numba", [True, False])
     def bench_lombscargle_gpu(
         self,
         linspace_data_gen,
@@ -382,7 +381,6 @@ class BenchLombScargle:
         num_out_samps,
         precenter,
         normalize,
-        use_numba,
     ):
         A = 2.0
         w = 1.0
@@ -405,7 +403,6 @@ class BenchLombScargle:
             d_f,
             precenter,
             normalize,
-            use_numba=use_numba,
         )
 
         key = self.cpu_version(x, y, f, precenter, normalize)
