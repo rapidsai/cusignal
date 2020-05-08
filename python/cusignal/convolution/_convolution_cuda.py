@@ -483,7 +483,7 @@ class _cupy_convolve_2d_wrapper(object):
 def _get_backend_kernel(
     dtype, grid, block, stream, use_numba, k_type,
 ):
-    from ..utils._compile_kernels import _stream_cupy_to_numba, GPUKernel
+    from ..utils.compile_kernels import _stream_cupy_to_numba, GPUKernel
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
@@ -531,7 +531,7 @@ def _get_backend_kernel(
 def _convolve_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs, cp_stream,
 ):
-    from ..utils._compile_kernels import _populate_kernel_cache, GPUKernel
+    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
