@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import itertools
 import numpy as np
 
 from numba import cuda, int32, int64, float32, float64, complex64, complex128
@@ -56,19 +55,14 @@ except ImportError:
 
 
 class GPUKernel(Enum):
-    CORRELATE = 0
-    CONVOLVE = 1
-    CORRELATE2D = 2
-    CONVOLVE2D = 3
-    LFILTER = 4
-    LOMBSCARGLE = 5
-    UPFIRDN = 6
-    UPFIRDN2D = 7
-
-
-class GPUBackend(Enum):
-    CUPY = 0
-    NUMBA = 1
+    CORRELATE = 'correlate'
+    CONVOLVE = 'convolve'
+    CORRELATE2D = 'correlate2d'
+    CONVOLVE2D = 'convolve2d'
+    LFILTER = 'lfilter'
+    LOMBSCARGLE = 'lombscargle'
+    UPFIRDN = 'upfirdn'
+    UPFIRDN2D = 'upfirdn2d'
 
 
 # Numba type supported and corresponding C type
@@ -130,6 +124,7 @@ def _stream_cupy_to_numba(cp_stream):
 
 
 def _get_supported_types(k_type):
+
     if (
         k_type == GPUKernel.CORRELATE
         or k_type == GPUKernel.CONVOLVE
@@ -148,30 +143,16 @@ def _get_supported_types(k_type):
         SUPPORTED_TYPES = _SUPPORTED_TYPES_UPFIRDN
 
     else:
-        raise ValueError("Support not found for {}".format(k_type))
+        raise ValueError("Support not found for '{}'".format(k_type.value))
 
     return SUPPORTED_TYPES
 
 
-def _validate_input(dtype, backend, k_type):
+def _validate_input(dtype, k_type):
 
-    backend = list([backend]) if backend else list(GPUBackend)
     k_type = list([k_type]) if k_type else list(GPUKernel)
 
-    for b, k in itertools.product(backend, k_type):
-        # Check if use_numba is support
-        try:
-            GPUBackend(b.value)
-
-        except ValueError:
-            raise
-
-        # Check if use_numba is support
-        try:
-            GPUKernel(k)
-
-        except ValueError:
-            raise
+    for k in k_type:
 
         # Point to types allowed for kernel
         SUPPORTED_TYPES = _get_supported_types(k)
@@ -180,15 +161,16 @@ def _validate_input(dtype, backend, k_type):
 
         for np_type in d:
 
+            # Check dtypes from user input
             try:
-                numba_type, c_type = SUPPORTED_TYPES[np_type]
+                SUPPORTED_TYPES[np_type]
 
             except KeyError:
                 raise KeyError(
-                    "Datatype {} not found for {}".format(np_type, k)
+                    "Datatype {} not found for '{}'".format(np_type, k.value)
                 )
 
-            _populate_kernel_cache(np_type, b.value, k)
+            _populate_kernel_cache(np_type, False, k)
 
 
 def _populate_kernel_cache(np_type, use_numba, k_type):
@@ -346,19 +328,30 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             )
 
 
-def precompile_kernels(dtype=None, backend=None, k_type=None):
+def precompile_kernels(k_type=None, dtype=None):
     r"""
     Precompile GPU kernels for later use.
 
     Parameters
     ----------
-    dtype : numpy datatype or list of datatypes, optional
+    k_type : {str}, optional
+        Which GPU kernel to compile for. If not specified,
+        all supported kernels will be precompiled.
+            'correlate'
+            'convolve'
+            'correlate2d'
+            'convolve2d'
+            'lfilter'
+            'lombscargle'
+            'upfirdn'
+            'upfirdn2d'
+    dtype : dtype or list of dtype, optional
         Data types for which kernels should be precompiled. If not
         specified, all supported data types will be precompiled.
-            GPUKernel.CORRELATE
-            GPUKernel.CONVOLVE
-            GPUKernel.CORRELATE2D
-            GPUKernel.CONVOLVE2D
+            'correlate'
+            'convolve'
+            'correlate2d'
+            'convolve2d'
             {
                 np.int32
                 np.int64
@@ -367,87 +360,52 @@ def precompile_kernels(dtype=None, backend=None, k_type=None):
                 np.complex64
                 np.complex128
             }
-            GPUKernel.LFILTER
-            GPUKernel.LOMBSCARGLE
+            'lfilter'
+            'lombscargle'
             {
                 np.float32
                 np.float64
             }
-            GPUKernel.UPFIRDN
-            GPUKernel.UPFIRDN2D
+            'upfirdn'
+            'upfirdn2d'
             {
                 np.float32
                 np.float64
                 np.complex64
                 np.complex128
             }
-    backend : GPUBackend, optional
-        Which GPU backend to precompile for. If not specified,
-        all supported backends will be precompiled.
-            GPUKernel.CORRELATE2D
-            GPUKernel.CONVOLVE2D
-            GPUKernel.UPFIRDN
-            GPUKernel.UPFIRDN2D
-            {
-                GPUBackend.CUPY
-                GPUBackend.NUMBA
-            }
 
-            GPUKernel.CORRELATE
-            GPUKernel.CONVOLVE
-            GPUKernel.LFILTER
-            GPUKernel.LOMBSCARGLE
-            {
-                GPUBackend.CUPY
-            }
-
-    k_type : GPUKernel, optional
-        Which GPU kernel to compile for. If not specified,
-        all supported kernels will be precompiled.
-            GPUKernel.CORRELATE
-            GPUKernel.CONVOLVE
-            GPUKernel.CORRELATE2D
-            GPUKernel.CONVOLVE2D
-            GPUKernel.LFILTER
-            GPUKernel.LOMBSCARGLE
-            GPUKernel.UPFIRDN
-            GPUKernel.UPFIRDN2D
-        Examples
+    Examples
     ----------
     To precompile all kernels in this unit
     >>> import cusignal
-    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
     >>> cusignal.precompile_kernels()
 
-    To precompile a specific NumPy data type [list of data types],
-    CuPy backend, and kernel type
-    >>> cusignal.precompile_kernels([np.float32, np.float64],
-        GPUBackend.CUPY, GPUKernel.LFILTER,)
+    To precompile a specific kernel and dtype [list of dtype],
+    >>> cusignal.precompile_kernels('lfilter', [np.float32, np.float64])
 
-
-    To precompile a specific NumPy data type and kernel type,
-    but both Numba and CuPY variations
-    >>> cusignal.precompile_kernels(dtype=[np.float64],
-        k_type=GPUKernel.LFILTER,)
+    To precompile a multiple kernels
+    >>> cusignal.precompile_kernels('lfilter', [np.float64])
+    >>> cusignal.precompile_kernels('correlate', [np.float64])
     """
+
+    if k_type is not None and not isinstance(k_type, str):
+        raise TypeError(
+            "k_type is type ({}), should be (string) - e.g {}".format(
+                type(k_type), "'lfilter'"
+            )
+        )
+    elif k_type is not None:
+        k_type = k_type.lower()
+        try:
+            k_type = GPUKernel(k_type)
+
+        except ValueError:
+            raise
 
     if dtype is not None and not hasattr(dtype, "__iter__"):
         raise TypeError(
             "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
         )
-
-    elif backend is not None and not isinstance(backend, GPUBackend):
-        raise TypeError(
-            "backend is type ({}), should be (GPUBackend) - e.g {}".format(
-                type(k_type), GPUBackend.CUPY
-            )
-        )
-
-    elif k_type is not None and not isinstance(k_type, GPUKernel):
-        raise TypeError(
-            "k_type is type ({}), should be (GPUKernel) - e.g {}".format(
-                type(k_type), GPUKernel.CORRELATE
-            )
-        )
     else:
-        _validate_input(dtype, backend, k_type)
+        _validate_input(dtype, k_type)
