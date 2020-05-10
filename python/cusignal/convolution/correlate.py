@@ -13,14 +13,22 @@
 
 import cupy as cp
 
+from . import _convolution_cuda
+
 from .convolve import convolve
 from .convolution_utils import _reverse_and_conj, _inputs_swap_needed
-from .. import _signaltools
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
-def correlate(in1, in2, mode="full", method="auto"):
+def correlate(
+    in1,
+    in2,
+    mode="full",
+    method="auto",
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+):
     r"""
     Cross-correlate two N-dimensional arrays.
 
@@ -58,6 +66,17 @@ def correlate(in1, in2, mode="full", method="auto"):
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).  See `convolve` Notes for more detail.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`
+        Default is True.
 
     Returns
     -------
@@ -144,7 +163,9 @@ def correlate(in1, in2, mode="full", method="auto"):
         if swapped_inputs:
             in1, in2 = in2, in1
 
-        return _signaltools._convolve(in1, in2, False, swapped_inputs, mode)
+        return _convolution_cuda._convolve(
+            in1, in2, False, swapped_inputs, mode, cp_stream, autosync
+        )
 
     else:
         raise ValueError(
@@ -159,6 +180,7 @@ def correlate2d(
     boundary="fill",
     fillvalue=0,
     cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
     use_numba=False,
 ):
     """
@@ -193,6 +215,21 @@ def correlate2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`
+        Default is true.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
+
     Returns
     -------
     correlate2d : ndarray
@@ -237,15 +274,16 @@ def correlate2d(
     if swapped_inputs:
         in1, in2 = in2, in1
 
-    out = _signaltools._convolve2d(
+    out = _convolution_cuda._convolve2d(
         in1,
         in2.conj(),
         0,
         mode,
         boundary,
         fillvalue,
-        cp_stream=cp_stream,
-        use_numba=use_numba,
+        cp_stream,
+        autosync,
+        use_numba,
     )
 
     if swapped_inputs:

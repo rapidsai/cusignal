@@ -26,7 +26,7 @@ Filtering
 Resample
 ------------
 
-.. automodule::cusignal.filtering.resample
+.. automodule:: cusignal.filtering.resample
     :members:
     :undoc-members:
 
@@ -44,7 +44,7 @@ Filter Design
 Resample
 ------------
 
-.. automodule::cusignal.filter_design.fir_filter_design
+.. automodule:: cusignal.filter_design.fir_filter_design
     :members:
     :undoc-members:
 
@@ -55,7 +55,7 @@ Peak Finding
 Peak Finding
 ------------
 
-.. automodule::cusignal.peak_finding.peak_finding
+.. automodule:: cusignal.peak_finding.peak_finding
     :members:
     :undoc-members:
 

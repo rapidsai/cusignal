@@ -15,13 +15,14 @@ from cusignal.filtering.resample import (
     decimate,
     resample,
     resample_poly,
-    upfirdn
+    upfirdn,
 )
 from cusignal.filtering.filtering import (
     wiener,
     lfiltic,
+    lfilter,
     hilbert,
     hilbert2,
     detrend,
-    freq_shift
+    freq_shift,
 )

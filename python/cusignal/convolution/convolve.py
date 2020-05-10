@@ -12,19 +12,34 @@
 # limitations under the License.
 
 import cupy as cp
-from cupyx.scipy import fftpack
 import sys
 
-from .. import _signaltools
-from ..utils.fftpack_helper import _init_nd_shape_and_axes_sorted, \
-    next_fast_len
-from .convolution_utils import _inputs_swap_needed, _numeric_arrays, \
-    _centered, _fftconv_faster, _timeit_fast
+from cupyx.scipy import fftpack
+
+from ..utils.fftpack_helper import (
+    _init_nd_shape_and_axes_sorted,
+    next_fast_len,
+)
+from . import _convolution_cuda
+from .convolution_utils import (
+    _inputs_swap_needed,
+    _numeric_arrays,
+    _centered,
+    _fftconv_faster,
+    _timeit_fast,
+)
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
-def convolve(in1, in2, mode="full", method="auto"):
+def convolve(
+    in1,
+    in2,
+    mode="full",
+    method="auto",
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+):
     """
     Convolve two N-dimensional arrays.
 
@@ -62,6 +77,17 @@ def convolve(in1, in2, mode="full", method="auto"):
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
 
     Returns
     -------
@@ -139,8 +165,8 @@ def convolve(in1, in2, mode="full", method="auto"):
         if swapped_inputs:
             volume, kernel = kernel, volume
 
-        return _signaltools._convolve(
-            volume, kernel, True, swapped_inputs, mode
+        return _convolution_cuda._convolve(
+            volume, kernel, True, swapped_inputs, mode, cp_stream, autosync
         )
 
     else:
@@ -185,7 +211,6 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     axes : int or array_like of ints or None, optional
         Axes over which to compute the convolution.
         The default is over all axes.
-
 
     Returns
     -------
@@ -323,6 +348,7 @@ def convolve2d(
     boundary="fill",
     fillvalue=0,
     cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
     use_numba=False,
 ):
     """
@@ -357,6 +383,21 @@ def convolve2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
+
     Returns
     -------
     out : ndarray
@@ -399,15 +440,8 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    out = _signaltools._convolve2d(
-        in1,
-        in2,
-        1,
-        mode,
-        boundary,
-        fillvalue,
-        cp_stream=cp_stream,
-        use_numba=use_numba,
+    out = _convolution_cuda._convolve2d(
+        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync, use_numba,
     )
     return out
 

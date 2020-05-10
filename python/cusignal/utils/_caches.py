@@ -11,13 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.spectral_analysis.spectral import (
-    periodogram,
-    welch,
-    csd,
-    coherence,
-    spectrogram,
-    lombscargle,
-    vectorstrength,
-    stft,
-)
+# Kernel caches
+_cupy_kernel_cache = {}
+_numba_kernel_cache = {}

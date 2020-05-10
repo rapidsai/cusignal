@@ -16,6 +16,13 @@ import cupy as cp
 
 import timeit
 
+FULL = 2
+SAME = 1
+VALID = 0
+
+CIRCULAR = 8
+REFLECT = 4
+PAD = 0
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 

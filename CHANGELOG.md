@@ -7,6 +7,9 @@
 - PR #51 - Add CuPy Module for lombscargle, along with tests/benchmarks
 - PR #62 - Add CuPy Module for 1d convolve and correlate, along with tests/benchmarks
 - PR #66 - Add CuPy Module for 2d upfirdn, along with tests/benchmarks
+- PR #73 - Local gpuCI build script
+- PR #75 - Add accelerated `lfilter` method.
+- PR #82 - Implement `autosync` to synchronize raw kernels by default
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
@@ -15,12 +18,18 @@
 - PR #55 - Update notebooks to use timeit instead of time
 - PR #56 - Ability to precompile select Numba/CuPy kernel on import
 - PR #60 - Updated decimate function to use an existing FIR window
+- PR #61 - Fix link in README
 - PR #65 - Added deprecation warning for Numba kernels
 - PR #67 - cuSignal code refactor and documentation update
+- PR #71 - README spelling and conda install fixes
+- PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
+- PR #83 - Implement code refactor
+- PR #87 - Update lfilter documentation to clarifiy single-threaded perf
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
 - PR #52 - Mirror API change in Numba 0.49
+- PR #70 - Typo fix in docs api.rst that broke build
 
 # cuSignal 0.13 (31 Mar 2020)
 

@@ -28,6 +28,7 @@ from cusignal.filtering.resample import (
 from cusignal.filtering.filtering import (
     wiener,
     lfiltic,
+    lfilter,
     hilbert,
     hilbert2,
     detrend,
@@ -109,6 +110,9 @@ from cusignal.peak_finding.peak_finding import (
 from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem
+)
+from cusignal.utils.compile_kernels import (
+    precompile_kernels,
 )
 
 # Versioneer

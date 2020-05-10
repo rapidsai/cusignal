@@ -12,70 +12,16 @@
 # limitations under the License.
 
 import cupy as cp
-import itertools
-import numpy as np
 import warnings
 
-from enum import Enum
 from math import sin, cos, atan2
-from numba import (
-    cuda,
-    float64,
-    void,
-)
+from numba import cuda, void
 from string import Template
+
+from ..utils._caches import _cupy_kernel_cache, _numba_kernel_cache
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
-
-
-class GPUKernel(Enum):
-    LOMBSCARGLE = 0
-
-
-class GPUBackend(Enum):
-    CUPY = 0
-    NUMBA = 1
-
-
-# Numba type supported and corresponding C type
-_SUPPORTED_TYPES = {
-    np.float64: [float64, "double"],
-}
-
-
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
-
-
-# Use until functionality provided in Numba 0.49/0.50 available
-def stream_cupy_to_numba(cp_stream):
-    """
-    Notes:
-        1. The lifetime of the returned Numba stream should be as
-           long as the CuPy one, which handles the deallocation
-           of the underlying CUDA stream.
-        2. The returned Numba stream is assumed to live in the same
-           CUDA context as the CuPy one.
-        3. The implementation here closely follows that of
-           cuda.stream() in Numba.
-    """
-    from ctypes import c_void_p
-    import weakref
-
-    # get the pointer to actual CUDA stream
-    raw_str = cp_stream.ptr
-
-    # gather necessary ingredients
-    ctx = cuda.devices.get_context()
-    handle = c_void_p(raw_str)
-
-    # create a Numba stream
-    nb_stream = cuda.cudadrv.driver.Stream(
-        weakref.proxy(ctx), handle, finalizer=None
-    )
-
-    return nb_stream
 
 
 def _numba_lombscargle(x, y, freqs, pgram, y_dot):
@@ -163,8 +109,10 @@ def _numba_lombscargle_signature(ty):
 
 # Custom Cupy raw kernel implementing lombscargle operation
 # Matthew Nicely - mnicely@nvidia.com
-loaded_from_source = Template(
+_cupy_lombscargle_src = Template(
     """
+$header
+
 extern "C" {
     __global__ void _cupy_lombscargle(
             const int x_shape,
@@ -269,9 +217,10 @@ class _cupy_lombscargle_wrapper(object):
 
 
 def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
+    from ..utils.compile_kernels import _stream_cupy_to_numba
 
     if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
         if kernel:
             return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
         else:
@@ -286,8 +235,8 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
             stacklevel=4,
         )
 
-        nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type)]
+        nb_stream = _stream_cupy_to_numba(stream)
+        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
 
         if kernel:
             return kernel[grid, block, nb_stream]
@@ -301,131 +250,8 @@ def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
     )
 
 
-def _populate_kernel_cache(np_type, use_numba, k_type):
-
-    # Check in np_type is a supported option
-    try:
-        numba_type, c_type = _SUPPORTED_TYPES[np_type]
-
-    except ValueError:
-        raise Exception("No kernel found for datatype {}".format(np_type))
-
-    # Check if use_numba is support
-    try:
-        GPUBackend(use_numba)
-
-    except ValueError:
-        raise
-
-    # Check if use_numba is support
-    try:
-        GPUKernel(k_type)
-
-    except ValueError:
-        raise
-
-    # JIT compile the numba kernels
-    if not use_numba:
-        if (str(numba_type), k_type) in _cupy_kernel_cache:
-            return
-        # Instantiate the cupy kernel for this type and compile
-        src = loaded_from_source.substitute(datatype=c_type)
-        module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
-        )
-        if k_type == GPUKernel.LOMBSCARGLE:
-            _cupy_kernel_cache[
-                (str(numba_type), k_type)
-            ] = module.get_function("_cupy_lombscargle")
-        else:
-            raise NotImplementedError(
-                "No kernel found for k_type {}, datatype {}".format(
-                    k_type, str(numba_type)
-                )
-            )
-
-    else:
-        if (str(numba_type), k_type) in _numba_kernel_cache:
-            return
-        # JIT compile the numba kernels
-        sig = _numba_lombscargle_signature(numba_type)
-        if k_type == GPUKernel.LOMBSCARGLE:
-            _numba_kernel_cache[(str(numba_type), k_type)] = cuda.jit(
-                sig, fastmath=True
-            )(_numba_lombscargle)
-        else:
-            raise NotImplementedError(
-                "No kernel found for k_type {}, datatype {}".format(
-                    k_type, str(numba_type)
-                )
-            )
-
-
-def precompile_kernels(dtype=None, backend=None, k_type=None):
-    r"""
-    Precompile GPU kernels for later use.
-
-    Parameters
-    ----------
-    dtype : numpy datatype or list of datatypes, optional
-        Data types for which kernels should be precompiled. If not
-        specified, all supported data types will be precompiled.
-        Specific to this unit
-            np.float64
-    backend : GPUBackend, optional
-        Which GPU backend to precompile for. If not specified,
-        all supported backends will be precompiled.
-        Specific to this unit
-            GPUBackend.CUPY
-            GPUBackend.NUMBA
-    k_type : GPUKernel, optional
-        Which GPU kernel to compile for. If not specified,
-        all supported kernels will be precompiled.
-        Specific to this unit
-            GPUBackend.LOMBSCARGLE
-        Examples
-    ----------
-    To precompile all kernels in this unit
-    >>> import cusignal
-    >>> from cusignal._upfirdn import GPUBackend, GPUKernel
-    >>> cusignal._spectral.precompile_kernels()
-
-    To precompile a specific NumPy datatype, CuPy backend, and kernel type
-    >>> cusignal._spectral.precompile_kernels( [np.float64],
-        [GPUBackend.CUPY],
-        [GPUKernel.LOMBSCARGLE],)
-
-
-    To precompile a specific NumPy datatype and kernel type,
-    but both Numba and CuPY variations
-    >>> cusignal._spectral.precompile_kernels( dtype=[np.float64],
-        k_type=[GPUKernel.LOMBSCARGLE],)
-    """
-    if dtype is not None and not hasattr(dtype, "__iter__"):
-        raise TypeError(
-            "dtype ({}) should be in list - e.g [np.float32,]".format(dtype)
-        )
-
-    elif backend is not None and not hasattr(backend, "__iter__"):
-        raise TypeError(
-            "backend ({}) should be in list - e.g [{},]".format(
-                backend, backend
-            )
-        )
-    elif k_type is not None and not hasattr(k_type, "__iter__"):
-        raise TypeError(
-            "k_type ({}) should be in list - e.g [{},]".format(k_type, k_type)
-        )
-    else:
-        dtype = list(dtype) if dtype else _SUPPORTED_TYPES.keys()
-        backend = list(backend) if backend else list(GPUBackend)
-        k_type = list(k_type) if k_type else list(GPUKernel)
-
-        for d, b, k in itertools.product(dtype, backend, k_type):
-            _populate_kernel_cache(d, b, k)
-
-
-def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
+def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync, use_numba):
+    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]
@@ -444,3 +270,6 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, use_numba):
     )
 
     kernel(x, y, freqs, pgram, y_dot)
+
+    if autosync is True:
+        cp_stream.synchronize()

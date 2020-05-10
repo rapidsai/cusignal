@@ -97,7 +97,7 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Installation
 
 ### Conda, Linux OS
-cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel). If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda-jetson-nano-tk1-tx2-xavier-linux-os)
+cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
 For `cusignal version == 0.13`:
 
@@ -108,27 +108,27 @@ conda install -c rapidsai -c nvidia -c conda-forge \
 
 # or, for CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.1
+    cusignal=0.13 python=3.6 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.2
+    cusignal=0.13 python=3.6 cudatoolkit=10.2
 ```
 
-For the nightly verison of `cusignal`:
+For the nightly verison of `cusignal`, currently 0.14a:
 
 ```
 # For CUDA 10.0
 conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    -c defaults cusignal=0.13 python=3.6 cudatoolkit=10.0
+    -c defaults cusignal python=3.6 cudatoolkit=10.0
 
 # or, for CUDA 10.1.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.1
+    cusignal python=3.6 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cudf=0.13 python=3.6 cudatoolkit=10.2
+    cusignal python=3.6 cudatoolkit=10.2
 ```
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
@@ -252,7 +252,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
     pytest -v -k <function name>  # for more select testing
     ```
 
-### Source, Windows OS [Expiremental]
+### Source, Windows OS [Experimental]
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
@@ -315,5 +315,13 @@ Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more 
 
 Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/master/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
 
-## GTC DC Slides and Presentation
-You can learn more about the cuSignal stack and motivations by viewing these GTC DC 2019 slides, located [here](https://drive.google.com/open?id=1rDNJVIHvCpFfNEDB9Gau5MzCN8G77lkH). The recording of this talk can be found at [GTC On Demand](https://on-demand.gputechconf.com/gtcdc/2019/video/dc91165-cusignal-gpu-acceleration-of-scipy-signal/)
+## cuSignal Blogs and Talks
+* Announcement Talk - GTC DC 2019 - [Recording](https://on-demand.gputechconf.com/gtcdc/2019/video/dc91165-cusignal-gpu-acceleration-of-scipy-signal/) | [Slides](https://on-demand.gputechconf.com/gtcdc/2019/pdf/dc91165-cusignal-gpu-acceleration-of-scipy-signal.pdf)
+* [GPU Accelerated Signal Processing with cuSignal](https://medium.com/rapids-ai/gpu-accelerated-signal-processing-with-cusignal-689062a6af8) - Adam Thompson - Medium
+* [cuSignal 0.13 - Entering the Big Leagues and Focused on Screamin' Streaming Performance](https://medium.com/rapids-ai/cusignal-0-13-entering-the-big-leagues-and-focused-on-screamin-streaming-performance-141908b10b3b) - Adam Thompson - Medium
+* [cuSignal: Easy CUDA GPU Acceleration for SDR DSP and Other Applications](https://www.rtl-sdr.com/cusignal-easy-cuda-gpu-acceleration-for-sdr-dsp-and-other-applications/) - RTL-SDR.com
+* [cuSignal on the AIR-T](http://docs.deepwavedigital.com/Tutorials/7_cuSignal.html) - Deepwave Digital
+* [Detecting, Labeling, and Recording Training Data with the AIR-T and cuSignal](https://www.youtube.com/watch?v=yhVm9hH4nIo) - Deepwave Digital
+* [Signal Processing and Deep Learning](https://www.youtube.com/watch?v=S17vUaTDHts) - Deepwave Digital
+* [cuSignal and CyberRadio Demonstrate GPU Accelerated SDR](https://limemicro.com/news/cusignal-and-cyberradio-demonstrate-gpu-accelerated-sdr/) - Andrew Back - LimeMicro
+* [Follow the latest cuSignal Announcements on Twitter](https://twitter.com/hashtag/cusignal?f=live)
