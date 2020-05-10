@@ -25,7 +25,7 @@ from ..utils.arraytools import (
     _as_strided,
 )
 from ..filtering import filtering
-from .._spectral import _lombscargle
+from ._spectral_cuda import _lombscargle
 
 import warnings
 

@@ -13,9 +13,10 @@
 
 import cupy as cp
 
+from . import _convolution_cuda
+
 from .convolve import convolve
 from .convolution_utils import _reverse_and_conj, _inputs_swap_needed
-from .. import _signaltools
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
@@ -162,7 +163,7 @@ def correlate(
         if swapped_inputs:
             in1, in2 = in2, in1
 
-        return _signaltools._convolve(
+        return _convolution_cuda._convolve(
             in1, in2, False, swapped_inputs, mode, cp_stream, autosync
         )
 
@@ -273,7 +274,7 @@ def correlate2d(
     if swapped_inputs:
         in1, in2 = in2, in1
 
-    out = _signaltools._convolve2d(
+    out = _convolution_cuda._convolve2d(
         in1,
         in2.conj(),
         0,

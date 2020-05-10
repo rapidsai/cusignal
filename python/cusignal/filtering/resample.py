@@ -23,10 +23,64 @@ from cupy.fft import ifftshift
 
 from math import gcd
 
-from .. import _signaltools
 from ..windows.windows import get_window
-from .._upfirdn import _UpFIRDn, _output_len
+from ._upfirdn_cuda import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
+
+
+def _design_resample_poly(up, down, window):
+    """
+    Design a prototype FIR low-pass filter using the window method
+    for use in polyphase rational resampling.
+
+    Parameters
+    ----------
+    up : int
+        The upsampling factor.
+    down : int
+        The downsampling factor.
+    window : string or tuple
+        Desired window to use to design the low-pass filter.
+        See below for details.
+
+    Returns
+    -------
+    h : array
+        The computed FIR filter coefficients.
+
+    See Also
+    --------
+    resample_poly : Resample up or down using the polyphase method.
+
+    Notes
+    -----
+    The argument `window` specifies the FIR low-pass filter design.
+    The functions `cusignal.get_window` and `cusignal.firwin`
+    are called to generate the appropriate filter coefficients.
+
+    The returned array of coefficients will always be of data type
+    `complex128` to maintain precision. For use in lower-precision
+    filter operations, this array should be converted to the desired
+    data type before providing it to `cusignal.resample_poly`.
+
+    """
+
+    # Determine our up and down factors
+    # Use a rational approximation to save computation time on really long
+    # signals
+    g_ = gcd(up, down)
+    up //= g_
+    down //= g_
+
+    # Design a linear-phase low-pass FIR filter
+    max_rate = max(up, down)
+    f_c = 1.0 / max_rate  # cutoff of FIR filter (rel. to Nyquist)
+
+    # reasonable cutoff for our sinc-like function
+    half_len = 10 * max_rate
+
+    h = firwin(2 * half_len + 1, f_c, window=window)
+    return h
 
 
 def decimate(
@@ -372,7 +426,7 @@ def resample_poly(
         h = up * window
     else:
         half_len = 10 * max(up, down)
-        h = up * _signaltools._design_resample_poly(up, down, window)
+        h = up * _design_resample_poly(up, down, window)
 
     # Zero-pad our filter to put the output samples at the center
     n_pre_pad = down - half_len % down
