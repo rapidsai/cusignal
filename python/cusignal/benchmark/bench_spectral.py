@@ -18,6 +18,8 @@ from cusignal.test.utils import array_equal
 import cusignal
 from scipy import signal
 
+cusignal.precompile_kernels()
+
 
 @pytest.mark.benchmark(group="CSD")
 @pytest.mark.parametrize("num_samps", [2 ** 14])
