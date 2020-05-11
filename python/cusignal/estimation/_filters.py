@@ -335,7 +335,7 @@ def _numba_kalman_signature(ty):
 loaded_from_source = Template(
     """
 extern "C" {
-    __global__ void _cupy_predict(
+    __global__ void __launch_bounds__(256, 8) _cupy_predict(
             const int num_points,
             const int dim_x,
             const ${datatype} * __restrict__ alpha_sq,
@@ -403,7 +403,7 @@ extern "C" {
     }
 
 
-    __global__ void _cupy_update(
+    __global__ void __launch_bounds__(256, 8) _cupy_update(
             const int num_points,
             const int dim_x,
             const int dim_z,
