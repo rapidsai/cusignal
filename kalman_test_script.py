@@ -11,7 +11,7 @@ dim_z = 2
 num_points = 4096
 iterations = 1000
 numba = False
-dt = np.float64
+dt = np.float32
 
 print("num_points", num_points)
 print("iterations", iterations)
@@ -82,7 +82,7 @@ cuS.Q = cp.repeat(
 )
 
 start = time.time()
-for _ in range(num_points):
+for _ in range(1):
     for i in range(iterations):
 
         f_fpy.predict()

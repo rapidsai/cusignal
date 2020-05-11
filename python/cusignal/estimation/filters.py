@@ -148,6 +148,24 @@ class KalmanFilter(object):
             _filters.GPUKernel.UPDATE,
         )
 
+        # debug
+        print("Predict")
+        print(self.predict_kernel.kernel.const_size_bytes)
+        print(self.predict_kernel.kernel.local_size_bytes)
+        print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
+        print(self.predict_kernel.kernel.max_threads_per_block)
+        print(self.predict_kernel.kernel.num_regs)
+        print(self.predict_kernel.kernel.shared_size_bytes)
+        print()
+        print("Update")
+        print(self.update_kernel.kernel.const_size_bytes)
+        print(self.update_kernel.kernel.local_size_bytes)
+        print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
+        print(self.update_kernel.kernel.max_threads_per_block)
+        print(self.update_kernel.kernel.num_regs)
+        print(self.update_kernel.kernel.shared_size_bytes)
+        print()
+
     def predict(self):
 
         self.predict_kernel(
