@@ -9,7 +9,7 @@ import time
 dim_x = 4
 dim_z = 2
 num_points = 4096
-iterations = 100000
+iterations = 1000
 numba = False
 dt = np.float64
 
@@ -82,7 +82,7 @@ cuS.Q = cp.repeat(
 )
 
 start = time.time()
-for _ in range(1):
+for _ in range(num_points):
     for i in range(iterations):
 
         f_fpy.predict()
