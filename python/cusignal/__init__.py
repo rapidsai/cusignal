@@ -108,6 +108,9 @@ from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem
 )
+from cusignal.utils.compile_kernels import (
+    precompile_kernels,
+)
 
 # Versioneer
 from ._version import get_versions

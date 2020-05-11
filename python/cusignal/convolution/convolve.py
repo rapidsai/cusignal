@@ -12,14 +12,15 @@
 # limitations under the License.
 
 import cupy as cp
-from cupyx.scipy import fftpack
 import sys
 
-from .. import _signaltools
+from cupyx.scipy import fftpack
+
 from ..utils.fftpack_helper import (
     _init_nd_shape_and_axes_sorted,
     next_fast_len,
 )
+from . import _convolution_cuda
 from .convolution_utils import (
     _inputs_swap_needed,
     _numeric_arrays,
@@ -164,7 +165,7 @@ def convolve(
         if swapped_inputs:
             volume, kernel = kernel, volume
 
-        return _signaltools._convolve(
+        return _convolution_cuda._convolve(
             volume, kernel, True, swapped_inputs, mode, cp_stream, autosync
         )
 
@@ -439,7 +440,7 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    out = _signaltools._convolve2d(
+    out = _convolution_cuda._convolve2d(
         in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync, use_numba,
     )
     return out

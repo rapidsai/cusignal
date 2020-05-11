@@ -11,19 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-[pytest]
-addopts = 
-	--benchmark-min-rounds=25
-	--benchmark-warmup=on 
-	--benchmark-warmup-iterations=10 
-	--benchmark-disable-gc
-	--benchmark-skip
-python_classes =
-	Bench*
-	Test*
-python_files =
-	bench_*
-	test_*
-python_functions = 
-	bench_*
-	test_*
+# Kernel caches
+_cupy_kernel_cache = {}
+_numba_kernel_cache = {}
