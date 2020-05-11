@@ -25,6 +25,7 @@
 - PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
 - PR #83 - Implement code refactor
 - PR #87 - Update lfilter documentation to clarifiy single-threaded perf
+- PR #89 - Include data types in tests and benchmarks
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
 
 ## Bug Fixes
