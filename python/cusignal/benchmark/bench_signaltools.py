@@ -11,179 +11,166 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import cupy as cp
-import numpy as np
-from cusignal.test.utils import array_equal
 import cusignal
+import numpy as np
+import pytest
+
+from cusignal.test.utils import array_equal
 from scipy import signal
 
 
-@pytest.mark.benchmark(group="Resample")
-@pytest.mark.parametrize("num_samps", [2 ** 14])
-@pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
-@pytest.mark.parametrize("window", [("kaiser", 0.5)])
-# Bench is required in class name for the test to be active
-class BenchResample:
-    # This function will ensure the GPU version is getting the correct answer
-    def cpu_version(self, cpu_sig, resample_num_samps, window):
-        return signal.resample(cpu_sig, resample_num_samps, window=window)
+class BenchSignaltools:
+    @pytest.mark.benchmark(group="Resample")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
+    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    class BenchResample:
+        def cpu_version(self, cpu_sig, resample_num_samps, window):
+            return signal.resample(cpu_sig, resample_num_samps, window=window)
 
-    # bench_ is required in function name to be searchable with -k parameter
-    def bench_resample_cpu(
-        self,
-        linspace_data_gen,
-        benchmark,
-        num_samps,
-        resample_num_samps,
-        window,
-    ):
-        cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
-        benchmark(
-            self.cpu_version, cpu_sig, resample_num_samps, window,
-        )
+        def bench_resample_cpu(
+            self,
+            linspace_data_gen,
+            benchmark,
+            num_samps,
+            resample_num_samps,
+            window,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            benchmark(
+                self.cpu_version, cpu_sig, resample_num_samps, window,
+            )
 
-    def bench_resample_gpu(
-        self,
-        linspace_data_gen,
-        benchmark,
-        num_samps,
-        resample_num_samps,
-        window,
-    ):
+        def bench_resample_gpu(
+            self,
+            linspace_data_gen,
+            benchmark,
+            num_samps,
+            resample_num_samps,
+            window,
+        ):
 
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
-        # Variable output holds result from final cusignal.resample
-        # It is not copied back until assert to so timing is not impacted
-        output = benchmark(
-            cusignal.resample, gpu_sig, resample_num_samps, window=window
-        )
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            output = benchmark(
+                cusignal.resample, gpu_sig, resample_num_samps, window=window
+            )
 
-        key = self.cpu_version(cpu_sig, resample_num_samps, window)
-        assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig, resample_num_samps, window)
+            assert array_equal(cp.asnumpy(output), key)
 
+    @pytest.mark.benchmark(group="ResamplePoly")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("up", [2, 3, 7])
+    @pytest.mark.parametrize("down", [1, 2, 9])
+    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    class BenchResamplePoly:
+        def cpu_version(self, cpu_sig, up, down, window):
+            return signal.resample_poly(cpu_sig, up, down, window=window)
 
-@pytest.mark.benchmark(group="ResamplePoly")
-@pytest.mark.parametrize("num_samps", [2 ** 14])
-@pytest.mark.parametrize("up", [2, 3, 7])
-@pytest.mark.parametrize("down", [1, 2, 9])
-@pytest.mark.parametrize("window", [("kaiser", 0.5)])
-class BenchResamplePoly:
-    # This function will ensure the GPU version is getting the correct answer
-    def cpu_version(self, cpu_sig, up, down, window):
-        return signal.resample_poly(cpu_sig, up, down, window=window)
+        def bench_resample_poly_cpu(
+            self, linspace_data_gen, benchmark, num_samps, up, down, window
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, window,
+            )
 
-    def bench_resample_poly_cpu(
-        self, linspace_data_gen, benchmark, num_samps, up, down, window
-    ):
-        cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
-        benchmark(
-            self.cpu_version, cpu_sig, up, down, window,
-        )
-
-    # Add parameter 'use_numba' to GPU test. It is not needed on CPU test.
-    # This reduces redundant executions and runtime
-    @pytest.mark.parametrize("use_numba", [True, False])
-    def bench_resample_poly_gpu(
-        self,
-        linspace_data_gen,
-        benchmark,
-        num_samps,
-        up,
-        down,
-        window,
-        use_numba,
-    ):
-
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
-        # Variable output holds result from final cusignal.resample
-        # It is not copied back until assert to so timing is not impacted
-        output = benchmark(
-            cusignal.resample_poly,
-            gpu_sig,
+        @pytest.mark.parametrize("use_numba", [True, False])
+        def bench_resample_poly_gpu(
+            self,
+            linspace_data_gen,
+            benchmark,
+            num_samps,
             up,
             down,
-            window=window,
-            use_numba=use_numba,
-        )
+            window,
+            use_numba,
+        ):
 
-        key = self.cpu_version(cpu_sig, up, down, window)
-        assert array_equal(cp.asnumpy(output), key)
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            output = benchmark(
+                cusignal.resample_poly,
+                gpu_sig,
+                up,
+                down,
+                window=window,
+                use_numba=use_numba,
+            )
 
+            key = self.cpu_version(cpu_sig, up, down, window)
+            assert array_equal(cp.asnumpy(output), key)
 
-@pytest.mark.benchmark(group="UpFirDn")
-@pytest.mark.parametrize("num_samps", [2 ** 14])
-@pytest.mark.parametrize("up", [2, 3, 7])
-@pytest.mark.parametrize("down", [1, 2, 9])
-@pytest.mark.parametrize("axis", [-1, 0])
-class BenchUpFirDn:
-    # This function will ensure the GPU version is getting the correct answer
-    def cpu_version(self, cpu_sig, up, down, axis):
-        return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+    @pytest.mark.benchmark(group="UpFirDn")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("up", [2, 3, 7])
+    @pytest.mark.parametrize("down", [1, 2, 9])
+    @pytest.mark.parametrize("axis", [-1, 0])
+    class BenchUpFirDn:
+        def cpu_version(self, cpu_sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
 
-    def bench_upfirdn_cpu(
-        self, rand_data_gen, benchmark, num_samps, up, down, axis
-    ):
-        cpu_sig, _ = rand_data_gen(num_samps)
-        benchmark(
-            self.cpu_version, cpu_sig, up, down, axis,
-        )
+        def bench_upfirdn_cpu(
+            self, rand_data_gen, benchmark, num_samps, up, down, axis
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, axis,
+            )
 
-    @pytest.mark.parametrize("use_numba", [True, False])
-    def bench_upfirdn_gpu(
-        self, rand_data_gen, benchmark, num_samps, up, down, axis, use_numba,
-    ):
-
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-        output = benchmark(
-            cusignal.upfirdn,
-            [1, 1, 1],
-            gpu_sig,
+        @pytest.mark.parametrize("use_numba", [True, False])
+        def bench_upfirdn_gpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            num_samps,
             up,
             down,
             axis,
-            use_numba=use_numba,
-        )
+            use_numba,
+        ):
 
-        key = self.cpu_version(cpu_sig, up, down, axis)
-        assert array_equal(cp.asnumpy(output), key)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = benchmark(
+                cusignal.upfirdn,
+                [1, 1, 1],
+                gpu_sig,
+                up,
+                down,
+                axis,
+                use_numba=use_numba,
+            )
 
+            key = self.cpu_version(cpu_sig, up, down, axis)
+            assert array_equal(cp.asnumpy(output), key)
 
-@pytest.mark.benchmark(group="UpFirDn2d")
-@pytest.mark.parametrize("num_samps", [2 ** 8])
-@pytest.mark.parametrize("up", [2, 3, 7])
-@pytest.mark.parametrize("down", [1, 2, 9])
-@pytest.mark.parametrize("axis", [-1, 0])
-class BenchUpFirDn2d:
-    # This function will ensure the GPU version is getting the correct answer
-    def cpu_version(self, cpu_sig, up, down, axis):
-        return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+    @pytest.mark.benchmark(group="UpFirDn2d")
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("up", [2, 3, 7])
+    @pytest.mark.parametrize("down", [1, 2, 9])
+    @pytest.mark.parametrize("axis", [-1, 0])
+    class BenchUpFirDn2d:
+        def cpu_version(self, cpu_sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
 
-    def bench_upfirdn2d_cpu(
-        self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
-    ):
-        cpu_sig, _ = rand_2d_data_gen(num_samps)
-        benchmark(
-            self.cpu_version, cpu_sig, up, down, axis,
-        )
+        def bench_upfirdn2d_cpu(
+            self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
+        ):
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, axis,
+            )
 
-    @pytest.mark.parametrize("use_numba", [True, False])
-    def bench_upfirdn2d_gpu(
-        self,
-        rand_2d_data_gen,
-        benchmark,
-        num_samps,
-        up,
-        down,
-        axis,
-        use_numba,
-    ):
-
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-        output = benchmark(
-            cusignal.upfirdn,
-            [1, 1, 1],
-            gpu_sig,
+        @pytest.mark.parametrize("use_numba", [True, False])
+        def bench_upfirdn2d_gpu(
+            self,
+            rand_2d_data_gen,
+            benchmark,
+            num_samps,
             up,
             down,
             axis,
