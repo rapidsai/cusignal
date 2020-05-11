@@ -9,7 +9,7 @@ import time
 dim_x = 4
 dim_z = 2
 num_points = 4096
-iterations = 10
+iterations = 100000
 numba = False
 dt = np.float64
 
@@ -18,8 +18,9 @@ print("iterations", iterations)
 print("use_numba", numba)
 print("data type", dt)
 
-
-cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, dtype=dt, use_numba=numba)
+cuS = cusignal.KalmanFilter(
+    num_points, dim_x, dim_z, dtype=dt, use_numba=numba
+)
 
 f_fpy = filterpy.kalman.KalmanFilter(dim_x=4, dim_z=2)
 
@@ -81,7 +82,7 @@ cuS.Q = cp.repeat(
 )
 
 start = time.time()
-for _ in range(num_points):
+for _ in range(1):
     for i in range(iterations):
 
         f_fpy.predict()

@@ -48,8 +48,7 @@ class KalmanFilter(object):
         self.dim_z = dim_z
         self.dim_u = dim_u
 
-        # 1. if read-only and same initial, we can have one copy
-        # 2. if not read-only and same initial, use broadcasting
+        # Create data arrays
         self.x = cp.zeros(
             (self.num_points, dim_x, 1,), dtype=dtype
         )  # state
@@ -94,49 +93,20 @@ class KalmanFilter(object):
 
         self.z = cp.empty((self.num_points, dim_z, 1,), dtype=dtype)
 
+        # Only need to populate cache once
+        # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype.type, self.use_numba, _filters.GPUKernel.PREDICT
-        )
-        _filters._populate_kernel_cache(
-            self.x.dtype.type, self.use_numba, _filters.GPUKernel.UPDATE
+            self.x.dtype.type, self.use_numba
         )
 
-    def predict(self):
+        # Allocate GPU resources
         d = cp.cuda.device.Device(0)
         numSM = d.attributes["MultiProcessorCount"]
-        threadsperblock = (self.dim_x, self.dim_x, 16)
-        blockspergrid = (1, 1, numSM * 20)
+        self.threadsperblock = (self.dim_x, self.dim_x, 16)
+        self.blockspergrid = (1, 1, numSM * 20)
 
         A_size = self.dim_x * self.dim_x
         F_size = self.dim_x * self.dim_x
-
-        total_size = A_size + F_size
-
-        shared_mem_size = (
-            total_size * threadsperblock[2] * self.x.dtype.itemsize
-        )
-
-        kernel = _filters._get_backend_kernel(
-            self.x.dtype,
-            blockspergrid,
-            threadsperblock,
-            shared_mem_size,
-            cp.cuda.stream.Stream(null=True),
-            self.use_numba,
-            _filters.GPUKernel.PREDICT,
-        )
-
-        kernel(
-            self._alpha_sq, self.x, self.F, self.P, self.Q,
-        )
-
-    def update(self):
-        d = cp.cuda.device.Device(0)
-        numSM = d.attributes["MultiProcessorCount"]
-        threadsperblock = (self.dim_x, self.dim_x, 16)
-        blockspergrid = (1, 1, numSM * 20)
-
-        A_size = self.dim_x * self.dim_x
         B_size = self.dim_x * self.dim_x
         P_size = self.dim_x * self.dim_x
         H_size = self.dim_z * self.dim_x
@@ -144,24 +114,48 @@ class KalmanFilter(object):
         R_size = self.dim_z * self.dim_z
         y_size = self.dim_z * 1
 
-        total_size = (
+        predict_size = A_size + F_size
+
+        update_size = (
             A_size + B_size + P_size + H_size + K_size + R_size + y_size
         )
 
-        shared_mem_size = (
-            total_size * threadsperblock[2] * self.x.dtype.itemsize
+        self.predict_sem = (
+            predict_size * self.threadsperblock[2] * self.x.dtype.itemsize
+        )
+        self.update_sem = (
+            update_size * self.threadsperblock[2] * self.x.dtype.itemsize
         )
 
-        kernel = _filters._get_backend_kernel(
+        # Retrieve kernel from cache
+        self.predict_kernel = _filters._get_backend_kernel(
             self.x.dtype,
-            blockspergrid,
-            threadsperblock,
-            shared_mem_size,
+            self.blockspergrid,
+            self.threadsperblock,
+            self.predict_sem,
+            cp.cuda.stream.Stream(null=True),
+            self.use_numba,
+            _filters.GPUKernel.PREDICT,
+        )
+
+        self.update_kernel = _filters._get_backend_kernel(
+            self.x.dtype,
+            self.blockspergrid,
+            self.threadsperblock,
+            self.update_sem,
             cp.cuda.stream.Stream(null=True),
             self.use_numba,
             _filters.GPUKernel.UPDATE,
         )
 
-        kernel(
+    def predict(self):
+
+        self.predict_kernel(
+            self._alpha_sq, self.x, self.F, self.P, self.Q,
+        )
+
+    def update(self):
+
+        self.update_kernel(
             self.x, self.z, self.H, self.P, self.R,
         )
