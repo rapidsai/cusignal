@@ -151,15 +151,6 @@ def _validate_input(dtype, k_type):
 
         for np_type in d:
 
-            # Check dtypes from user input
-            try:
-                SUPPORTED_TYPES[np_type]
-
-            except KeyError:
-                raise KeyError(
-                    "Datatype {} not found for '{}'".format(np_type, k.value)
-                )
-
             _populate_kernel_cache(np_type, False, k)
 
 
@@ -167,7 +158,13 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
 
     SUPPORTED_TYPES = _get_supported_types(k_type)
 
-    numba_type, c_type = SUPPORTED_TYPES[np_type]
+    # Check dtypes from user input
+    try:
+        numba_type, c_type = SUPPORTED_TYPES[np_type]
+    except KeyError:
+        raise KeyError(
+            "Datatype {} not found for '{}'".format(np_type, k_type.value)
+        )
 
     if not use_numba:
         if (str(numba_type), k_type.value) in _cupy_kernel_cache:
