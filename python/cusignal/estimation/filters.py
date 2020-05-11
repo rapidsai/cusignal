@@ -96,7 +96,7 @@ class KalmanFilter(object):
         # Only need to populate cache once
         # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype.type, self.use_numba
+            self.x.dtype.type, self.use_numba, self.dim_x, self.dim_z
         )
 
         # Allocate GPU resources

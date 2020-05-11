@@ -330,281 +330,269 @@ def _numba_kalman_signature(ty):
     )
 
 
-# Custom Cupy raw kernel implementing lombscargle operation
+# Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
-loaded_from_source = Template(
-    """
-extern "C" {
-    __global__ void __launch_bounds__(256, 8) _cupy_predict(
-            const int num_points,
-            const int dim_x,
-            const ${datatype} * __restrict__ alpha_sq,
-            ${datatype} * __restrict__ x_in,
-            const ${datatype} * __restrict__ F,
-            ${datatype} * __restrict__ P,
-            const ${datatype} * __restrict__ Q
-            ) {
+cuda_code = """
+template<typename T, int DIM_X>
+__global__ void __launch_bounds__(256, 8) _cupy_predict(
+//__global__ void _cupy_predict(
+        const int num_points,
+        const T * __restrict__ alpha_sq,
+        T * __restrict__ x_in,
+        const T * __restrict__ F,
+        T * __restrict__ P,
+        const T * __restrict__ Q
+        ) {
 
-        extern __shared__ ${datatype} s_buffer[];
+    extern __shared__ T s_buffer[];
 
-        ${datatype} *s_A { s_buffer };
-        ${datatype} *s_F {
-            reinterpret_cast<${datatype}*>(&s_A[dim_x * dim_x * blockDim.z]) };
+    T *s_A { s_buffer };
+    T *s_F { reinterpret_cast<T*>(&s_A[DIM_X * DIM_X * blockDim.z]) };
 
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int ty {
-            static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
-        const int tz {
-            static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
+    const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+    const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+    const int tz { static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
 
-        const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
+    const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
 
-        const int xx_idx { static_cast<int>( dim_x * dim_x * threadIdx.z ) };
+    const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
 
-        const int x_value { ty * dim_x + tx };
+    const int x_value { ty * DIM_X + tx };
 
-        for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
+    for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
-            s_F[xx_idx + x_value] = F[tid_z * dim_x * dim_x + ty * dim_x + tx];
+        s_F[xx_idx + x_value] = F[tid_z * DIM_X * DIM_X + ty * DIM_X + tx];
 
-            __syncthreads();
+        __syncthreads();
 
-            ${datatype} alpha2 { alpha_sq[tid_z] };
-            ${datatype} localQ { Q[tid_z * dim_x * dim_x + ty * dim_x + tx] };
+        T alpha2 { alpha_sq[tid_z] };
+        T localQ { Q[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] };
 
-            ${datatype} temp {};
+        T temp {};
 
-            if ( tx == 0 ) {
-                for ( int j = 0; j < dim_x; j++ ) {
-                    temp += s_F[xx_idx + (ty * dim_x + j)] *
-                        x_in[tid_z * dim_x * 1 + j * 1 + tx];
-                }
-                x_in[tid_z * dim_x * 1 + ty * 1 + tx] = temp;
+        if ( tx == 0 ) {
+            for ( int j = 0; j < DIM_X; j++ ) {
+                temp += s_F[xx_idx + (ty * DIM_X + j)] *
+                    x_in[tid_z * DIM_X * 1 + j * 1 + tx];
             }
-
-            temp = 0.0f;
-            for ( int j = 0; j < dim_x; j++ ) {
-                temp += s_F[xx_idx + (ty * dim_x + j)] *
-                    P[tid_z * dim_x * dim_x + j * dim_x + tx];
-            }
-            s_A[xx_idx + x_value] = temp;
-
-            __syncthreads();
-
-            temp = 0.0f;
-            for ( int j = 0; j < dim_x; j++ ) {
-                temp += s_A[xx_idx + (ty * dim_x + j)] *
-                    s_F[xx_idx + (tx * dim_x + j)];
-            }
-            P[tid_z * dim_x * dim_x + ty * dim_x + tx] =
-                alpha2 * temp + localQ;
+            x_in[tid_z * DIM_X * 1 + ty * 1 + tx] = temp;
         }
-    }
 
-
-    __global__ void __launch_bounds__(256, 8) _cupy_update(
-            const int num_points,
-            const int dim_x,
-            const int dim_z,
-            ${datatype} * __restrict__ x_in,
-            const ${datatype} * __restrict__ z_in,
-            const ${datatype} * __restrict__ H,
-            ${datatype} * __restrict__ P,
-            const ${datatype} * __restrict__ R
-            ) {
-
-        extern __shared__ ${datatype} s_buffer[];
-
-        ${datatype} *s_A { s_buffer };
-        ${datatype} *s_B {
-            reinterpret_cast<${datatype}*>(&s_A[dim_x * dim_x * blockDim.z]) };
-        ${datatype} *s_P {
-            reinterpret_cast<${datatype}*>(&s_B[dim_x * dim_x * blockDim.z]) };
-        ${datatype} *s_H {
-            reinterpret_cast<${datatype}*>(&s_P[dim_x * dim_x * blockDim.z]) };
-        ${datatype} *s_K {
-            reinterpret_cast<${datatype}*>(&s_H[dim_z * dim_x * blockDim.z]) };
-        ${datatype} *s_R {
-            reinterpret_cast<${datatype}*>(&s_K[dim_x * dim_z * blockDim.z]) };
-        ${datatype} *s_y {
-            reinterpret_cast<${datatype}*>(&s_R[dim_z * dim_z * blockDim.z]) };
-
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int ty {
-            static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
-        const int tz {
-            static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
-
-        const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
-
-        const int xx_idx { static_cast<int>( dim_x * dim_x * threadIdx.z ) };
-        const int xz_idx { static_cast<int>( dim_x * dim_z * threadIdx.z ) };
-        const int zz_idx { static_cast<int>( dim_z * dim_z * threadIdx.z ) };
-
-        const int x_value { ty * dim_x + tx };
-        const int z_value { ty * dim_z + tx };
-
-        for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
-
-            s_P[xx_idx + x_value] = P[tid_z * dim_x * dim_x + ty * dim_x + tx];
-
-            if ( ty < dim_z ) {
-                s_H[xz_idx + x_value] =
-                    H[tid_z * dim_z * dim_x + ty * dim_x + tx];
-            }
-
-            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
-                s_R[zz_idx + z_value] =
-                    R[tid_z * dim_z * dim_z + ty * dim_z + tx];
-            }
-            __syncthreads();
-
-            ${datatype} temp {};
-
-            // Compute self.y : z = dot(self.H, self.x)
-            if ( ( ty < dim_z ) && ( tx == 0 ) ) {
-                ${datatype} temp_z { z_in[tid_z * dim_z * 1 + ty * 1 + tx] };
-
-                for ( int j = 0; j < dim_x; j++ ) {
-                    temp += s_H[xz_idx + (ty * dim_x + j)] *
-                        x_in[tid_z * dim_x * 1 + j * 1 + tx];
-                }
-
-                s_y[threadIdx.z * dim_z * 1 + ty * 1 + tx] = temp_z - temp;
-            }
-
-            // Compute PHT : dot(self.P, self.H.T)
-            temp = 0.0f;
-            if ( tx < dim_z ) {
-                for ( int j = 0; j < dim_x; j++ ) {
-                    temp += s_P[xx_idx + (ty * dim_x + j)] *
-                        s_H[xz_idx + (tx * dim_x + j)];
-                }
-                // s_A holds PHT
-                s_A[xx_idx + z_value] = temp;
-            }
-
-            __syncthreads();
-
-            // Compute self.S : dot(self.H, PHT) + self.R
-            temp = 0.0f;
-            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
-                for ( int j = 0; j < dim_x; j++ ) {
-                    temp += s_H[xz_idx + (ty * dim_x + j)] *
-                        s_A[xx_idx + (j * dim_z + tx)];
-                }
-                // s_B holds S - system uncertainty
-                s_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
-            }
-
-            __syncthreads();
-
-            if ( ( ty < dim_z ) && ( tx < dim_z ) ) {
-
-                // Compute linalg.inv(S)
-                // Hardcoded for 2x2
-                const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
-
-                // sign * determinant
-                const ${datatype} sign_det { sign *
-                    ( ( s_B[xx_idx + (0 * dim_z + 0)] *
-                    s_B[xx_idx + (1 * dim_z + 1)] ) -
-                    ( s_B[xx_idx + (1 * dim_z + 0)] *
-                    s_B[xx_idx + (0 * dim_z + 1)] ) ) };
-
-                temp = s_B[xx_idx + ( ( dim_z - 1 - ty ) *
-                    dim_z + ( dim_z - 1 - tx ) )] /
-                    sign_det;
-                // s_B hold SI - inverse system uncertainty
-                s_B[xx_idx + z_value] = temp;
-            }
-
-            __syncthreads();
-
-            //  Compute self.K : dot(PHT, self.SI)
-            //  kalman gain
-            temp = 0.0f;
-            if ( tx < 2 ) {
-                for ( int j = 0; j < dim_z; j++ ) {
-                    temp += s_A[xx_idx + (ty * dim_z + j)] *
-                        s_B[xx_idx + (tx * dim_z + j)];
-                }
-                s_K[xz_idx + z_value] = temp;
-            }
-
-            __syncthreads();
-
-            //  Compute self.x : self.x + cp.dot(self.K, self.y)
-            temp = 0.0;
-            if ( tx == 0 ) {
-                for ( int j = 0; j < dim_z; j++ ) {
-                    temp += s_K[xz_idx + (ty * dim_z + j)] *
-                        s_y[threadIdx.z * dim_z + j];
-                }
-                x_in[tid_z * dim_x * 1 + ty * 1 + tx] += temp;
-            }
-
-            // Compute I_KH = self_I - dot(self.K, self.H)
-            temp = 0.0f;
-            for ( int j = 0; j < dim_z; j++ ) {
-                temp += s_K[xz_idx + (ty * dim_z + j)] *
-                    s_H[xz_idx + (j * dim_x + tx)];
-            }
-            // s_A holds I_KH
-            s_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
-
-            __syncthreads();
-
-            // Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
-            // dot(dot(self.K, self.R), self.K.T)
-
-            // Compute dot(I_KH, self.P)
-            temp = 0.0f;
-            for ( int j = 0; j < dim_x; j++ ) {
-                temp += s_A[xx_idx + (ty * dim_x + j)] *
-                    s_P[xx_idx + (j * dim_x + tx)];
-            }
-            s_B[xx_idx + x_value] = temp;
-
-            __syncthreads();
-
-            // Compute dot(dot(I_KH, self.P), I_KH.T)
-            temp = 0.0f;
-            for ( int j = 0; j < dim_x; j++ ) {
-                temp += s_B[xx_idx + (ty * dim_x + j)] *
-                    s_A[xx_idx + (tx * dim_x + j)];
-            }
-
-            s_P[xx_idx + (ty * dim_x + tx)] = temp;
-
-            temp = 0.0f;
-            if ( tx < dim_z ) {
-                for ( int j = 0; j < dim_z; j++ ) {
-                    temp += s_K[xz_idx + (ty * dim_z + j)] *
-                        s_R[zz_idx + (j * dim_z + tx)];
-                }
-            }
-
-            // s_A holds dot(self.K, self.R)
-            s_A[xx_idx + z_value] = temp;
-
-            __syncthreads();
-
-            temp = 0.0f;
-            for ( int j = 0; j < dim_z; j++ ) {
-                temp += s_A[xx_idx + (ty * dim_z + j)] *
-                    s_K[xz_idx + (tx * dim_z + j)];
-            }
-
-            P[tid_z * dim_x * dim_x + ty * dim_x + tx] =
-                s_P[xx_idx + (ty * dim_x + tx)] + temp;
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_X; j++ ) {
+            temp += s_F[xx_idx + (ty * DIM_X + j)] *
+                P[tid_z * DIM_X * DIM_X + j * DIM_X + tx];
         }
+        s_A[xx_idx + x_value] = temp;
+
+        __syncthreads();
+
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_X; j++ ) {
+            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+                s_F[xx_idx + (tx * DIM_X + j)];
+        }
+
+        P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] =
+            alpha2 * temp + localQ;
     }
 }
+
+template<typename T, int DIM_X, int DIM_Z>
+__global__ void __launch_bounds__(256, 8) _cupy_update(
+//__global__ void _cupy_update(
+        const int num_points,
+        T * __restrict__ x_in,
+        const T * __restrict__ z_in,
+        const T * __restrict__ H,
+        T * __restrict__ P,
+        const T * __restrict__ R
+        ) {
+
+    extern __shared__ T s_buffer[];
+
+    T *s_A { s_buffer };
+    T *s_B { reinterpret_cast<T*>(&s_A[DIM_X * DIM_X * blockDim.z]) };
+    T *s_P { reinterpret_cast<T*>(&s_B[DIM_X * DIM_X * blockDim.z]) };
+    T *s_H { reinterpret_cast<T*>(&s_P[DIM_X * DIM_X * blockDim.z]) };
+    T *s_K { reinterpret_cast<T*>(&s_H[DIM_Z * DIM_X * blockDim.z]) };
+    T *s_R { reinterpret_cast<T*>(&s_K[DIM_X * DIM_Z * blockDim.z]) };
+    T *s_y { reinterpret_cast<T*>(&s_R[DIM_Z * DIM_Z * blockDim.z]) };
+
+    const int tx {
+        static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+    const int ty {
+        static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+    const int tz {
+        static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
+
+    const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
+
+    const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
+    const int xz_idx { static_cast<int>( DIM_X * DIM_Z * threadIdx.z ) };
+    const int zz_idx { static_cast<int>( DIM_Z * DIM_Z * threadIdx.z ) };
+
+    const int x_value { ty * DIM_X + tx };
+    const int z_value { ty * DIM_Z + tx };
+
+    for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
+
+        s_P[xx_idx + x_value] = P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx];
+
+        if ( ty < DIM_Z ) {
+            s_H[xz_idx + x_value] =
+                H[tid_z * DIM_Z * DIM_X + ty * DIM_X + tx];
+        }
+
+        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+            s_R[zz_idx + z_value] =
+                R[tid_z * DIM_Z * DIM_Z + ty * DIM_Z + tx];
+        }
+        __syncthreads();
+
+        T temp {};
+
+        // Compute self.y : z = dot(self.H, self.x)
+        if ( ( ty < DIM_Z ) && ( tx == 0 ) ) {
+            T temp_z { z_in[tid_z * DIM_Z * 1 + ty * 1 + tx] };
+
+            for ( int j = 0; j < DIM_X; j++ ) {
+                temp += s_H[xz_idx + (ty * DIM_X + j)] *
+                    x_in[tid_z * DIM_X * 1 + j * 1 + tx];
+            }
+
+            s_y[threadIdx.z * DIM_Z * 1 + ty * 1 + tx] = temp_z - temp;
+        }
+
+        // Compute PHT : dot(self.P, self.H.T)
+        temp = 0.0f;
+        if ( tx < DIM_Z ) {
+            for ( int j = 0; j < DIM_X; j++ ) {
+                temp += s_P[xx_idx + (ty * DIM_X + j)] *
+                    s_H[xz_idx + (tx * DIM_X + j)];
+            }
+            // s_A holds PHT
+            s_A[xx_idx + z_value] = temp;
+        }
+
+        __syncthreads();
+
+        // Compute self.S : dot(self.H, PHT) + self.R
+        temp = 0.0f;
+        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+            for ( int j = 0; j < DIM_X; j++ ) {
+                temp += s_H[xz_idx + (ty * DIM_X + j)] *
+                    s_A[xx_idx + (j * DIM_Z + tx)];
+            }
+            // s_B holds S - system uncertainty
+            s_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
+        }
+
+        __syncthreads();
+
+        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+
+            // Compute linalg.inv(S)
+            // Hardcoded for 2x2
+            const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
+
+            // sign * determinant
+            const T sign_det { sign *
+                ( ( s_B[xx_idx + (0 * DIM_Z + 0)] *
+                s_B[xx_idx + (1 * DIM_Z + 1)] ) -
+                ( s_B[xx_idx + (1 * DIM_Z + 0)] *
+                s_B[xx_idx + (0 * DIM_Z + 1)] ) ) };
+
+            temp = s_B[xx_idx + ( ( DIM_Z - 1 - ty ) *
+                DIM_Z + ( DIM_Z - 1 - tx ) )] /
+                sign_det;
+            // s_B hold SI - inverse system uncertainty
+            s_B[xx_idx + z_value] = temp;
+        }
+
+        __syncthreads();
+
+        //  Compute self.K : dot(PHT, self.SI)
+        //  kalman gain
+        temp = 0.0f;
+        if ( tx < 2 ) {
+            for ( int j = 0; j < DIM_Z; j++ ) {
+                temp += s_A[xx_idx + (ty * DIM_Z + j)] *
+                    s_B[xx_idx + (tx * DIM_Z + j)];
+            }
+            s_K[xz_idx + z_value] = temp;
+        }
+
+        __syncthreads();
+
+        //  Compute self.x : self.x + cp.dot(self.K, self.y)
+        temp = 0.0;
+        if ( tx == 0 ) {
+            for ( int j = 0; j < DIM_Z; j++ ) {
+                temp += s_K[xz_idx + (ty * DIM_Z + j)] *
+                    s_y[threadIdx.z * DIM_Z + j];
+            }
+            x_in[tid_z * DIM_X * 1 + ty * 1 + tx] += temp;
+        }
+
+        // Compute I_KH = self_I - dot(self.K, self.H)
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_Z; j++ ) {
+            temp += s_K[xz_idx + (ty * DIM_Z + j)] *
+                s_H[xz_idx + (j * DIM_X + tx)];
+        }
+        // s_A holds I_KH
+        s_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
+
+        __syncthreads();
+
+        // Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
+        // dot(dot(self.K, self.R), self.K.T)
+
+        // Compute dot(I_KH, self.P)
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_X; j++ ) {
+            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+                s_P[xx_idx + (j * DIM_X + tx)];
+        }
+        s_B[xx_idx + x_value] = temp;
+
+        __syncthreads();
+
+        // Compute dot(dot(I_KH, self.P), I_KH.T)
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_X; j++ ) {
+            temp += s_B[xx_idx + (ty * DIM_X + j)] *
+                s_A[xx_idx + (tx * DIM_X + j)];
+        }
+
+        s_P[xx_idx + (ty * DIM_X + tx)] = temp;
+
+        temp = 0.0f;
+        if ( tx < DIM_Z ) {
+            for ( int j = 0; j < DIM_Z; j++ ) {
+                temp += s_K[xz_idx + (ty * DIM_Z + j)] *
+                    s_R[zz_idx + (j * DIM_Z + tx)];
+            }
+        }
+
+        // s_A holds dot(self.K, self.R)
+        s_A[xx_idx + z_value] = temp;
+
+        __syncthreads();
+
+        temp = 0.0f;
+        for ( int j = 0; j < DIM_Z; j++ ) {
+            temp += s_A[xx_idx + (ty * DIM_Z + j)] *
+                s_K[xz_idx + (tx * DIM_Z + j)];
+        }
+
+        P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] =
+            s_P[xx_idx + (ty * DIM_X + tx)] + temp;
+    }
+}
+
 """
-)
 
 
 class _cupy_predict_wrapper(object):
@@ -624,7 +612,7 @@ class _cupy_predict_wrapper(object):
         self, alpha_sq, x, F, P, Q,
     ):
 
-        kernel_args = (x.shape[0], P.shape[1], alpha_sq, x, F, P, Q)
+        kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
 
         self.stream.use()
         self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
@@ -645,7 +633,7 @@ class _cupy_update_wrapper(object):
 
     def __call__(self, x, z, H, P, R):
 
-        kernel_args = (x.shape[0], P.shape[1], R.shape[1], x, z, H, P, R)
+        kernel_args = (x.shape[0], x, z, H, P, R)
 
         self.stream.use()
         self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
@@ -685,7 +673,7 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
     )
 
 
-def _populate_kernel_cache(np_type, use_numba):
+def _populate_kernel_cache(np_type, use_numba, dim_x, dim_z):
 
     # Check in np_type is a supported option
     try:
@@ -696,17 +684,22 @@ def _populate_kernel_cache(np_type, use_numba):
 
     if not use_numba:
         # Instantiate the cupy kernel for this type and compile
-        src = loaded_from_source.substitute(datatype=c_type)
-        module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+        specializations = (
+            '_cupy_predict<{}, {}>'.format(c_type, dim_x),
+            '_cupy_update<{}, {}, {}>'.format(c_type, dim_x, dim_z)
         )
+        module = cp.RawModule(
+            code=cuda_code, options=("-std=c++11", "-use_fast_math"),
+            specializations=specializations
+        )
+        kernels = [module.get_mangled_name(ker) for ker in specializations]
+
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.PREDICT)
-        ] = module.get_function("_cupy_predict")
+        ] = module.get_function(kernels[0])
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.UPDATE)
-        ] = module.get_function("_cupy_update")
-
+        ] = module.get_function(kernels[1])
     else:
         sig = _numba_kalman_signature(numba_type)
         _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
