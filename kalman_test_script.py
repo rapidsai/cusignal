@@ -5,18 +5,23 @@ import numpy as np
 import filterpy.kalman
 import cusignal
 import time
+# import itertools
 
 dim_x = 4
 dim_z = 2
-num_points = 4096
+loops = 50
+
+num_points = 2 ** 12
 iterations = 1000
 numba = False
 dt = np.float32
 
+# def run_test(num_points, iterations, numba, dt):
 print("num_points", num_points)
 print("iterations", iterations)
 print("use_numba", numba)
 print("data type", dt)
+print("loops", loops)
 
 cuS = cusignal.KalmanFilter(
     num_points, dim_x, dim_z, dtype=dt, use_numba=numba
@@ -68,7 +73,9 @@ cuS.H = cp.repeat(cp.asarray(H[cp.newaxis, :, :]), num_points, axis=0)
 # Covariance Matrix
 f_fpy.P = initial_estimate_error
 cuS.P = cp.repeat(
-    cp.asarray(initial_estimate_error[cp.newaxis, :, :]), num_points, axis=0
+    cp.asarray(
+        initial_estimate_error[cp.newaxis, :, :]
+    ), num_points, axis=0
 )
 
 f_fpy.R = measurement_noise
@@ -82,16 +89,18 @@ cuS.Q = cp.repeat(
 )
 
 start = time.time()
-for _ in range(1):
-    for i in range(iterations):
+for _ in range(loops):
+    for _ in range(1):
+        for i in range(iterations):
 
-        f_fpy.predict()
+            f_fpy.predict()
 
-        z = np.array([i, i], dtype=dt).T  # must be 2d for cuSignal.filter
+            # must be 2d for cuSignal.filter
+            z = np.array([i, i], dtype=dt).T
 
-        f_fpy.update(z)
+            f_fpy.update(z)
 
-print("CPU:", time.time() - start)
+print("CPU:", (time.time() - start) / loops)
 
 z = cp.asarray([0, 0], dtype=dt).T  # must be 2d for cuSignal.filter
 z = cp.atleast_2d(z)
@@ -99,21 +108,21 @@ if z.shape[1] == dim_z:
     z = z.T
 
 start = time.time()
-for i in range(iterations):
+for _ in range(loops):
+    for i in range(iterations):
 
-    cuS.predict()
+        cuS.predict()
 
-    z[0] = i
-    z[1] = i
+        z[0] = i
+        z[1] = i
 
-    cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
+        cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
 
-    cuS.update()
+        cuS.update()
 
-    cp.cuda.runtime.deviceSynchronize()
+        cp.cuda.runtime.deviceSynchronize()
 
-
-print("GPU:", time.time() - start)
+print("GPU:", (time.time() - start) / loops)
 
 print()
 print("Final")
@@ -123,3 +132,14 @@ print("predicted cusignal (First)")
 print(cuS.x[0, :, :])
 print("predicted cusignal (Last)")
 print(cuS.x[-1, :, :])
+print()
+print()
+
+
+# num_points = [2 ** 12, 2 ** 16, 2 ** 17, 2 ** 18]
+# iterations = [1000]
+# numba = [True, False]
+# dt = [np.float32, np.float64]
+
+# for p, i, n, d in itertools.product(num_points, iterations, numba, dt):
+#     run_test(p, i, n, d)
