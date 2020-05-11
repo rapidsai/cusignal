@@ -187,7 +187,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
 
 3. Activate conda environment
 
-    `conda activate cusignal`
+    `conda activate cusignal-dev`
 
 4. Install cuSignal module
 
@@ -249,7 +249,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
 
 3. Activate conda environment
 
-    `conda activate cusignal`
+    `conda activate cusignal-dev`
 
 4. Install cuSignal module
 
@@ -291,7 +291,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
 
 3. Activate conda environment
 
-    `conda activate cusignal`
+    `conda activate cusignal-dev`
 
 4. Install cuSignal Core Dependencies
 
