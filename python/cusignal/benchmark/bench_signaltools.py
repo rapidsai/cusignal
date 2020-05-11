@@ -175,7 +175,7 @@ class BenchSignaltools:
             down,
             axis,
             use_numba=use_numba,
-        )
+        ):
 
         key = self.cpu_version(cpu_sig, up, down, axis)
         assert array_equal(cp.asnumpy(output), key)
