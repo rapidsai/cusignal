@@ -112,7 +112,7 @@ def _populate_kernel_cache(np_type, k_type):
 
     # Check dtypes from user input
     try:
-        c_type = SUPPORTED_TYPES[np_type]
+        c_type = SUPPORTED_TYPES[str(np_type)]
     except KeyError:
         raise KeyError(
             "Datatype {} not found for '{}'".format(np_type, k_type.value)
