@@ -332,9 +332,8 @@ def _numba_kalman_signature(ty):
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
-template<typename T, int DIM_X>
-__global__ void __launch_bounds__(DIM_X*DIM_X*16, 8) _cupy_predict(
-//__global__ void _cupy_predict(
+template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
+__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
         T * __restrict__ x_in,
@@ -398,9 +397,8 @@ __global__ void __launch_bounds__(DIM_X*DIM_X*16, 8) _cupy_predict(
     }
 }
 
-template<typename T, int DIM_X, int DIM_Z>
-__global__ void __launch_bounds__(DIM_X*DIM_X*16, 8) _cupy_update(
-//__global__ void _cupy_update(
+template<typename T, int DIM_X, int DIM_Z, int MAX_TPB, int MIN_BPSM>
+__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         const int num_points,
         T * __restrict__ x_in,
         const T * __restrict__ z_in,
@@ -679,7 +677,9 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
     )
 
 
-def _populate_kernel_cache(np_type, use_numba, dim_x, dim_z):
+def _populate_kernel_cache(
+    np_type, use_numba, dim_x, dim_z, max_tpb, min_bpsm
+):
 
     # Check in np_type is a supported option
     try:
@@ -691,12 +691,17 @@ def _populate_kernel_cache(np_type, use_numba, dim_x, dim_z):
     if not use_numba:
         # Instantiate the cupy kernel for this type and compile
         specializations = (
-            '_cupy_predict<{}, {}>'.format(c_type, dim_x),
-            '_cupy_update<{}, {}, {}>'.format(c_type, dim_x, dim_z)
+            "_cupy_predict<{}, {}, {}, {}>".format(
+                c_type, dim_x, max_tpb, min_bpsm
+            ),
+            "_cupy_update<{}, {}, {}, {}, {}>".format(
+                c_type, dim_x, dim_z, max_tpb, min_bpsm
+            ),
         )
         module = cp.RawModule(
-            code=cuda_code, options=("-std=c++11", "-use_fast_math"),
-            specializations=specializations
+            code=cuda_code,
+            options=("-std=c++11", "-use_fast_math"),
+            specializations=specializations,
         )
         kernels = [module.get_mangled_name(ker) for ker in specializations]
 

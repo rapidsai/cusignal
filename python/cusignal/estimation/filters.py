@@ -49,9 +49,7 @@ class KalmanFilter(object):
         self.dim_u = dim_u
 
         # Create data arrays
-        self.x = cp.zeros(
-            (self.num_points, dim_x, 1,), dtype=dtype
-        )  # state
+        self.x = cp.zeros((self.num_points, dim_x, 1,), dtype=dtype)  # state
 
         self.P = cp.repeat(
             cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
@@ -93,18 +91,33 @@ class KalmanFilter(object):
 
         self.z = cp.empty((self.num_points, dim_z, 1,), dtype=dtype)
 
+        # Allocate GPU resources
+        threads_z_axis = 16
+        d = cp.cuda.device.Device(0)
+        numSM = d.attributes["MultiProcessorCount"]
+        self.threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
+        self.blockspergrid = (1, 1, numSM * 20)
+
+        max_available_threadsperblock = d.attributes["MaxThreadsPerBlock"]
+
+        max_threads_per_block = self.dim_x * self.dim_x * threads_z_axis
+        min_blocks_per_multiprocessor = (
+            max_available_threadsperblock // max_threads_per_block
+        )
+        print(min_blocks_per_multiprocessor)
+
         # Only need to populate cache once
         # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype.type, self.use_numba, self.dim_x, self.dim_z
+            self.x.dtype.type,
+            self.use_numba,
+            self.dim_x,
+            self.dim_z,
+            max_threads_per_block,
+            min_blocks_per_multiprocessor,
         )
 
-        # Allocate GPU resources
-        d = cp.cuda.device.Device(0)
-        numSM = d.attributes["MultiProcessorCount"]
-        self.threadsperblock = (self.dim_x, self.dim_x, 16)
-        self.blockspergrid = (1, 1, numSM * 20)
-
+        #  Only need this for Numba
         A_size = self.dim_x * self.dim_x
         F_size = self.dim_x * self.dim_x
         B_size = self.dim_x * self.dim_x
