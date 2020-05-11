@@ -120,10 +120,11 @@ class TestSignaltools:
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_convolve(self, rand_data_gen, num_samps, num_taps, mode, method):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
+    def test_convolve(self, num_samps, num_taps, mode, method):
+        cpu_sig = np.random.rand(num_samps)
         cpu_win = signal.windows.hann(num_taps)
+
+        gpu_sig = cp.asarray(cpu_sig)
         gpu_win = cusignal.windows.hann(num_taps)
 
         cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
@@ -133,8 +134,9 @@ class TestSignaltools:
         assert array_equal(cpu_conv, gpu_conv)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_fftconvolve(self, rand_data_gen, num_samps, mode="full"):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+    def test_fftconvolve(self, num_samps, mode="full"):
+        cpu_sig = np.random.rand(num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
 
         cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
         gpu_autocorr = cp.asnumpy(
@@ -143,38 +145,27 @@ class TestSignaltools:
         assert array_equal(cpu_autocorr, gpu_autocorr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
-    def test_wiener(self, rand_data_gen, num_samps):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+    def test_wiener(self, num_samps):
+        cpu_sig = np.random.rand(num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
 
         cpu_wfilt = signal.wiener(cpu_sig)
         gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
         assert array_equal(cpu_wfilt, gpu_wfilt)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    def test_lfilter(self, linspace_range_gen, num_samps):
-        cpu_sig, gpu_sig = linspace_range_gen(num_samps)
-
-        cpu_a = [1.0, 0.25, 0.5]
-        cpu_b = [1.0, 0.0, 0.0]
-
-        gpu_a = cp.asarray(cpu_a)
-        gpu_b = cp.asarray(cpu_b)
-
-        cpu_lfilter = signal.lfilter(cpu_b, cpu_a, cpu_sig)
-        gpu_lfilter = cp.asnumpy(cusignal.lfilter(gpu_b, gpu_a, gpu_sig,))
-        assert array_equal(cpu_lfilter, gpu_lfilter)
-
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_hilbert(self, rand_data_gen, num_samps):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+    def test_hilbert(self, num_samps):
+        cpu_sig = np.random.rand(num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
 
         cpu_hilbert = signal.hilbert(cpu_sig)
         gpu_hilbert = cp.asnumpy(cusignal.hilbert(gpu_sig))
         assert array_equal(cpu_hilbert, gpu_hilbert)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
-    def test_hilbert2(self, rand_2d_data_gen, num_samps):
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+    def test_hilbert2(self, num_samps):
+        cpu_sig = np.random.rand(num_samps, num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
 
         cpu_hilbert2 = signal.hilbert2(cpu_sig)
         gpu_hilbert2 = cp.asnumpy(cusignal.hilbert2(gpu_sig))
@@ -185,15 +176,16 @@ class TestSignaltools:
     @pytest.mark.parametrize("boundary", ["symm"])
     @pytest.mark.parametrize("mode", ["same"])
     @pytest.mark.parametrize("use_numba", [True, False])
-    def test_convolve2d(
-        self, rand_2d_data_gen, num_samps, num_taps, boundary, mode, use_numba
-    ):
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-        cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
+    def test_convolve2d(self, num_samps, num_taps, boundary, mode, use_numba):
+        cpu_sig = np.random.rand(num_samps, num_samps)
+        cpu_filt = np.random.rand(num_taps, num_taps)
+        gpu_sig = cp.asarray(cpu_sig)
+        gpu_filt = cp.asarray(cpu_filt)
 
         cpu_convolve2d = signal.convolve2d(
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
         )
+
         gpu_convolve2d = cp.asnumpy(
             cusignal.convolve2d(
                 gpu_sig,

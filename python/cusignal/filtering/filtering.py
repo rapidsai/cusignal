@@ -41,7 +41,6 @@ from cupy import linalg
 import numpy as np
 
 from ..convolution.correlate import correlate
-from ._lfilter_cuda import _lfilter_gpu
 
 
 def wiener(im, mysize=None, noise=None):
@@ -164,82 +163,6 @@ def lfiltic(b, a, y, x=None):
         zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
 
     return zi
-
-
-def lfilter(
-    b,
-    a,
-    x,
-    clip=False,
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    autosync=True,
-):
-    """
-    Perform an IIR filter by evaluating difference equation.
-    Parameters
-    ----------
-    b : array_like
-        The numerator coefficient vector in a 1-D sequence.
-    a : array_like
-        The denominator coefficient vector in a 1-D sequence.  If ``a[0]``
-        is not 1, then both `a` and `b` are normalized by ``a[0]``.
-    x : array_like
-        An N-dimensional input array. Must be normalized to -1 to 1.
-    clip : bool, optional
-        Option allows clipping results greater than 1 and
-        less than -1
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
-
-    Returns
-    -------
-    y : array
-        The output of the digital filter. Output will be clipped to -1 to 1.
-
-    Notes
-    -------
-    cuSignal's implementation of the linear filter is SINGLE THREADED and is
-    outperformed by `scipy.signal`. Please keep this in mind when using the
-    filter and profile end-to-end performance. For your data sizes, it may be
-    faster to migrate data from GPU <-> CPU.
-    """
-
-    if len(a.shape) > 1 or len(b.shape) > 1:
-        raise ValueError("Inputs a and b must both be 1D arrays")
-
-    if len(x.shape) != 1:
-        raise NotImplementedError(
-            "Only functionality for 1D arrays are implemented at the moment"
-        )
-
-    if a[0] == 0:
-        raise NotImplementedError(
-            "filter coefficient a[0] == 0 not supported yet"
-        )
-
-    x = cp.asarray(x)
-    a = cp.asarray(a)
-    b = cp.asarray(b)
-
-    if a.shape[0] != b.shape[0]:
-        len_array = max(a.shape[0], b.shape[0])
-        if a.shape[0] < b.shape[0]:
-            a = cp.pad(a, (0, len_array - a.shape[0]))
-        else:
-            b = cp.pad(b, (0, len_array - b.shape[0]))
-
-    out = _lfilter_gpu(b, a, x, clip, cp_stream, autosync)
-
-    return out
 
 
 def hilbert(x, N=None, axis=-1):

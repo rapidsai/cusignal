@@ -19,7 +19,6 @@ from enum import Enum
 
 from ._caches import _cupy_kernel_cache, _numba_kernel_cache
 
-from ..filtering._lfilter_cuda import _cupy_lfilter_src
 from ..convolution._convolution_cuda import (
     _cupy_convolve_src,
     _cupy_convolve_2d_src,
@@ -59,7 +58,6 @@ class GPUKernel(Enum):
     CONVOLVE = 'convolve'
     CORRELATE2D = 'correlate2d'
     CONVOLVE2D = 'convolve2d'
-    LFILTER = 'lfilter'
     LOMBSCARGLE = 'lombscargle'
     UPFIRDN = 'upfirdn'
     UPFIRDN2D = 'upfirdn2d'
@@ -73,11 +71,6 @@ _SUPPORTED_TYPES_CONVOLVE = {
     np.float64: [float64, "double"],
     np.complex64: [complex64, "complex<float>"],
     np.complex128: [complex128, "complex<double>"],
-}
-
-_SUPPORTED_TYPES_LFILTER = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
 }
 
 _SUPPORTED_TYPES_LOMBSCARGLE = {
@@ -133,9 +126,6 @@ def _get_supported_types(k_type):
     ):
         SUPPORTED_TYPES = _SUPPORTED_TYPES_CONVOLVE
 
-    elif k_type == GPUKernel.LFILTER:
-        SUPPORTED_TYPES = _SUPPORTED_TYPES_LFILTER
-
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
 
@@ -161,15 +151,6 @@ def _validate_input(dtype, k_type):
 
         for np_type in d:
 
-            # Check dtypes from user input
-            try:
-                SUPPORTED_TYPES[np_type]
-
-            except KeyError:
-                raise KeyError(
-                    "Datatype {} not found for '{}'".format(np_type, k.value)
-                )
-
             _populate_kernel_cache(np_type, False, k)
 
 
@@ -177,7 +158,13 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
 
     SUPPORTED_TYPES = _get_supported_types(k_type)
 
-    numba_type, c_type = SUPPORTED_TYPES[np_type]
+    # Check dtypes from user input
+    try:
+        numba_type, c_type = SUPPORTED_TYPES[np_type]
+    except KeyError:
+        raise KeyError(
+            "Datatype {} not found for '{}'".format(np_type, k_type.value)
+        )
 
     if not use_numba:
         if (str(numba_type), k_type.value) in _cupy_kernel_cache:
@@ -241,14 +228,6 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _cupy_kernel_cache[
                 (str(numba_type), k_type.value)
             ] = module.get_function("_cupy_lombscargle")
-        elif k_type == GPUKernel.LFILTER:
-            src = _cupy_lfilter_src.substitute(datatype=c_type, header=header)
-            module = cp.RawModule(
-                code=src, options=("-std=c++11", "-use_fast_math")
-            )
-            _cupy_kernel_cache[
-                (str(numba_type), k_type.value)
-            ] = module.get_function("_cupy_lfilter")
         elif k_type == GPUKernel.UPFIRDN:
             src = _cupy_upfirdn_1d_src.substitute(
                 datatype=c_type, header=header
@@ -304,12 +283,6 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_lombscargle)
-        elif k_type == GPUKernel.LFILTER:
-            raise NotImplementedError(
-                "{} Numba has no Numba Implementation".format(
-                    k_type
-                )
-            )
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
@@ -345,7 +318,6 @@ def precompile_kernels(k_type=None, dtype=None):
             'convolve'
             'correlate2d'
             'convolve2d'
-            'lfilter'
             'lombscargle'
             'upfirdn'
             'upfirdn2d'
@@ -364,7 +336,6 @@ def precompile_kernels(k_type=None, dtype=None):
                 np.complex64
                 np.complex128
             }
-            'lfilter'
             'lombscargle'
             {
                 np.float32
@@ -386,23 +357,23 @@ def precompile_kernels(k_type=None, dtype=None):
     >>> cusignal.precompile_kernels()
 
     To precompile a specific kernel and dtype [list of dtype],
-    >>> cusignal.precompile_kernels('lfilter', [np.float32, np.float64])
+    >>> cusignal.precompile_kernels('convolve2d', [np.float32, np.float64])
 
     To precompile a specific kernel and all data types
-    >>> cusignal.precompile_kernels('lfilter')
+    >>> cusignal.precompile_kernels('convolve2d')
 
     To precompile a specific data type and all kernels
     >>> cusignal.precompile_kernels(dtype=[np.float64])
 
     To precompile a multiple kernels
-    >>> cusignal.precompile_kernels('lfilter', [np.float64])
+    >>> cusignal.precompile_kernels('convolve2d', [np.float64])
     >>> cusignal.precompile_kernels('correlate', [np.float64])
     """
 
     if k_type is not None and not isinstance(k_type, str):
         raise TypeError(
             "k_type is type ({}), should be (string) - e.g {}".format(
-                type(k_type), "'lfilter'"
+                type(k_type), "'convolve2d'"
             )
         )
     elif k_type is not None:
