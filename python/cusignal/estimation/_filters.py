@@ -15,7 +15,6 @@ import cupy as cp
 
 from enum import Enum
 from numba import cuda, void, float32, float64
-from string import Template
 
 
 class GPUKernel(Enum):
@@ -334,7 +333,7 @@ def _numba_kalman_signature(ty):
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
 template<typename T, int DIM_X>
-__global__ void __launch_bounds__(256, 8) _cupy_predict(
+__global__ void __launch_bounds__(DIM_X*DIM_X*16, 8) _cupy_predict(
 //__global__ void _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
@@ -344,10 +343,8 @@ __global__ void __launch_bounds__(256, 8) _cupy_predict(
         const T * __restrict__ Q
         ) {
 
-    extern __shared__ T s_buffer[];
-
-    T *s_A { s_buffer };
-    T *s_F { reinterpret_cast<T*>(&s_A[DIM_X * DIM_X * blockDim.z]) };
+    __shared__ T s_A[DIM_X * DIM_X * 16];
+    __shared__ T s_F[DIM_X * DIM_X * 16];
 
     const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
@@ -371,6 +368,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_predict(
         T temp {};
 
         if ( tx == 0 ) {
+#pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_F[xx_idx + (ty * DIM_X + j)] *
                     x_in[tid_z * DIM_X * 1 + j * 1 + tx];
@@ -379,6 +377,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_predict(
         }
 
         temp = 0.0f;
+#pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_F[xx_idx + (ty * DIM_X + j)] *
                 P[tid_z * DIM_X * DIM_X + j * DIM_X + tx];
@@ -388,6 +387,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_predict(
         __syncthreads();
 
         temp = 0.0f;
+#pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_A[xx_idx + (ty * DIM_X + j)] *
                 s_F[xx_idx + (tx * DIM_X + j)];
@@ -399,7 +399,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_predict(
 }
 
 template<typename T, int DIM_X, int DIM_Z>
-__global__ void __launch_bounds__(256, 8) _cupy_update(
+__global__ void __launch_bounds__(DIM_X*DIM_X*16, 8) _cupy_update(
 //__global__ void _cupy_update(
         const int num_points,
         T * __restrict__ x_in,
@@ -409,15 +409,13 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         const T * __restrict__ R
         ) {
 
-    extern __shared__ T s_buffer[];
-
-    T *s_A { s_buffer };
-    T *s_B { reinterpret_cast<T*>(&s_A[DIM_X * DIM_X * blockDim.z]) };
-    T *s_P { reinterpret_cast<T*>(&s_B[DIM_X * DIM_X * blockDim.z]) };
-    T *s_H { reinterpret_cast<T*>(&s_P[DIM_X * DIM_X * blockDim.z]) };
-    T *s_K { reinterpret_cast<T*>(&s_H[DIM_Z * DIM_X * blockDim.z]) };
-    T *s_R { reinterpret_cast<T*>(&s_K[DIM_X * DIM_Z * blockDim.z]) };
-    T *s_y { reinterpret_cast<T*>(&s_R[DIM_Z * DIM_Z * blockDim.z]) };
+    __shared__ T s_A[DIM_X * DIM_X * 16];
+    __shared__ T s_B[DIM_X * DIM_X * 16];
+    __shared__ T s_P[DIM_X * DIM_X * 16];
+    __shared__ T s_H[DIM_Z * DIM_X * 16];
+    __shared__ T s_K[DIM_X * DIM_Z * 16];
+    __shared__ T s_R[DIM_Z * DIM_Z * 16];
+    __shared__ T s_y[DIM_Z * 1 * 16];
 
     const int tx {
         static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
@@ -456,6 +454,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         if ( ( ty < DIM_Z ) && ( tx == 0 ) ) {
             T temp_z { z_in[tid_z * DIM_Z * 1 + ty * 1 + tx] };
 
+#pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_H[xz_idx + (ty * DIM_X + j)] *
                     x_in[tid_z * DIM_X * 1 + j * 1 + tx];
@@ -467,6 +466,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         // Compute PHT : dot(self.P, self.H.T)
         temp = 0.0f;
         if ( tx < DIM_Z ) {
+#pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_P[xx_idx + (ty * DIM_X + j)] *
                     s_H[xz_idx + (tx * DIM_X + j)];
@@ -480,6 +480,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         // Compute self.S : dot(self.H, PHT) + self.R
         temp = 0.0f;
         if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+#pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_H[xz_idx + (ty * DIM_X + j)] *
                     s_A[xx_idx + (j * DIM_Z + tx)];
@@ -516,6 +517,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         //  kalman gain
         temp = 0.0f;
         if ( tx < 2 ) {
+#pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
                 temp += s_A[xx_idx + (ty * DIM_Z + j)] *
                     s_B[xx_idx + (tx * DIM_Z + j)];
@@ -528,6 +530,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         //  Compute self.x : self.x + cp.dot(self.K, self.y)
         temp = 0.0;
         if ( tx == 0 ) {
+#pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
                 temp += s_K[xz_idx + (ty * DIM_Z + j)] *
                     s_y[threadIdx.z * DIM_Z + j];
@@ -537,6 +540,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
 
         // Compute I_KH = self_I - dot(self.K, self.H)
         temp = 0.0f;
+#pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
             temp += s_K[xz_idx + (ty * DIM_Z + j)] *
                 s_H[xz_idx + (j * DIM_X + tx)];
@@ -551,6 +555,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
 
         // Compute dot(I_KH, self.P)
         temp = 0.0f;
+#pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_A[xx_idx + (ty * DIM_X + j)] *
                 s_P[xx_idx + (j * DIM_X + tx)];
@@ -561,6 +566,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
 
         // Compute dot(dot(I_KH, self.P), I_KH.T)
         temp = 0.0f;
+#pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_B[xx_idx + (ty * DIM_X + j)] *
                 s_A[xx_idx + (tx * DIM_X + j)];
@@ -570,6 +576,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
 
         temp = 0.0f;
         if ( tx < DIM_Z ) {
+#pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
                 temp += s_K[xz_idx + (ty * DIM_Z + j)] *
                     s_R[zz_idx + (j * DIM_Z + tx)];
@@ -582,6 +589,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
         __syncthreads();
 
         temp = 0.0f;
+#pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
             temp += s_A[xx_idx + (ty * DIM_Z + j)] *
                 s_K[xz_idx + (tx * DIM_Z + j)];
@@ -596,7 +604,7 @@ __global__ void __launch_bounds__(256, 8) _cupy_update(
 
 
 class _cupy_predict_wrapper(object):
-    def __init__(self, grid, block, stream, smem, kernel):
+    def __init__(self, grid, block, stream, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -605,7 +613,6 @@ class _cupy_predict_wrapper(object):
         self.grid = grid
         self.block = block
         self.stream = stream
-        self.smem = smem
         self.kernel = kernel
 
     def __call__(
@@ -615,11 +622,11 @@ class _cupy_predict_wrapper(object):
         kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
 
         self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_update_wrapper(object):
-    def __init__(self, grid, block, stream, smem, kernel):
+    def __init__(self, grid, block, stream, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -628,7 +635,6 @@ class _cupy_update_wrapper(object):
         self.grid = grid
         self.block = block
         self.stream = stream
-        self.smem = smem
         self.kernel = kernel
 
     def __call__(self, x, z, H, P, R):
@@ -636,7 +642,7 @@ class _cupy_update_wrapper(object):
         kernel_args = (x.shape[0], x, z, H, P, R)
 
         self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
@@ -645,9 +651,9 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
         kernel = _cupy_kernel_cache[(dtype.name, k_type)]
         if kernel:
             if k_type == GPUKernel.PREDICT:
-                return _cupy_predict_wrapper(grid, block, stream, smem, kernel)
+                return _cupy_predict_wrapper(grid, block, stream, kernel)
             elif k_type == GPUKernel.UPDATE:
-                return _cupy_update_wrapper(grid, block, stream, smem, kernel)
+                return _cupy_update_wrapper(grid, block, stream, kernel)
             else:
                 raise NotImplementedError(
                     "No CuPY kernel found for k_type {}, datatype {}".format(
