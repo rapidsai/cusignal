@@ -120,32 +120,6 @@ class TestSignaltools:
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_convolve(self, rand_data_gen, num_samps, num_taps, mode, method):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
-        cpu_win = signal.windows.hann(num_taps)
-        gpu_win = cusignal.windows.hann(num_taps)
-
-        cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
-        gpu_conv = cp.asnumpy(
-            cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
-        )
-        assert array_equal(cpu_conv, gpu_conv)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_fftconvolve(self, rand_data_gen, num_samps, mode="full"):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
-        cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
-        gpu_autocorr = cp.asnumpy(
-            cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
-        )
-        assert array_equal(cpu_autocorr, gpu_autocorr)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
-    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
     def test_convolve(num_samps, num_taps, mode, method):
         cpu_sig = np.random.rand(num_samps)
         cpu_win = signal.windows.hann(num_taps)
