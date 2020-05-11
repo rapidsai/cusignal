@@ -33,6 +33,7 @@
 - PR #52 - Mirror API change in Numba 0.49
 - PR #70 - Typo fix in docs api.rst that broke build
 - PR #93 - Remove `lfilter` due to poor performance in real-time applications
+- PR #96 - Move data type check to `_populate_kernel_cache`
 
 # cuSignal 0.13 (31 Mar 2020)
 
