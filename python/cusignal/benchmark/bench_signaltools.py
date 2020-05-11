@@ -322,34 +322,6 @@ class BenchSignaltools:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Lfilter")
-    @pytest.mark.parametrize("num_samps", [2 ** 16])
-    class BenchLfilter:
-        def cpu_version(self, b, a, cpu_sig):
-            return signal.lfilter(b, a, cpu_sig)
-
-        def bench_lfilter_cpu(self, linspace_range_gen, benchmark, num_samps):
-            cpu_sig, _ = linspace_range_gen(num_samps)
-            a = [1.0, 0.25, 0.5]
-            b = [1.0, 0.0, 0.0]
-
-            benchmark(self.cpu_version, b, a, cpu_sig)
-
-        def bench_lfilter_gpu(self, linspace_range_gen, benchmark, num_samps):
-
-            cpu_sig, gpu_sig = linspace_range_gen(num_samps)
-
-            cpu_a = [1.0, 0.25, 0.5]
-            cpu_b = [1.0, 0.0, 0.0]
-
-            gpu_a = cp.asarray(cpu_a)
-            gpu_b = cp.asarray(cpu_b)
-
-            output = benchmark(cusignal.lfilter, gpu_b, gpu_a, gpu_sig)
-
-            key = self.cpu_version(cpu_b, cpu_a, cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
-
     @pytest.mark.benchmark(group="Hilbert")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class BenchHilbert:
@@ -484,49 +456,4 @@ class BenchSignaltools:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="Resample")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
-    @pytest.mark.parametrize("zero_phase", [True, False])
-    class BenchDecimate:
-        def cpu_version(self, cpu_sig, downsample_factor, zero_phase):
-            return signal.decimate(
-                cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
-            )
-
-        def bench_decimate_cpu(
-            self,
-            linspace_data_gen,
-            benchmark,
-            num_samps,
-            downsample_factor,
-            zero_phase,
-        ):
-            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
-            benchmark(
-                self.cpu_version, cpu_sig, downsample_factor, zero_phase,
-            )
-
-        def bench_decimate_gpu(
-            self,
-            linspace_data_gen,
-            benchmark,
-            num_samps,
-            downsample_factor,
-            zero_phase,
-        ):
-
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
-            output = benchmark(
-                cusignal.decimate,
-                gpu_sig,
-                downsample_factor,
-                zero_phase=zero_phase,
-            )
-
-            key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)
             assert array_equal(cp.asnumpy(output), key)
