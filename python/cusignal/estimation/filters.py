@@ -98,13 +98,14 @@ class KalmanFilter(object):
         self.threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
         self.blockspergrid = (1, 1, numSM * 20)
 
-        max_available_threadsperblock = d.attributes["MaxThreadsPerBlock"]
+        max_available_threadsperblock = d.attributes[
+            "MaxThreadsPerMultiProcessor"
+        ]
 
         max_threads_per_block = self.dim_x * self.dim_x * threads_z_axis
         min_blocks_per_multiprocessor = (
             max_available_threadsperblock // max_threads_per_block
         )
-        print(min_blocks_per_multiprocessor)
 
         # Only need to populate cache once
         # At class initialization
