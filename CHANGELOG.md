@@ -24,10 +24,12 @@
 - PR #71 - README spelling and conda install fixes
 - PR #78 - Ported lfilter to CuPy Raw Kernel (only 1D functional)
 - PR #83 - Implement code refactor
+- PR #84 - Update minimum versions of CuPy and Numba and associated conda envs
 - PR #87 - Update lfilter documentation to clarifiy single-threaded perf
 - PR #89 - Include data types in tests and benchmarks
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
 - PR #97 - Add pytest-benchmark to conda ymls and update conda env name
+- PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
