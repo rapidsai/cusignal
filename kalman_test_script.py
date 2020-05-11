@@ -10,15 +10,18 @@ dim_x = 4
 dim_z = 2
 num_points = 4096
 iterations = 10
+numba = False
+dt = np.float64
 
 print("num_points", num_points)
 print("iterations", iterations)
+print("use_numba", numba)
+print("data type", dt)
 
-cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, use_numba=False)
+
+cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, dtype=dt, use_numba=numba)
 
 f_fpy = filterpy.kalman.KalmanFilter(dim_x=4, dim_z=2)
-
-dt = np.float32
 
 initial_location = np.array(
     [[10.0, 10.0, 0.0, 0.0]], dtype=dt
@@ -105,6 +108,8 @@ for i in range(iterations):
     cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
 
     cuS.update()
+
+    cp.cuda.runtime.deviceSynchronize()
 
 
 print("GPU:", time.time() - start)

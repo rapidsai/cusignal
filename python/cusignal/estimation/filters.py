@@ -13,12 +13,21 @@
 
 import cupy as cp
 
-from .. import _filters
+from . import _filters
+
 
 class KalmanFilter(object):
 
     #  documentation
-    def __init__(self, num_points, dim_x, dim_z, dim_u=0, use_numba=False):
+    def __init__(
+        self,
+        num_points,
+        dim_x,
+        dim_z,
+        dim_u=0,
+        dtype=cp.float32,
+        use_numba=False,
+    ):
 
         self.num_points = num_points
         self.use_numba = use_numba
@@ -42,17 +51,17 @@ class KalmanFilter(object):
         # 1. if read-only and same initial, we can have one copy
         # 2. if not read-only and same initial, use broadcasting
         self.x = cp.zeros(
-            (self.num_points, dim_x, 1,), dtype=cp.float32
+            (self.num_points, dim_x, 1,), dtype=dtype
         )  # state
 
         self.P = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :],
+            cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # uncertainty covariance
 
         self.Q = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :],
+            cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # process uncertainty
@@ -60,30 +69,30 @@ class KalmanFilter(object):
         # self.B = None  # control transition matrix
 
         self.F = cp.repeat(
-            cp.identity(dim_x, dtype=cp.float32)[cp.newaxis, :, :],
+            cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # state transition matrix
 
         self.H = cp.zeros(
-            (self.num_points, dim_z, dim_z,), dtype=cp.float32
+            (self.num_points, dim_z, dim_z,), dtype=dtype
         )  # Measurement function
 
         self.R = cp.repeat(
-            cp.identity(dim_z, dtype=cp.float32)[cp.newaxis, :, :],
+            cp.identity(dim_z, dtype=dtype)[cp.newaxis, :, :],
             self.num_points,
             axis=0,
         )  # process uncertainty
 
         self._alpha_sq = cp.ones(
-            (self.num_points, 1, 1,), dtype=cp.float32
+            (self.num_points, 1, 1,), dtype=dtype
         )  # fading memory control
 
         self.M = cp.zeros(
-            (self.num_points, dim_z, dim_z,), dtype=cp.float32
+            (self.num_points, dim_z, dim_z,), dtype=dtype
         )  # process-measurement cross correlation
 
-        self.z = cp.empty((self.num_points, dim_z, 1,), dtype=cp.float32)
+        self.z = cp.empty((self.num_points, dim_z, 1,), dtype=dtype)
 
         _filters._populate_kernel_cache(
             self.x.dtype.type, self.use_numba, _filters.GPUKernel.PREDICT
