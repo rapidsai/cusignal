@@ -17,9 +17,6 @@ from enum import Enum
 
 from ._caches import _cupy_kernel_cache
 
-from ..filtering._lfilter_cuda import (
-    _cupy_lfilter_src
-)
 from ..convolution._convolution_cuda import (
     _cupy_convolve_src,
     _cupy_convolve_2d_src,
@@ -43,7 +40,6 @@ class GPUKernel(Enum):
     CONVOLVE = 'convolve'
     CORRELATE2D = 'correlate2d'
     CONVOLVE2D = 'convolve2d'
-    LFILTER = 'lfilter'
     LOMBSCARGLE = 'lombscargle'
     UPFIRDN = 'upfirdn'
     UPFIRDN2D = 'upfirdn2d'
@@ -57,11 +53,6 @@ _SUPPORTED_TYPES_CONVOLVE = {
     "float64": "double",
     "complex64": "complex<float>",
     "complex128": "complex<double>",
-}
-
-_SUPPORTED_TYPES_LFILTER = {
-    "float32": "float",
-    "float64": "double",
 }
 
 _SUPPORTED_TYPES_LOMBSCARGLE = {
@@ -86,9 +77,6 @@ def _get_supported_types(k_type):
         or k_type == GPUKernel.CONVOLVE2D
     ):
         SUPPORTED_TYPES = _SUPPORTED_TYPES_CONVOLVE
-
-    elif k_type == GPUKernel.LFILTER:
-        SUPPORTED_TYPES = _SUPPORTED_TYPES_LFILTER
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
@@ -115,15 +103,6 @@ def _validate_input(dtype, k_type):
 
         for np_type in d:
 
-            # Check dtypes from user input
-            try:
-                SUPPORTED_TYPES[str(np_type)]
-
-            except KeyError:
-                raise KeyError(
-                    "Datatype {} not found for '{}'".format(np_type, k.value)
-                )
-
             _populate_kernel_cache(np_type, k)
 
 
@@ -131,7 +110,13 @@ def _populate_kernel_cache(np_type, k_type):
 
     SUPPORTED_TYPES = _get_supported_types(k_type)
 
-    c_type = SUPPORTED_TYPES[str(np_type)]
+    # Check dtypes from user input
+    try:
+        c_type = SUPPORTED_TYPES[np_type]
+    except KeyError:
+        raise KeyError(
+            "Datatype {} not found for '{}'".format(np_type, k_type.value)
+        )
 
     if (str(np_type), k_type.value) in _cupy_kernel_cache:
         return
@@ -194,14 +179,6 @@ def _populate_kernel_cache(np_type, k_type):
         _cupy_kernel_cache[
             (str(np_type), k_type.value)
         ] = module.get_function("_cupy_lombscargle")
-    elif k_type == GPUKernel.LFILTER:
-        src = _cupy_lfilter_src.substitute(datatype=c_type, header=header)
-        module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
-        )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_lfilter")
     elif k_type == GPUKernel.UPFIRDN:
         src = _cupy_upfirdn_1d_src.substitute(
             datatype=c_type, header=header
@@ -248,7 +225,6 @@ def precompile_kernels(k_type=None, dtype=None):
             'convolve'
             'correlate2d'
             'convolve2d'
-            'lfilter'
             'lombscargle'
             'upfirdn'
             'upfirdn2d'
@@ -267,7 +243,6 @@ def precompile_kernels(k_type=None, dtype=None):
                 complex64
                 complex128
             }
-            'lfilter'
             'lombscargle'
             {
                 float32
@@ -289,23 +264,23 @@ def precompile_kernels(k_type=None, dtype=None):
     >>> cusignal.precompile_kernels()
 
     To precompile a specific kernel and dtype [list of dtype],
-    >>> cusignal.precompile_kernels('lfilter', ['float32', 'float64'])
+    >>> cusignal.precompile_kernels('convolve2d', [np.float32, np.float64])
 
     To precompile a specific kernel and all data types
-    >>> cusignal.precompile_kernels('lfilter')
+    >>> cusignal.precompile_kernels('convolve2d')
 
     To precompile a specific data type and all kernels
     >>> cusignal.precompile_kernels(dtype=['float64'])
 
     To precompile a multiple kernels
-    >>> cusignal.precompile_kernels('lfilter', ['float64'])
-    >>> cusignal.precompile_kernels('correlate', ['float64'])
+    >>> cusignal.precompile_kernels('convolve2d', [np.float64])
+    >>> cusignal.precompile_kernels('correlate', [np.float64])
     """
 
     if k_type is not None and not isinstance(k_type, str):
         raise TypeError(
             "k_type is type ({}), should be (string) - e.g {}".format(
-                type(k_type), "'lfilter'"
+                type(k_type), "'convolve2d'"
             )
         )
     elif k_type is not None:
