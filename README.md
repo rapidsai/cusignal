@@ -6,6 +6,21 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 
 **NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the latest branch.
 
+## Table of Contents
+* [Quick Start](#quick-start)
+* [Documentation](#documentation)
+* [Installation](#installation)
+    * [Conda: Linux OS](#conda-linux-os)
+    * [Conda: Jetson Nano, TK1, TX2, Xavier, Linux OS](#conda---jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Source: Linux OS](#source-linux-os)
+    * [Source: Windows OS (Experimental)](#source-windows-os-experimental)
+    * [Docker](#docker---all-rapids-libraries-including-cusignal)
+* [Optional Dependencies](#optional-dependencies)
+* [Benchmarking](#benchmarking)
+* [Contribution Guide](#contributing-guide)
+* [cuSignal Blogs and Talks](#cusignal-blogs-and-talks)
+
+
 ## Quick Start
 cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
 
@@ -33,6 +48,9 @@ This code executes on 2x Xeon E5-2600 in 2.36 sec.
 import cupy as cp
 import cusignal
 
+# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
+cusignal.precompile_kernels()
+
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -52,6 +70,9 @@ This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Sign
 import cupy as cp
 import numpy as np
 import cusignal
+
+# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
+cusignal.precompile_kernels()
 
 start = 0
 stop = 10
@@ -79,6 +100,9 @@ import cupy as cp
 import numpy as np
 import cusignal
 
+# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
+cusignal.precompile_kernels()
+
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -93,6 +117,11 @@ cy = np.cos(-cx**2/6.0)
 gf = cusignal.resample_poly(cp.asarray(cy), resample_up, resample_down, window=('kaiser', 0.5))
 ```
 This code executes on an NVIDIA V100 in 637 ms.
+
+## Documentation
+The complete cuSignal API documentation including a complete list of functionality and examples can be found for both the Stable and Nightly (Experimental) releases.
+
+[cuSignal 0.13 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.14 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
 ## Installation
 
@@ -310,6 +339,13 @@ Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more 
 ## Optional Dependencies
 * [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) if using Docker 
 * RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
+
+## Benchmarking
+cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal processing implementations. To run cuSignal's benchmark suite, **navigate to the topmost python directory ($CUSIGNAL_HOME/python)** and run:
+
+`pytest --benchmark-only`
+
+As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _minimum_ execution time reported.
 
 ## Contributing Guide
 

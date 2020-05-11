@@ -27,6 +27,7 @@
 - PR #87 - Update lfilter documentation to clarifiy single-threaded perf
 - PR #89 - Include data types in tests and benchmarks
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
+- PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
