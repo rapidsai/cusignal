@@ -120,7 +120,7 @@ class TestSignaltools:
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_convolve(num_samps, num_taps, mode, method):
+    def test_convolve(self, num_samps, num_taps, mode, method):
         cpu_sig = np.random.rand(num_samps)
         cpu_win = signal.windows.hann(num_taps)
 
@@ -134,7 +134,7 @@ class TestSignaltools:
         assert array_equal(cpu_conv, gpu_conv)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_fftconvolve(num_samps, mode="full"):
+    def test_fftconvolve(self, num_samps, mode="full"):
         cpu_sig = np.random.rand(num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -145,7 +145,7 @@ class TestSignaltools:
         assert array_equal(cpu_autocorr, gpu_autocorr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
-    def test_wiener(num_samps):
+    def test_wiener(self, num_samps):
         cpu_sig = np.random.rand(num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -154,7 +154,7 @@ class TestSignaltools:
         assert array_equal(cpu_wfilt, gpu_wfilt)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_hilbert(num_samps):
+    def test_hilbert(self, num_samps):
         cpu_sig = np.random.rand(num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -163,7 +163,7 @@ class TestSignaltools:
         assert array_equal(cpu_hilbert, gpu_hilbert)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
-    def test_hilbert2(num_samps):
+    def test_hilbert2(self, num_samps):
         cpu_sig = np.random.rand(num_samps, num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -176,7 +176,7 @@ class TestSignaltools:
     @pytest.mark.parametrize("boundary", ["symm"])
     @pytest.mark.parametrize("mode", ["same"])
     @pytest.mark.parametrize("use_numba", [True, False])
-    def test_convolve2d(num_samps, num_taps, boundary, mode, use_numba):
+    def test_convolve2d(self, num_samps, num_taps, boundary, mode, use_numba):
         cpu_sig = np.random.rand(num_samps, num_samps)
         cpu_filt = np.random.rand(num_taps, num_taps)
         gpu_sig = cp.asarray(cpu_sig)
