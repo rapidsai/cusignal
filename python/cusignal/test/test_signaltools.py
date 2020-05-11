@@ -140,7 +140,7 @@ class TestSignaltools:
         gpu_autocorr = cp.asnumpy(
             cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
         )
-        assert array_equal(cpu_corr, gpu_corr)
+        assert array_equal(cpu_autocorr, gpu_autocorr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
