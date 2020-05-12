@@ -332,6 +332,67 @@ def _numba_kalman_signature(ty):
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
+template<typename T, int DIM_Z>
+__device__ T inverse(
+    const int & idx,
+    const int & tx,
+    const int & ty,
+    T * s_B) {
+
+    const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
+
+    T determinant {};
+    T temp {};
+
+    if ( DIM_Z == 2 ) {
+        determinant = ( (
+            s_B[idx + (0 * DIM_Z + 0)] *
+            s_B[idx + (1 * DIM_Z + 1)] ) -
+            ( s_B[idx + (1 * DIM_Z + 0)] *
+            s_B[idx + (0 * DIM_Z + 1)] ) );
+
+        temp = s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+
+        temp /= ( determinant * sign );
+
+    } else if ( DIM_Z == 3 ) {
+
+#pragma unroll DIM_Z
+        for (int i = 0; i < DIM_Z; i++) {
+            determinant += ( s_B[idx + (0 * DIM_Z + i)] * (
+                s_B[idx + (1 * DIM_Z + ((i + 1) % DIM_Z))] *
+                s_B[idx + (2 * DIM_Z + ((i + 2) % DIM_Z))] -
+                s_B[idx + (1 * DIM_Z + ((i + 2) % DIM_Z))] *
+                s_B[idx + (2 * DIM_Z + ((i + 1) % DIM_Z))] ) );
+        }
+
+        if (tx==0 && ty ==0 && (static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
+            printf("d %f\\n", determinant);
+        }
+
+        temp = s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))] *
+                s_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] -
+                s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] *
+                s_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+
+        if ((static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
+            printf("t %f %d %d\\n", temp, tx, ty);
+        }
+
+        temp /= ( determinant * sign );
+
+        if ((static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
+            printf("i %f %d %d\\n", temp, tx, ty);
+        }
+
+    } else {
+        determinant = sign;
+    }
+
+    return ( temp );
+}
+
+
 template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
 __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const int num_points,
@@ -449,7 +510,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         T temp {};
 
         // Compute self.y : z = dot(self.H, self.x)
-        if ( ( ty < DIM_Z ) && ( tx == 0 ) ) {
+        if ( ( tx == 0 ) && ( ty < DIM_Z ) ) {
             T temp_z { z_in[tid_z * DIM_Z * 1 + ty * 1 + tx] };
 
 #pragma unroll DIM_X
@@ -477,7 +538,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         // Compute self.S : dot(self.H, PHT) + self.R
         temp = 0.0f;
-        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_H[xz_idx + (ty * DIM_X + j)] *
@@ -489,22 +550,18 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         __syncthreads();
 
-        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
+        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
+
+            //if (tx == 0 && ty == 0 && tz == 0) {
+            //    for (int i = 0; i< 9; i++) {
+            //        printf("%f\\n", s_B[xx_idx + i]);
+            //    }
+            //}
 
             // Compute linalg.inv(S)
-            // Hardcoded for 2x2
-            const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
+            // Hardcoded for 2x2, 3x3
+            temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_B );
 
-            // sign * determinant
-            const T sign_det { sign *
-                ( ( s_B[xx_idx + (0 * DIM_Z + 0)] *
-                s_B[xx_idx + (1 * DIM_Z + 1)] ) -
-                ( s_B[xx_idx + (1 * DIM_Z + 0)] *
-                s_B[xx_idx + (0 * DIM_Z + 1)] ) ) };
-
-            temp = s_B[xx_idx + ( ( DIM_Z - 1 - ty ) *
-                DIM_Z + ( DIM_Z - 1 - tx ) )] /
-                sign_det;
             // s_B hold SI - inverse system uncertainty
             s_B[xx_idx + z_value] = temp;
         }

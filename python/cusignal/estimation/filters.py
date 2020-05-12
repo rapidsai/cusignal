@@ -39,7 +39,7 @@ class KalmanFilter(object):
         if dim_u < 0:
             raise ValueError("dim_u must be 0 or greater")
 
-        if dim_z > 2:
+        if dim_z > 3:
             raise ValueError(
                 "cuSignal KalmanFilter only works with dim_z = 2 currently"
             )
@@ -163,23 +163,23 @@ class KalmanFilter(object):
         )
 
         # debug
-        # if use_numba is False:
-        #     print("Predict")
-        #     print(self.predict_kernel.kernel.const_size_bytes)
-        #     print(self.predict_kernel.kernel.local_size_bytes)
-        #     print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
-        #     print(self.predict_kernel.kernel.max_threads_per_block)
-        #     print(self.predict_kernel.kernel.num_regs)
-        #     print(self.predict_kernel.kernel.shared_size_bytes)
-        #     print()
-        #     print("Update")
-        #     print(self.update_kernel.kernel.const_size_bytes)
-        #     print(self.update_kernel.kernel.local_size_bytes)
-        #     print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
-        #     print(self.update_kernel.kernel.max_threads_per_block)
-        #     print(self.update_kernel.kernel.num_regs)
-        #     print(self.update_kernel.kernel.shared_size_bytes)
-        #     print()
+        if use_numba is False:
+            print("Predict")
+            print(self.predict_kernel.kernel.const_size_bytes)
+            print(self.predict_kernel.kernel.local_size_bytes)
+            print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
+            print(self.predict_kernel.kernel.max_threads_per_block)
+            print(self.predict_kernel.kernel.num_regs)
+            print(self.predict_kernel.kernel.shared_size_bytes)
+            print()
+            print("Update")
+            print(self.update_kernel.kernel.const_size_bytes)
+            print(self.update_kernel.kernel.local_size_bytes)
+            print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
+            print(self.update_kernel.kernel.max_threads_per_block)
+            print(self.update_kernel.kernel.num_regs)
+            print(self.update_kernel.kernel.shared_size_bytes)
+            print()
 
     def predict(self):
 
