@@ -226,12 +226,11 @@ def sosfilt(sos, x, axis=-1, zi=None):
     >>> import cusignal
     >>> import cupy as cp
     >>> # Generate filter on CPU with Scipy.Signal
-    >>> b, a = signal.ellip(13, 0.009, 80, 0.05, output='ba')
     >>> sos = signal.ellip(13, 0.009, 80, 0.05, output='sos')
     >>> # Move data to GPU
     >>> sos = cp.asarray(sos)
     >>> x = cp.random.randn(100_000_000)
-    >>> y = signal.sosfilt(sos, x)
+    >>> y = cusignal.sosfilt(sos, x)
     """
     x = cp.asarray(x)
     sos = cp.asarray(sos)
