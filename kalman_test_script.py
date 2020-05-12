@@ -100,7 +100,8 @@ for _ in range(loops):
 
             f_fpy.update(z)
 
-print("CPU:", (time.time() - start) / loops)
+cpu_time = (time.time() - start) / loops
+print("CPU:", cpu_time)
 
 z = cp.asarray([0, 0], dtype=dt).T  # must be 2d for cuSignal.filter
 z = cp.atleast_2d(z)
@@ -122,7 +123,10 @@ for _ in range(loops):
 
         cp.cuda.runtime.deviceSynchronize()
 
-print("GPU:", (time.time() - start) / loops)
+gpu_time = (time.time() - start) / loops
+print("GPU:", gpu_time)
+
+print("Speed Up:", (cpu_time / gpu_time))
 
 print()
 print("Final")
