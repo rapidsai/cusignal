@@ -312,7 +312,7 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
         elif k_type == GPUKernel.SOSFILT:
             sig = _numba_sosfilt_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
-                sig, fastmath=True
+                sig, fastmath=True, max_registers=64
             )(_numba_sosfilt)
 
         elif k_type == GPUKernel.UPFIRDN:

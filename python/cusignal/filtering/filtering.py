@@ -258,7 +258,7 @@ def sosfilt(
     x = cp.asarray(x)
     sos = cp.asarray(sos)
     if x.ndim == 0:
-        raise ValueError('x must be at least 1D')
+        raise ValueError("x must be at least 1D")
     sos, n_sections = _validate_sos(sos)
     x_zi_shape = list(x.shape)
     x_zi_shape[axis] = 2
@@ -267,15 +267,17 @@ def sosfilt(
     if zi is not None:
         inputs.append(np.asarray(zi))
     dtype = cp.result_type(*inputs)
-    if dtype.char not in 'fdgFDGO':
+    if dtype.char not in "fdgFDGO":
         raise NotImplementedError("input type '%s' not supported" % dtype)
     if zi is not None:
         zi = cp.array(zi, dtype)  # make a copy so that we can operate in place
         if zi.shape != x_zi_shape:
-            raise ValueError('Invalid zi shape. With axis=%r, an input with '
-                             'shape %r, and an sos array with %d sections, zi '
-                             'must have shape %r, got %r.' %
-                             (axis, x.shape, n_sections, x_zi_shape, zi.shape))
+            raise ValueError(
+                "Invalid zi shape. With axis=%r, an input with "
+                "shape %r, and an sos array with %d sections, zi "
+                "must have shape %r, got %r."
+                % (axis, x.shape, n_sections, x_zi_shape, zi.shape)
+            )
         return_zi = True
     else:
         zi = cp.zeros(x_zi_shape, dtype=dtype)
@@ -285,7 +287,7 @@ def sosfilt(
     zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
     x_shape, zi_shape = x.shape, zi.shape
     x = cp.reshape(x, (-1, x.shape[-1]))
-    x = cp.array(x, dtype, order='C')  # make a copy, can modify in place
+    x = cp.array(x, dtype, order="C")  # make a copy, can modify in place
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
 
@@ -294,6 +296,18 @@ def sosfilt(
     print("zi", zi.shape)
     print("b", sos[:, :3].shape)
     print("a", sos[:, 4:].shape)
+
+    if sos.shape[0] > 1024:
+        raise ValueError(
+            "The number of samples {}, can not be less "
+            "than the number of sections {}".format(x.shape[1], sos.shape[0])
+        )
+
+    if sos.shape[0] > x.shape[1]:
+        raise ValueError(
+            "The number of samples {}, can not be less "
+            "than the number of sections {}".format(x.shape[1], sos.shape[0])
+        )
 
     _sosfilt(sos, x, zi, cp_stream, autosync, use_numba)
     x.shape = x_shape
