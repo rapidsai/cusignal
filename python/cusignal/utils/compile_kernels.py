@@ -35,7 +35,11 @@ from ..spectral_analysis._spectral_cuda import (
     _numba_lombscargle,
     _numba_lombscargle_signature,
 )
-
+from ..filtering._sosfilt_cuda import (
+    _cupy_sosfilt_src,
+    _numba_sosfilt,
+    _numba_sosfilt_signature,
+)
 from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_1d_src,
     _cupy_upfirdn_2d_src,
@@ -59,6 +63,7 @@ class GPUKernel(Enum):
     CORRELATE2D = 'correlate2d'
     CONVOLVE2D = 'convolve2d'
     LOMBSCARGLE = 'lombscargle'
+    SOSFILT = 'sosfilt'
     UPFIRDN = 'upfirdn'
     UPFIRDN2D = 'upfirdn2d'
 
@@ -74,6 +79,11 @@ _SUPPORTED_TYPES_CONVOLVE = {
 }
 
 _SUPPORTED_TYPES_LOMBSCARGLE = {
+    np.float32: [float32, "float"],
+    np.float64: [float64, "double"],
+}
+
+_SUPPORTED_TYPES_SOSFILT = {
     np.float32: [float32, "float"],
     np.float64: [float64, "double"],
 }
@@ -128,6 +138,9 @@ def _get_supported_types(k_type):
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
+
+    elif k_type == GPUKernel.SOSFILT:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_SOSFILT
 
     elif k_type == GPUKernel.UPFIRDN or k_type == GPUKernel.UPFIRDN2D:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_UPFIRDN
@@ -228,6 +241,18 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _cupy_kernel_cache[
                 (str(numba_type), k_type.value)
             ] = module.get_function("_cupy_lombscargle")
+
+        elif k_type == GPUKernel.SOSFILT:
+            src = _cupy_sosfilt_src.substitute(
+                datatype=c_type, header=header
+            )
+            module = cp.RawModule(
+                code=src, options=("-std=c++11", "-use_fast_math")
+            )
+            _cupy_kernel_cache[
+                (str(numba_type), k_type.value)
+            ] = module.get_function("_cupy_sosfilt")
+
         elif k_type == GPUKernel.UPFIRDN:
             src = _cupy_upfirdn_1d_src.substitute(
                 datatype=c_type, header=header
@@ -283,16 +308,25 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_lombscargle)
+
+        elif k_type == GPUKernel.SOSFILT:
+            sig = _numba_sosfilt_signature(numba_type)
+            _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
+                sig, fastmath=True
+            )(_numba_sosfilt)
+
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_upfirdn_1d)
+
         elif k_type == GPUKernel.UPFIRDN2D:
             sig = _numba_upfirdn_2d_signature(numba_type)
             _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
                 sig, fastmath=True
             )(_numba_upfirdn_2d)
+
         else:
             raise NotImplementedError(
                 "No kernel found for k_type {}, datatype {}".format(

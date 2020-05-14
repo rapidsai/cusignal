@@ -167,7 +167,15 @@ def lfiltic(b, a, y, x=None):
     return zi
 
 
-def sosfilt(sos, x, axis=-1, zi=None):
+def sosfilt(
+    sos,
+    x,
+    axis=-1,
+    zi=None,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+    use_numba=False,
+):
     """
     Filter data along one dimension using cascaded second-order sections.
     Filter a data sequence, `x`, using a digital IIR filter defined by
@@ -195,6 +203,20 @@ def sosfilt(sos, x, axis=-1, zi=None):
         (i.e. all zeros) is assumed.
         Note that these initial conditions are *not* the same as the initial
         conditions given by `lfiltic` or `lfilter_zi`.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
@@ -232,6 +254,7 @@ def sosfilt(sos, x, axis=-1, zi=None):
     >>> x = cp.random.randn(100_000_000)
     >>> y = cusignal.sosfilt(sos, x)
     """
+
     x = cp.asarray(x)
     sos = cp.asarray(sos)
     if x.ndim == 0:
@@ -242,7 +265,7 @@ def sosfilt(sos, x, axis=-1, zi=None):
     x_zi_shape = tuple([n_sections] + x_zi_shape)
     inputs = [sos, x]
     if zi is not None:
-        inputs.append(cp.asarray(zi))
+        inputs.append(np.asarray(zi))
     dtype = cp.result_type(*inputs)
     if dtype.char not in 'fdgFDGO':
         raise NotImplementedError("input type '%s' not supported" % dtype)
@@ -265,7 +288,14 @@ def sosfilt(sos, x, axis=-1, zi=None):
     x = cp.array(x, dtype, order='C')  # make a copy, can modify in place
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
-    _sosfilt(sos, x, zi)
+
+    print("sos", sos.shape)
+    print("x", x.shape)
+    print("zi", zi.shape)
+    print("b", sos[:, :3].shape)
+    print("a", sos[:, 4:].shape)
+
+    _sosfilt(sos, x, zi, cp_stream, autosync, use_numba)
     x.shape = x_shape
     x = cp.moveaxis(x, -1, axis)
     if return_zi:
