@@ -66,8 +66,6 @@ def _numba_sosfilt(sos, x_in, zi):
             # temp = b[x, 0] * x_n + zi[y, x, 0]
             temp = s_sos[x * sos_width + 0] * x_n + s_zi[x * zi_width + 0]
 
-            # print("1", y, n, x, x_n, temp, zi[y, x, 0], a[x, 0], b[x, 0])
-
             # zi[y, x, 0] = (b[x, 1] * x_n - a[x, 0] * temp + zi[y, x, 1])
             # zi[y, x, 1] = (b[x, 2] * x_n - a[x, 1] * temp)
             s_zi[x * zi_width + 0] = (
@@ -95,8 +93,6 @@ def _numba_sosfilt(sos, x_in, zi):
             # Use direct II transposed structure:
             # temp = b[x, 0] * x_n + zi[y, x, 0]
             temp = s_sos[x * sos_width + 0] * x_n + s_zi[x * zi_width + 0]
-
-            # print("1", y, n, x, x_n, temp, zi[y, x, 0], a[x, 0], b[x, 0])
 
             # zi[y, x, 0] = (b[x, 1] * x_n - a[x, 0] * temp + zi[y, x, 1])
             # zi[y, x, 1] = (b[x, 2] * x_n - a[x, 1] * temp)
@@ -227,10 +223,9 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
 def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
-    threadsperblock = (sos.shape[0], 1)  # Up-to (512, 2) = 1024 max per block
+    threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
-    print("tbp", sos.shape[0] * 2, (sos.shape[0], 1), (1, x.shape[0]))
 
     _populate_kernel_cache(x.dtype.type, use_numba, GPUKernel.SOSFILT)
 
@@ -239,8 +234,6 @@ def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
     sos_size = sos.shape[0] * sos.shape[1]
 
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
-
-    print("sm", shared_mem, out_size, z_size, sos_size, x.dtype.itemsize)
 
     kernel = _get_backend_kernel(
         x.dtype,
