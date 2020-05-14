@@ -227,11 +227,6 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
 def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
-    # device_id = cp.cuda.Device()
-    # numSM = device_id.attributes["MultiProcessorCount"]
-    # threadsperblock = 256
-    # blockspergrid = numSM * 20
-
     threadsperblock = (sos.shape[0], 1)  # Up-to (512, 2) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
@@ -242,7 +237,6 @@ def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
     out_size = threadsperblock[0]
     z_size = zi.shape[1] * zi.shape[2]
     sos_size = sos.shape[0] * sos.shape[1]
-    # sos_size = 0
 
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
 

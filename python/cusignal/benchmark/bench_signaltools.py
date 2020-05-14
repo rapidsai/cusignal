@@ -459,7 +459,7 @@ class BenchSignaltools:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
-    @pytest.mark.parametrize("order", [32, 64, 128])
+    @pytest.mark.parametrize("order", [128, 256, 512])
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 16, 2 ** 18, 2 ** 20])
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
     # @pytest.mark.parametrize("num_samps", [10000])
