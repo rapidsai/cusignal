@@ -235,6 +235,11 @@ def sosfilt(
     with direct-form II transposed structure. It is designed to minimize
     numerical precision errors for high-order filters.
 
+    Limitations
+    -----------
+    1. The number of n_sections must be less than 513.
+    2. The number of samples must be greater than the number of sections
+
     Examples
     --------
     sosfilt is a stable alternative to `lfilter` as using 2nd order sections
@@ -291,11 +296,11 @@ def sosfilt(
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
 
-    print("sos", sos.shape)
-    print("x", x.shape)
-    print("zi", zi.shape)
-    print("b", sos[:, :3].shape)
-    print("a", sos[:, 4:].shape)
+    # print("sos", sos.shape)
+    # print("x", x.shape)
+    # print("zi", zi.shape)
+    # print("b", sos[:, :3].shape)
+    # print("a", sos[:, 4:].shape)
 
     if sos.shape[0] > 1024:
         raise ValueError(
