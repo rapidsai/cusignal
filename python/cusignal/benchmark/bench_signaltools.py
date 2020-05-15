@@ -459,10 +459,10 @@ class BenchSignaltools:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
-    @pytest.mark.parametrize("order", [128, 256, 512])
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 16, 2 ** 18, 2 ** 20])
+    @pytest.mark.parametrize("order", [32, 64, 128, 256, 512])
+    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
-    # @pytest.mark.parametrize("num_samps", [10000])
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     class BenchSOSFilt:
         np.random.seed(1234)
 
@@ -476,12 +476,14 @@ class BenchSignaltools:
             num_signals,
             num_samps,
             order,
+            dtype,
         ):
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output='sos')
+            cpu_sos = np.array(cpu_sos, dtype=dtype)
             cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.array(cpu_sig, dtype=dtype)
             benchmark(self.cpu_version, cpu_sos, cpu_sig)
 
-        @pytest.mark.parametrize("use_numba", [True])
         def bench_sosfilt_gpu(
             self,
             rand_2d_data_gen,
@@ -489,19 +491,20 @@ class BenchSignaltools:
             num_signals,
             num_samps,
             order,
-            use_numba,
+            dtype,
         ):
 
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output='sos')
+            cpu_sos = np.array(cpu_sos, dtype=dtype)
             gpu_sos = cp.asarray(cpu_sos)
             cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
             output = benchmark(
                 cusignal.sosfilt,
                 gpu_sos,
                 gpu_sig,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sos, cpu_sig)

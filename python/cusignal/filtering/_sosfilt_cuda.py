@@ -11,144 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
-
-from numba import cuda, void, float64
 from string import Template
 
-from ..utils._caches import _cupy_kernel_cache, _numba_kernel_cache
-
-
-def _numba_sosfilt(sos, x_in, zi):
-
-    n_samples = x_in.shape[1]
-    n_sections = sos.shape[0]
-
-    zi_width = 2
-    sos_width = 6
-
-    s_buffer = cuda.shared.array(shape=0, dtype=float64)
-
-    s_out = s_buffer[:n_sections]
-    s_zi = s_buffer[n_sections : (n_sections + sos.shape[0] * zi_width)]
-    s_sos = s_buffer[(n_sections + sos.shape[0] * zi_width) :]
-
-    x, y = cuda.grid(2)
-
-    # Reset shared memory
-    s_out[x] = 0
-
-    # Load zi
-    for i in range(zi_width):
-        s_zi[x * zi_width + i] = zi[y, x, i]
-
-    # Load SOS
-    # b is in s_sos[x * sos_width + [0-2]]
-    # a is in s_sos[x * sos_width + [3-6]]
-    for i in range(sos_width):
-        s_sos[x * sos_width + i] = sos[x, i]
-
-    cuda.syncthreads()
-
-    load_size = n_sections - 1
-    unload_size = n_samples - load_size
-
-    if y < x_in.shape[0]:
-        # Loading phase
-        for n in range(load_size):
-            # for s in range(n_sections):
-            if x == 0:
-                x_n = x_in[y, n]  # make a temporary copy
-            else:
-                x_n = s_out[x - 1]
-
-            # Use direct II transposed structure:
-            # temp = b[x, 0] * x_n + zi[y, x, 0]
-            temp = s_sos[x * sos_width + 0] * x_n + s_zi[x * zi_width + 0]
-
-            # print("1", y, n, x, x_n, temp, zi[y, x, 0], a[x, 0], b[x, 0])
-
-            # zi[y, x, 0] = (b[x, 1] * x_n - a[x, 0] * temp + zi[y, x, 1])
-            # zi[y, x, 1] = (b[x, 2] * x_n - a[x, 1] * temp)
-            s_zi[x * zi_width + 0] = (
-                s_sos[x * sos_width + 1] * x_n
-                - s_sos[x * sos_width + 4] * temp
-                + s_zi[x * zi_width + 1]
-            )
-            s_zi[x * zi_width + 1] = (
-                s_sos[x * sos_width + 2] * x_n
-                - s_sos[x * sos_width + 5] * temp
-            )
-
-            s_out[x] = temp
-
-            cuda.syncthreads()
-
-        # Processing phase
-        for n in range(load_size, n_samples):
-
-            if x == 0:
-                x_n = x_in[y, n]  # make a temporary copy
-            else:
-                x_n = s_out[x - 1]
-
-            # Use direct II transposed structure:
-            # temp = b[x, 0] * x_n + zi[y, x, 0]
-            temp = s_sos[x * sos_width + 0] * x_n + s_zi[x * zi_width + 0]
-
-            # print("1", y, n, x, x_n, temp, zi[y, x, 0], a[x, 0], b[x, 0])
-
-            # zi[y, x, 0] = (b[x, 1] * x_n - a[x, 0] * temp + zi[y, x, 1])
-            # zi[y, x, 1] = (b[x, 2] * x_n - a[x, 1] * temp)
-            s_zi[x * zi_width + 0] = (
-                s_sos[x * sos_width + 1] * x_n
-                - s_sos[x * sos_width + 4] * temp
-                + s_zi[x * zi_width + 1]
-            )
-            s_zi[x * zi_width + 1] = (
-                s_sos[x * sos_width + 2] * x_n
-                - s_sos[x * sos_width + 5] * temp
-            )
-
-            if x < load_size:
-                s_out[x] = temp
-            if x == load_size:
-                x_in[y, n - load_size] = temp
-
-            cuda.syncthreads()
-
-        # Unloading phase
-        for n in range(n_sections):
-            # retire threads that are less than n
-            if x > n:
-                x_n = s_out[x - 1]
-
-                # Use direct II transposed structure:
-                # temp = b[x, 0] * x_n + zi[y, x, 0]
-                temp = s_sos[x * sos_width + 0] * x_n + s_zi[x * zi_width + 0]
-
-                # zi[y, x, 0] = (b[x, 1] * x_n - a[x, 0] * temp + zi[y, x, 1])
-                # zi[y, x, 1] = (b[x, 2] * x_n - a[x, 1] * temp)
-                s_zi[x * zi_width + 0] = (
-                    s_sos[x * sos_width + 1] * x_n
-                    - s_sos[x * sos_width + 4] * temp
-                    + s_zi[x * zi_width + 1]
-                )
-                s_zi[x * zi_width + 1] = (
-                    s_sos[x * sos_width + 2] * x_n
-                    - s_sos[x * sos_width + 5] * temp
-                )
-
-                if x < load_size:
-                    s_out[x] = temp
-                if x == load_size:
-                    x_in[y, n + unload_size] = temp
-
-                cuda.syncthreads()
-
-
-def _numba_sosfilt_signature(ty):
-    return void(ty[:, :], ty[:, :], ty[:, :, :],)
+from ..utils._caches import _cupy_kernel_cache
 
 
 # Custom Cupy raw kernel implementing lombscargle operation
@@ -158,20 +23,147 @@ _cupy_sosfilt_src = Template(
 $header
 
 extern "C" {
-    __global__ void _cupy_sosfilt( ) {
+    __global__ void _cupy_sosfilt(
+        const int n_signals,
+        const int n_samples,
+        const int n_sections,
+        const int zi_width,
+        const int sos_width,
+        const ${datatype} * __restrict__ sos,
+        const ${datatype} * __restrict__ zi,
+        ${datatype} * __restrict__ x_in
+     ) {
 
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
+        extern __shared__ ${datatype} s_buffer[];
 
+        ${datatype} *s_out { s_buffer };
+        ${datatype} *s_zi {
+            reinterpret_cast<${datatype}*>(&s_out[n_sections]) };
+        ${datatype} *s_sos {
+            reinterpret_cast<${datatype}*>(
+                &s_zi[n_sections * zi_width]) };
+
+        const int tx { static_cast<int>( threadIdx.x ) };
+        const int ty {
+            static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+
+        // Reset shared memory
+        s_out[tx] = 0;
+
+        // Load zi
+        for ( int i = 0; i < zi_width; i++ ) {
+            s_zi[tx * zi_width + i] =
+                zi[ty * n_sections * zi_width + tx * zi_width + i ];
+        }
+
+        // Load SOS
+        // b is in s_sos[tx * sos_width + [0-2]]
+        // a is in s_sos[tx * sos_width + [3-6]]
+        for ( int i = 0; i < sos_width; i++ ) {
+            s_sos[tx * sos_width + i] = sos[tx * sos_width + i];
+        }
+
+        __syncthreads();
+
+        const int load_size { n_sections - 1 };
+        const int unload_size { n_samples - load_size };
+
+        ${datatype} temp {};
+        ${datatype} x_n {};
+
+        if ( ty < n_signals ) {
+            // Loading phase
+            for ( int n = 0; n < load_size; n++ ) {
+                if ( tx == 0 ) {
+                    x_n = x_in[ty * n_samples + n];
+                } else {
+                    x_n = s_out[tx - 1];
+                }
+
+                // Use direct II transposed structure
+                temp = s_sos[tx * sos_width + 0]
+                    * x_n + s_zi[tx * zi_width + 0];
+
+                s_zi[tx * zi_width + 0] =
+                    s_sos[tx * sos_width + 1] * x_n
+                    - s_sos[tx * sos_width + 4] * temp
+                    + s_zi[tx * zi_width + 1];
+
+                s_zi[tx * zi_width + 1] =
+                    s_sos[tx * sos_width + 2] * x_n
+                    - s_sos[tx * sos_width + 5] * temp;
+
+                s_out[tx] = temp;
+
+                __syncthreads();
+            }
+
+            // Processing phase
+            for ( int n = load_size; n < n_samples; n++ ) {
+                if ( tx == 0 ) {
+                    x_n = x_in[ty * n_samples + n];
+                } else {
+                    x_n = s_out[tx - 1];
+                }
+
+                // Use direct II transposed structure
+                temp = s_sos[tx * sos_width + 0] *
+                    x_n + s_zi[tx * zi_width + 0];
+
+                s_zi[tx * zi_width + 0] =
+                    s_sos[tx * sos_width + 1] * x_n
+                    - s_sos[tx * sos_width + 4] * temp
+                    + s_zi[tx * zi_width + 1];
+
+                s_zi[tx * zi_width + 1] =
+                    s_sos[tx * sos_width + 2] * x_n
+                    - s_sos[tx * sos_width + 5] * temp;
+
+                if ( tx < load_size ) {
+                    s_out[tx] = temp;
+                } else {
+                    x_in[ty * n_samples + ( n - load_size )] = temp;
+                }
+
+                __syncthreads();
+            }
+
+            // Unloading phase
+            for ( int n = 0; n < n_sections; n++ ) {
+                // retire threads that are less than n
+                if ( tx > n ) {
+                    x_n = s_out[tx - 1];
+
+                    // Use direct II transposed structure
+                    temp = s_sos[tx * sos_width + 0] *
+                        x_n + s_zi[tx * zi_width + 0];
+
+                    s_zi[tx * zi_width + 0] =
+                        s_sos[tx * sos_width + 1] * x_n
+                        - s_sos[tx * sos_width + 4] * temp
+                        + s_zi[tx * zi_width + 1];
+
+                    s_zi[tx * zi_width + 1] =
+                        s_sos[tx * sos_width + 2] * x_n
+                        - s_sos[tx * sos_width + 5] * temp;
+
+                    if ( tx < load_size ) {
+                        s_out[tx] = temp;
+                    } else {
+                        x_in[ty * n_samples + ( n + unload_size )] = temp;
+                    }
+                    __syncthreads();
+                }
+            }
+        }
     }
 }
 """
 )
 
 
-class _cupy_lombscargle_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+class _cupy_sosfilt_wrapper(object):
+    def __init__(self, grid, block, stream, smem, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -180,59 +172,47 @@ class _cupy_lombscargle_wrapper(object):
         self.grid = grid
         self.block = block
         self.stream = stream
+        self.smem = smem
         self.kernel = kernel
 
-    def __call__(self, sos, x, zi, a, b):
+    def __call__(self, sos, x, zi):
 
-        kernel_args = ()
-
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
-
-
-def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
-    from ..utils.compile_kernels import _stream_cupy_to_numba
-
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
-        else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-            )
-
-    else:
-        warnings.warn(
-            "Numba kernels will be removed in a later release",
-            FutureWarning,
-            stacklevel=4,
+        kernel_args = (
+            x.shape[0],
+            x.shape[1],
+            sos.shape[0],
+            zi.shape[2],
+            sos.shape[1],
+            sos,
+            zi,
+            x,
         )
 
-        nb_stream = _stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
+        self.stream.use()
+        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
 
-        if kernel:
-            return kernel[grid, block, nb_stream, smem]
-        else:
-            raise ValueError(
-                "Kernel {} not found in _numba_kernel_cache".format(k_type)
-            )
+
+def _get_backend_kernel(dtype, grid, block, smem, stream, k_type):
+    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    if kernel:
+        return _cupy_sosfilt_wrapper(grid, block, stream, smem, kernel)
+    else:
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+        )
 
     raise NotImplementedError(
         "No kernel found for datatype {}".format(dtype.name)
     )
 
 
-def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
+def _sosfilt(sos, x, zi, cp_stream, autosync):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
-    threadsperblock = (sos.shape[0], 1)  # Up-to (512, 2) = 1024 max per block
+    threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
-    print("tbp", sos.shape[0] * 2, (sos.shape[0], 1), (1, x.shape[0]))
-
-    _populate_kernel_cache(x.dtype.type, use_numba, GPUKernel.SOSFILT)
+    _populate_kernel_cache(x.dtype.type, False, GPUKernel.SOSFILT)
 
     out_size = threadsperblock[0]
     z_size = zi.shape[1] * zi.shape[2]
@@ -240,15 +220,12 @@ def _sosfilt(sos, x, zi, cp_stream, autosync, use_numba):
 
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
 
-    print("sm", shared_mem, out_size, z_size, sos_size, x.dtype.itemsize)
-
     kernel = _get_backend_kernel(
         x.dtype,
         blockspergrid,
         threadsperblock,
         shared_mem,
         cp_stream,
-        use_numba,
         GPUKernel.SOSFILT,
     )
 
