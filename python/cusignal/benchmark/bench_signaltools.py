@@ -484,7 +484,6 @@ class BenchSignaltools:
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             benchmark(self.cpu_version, cpu_sos, cpu_sig)
 
-        # @pytest.mark.parametrize("use_numba", [True, False])
         def bench_sosfilt_gpu(
             self,
             rand_2d_data_gen,
@@ -493,21 +492,19 @@ class BenchSignaltools:
             num_samps,
             order,
             dtype,
-            # use_numba,
         ):
 
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output='sos')
             cpu_sos = np.array(cpu_sos, dtype=dtype)
-            gpu_sos = cp.array(cpu_sos, dtype=dtype)
+            gpu_sos = cp.asarray(cpu_sos)
             cpu_sig = np.random.rand(num_signals, num_samps)
             cpu_sig = np.array(cpu_sig, dtype=dtype)
-            gpu_sig = cp.array(cpu_sig, dtype=dtype)
+            gpu_sig = cp.asarray(cpu_sig)
 
             output = benchmark(
                 cusignal.sosfilt,
                 gpu_sos,
                 gpu_sig,
-                # use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sos, cpu_sig)
