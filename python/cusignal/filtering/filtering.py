@@ -174,7 +174,6 @@ def sosfilt(
     zi=None,
     cp_stream=cp.cuda.stream.Stream(null=True),
     autosync=True,
-    use_numba=False,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -214,9 +213,6 @@ def sosfilt(
         false will allow asynchronous operation but might required
         manual synchronize later `cp_stream.synchronize()`.
         Default is True.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
@@ -296,25 +292,41 @@ def sosfilt(
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
 
-    # print("sos", sos.shape)
-    # print("x", x.shape)
-    # print("zi", zi.shape)
-    # print("b", sos[:, :3].shape)
-    # print("a", sos[:, 4:].shape)
+    d = cp.cuda.device.Device(0)
+    max_smem = d.attributes["MaxSharedMemoryPerBlock"]
+    max_tpb = d.attributes["MaxThreadsPerBlock"]
 
-    if sos.shape[0] > 1024:
+    # Determine how much shared memory is needed
+    out_size = sos.shape[0]
+    z_size = zi.shape[1] * zi.shape[2]
+    sos_size = sos.shape[0] * sos.shape[1]
+    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+
+    if shared_mem > max_smem:
+        max_sections = (
+            max_smem // (1 + zi.shape[2] + sos.shape[1]) // x.dtype.itemsize
+        )
         raise ValueError(
-            "The number of samples {}, can not be less "
-            "than the number of sections {}".format(x.shape[1], sos.shape[0])
+            "The number of sections ({}), requires too much "
+            "shared memory ({}B) > ({}B). \n"
+            "\n**Max sections possible ({})**".format(
+                sos.shape[0], shared_mem, max_smem, max_sections
+            )
+        )
+
+    if sos.shape[0] > max_tpb:
+        raise ValueError(
+            "The number of sections ({}), must be less "
+            "than max threads per block ({})".format(sos.shape[0], max_tpb)
         )
 
     if sos.shape[0] > x.shape[1]:
         raise ValueError(
-            "The number of samples {}, can not be less "
-            "than the number of sections {}".format(x.shape[1], sos.shape[0])
+            "The number of samples ({}), must be greater "
+            "than the number of sections ({})".format(x.shape[1], sos.shape[0])
         )
 
-    _sosfilt(sos, x, zi, cp_stream, autosync, use_numba)
+    _sosfilt(sos, x, zi, cp_stream, autosync)
     x.shape = x_shape
     x = cp.moveaxis(x, -1, axis)
     if return_zi:

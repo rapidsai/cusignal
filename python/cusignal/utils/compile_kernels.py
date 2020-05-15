@@ -37,8 +37,6 @@ from ..spectral_analysis._spectral_cuda import (
 )
 from ..filtering._sosfilt_cuda import (
     _cupy_sosfilt_src,
-    _numba_sosfilt,
-    _numba_sosfilt_signature,
 )
 from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_1d_src,
@@ -310,10 +308,11 @@ def _populate_kernel_cache(np_type, use_numba, k_type):
             )(_numba_lombscargle)
 
         elif k_type == GPUKernel.SOSFILT:
-            sig = _numba_sosfilt_signature(numba_type)
-            _numba_kernel_cache[(str(numba_type), k_type.value)] = cuda.jit(
-                sig, fastmath=True, max_registers=64
-            )(_numba_sosfilt)
+            raise NotImplementedError(
+                "{} Numba has no Numba Implementation".format(
+                    k_type
+                )
+            )
 
         elif k_type == GPUKernel.UPFIRDN:
             sig = _numba_upfirdn_1d_signature(numba_type)
