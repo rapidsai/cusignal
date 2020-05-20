@@ -73,3 +73,7 @@ logger "Python pytest for cusignal..."
 cd $WORKSPACE/python
 
 pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+
+${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
+python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
+
