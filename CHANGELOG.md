@@ -37,6 +37,7 @@
 - PR #70 - Typo fix in docs api.rst that broke build
 - PR #93 - Remove `lfilter` due to poor performance in real-time applications
 - PR #96 - Move data type check to `_populate_kernel_cache`
+- PR #104 - Fix flake8 errors
 
 # cuSignal 0.13 (31 Mar 2020)
 
