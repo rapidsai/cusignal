@@ -15,6 +15,7 @@ import pytest
 import cupy as cp
 import numpy as np
 
+
 # Fixtures with (scope="session") will execute once
 # and be shared will all tests that need it.
 
