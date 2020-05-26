@@ -227,6 +227,9 @@ def sosfilt(
 
     Notes
     -----
+    WARNING: This is an experimental API and is prone to change in future
+    versions of cuSignal.
+
     The filter function is implemented as a series of second-order filters
     with direct-form II transposed structure. It is designed to minimize
     numerical precision errors for high-order filters.
