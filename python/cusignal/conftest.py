@@ -97,6 +97,7 @@ def time_data_gen():
 
     return _generate
 
+
 # Generate input for lombscargle
 @pytest.fixture(scope="session")
 def lombscargle_gen(rand_data_gen):
