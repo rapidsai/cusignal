@@ -99,26 +99,26 @@ def _numba_correlate_2d(
 
         if pick == 1:  # odd
             for k in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                for l in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
+                for ll in range(cp.int32(-S0), cp.int32(S0 + 1)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + ll))
+                    coefPos = (cp.int32(k + S0), cp.int32(ll + S0))
                     temp += inp[iPixelPos] * kernel[coefPos]
 
         elif pick == 2:  # even
             for k in range(cp.int32(-S0), cp.int32(S0)):
-                for l in range(cp.int32(-S0), cp.int32(S0)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
+                for ll in range(cp.int32(-S0), cp.int32(S0)):
+                    iPixelPos = (cp.int32(i + k), cp.int32(j + ll))
+                    coefPos = (cp.int32(k + S0), cp.int32(ll + S0))
                     temp += inp[iPixelPos] * kernel[coefPos]
 
         else:  # non-squares
             for k in range(cp.int32(S0)):
-                for l in range(cp.int32(S1)):
+                for ll in range(cp.int32(S1)):
                     iPixelPos = (
                         cp.int32(cp.int32(i + k) - S1),
-                        cp.int32(cp.int32(j + l) - S0),
+                        cp.int32(cp.int32(j + ll) - S0),
                     )
-                    coefPos = (k, l)
+                    coefPos = (k, ll)
                     temp += inp[iPixelPos] * kernel[coefPos]
 
         out[oPixelPos] = temp
