@@ -15,6 +15,7 @@ import pytest
 import cupy as cp
 import numpy as np
 
+
 # Fixtures with (scope="session") will execute once
 # and be shared will all tests that need it.
 
@@ -95,6 +96,7 @@ def time_data_gen():
         return cpu_sig, gpu_sig
 
     return _generate
+
 
 # Generate input for lombscargle
 @pytest.fixture(scope="session")
