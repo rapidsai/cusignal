@@ -38,6 +38,7 @@
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
 - PR #97 - Add pytest-benchmark to conda ymls and update conda env name
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
+- PR #103 - Update notebooks to match new code structure
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
