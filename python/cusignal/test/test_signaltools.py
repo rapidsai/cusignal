@@ -243,8 +243,7 @@ class TestSignaltools:
 
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
     @pytest.mark.parametrize("num_samps", [100])
-    @pytest.mark.parametrize("use_numba", [True])
-    def test_sosfilt(self, num_signals, num_samps, use_numba):
+    def test_sosfilt(self, num_signals, num_samps):
         cpu_sig = np.random.rand(num_signals, num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
@@ -255,7 +254,7 @@ class TestSignaltools:
         gpu_sos = cp.asarray(cpu_sos)
 
         gpu_sosfilt = cp.asnumpy(
-            cusignal.sosfilt(gpu_sos, gpu_sig, use_numba=use_numba)
+            cusignal.sosfilt(gpu_sos, gpu_sig)
         )
 
         assert array_equal(cpu_sosfilt, gpu_sosfilt)
