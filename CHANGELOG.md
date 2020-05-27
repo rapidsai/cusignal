@@ -10,6 +10,7 @@
 - PR #73 - Local gpuCI build script
 - PR #75 - Add accelerated `lfilter` method.
 - PR #82 - Implement `autosync` to synchronize raw kernels by default
+- PR #99 - Implement `sosfilt` as an alternative to `lfilter`
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
