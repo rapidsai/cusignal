@@ -32,6 +32,7 @@
 - PR #97 - Add pytest-benchmark to conda ymls and update conda env name
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 - PR #103 - Update notebooks to match new code structure
+- PR #110 - Update README for 0.14 release
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
