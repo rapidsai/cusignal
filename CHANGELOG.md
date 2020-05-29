@@ -3,6 +3,7 @@
 ## New Features
 
 ## Improvements
+- PR #112 - Remove Numba kernels
 
 ## Bug Fixes
 
