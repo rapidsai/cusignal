@@ -257,7 +257,7 @@ def _get_backend_kernel(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
-  
+
 class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
         """Helper for resampling"""
@@ -309,9 +309,7 @@ class _UpFIRDn(object):
             threadsperblock = 512
 
         if out.ndim == 1:
-            _populate_kernel_cache(
-                out.dtype, GPUKernel.UPFIRDN
-            )
+            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN)
             kernel = _get_backend_kernel(
                 out.dtype,
                 blockspergrid,
@@ -320,9 +318,7 @@ class _UpFIRDn(object):
                 GPUKernel.UPFIRDN,
             )
         elif out.ndim == 2:
-            _populate_kernel_cache(
-                out.dtype, GPUKernel.UPFIRDN2D
-            )
+            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN2D)
             kernel = _get_backend_kernel(
                 out.dtype,
                 blockspergrid,
