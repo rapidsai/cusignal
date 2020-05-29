@@ -153,7 +153,7 @@ def decimate(
         # upfirdn is generally faster than lfilter by a factor equal to the
         # downsampling factor, since it only calculates the needed outputs
         n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
-        y = upfirdn(b, x, 1, q, axis, cp_stream, autosync, use_numba)
+        y = upfirdn(b, x, 1, q, axis, cp_stream, autosync)
         sl[axis] = slice(None, n_out, None)
 
     return y[tuple(sl)]
