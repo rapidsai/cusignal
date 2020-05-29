@@ -233,3 +233,21 @@ class TestSignaltools:
         )
 
         assert array_equal(cpu_decimate, gpu_decimate)
+
+    @pytest.mark.parametrize("num_signals", [1, 2, 10])
+    @pytest.mark.parametrize("num_samps", [100])
+    def test_sosfilt(self, num_signals, num_samps):
+        cpu_sig = np.random.rand(num_signals, num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
+
+        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output='sos')
+
+        cpu_sosfilt = signal.sosfilt(cpu_sos, cpu_sig)
+
+        gpu_sos = cp.asarray(cpu_sos)
+
+        gpu_sosfilt = cp.asnumpy(
+            cusignal.sosfilt(gpu_sos, gpu_sig)
+        )
+
+        assert array_equal(cpu_sosfilt, gpu_sosfilt)

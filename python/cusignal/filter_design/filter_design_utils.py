@@ -11,18 +11,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.filtering.resample import (
-    decimate,
-    resample,
-    resample_poly,
-    upfirdn,
-)
-from cusignal.filtering.filtering import (
-    wiener,
-    lfiltic,
-    sosfilt,
-    hilbert,
-    hilbert2,
-    detrend,
-    freq_shift,
-)
+import cupy as cp
+
+
+def _validate_sos(sos):
+    """Helper to validate a SOS input"""
+    sos = cp.atleast_2d(sos)
+    if sos.ndim != 2:
+        raise ValueError('sos array must be 2D')
+    n_sections, m = sos.shape
+    if m != 6:
+        raise ValueError('sos array must be shape (n_sections, 6)')
+    if not (sos[:, 3] == 1).all():
+        raise ValueError('sos[:, 3] should be all ones')
+    return sos, n_sections

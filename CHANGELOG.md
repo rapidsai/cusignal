@@ -1,3 +1,11 @@
+# cuSignal 0.15.0 (Date TBD)
+
+## New Features
+
+## Improvements
+
+## Bug Fixes
+
 # cuSignal 0.14 (Date TBD)
 
 ## New Features
@@ -10,6 +18,7 @@
 - PR #73 - Local gpuCI build script
 - PR #75 - Add accelerated `lfilter` method.
 - PR #82 - Implement `autosync` to synchronize raw kernels by default
+- PR #99 - Implement `sosfilt` as an alternative to `lfilter`
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
@@ -30,6 +39,8 @@
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
 - PR #97 - Add pytest-benchmark to conda ymls and update conda env name
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
+- PR #103 - Update notebooks to match new code structure
+- PR #110 - Update README for 0.14 release
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
@@ -37,6 +48,7 @@
 - PR #70 - Typo fix in docs api.rst that broke build
 - PR #93 - Remove `lfilter` due to poor performance in real-time applications
 - PR #96 - Move data type check to `_populate_kernel_cache`
+- PR #104 - Fix flake8 errors
 
 # cuSignal 0.13 (31 Mar 2020)
 

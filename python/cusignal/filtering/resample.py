@@ -153,7 +153,7 @@ def decimate(
         # upfirdn is generally faster than lfilter by a factor equal to the
         # downsampling factor, since it only calculates the needed outputs
         n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
-        y = upfirdn(b, x, up=1, down=q, axis=axis)
+        y = upfirdn(b, x, 1, q, axis, cp_stream, autosync, use_numba)
         sl[axis] = slice(None, n_out, None)
 
     return y[tuple(sl)]
@@ -438,7 +438,7 @@ def resample_poly(
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
-    y = upfirdn(h, x, up, down, axis=axis)
+    y = upfirdn(h, x, up, down, axis, cp_stream, autosync)
     keep = [slice(None)] * x.ndim
     keep[axis] = slice(n_pre_remove, n_pre_remove_end)
     return y[tuple(keep)]

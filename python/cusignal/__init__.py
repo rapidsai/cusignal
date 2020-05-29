@@ -25,6 +25,7 @@ from cusignal.filtering.resample import (
 from cusignal.filtering.filtering import (
     wiener,
     lfiltic,
+    sosfilt,
     hilbert,
     hilbert2,
     detrend,
