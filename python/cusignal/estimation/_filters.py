@@ -760,14 +760,13 @@ def _populate_kernel_cache(
             options=("-std=c++11", "-use_fast_math"),
             specializations=specializations,
         )
-        kernels = [module.get_mangled_name(ker) for ker in specializations]
 
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.PREDICT)
-        ] = module.get_function(kernels[0])
+        ] = module.get_function(specializations[0])
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.UPDATE)
-        ] = module.get_function(kernels[1])
+        ] = module.get_function(specializations[1])
     else:
         sig = _numba_kalman_signature(numba_type)
         _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
