@@ -64,8 +64,8 @@ _SUPPORTED_TYPES_LOMBSCARGLE = {
 }
 
 _SUPPORTED_TYPES_SOSFILT = {
-    np.float32: [float32, "float"],
-    np.float64: [float64, "double"],
+    "float32": "float",
+    "float64": "double",
 }
 
 _SUPPORTED_TYPES_UPFIRDN = {
