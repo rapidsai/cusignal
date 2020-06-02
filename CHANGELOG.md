@@ -1,4 +1,4 @@
-# cuSignal 0.14 (Date TBD)
+# cuSignal 0.14 (03 Jun 2020)
 
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
