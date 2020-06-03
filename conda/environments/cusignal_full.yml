@@ -1,4 +1,4 @@
-name: cusignal
+name: cusignal-dev
 channels:
   - conda-forge
   - nvidia
@@ -12,9 +12,10 @@ dependencies:
   - cudatoolkit>=9.2,<=10.2
   - boost
   - matplotlib
-  - numba
+  - numba>=0.49
   - pytest
-  - cupy>=6.2.0
+  - pytest-benchmark
+  - cupy>=7.2.0
   - pytorch
   - cudf
   - cuml

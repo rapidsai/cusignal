@@ -11,5 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.cupy_helper.polynomial import polyval
-from cusignal.cupy_helper.linalg_extended import toeplitz, hankel
+from cusignal.filtering.resample import (
+    decimate,
+    resample,
+    resample_poly,
+    upfirdn,
+)
+from cusignal.filtering.filtering import (
+    wiener,
+    lfiltic,
+    sosfilt,
+    hilbert,
+    hilbert2,
+    detrend,
+    freq_shift,
+)

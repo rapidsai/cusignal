@@ -12,24 +12,34 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (angle, arange, asarray, reshape, zeros)
+from cupy import angle, arange, asarray, reshape, zeros
 from cupyx.scipy import fftpack
 from scipy._lib.six import string_types
-import numpy as np
 
-from .windows import get_window
-from ._arraytools import even_ext, odd_ext, const_ext, zero_ext, as_strided
-from . import signaltools
-from ._spectral import _lombscargle, _lombscargle_norm
+from ..windows.windows import get_window
+from ..utils.arraytools import (
+    _even_ext,
+    _odd_ext,
+    _const_ext,
+    _zero_ext,
+    _as_strided,
+)
+from ..filtering import filtering
+from ._spectral_cuda import _lombscargle
 
 import warnings
 
 
-def lombscargle(x,
-                y,
-                freqs,
-                precenter=False,
-                normalize=False):
+def lombscargle(
+    x,
+    y,
+    freqs,
+    precenter=False,
+    normalize=False,
+    cp_stream=cp.cuda.stream.Stream(null=True),
+    autosync=True,
+    use_numba=False,
+):
     """
     lombscargle(x, y, freqs)
     Computes the Lomb-Scargle periodogram.
@@ -54,6 +64,21 @@ def lombscargle(x,
         Pre-center amplitudes by subtracting the mean.
     normalize : bool, optional
         Compute normalized periodogram.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
+    use_numba : bool, optional
+        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
+        can yield performance gains over Numba. Default is False.
+
     Returns
     -------
     pgram : array_like
@@ -89,37 +114,38 @@ def lombscargle(x,
     csd: Cross spectral density by Welch's method
     Examples
     --------
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
     First define some input parameters for the signal:
     >>> A = 2.
     >>> w = 1.
-    >>> phi = 0.5 * np.pi
+    >>> phi = 0.5 * cp.pi
     >>> nin = 1000
     >>> nout = 100000
     >>> frac_points = 0.9 # Fraction of points to select
     Randomly select a fraction of an array with timesteps:
-    >>> r = np.random.rand(nin)
-    >>> x = np.linspace(0.01, 10*np.pi, nin)
+    >>> r = cp.random.rand(nin)
+    >>> x = cp.linspace(0.01, 10*cp.pi, nin)
     >>> x = x[r >= frac_points]
     Plot a sine wave for the selected times:
-    >>> y = A * np.sin(w*x+phi)
+    >>> y = A * cp.sin(w*x+phi)
     Define the array of frequencies for which to compute the periodogram:
-    >>> f = np.linspace(0.01, 10, nout)
+    >>> f = cp.linspace(0.01, 10, nout)
     Calculate Lomb-Scargle periodogram:
-    >>> import scipy.signal as signal
-    >>> pgram = signal.lombscargle(x, y, f, normalize=True)
+    >>> pgram = cusignal.lombscargle(x, y, f, normalize=True)
     Now make a plot of the input data:
     >>> plt.subplot(2, 1, 1)
-    >>> plt.plot(x, y, 'b+')
+    >>> plt.plot(cp.asnumpy(x), cp.asnumpy(y), 'b+')
     Then plot the normalized periodogram:
     >>> plt.subplot(2, 1, 2)
-    >>> plt.plot(f, pgram)
+    >>> plt.plot(cp.asnumpy(f), cp.asnumpy(pgram))
     >>> plt.show()
     """
 
     x = asarray(x, dtype=cp.float64)
     y = asarray(y, dtype=cp.float64)
-    freqs = asarray(freqs, dtype=np.float64)
+    freqs = asarray(freqs, dtype=cp.float64)
     pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
 
     assert x.ndim == 1
@@ -130,34 +156,30 @@ def lombscargle(x,
     if x.shape[0] != y.shape[0]:
         raise ValueError("Input arrays do not have the same size.")
 
-    d = cp.cuda.device.Device(0)
-    numSM = d.attributes['MultiProcessorCount']
-    threadsperblock = (256)
-    blockspergrid = (numSM * 20)
-
+    y_dot = cp.zeros(1, dtype=cp.float64)
     if normalize:
-        y_dot = cp.dot(y, y)
-        if precenter:
-            _lombscargle_norm[blockspergrid, threadsperblock](
-                x, y - y.mean(), freqs, pgram, y_dot
-            )
-        else:
-            _lombscargle_norm[blockspergrid, threadsperblock](
-                x, y, freqs, pgram, y_dot
-            )
+        cp.dot(y, y, out=y_dot)
+
+    if precenter:
+        y_in = y - y.mean()
     else:
-        if precenter:
-            _lombscargle[blockspergrid, threadsperblock](
-                x, y - y.mean(), freqs, pgram
-            )
-        else:
-            _lombscargle[blockspergrid, threadsperblock](x, y, freqs, pgram)
+        y_in = y
+
+    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream, autosync, use_numba)
 
     return pgram
 
 
-def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
-                return_onesided=True, scaling='density', axis=-1):
+def periodogram(
+    x,
+    fs=1.0,
+    window="boxcar",
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+):
     """
     Estimate power spectral density using a periodogram.
 
@@ -204,10 +226,6 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
     Pxx : ndarray
         Power spectral density or power spectrum of `x`.
 
-    Notes
-    -----
-    .. versionadded:: 0.12.0
-
     See Also
     --------
     welch: Estimate power spectral density using Welch's method
@@ -215,26 +233,27 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
-    >>> np.random.seed(1234)
+    >>> cp.random.seed(1234)
 
     Generate a test signal, a 2 Vrms sine wave at 1234 Hz, corrupted by
     0.001 V**2/Hz of white noise sampled at 10 kHz.
 
     >>> fs = 10e3
     >>> N = 1e5
-    >>> amp = 2*np.sqrt(2)
+    >>> amp = 2*cp.sqrt(2)
     >>> freq = 1234.0
     >>> noise_power = 0.001 * fs / 2
-    >>> time = np.arange(N) / fs
-    >>> x = amp*np.sin(2*np.pi*freq*time)
-    >>> x += np.random.normal(scale=np.sqrt(noise_power), size=time.shape)
+    >>> time = cp.arange(N) / fs
+    >>> x = amp*cp.sin(2*cp.pi*freq*time)
+    >>> x += cp.random.normal(scale=cp.sqrt(noise_power), size=time.shape)
 
     Compute and plot the power spectral density.
 
-    >>> f, Pxx_den = signal.periodogram(x, fs)
-    >>> plt.semilogy(f, Pxx_den)
+    >>> f, Pxx_den = cusignal.periodogram(x, fs)
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(Pxx_den))
     >>> plt.ylim([1e-7, 1e2])
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('PSD [V**2/Hz]')
@@ -243,14 +262,15 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
     If we average the last half of the spectral density, to exclude the
     peak, we can recover the noise power on the signal.
 
-    >>> np.mean(Pxx_den[25000:])
+    >>> cp.mean(Pxx_den[25000:])
     0.00099728892368242854
 
     Now compute and plot the power spectrum.
 
-    >>> f, Pxx_spec = signal.periodogram(x, fs, 'flattop', scaling='spectrum')
+    >>> f, Pxx_spec = cusignal.periodogram(x, fs, 'flattop', \
+            scaling='spectrum')
     >>> plt.figure()
-    >>> plt.semilogy(f, np.sqrt(Pxx_spec))
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(cp.sqrt(Pxx_spec)))
     >>> plt.ylim([1e-4, 1e1])
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('Linear spectrum [V RMS]')
@@ -259,7 +279,7 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
     The peak height in the power spectrum is an estimate of the RMS
     amplitude.
 
-    >>> np.sqrt(Pxx_spec.max())
+    >>> cp.sqrt(Pxx_spec.max())
     2.0077340678640727
 
     """
@@ -269,7 +289,7 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         return cp.empty(x.shape), cp.empty(x.shape)
 
     if window is None:
-        window = 'boxcar'
+        window = "boxcar"
 
     if nfft is None:
         nperseg = x.shape[axis]
@@ -279,20 +299,39 @@ def periodogram(x, fs=1.0, window='boxcar', nfft=None, detrend='constant',
         nperseg = x.shape[axis]
     elif nfft < x.shape[axis]:
         # cp.s_ not implemented
-        s = [np.s_[:]] * len(x.shape)
-        s[axis] = np.s_[:nfft]
+        s = [cp.s_[:]] * len(x.shape)
+        s[axis] = cp.s_[:nfft]
         x = cp.asarray(x[tuple(s)])
         nperseg = nfft
         nfft = None
 
-    return welch(x, fs=fs, window=window, nperseg=nperseg, noverlap=0,
-                 nfft=nfft, detrend=detrend, return_onesided=return_onesided,
-                 scaling=scaling, axis=axis)
+    return welch(
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=0,
+        nfft=nfft,
+        detrend=detrend,
+        return_onesided=return_onesided,
+        scaling=scaling,
+        axis=axis,
+    )
 
 
-def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
-          detrend='constant', return_onesided=True, scaling='density',
-          axis=-1, average='mean'):
+def welch(
+    x,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    average="mean",
+):
     r"""
     Estimate power spectral density using Welch's method.
 
@@ -346,7 +385,6 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     average : { 'mean', 'median' }, optional
         Method to use when averaging periodograms. Defaults to 'mean'.
 
-        .. versionadded:: 1.2.0
 
     Returns
     -------
@@ -384,26 +422,27 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
-    >>> np.random.seed(1234)
+    >>> cp.random.seed(1234)
 
     Generate a test signal, a 2 Vrms sine wave at 1234 Hz, corrupted by
     0.001 V**2/Hz of white noise sampled at 10 kHz.
 
     >>> fs = 10e3
     >>> N = 1e5
-    >>> amp = 2*np.sqrt(2)
+    >>> amp = 2*cp.sqrt(2)
     >>> freq = 1234.0
     >>> noise_power = 0.001 * fs / 2
-    >>> time = np.arange(N) / fs
-    >>> x = amp*np.sin(2*np.pi*freq*time)
-    >>> x += np.random.normal(scale=np.sqrt(noise_power), size=time.shape)
+    >>> time = cp.arange(N) / fs
+    >>> x = amp*cp.sin(2*cp.pi*freq*time)
+    >>> x += cp.random.normal(scale=cp.sqrt(noise_power), size=time.shape)
 
     Compute and plot the power spectral density.
 
-    >>> f, Pxx_den = signal.welch(x, fs, nperseg=1024)
-    >>> plt.semilogy(f, Pxx_den)
+    >>> f, Pxx_den = cusignal.welch(x, fs, nperseg=1024)
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(Pxx_den))
     >>> plt.ylim([0.5e-3, 1])
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('PSD [V**2/Hz]')
@@ -412,14 +451,15 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     If we average the last half of the spectral density, to exclude the
     peak, we can recover the noise power on the signal.
 
-    >>> np.mean(Pxx_den[256:])
+    >>> cp.mean(Pxx_den[256:])
     0.0009924865443739191
 
     Now compute and plot the power spectrum.
 
-    >>> f, Pxx_spec = signal.welch(x, fs, 'flattop', 1024, scaling='spectrum')
+    >>> f, Pxx_spec = cusignal.welch(x, fs, 'flattop', 1024, \
+        scaling='spectrum')
     >>> plt.figure()
-    >>> plt.semilogy(f, np.sqrt(Pxx_spec))
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(cp.sqrt(Pxx_spec)))
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('Linear spectrum [V RMS]')
     >>> plt.show()
@@ -427,7 +467,7 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     The peak height in the power spectrum is an estimate of the RMS
     amplitude.
 
-    >>> np.sqrt(Pxx_spec.max())
+    >>> cp.sqrt(Pxx_spec.max())
     2.0077340678640727
 
     If we now introduce a discontinuity in the signal, by increasing the
@@ -436,11 +476,12 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     median average better estimates the normal behaviour.
 
     >>> x[int(N//2):int(N//2)+10] *= 50.
-    >>> f, Pxx_den = signal.welch(x, fs, nperseg=1024)
-    >>> f_med, Pxx_den_med = signal.welch(x, fs, nperseg=1024,
+    >>> f, Pxx_den = cusignal.welch(x, fs, nperseg=1024)
+    >>> f_med, Pxx_den_med = cusignal.welch(x, fs, nperseg=1024,
                                           average='median')
-    >>> plt.semilogy(f, Pxx_den, label='mean')
-    >>> plt.semilogy(f_med, Pxx_den_med, label='median')
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(Pxx_den), label='mean')
+    >>> plt.semilogy(cp.asnumpy(f_med), cp.asnumpy(Pxx_den_med), \
+        label='median')
     >>> plt.ylim([0.5e-3, 1])
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('PSD [V**2/Hz]')
@@ -449,17 +490,38 @@ def welch(x, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     """
 
-    freqs, Pxx = csd(x, x, fs=fs, window=window, nperseg=nperseg,
-                     noverlap=noverlap, nfft=nfft, detrend=detrend,
-                     return_onesided=return_onesided, scaling=scaling,
-                     axis=axis, average=average)
+    freqs, Pxx = csd(
+        x,
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        return_onesided=return_onesided,
+        scaling=scaling,
+        axis=axis,
+        average=average,
+    )
 
     return freqs, Pxx.real
 
 
-def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
-        detrend='constant', return_onesided=True, scaling='density',
-        axis=-1, average='mean'):
+def csd(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    average="mean",
+):
     r"""
     Estimate the cross power spectral density, Pxy, using Welch's
     method.
@@ -511,7 +573,6 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     average : { 'mean', 'median' }, optional
         Method to use when averaging periodograms. Defaults to 'mean'.
 
-        .. versionadded:: 1.2.0
 
     Returns
     -------
@@ -542,7 +603,6 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     signal power, while not over counting any of the data. Narrower
     windows may require a larger overlap.
 
-    .. versionadded:: 0.16.0
 
     References
     ----------
@@ -555,7 +615,8 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     Generate two test signals with some common features.
@@ -565,46 +626,69 @@ def csd(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     >>> amp = 20
     >>> freq = 1234.0
     >>> noise_power = 0.001 * fs / 2
-    >>> time = np.arange(N) / fs
-    >>> b, a = signal.butter(2, 0.25, 'low')
-    >>> x = np.random.normal(scale=np.sqrt(noise_power), size=time.shape)
+    >>> time = cp.arange(N) / fs
+    >>> b, a = cusignal.butter(2, 0.25, 'low')
+    >>> x = cp.random.normal(scale=cp.sqrt(noise_power), size=time.shape)
+    >>> # lfilter not currently implemented in cuSignal
     >>> y = signal.lfilter(b, a, x)
-    >>> x += amp*np.sin(2*np.pi*freq*time)
-    >>> y += np.random.normal(scale=0.1*np.sqrt(noise_power), size=time.shape)
+    >>> x += amp*cp.sin(2*cp.pi*freq*time)
+    >>> y += cp.random.normal(scale=0.1*cp.sqrt(noise_power), size=time.shape)
 
     Compute and plot the magnitude of the cross spectral density.
 
-    >>> f, Pxy = signal.csd(x, y, fs, nperseg=1024)
-    >>> plt.semilogy(f, np.abs(Pxy))
+    >>> f, Pxy = cusignal.csd(x, y, fs, nperseg=1024)
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(cp.abs(Pxy)))
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('CSD [V**2/Hz]')
     >>> plt.show()
     """
     x = asarray(x)
     y = asarray(y)
-    freqs, _, Pxy = _spectral_helper(x, y, fs, window, nperseg, noverlap, nfft,
-                                     detrend, return_onesided, scaling, axis,
-                                     mode='psd')
+    freqs, _, Pxy = _spectral_helper(
+        x,
+        y,
+        fs,
+        window,
+        nperseg,
+        noverlap,
+        nfft,
+        detrend,
+        return_onesided,
+        scaling,
+        axis,
+        mode="psd",
+    )
 
     # Average over windows.
     if len(Pxy.shape) >= 2 and Pxy.size > 0:
         if Pxy.shape[-1] > 1:
-            if average == 'median':
+            if average == "median":
                 Pxy = cp.median(Pxy, axis=-1) / _median_bias(Pxy.shape[-1])
-            elif average == 'mean':
+            elif average == "mean":
                 Pxy = Pxy.mean(axis=-1)
             else:
-                raise ValueError('average must be "median" or "mean", got %s'
-                                 % (average,))
+                raise ValueError(
+                    'average must be "median" or "mean", got %s' % (average,)
+                )
         else:
             Pxy = reshape(Pxy, Pxy.shape[:-1])
 
     return freqs, Pxy
 
 
-def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
-                nfft=None, detrend='constant', return_onesided=True,
-                scaling='density', axis=-1, mode='psd'):
+def spectrogram(
+    x,
+    fs=1.0,
+    window=("tukey", 0.25),
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    mode="psd",
+):
     """
     Compute a spectrogram with consecutive Fourier transforms.
 
@@ -697,7 +781,8 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     Generate a test signal, a 2 Vrms sine wave whose frequency is slowly
@@ -706,61 +791,86 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
 
     >>> fs = 10e3
     >>> N = 1e5
-    >>> amp = 2 * np.sqrt(2)
+    >>> amp = 2 * cp.sqrt(2)
     >>> noise_power = 0.01 * fs / 2
-    >>> time = np.arange(N) / float(fs)
-    >>> mod = 500*np.cos(2*np.pi*0.25*time)
-    >>> carrier = amp * np.sin(2*np.pi*3e3*time + mod)
-    >>> noise = np.random.normal(scale=np.sqrt(noise_power), size=time.shape)
-    >>> noise *= np.exp(-time/5)
+    >>> time = cp.arange(N) / float(fs)
+    >>> mod = 500*cp.cos(2*cp.pi*0.25*time)
+    >>> carrier = amp * cp.sin(2*cp.pi*3e3*time + mod)
+    >>> noise = cp.random.normal(scale=cp.sqrt(noise_power), size=time.shape)
+    >>> noise *= cp.exp(-time/5)
     >>> x = carrier + noise
 
     Compute and plot the spectrogram.
 
-    >>> f, t, Sxx = signal.spectrogram(x, fs)
-    >>> plt.pcolormesh(t, f, Sxx)
+    >>> f, t, Sxx = cusignal.spectrogram(x, fs)
+    >>> plt.pcolormesh(cp.asnumpy(t), cp.asnumpy(f), cp.asnumpy(Sxx))
     >>> plt.ylabel('Frequency [Hz]')
     >>> plt.xlabel('Time [sec]')
     >>> plt.show()
 
     Note, if using output that is not one sided, then use the following:
 
-    >>> f, t, Sxx = signal.spectrogram(x, fs, return_onesided=False)
-    >>> plt.pcolormesh(t, np.fft.fftshift(f), np.fft.fftshift(Sxx, axes=0))
+    >>> f, t, Sxx = cusignal.spectrogram(x, fs, return_onesided=False)
+    >>> plt.pcolormesh(cp.asnumpy(t), cp.fft.fftshift(f), \
+        cp.fft.fftshift(Sxx, axes=0))
     >>> plt.ylabel('Frequency [Hz]')
     >>> plt.xlabel('Time [sec]')
     >>> plt.show()
     """
-    modelist = ['psd', 'complex', 'magnitude', 'angle', 'phase']
+    modelist = ["psd", "complex", "magnitude", "angle", "phase"]
     if mode not in modelist:
-        raise ValueError('unknown value for mode {}, must be one of {}'
-                         .format(mode, modelist))
+        raise ValueError(
+            "unknown value for mode {}, must be one of {}".format(
+                mode, modelist
+            )
+        )
 
     # need to set default for nperseg before setting default for noverlap below
-    window, nperseg = _triage_segments(window, nperseg,
-                                       input_length=x.shape[axis])
+    window, nperseg = _triage_segments(
+        window, nperseg, input_length=x.shape[axis]
+    )
 
     # Less overlap than welch, so samples are more statisically independent
     if noverlap is None:
         noverlap = nperseg // 8
 
-    if mode == 'psd':
-        freqs, time, Sxx = _spectral_helper(x, x, fs, window, nperseg,
-                                            noverlap, nfft, detrend,
-                                            return_onesided, scaling, axis,
-                                            mode='psd')
+    if mode == "psd":
+        freqs, time, Sxx = _spectral_helper(
+            x,
+            x,
+            fs,
+            window,
+            nperseg,
+            noverlap,
+            nfft,
+            detrend,
+            return_onesided,
+            scaling,
+            axis,
+            mode="psd",
+        )
 
     else:
-        freqs, time, Sxx = _spectral_helper(x, x, fs, window, nperseg,
-                                            noverlap, nfft, detrend,
-                                            return_onesided, scaling, axis,
-                                            mode='stft')
+        freqs, time, Sxx = _spectral_helper(
+            x,
+            x,
+            fs,
+            window,
+            nperseg,
+            noverlap,
+            nfft,
+            detrend,
+            return_onesided,
+            scaling,
+            axis,
+            mode="stft",
+        )
 
-        if mode == 'magnitude':
+        if mode == "magnitude":
             Sxx = cp.abs(Sxx)
-        elif mode in ['angle', 'phase']:
+        elif mode in ["angle", "phase"]:
             Sxx = angle(Sxx)
-            if mode == 'phase':
+            if mode == "phase":
                 # Sxx has one additional dimension for time strides
                 if axis < 0:
                     axis -= 1
@@ -771,9 +881,19 @@ def spectrogram(x, fs=1.0, window=('tukey', .25), nperseg=None, noverlap=None,
     return freqs, time, Sxx
 
 
-def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
-         detrend=False, return_onesided=True, boundary='zeros', padded=True,
-         axis=-1):
+def stft(
+    x,
+    fs=1.0,
+    window="hann",
+    nperseg=256,
+    noverlap=None,
+    nfft=None,
+    detrend=False,
+    return_onesided=True,
+    boundary="zeros",
+    padded=True,
+    axis=-1,
+):
     r"""
     Compute the Short Time Fourier Transform (STFT).
 
@@ -844,10 +964,6 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
 
     See Also
     --------
-    istft: Inverse Short Time Fourier Transform
-    check_COLA: Check whether the Constant OverLap Add (COLA) constraint
-                is met
-    check_NOLA: Check whether the Nonzero Overlap Add (NOLA) constraint is met
     welch: Power spectral density by Welch's method.
     spectrogram: Spectrogram by Welch's method.
     csd: Cross spectral density by Welch's method.
@@ -877,8 +993,6 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
     choice of `window`, `nperseg`, and `noverlap` satisfy this constraint can
     be tested with `check_NOLA`.
 
-    .. versionadded:: 0.19.0
-
     References
     ----------
     .. [1] Oppenheim, Alan V., Ronald W. Schafer, John R. Buck
@@ -889,7 +1003,8 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     Generate a test signal, a 2 Vrms sine wave whose frequency is slowly
@@ -898,37 +1013,58 @@ def stft(x, fs=1.0, window='hann', nperseg=256, noverlap=None, nfft=None,
 
     >>> fs = 10e3
     >>> N = 1e5
-    >>> amp = 2 * np.sqrt(2)
+    >>> amp = 2 * cp.sqrt(2)
     >>> noise_power = 0.01 * fs / 2
-    >>> time = np.arange(N) / float(fs)
-    >>> mod = 500*np.cos(2*np.pi*0.25*time)
-    >>> carrier = amp * np.sin(2*np.pi*3e3*time + mod)
-    >>> noise = np.random.normal(scale=np.sqrt(noise_power),
+    >>> time = cp.arange(N) / float(fs)
+    >>> mod = 500*cp.cos(2*cp.pi*0.25*time)
+    >>> carrier = amp * cp.sin(2*cp.pi*3e3*time + mod)
+    >>> noise = cp.random.normal(scale=cp.sqrt(noise_power),
     ...                          size=time.shape)
-    >>> noise *= np.exp(-time/5)
+    >>> noise *= cp.exp(-time/5)
     >>> x = carrier + noise
 
     Compute and plot the STFT's magnitude.
 
-    >>> f, t, Zxx = signal.stft(x, fs, nperseg=1000)
-    >>> plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp)
+    >>> f, t, Zxx = cusignal.stft(x, fs, nperseg=1000)
+    >>> plt.pcolormesh(cp.asnumpy(t), cp.asnumpy(f), cp.asnumpy(cp.abs(Zxx)), \
+        vmin=0, vmax=amp)
     >>> plt.title('STFT Magnitude')
     >>> plt.ylabel('Frequency [Hz]')
     >>> plt.xlabel('Time [sec]')
     >>> plt.show()
     """
 
-    freqs, time, Zxx = _spectral_helper(x, x, fs, window, nperseg, noverlap,
-                                        nfft, detrend, return_onesided,
-                                        scaling='spectrum', axis=axis,
-                                        mode='stft', boundary=boundary,
-                                        padded=padded)
+    freqs, time, Zxx = _spectral_helper(
+        x,
+        x,
+        fs,
+        window,
+        nperseg,
+        noverlap,
+        nfft,
+        detrend,
+        return_onesided,
+        scaling="spectrum",
+        axis=axis,
+        mode="stft",
+        boundary=boundary,
+        padded=padded,
+    )
 
     return freqs, time, Zxx
 
 
-def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
-              nfft=None, detrend='constant', axis=-1):
+def coherence(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    axis=-1,
+):
     r"""
     Estimate the magnitude squared coherence estimate, Cxy, of
     discrete-time signals X and Y using Welch's method.
@@ -995,7 +1131,6 @@ def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     signal power, while not over counting any of the data. Narrower
     windows may require a larger overlap.
 
-    .. versionadded:: 0.16.0
 
     References
     ----------
@@ -1008,7 +1143,8 @@ def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     Generate two test signals with some common features.
@@ -1018,39 +1154,154 @@ def coherence(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     >>> amp = 20
     >>> freq = 1234.0
     >>> noise_power = 0.001 * fs / 2
-    >>> time = np.arange(N) / fs
-    >>> b, a = signal.butter(2, 0.25, 'low')
-    >>> x = np.random.normal(scale=np.sqrt(noise_power), size=time.shape)
-    >>> y = signal.lfilter(b, a, x)
-    >>> x += amp*np.sin(2*np.pi*freq*time)
-    >>> y += np.random.normal(scale=0.1*np.sqrt(noise_power), size=time.shape)
+    >>> time = cp.arange(N) / fs
+    >>> b, a = cusignal.butter(2, 0.25, 'low')
+    >>> x = cp.random.normal(scale=cp.sqrt(noise_power), size=time.shape)
+    >>> # lfilter not implemented in cuSignal
+    >>> y = cusignal.lfilter(b, a, x)
+    >>> x += amp*cp.sin(2*cp.pi*freq*time)
+    >>> y += cp.random.normal(scale=0.1*cp.sqrt(noise_power), size=time.shape)
 
     Compute and plot the coherence.
 
-    >>> f, Cxy = signal.coherence(x, y, fs, nperseg=1024)
-    >>> plt.semilogy(f, Cxy)
+    >>> f, Cxy = cusignal.coherence(x, y, fs, nperseg=1024)
+    >>> plt.semilogy(cp.asnumpy(f), cp.asnumpy(Cxy))
     >>> plt.xlabel('frequency [Hz]')
     >>> plt.ylabel('Coherence')
     >>> plt.show()
     """
 
-    freqs, Pxx = welch(x, fs=fs, window=window, nperseg=nperseg,
-                       noverlap=noverlap, nfft=nfft, detrend=detrend,
-                       axis=axis)
-    _, Pyy = welch(y, fs=fs, window=window, nperseg=nperseg, noverlap=noverlap,
-                   nfft=nfft, detrend=detrend, axis=axis)
-    _, Pxy = csd(x, y, fs=fs, window=window, nperseg=nperseg,
-                 noverlap=noverlap, nfft=nfft, detrend=detrend, axis=axis)
+    freqs, Pxx = welch(
+        x,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
+    _, Pyy = welch(
+        y,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
+    _, Pxy = csd(
+        x,
+        y,
+        fs=fs,
+        window=window,
+        nperseg=nperseg,
+        noverlap=noverlap,
+        nfft=nfft,
+        detrend=detrend,
+        axis=axis,
+    )
 
-    Cxy = cp.abs(Pxy)**2 / Pxx / Pyy
+    Cxy = cp.abs(Pxy) ** 2 / Pxx / Pyy
 
     return freqs, Cxy
 
 
-def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
-                     nfft=None, detrend='constant', return_onesided=True,
-                     scaling='density', axis=-1, mode='psd', boundary=None,
-                     padded=False):
+def vectorstrength(events, period):
+    """
+    Determine the vector strength of the events corresponding to the given
+    period.
+
+    The vector strength is a measure of phase synchrony, how well the
+    timing of the events is synchronized to a single period of a periodic
+    signal.
+
+    If multiple periods are used, calculate the vector strength of each.
+    This is called the "resonating vector strength".
+
+    Parameters
+    ----------
+    events : 1D array_like
+        An array of time points containing the timing of the events.
+    period : float or array_like
+        The period of the signal that the events should synchronize to.
+        The period is in the same units as `events`.  It can also be an array
+        of periods, in which case the outputs are arrays of the same length.
+
+    Returns
+    -------
+    strength : float or 1D array
+        The strength of the synchronization.  1.0 is perfect synchronization
+        and 0.0 is no synchronization.  If `period` is an array, this is also
+        an array with each element containing the vector strength at the
+        corresponding period.
+    phase : float or array
+        The phase that the events are most strongly synchronized to in radians.
+        If `period` is an array, this is also an array with each element
+        containing the phase for the corresponding period.
+
+    References
+    ----------
+    van Hemmen, JL, Longtin, A, and Vollmayr, AN. Testing resonating vector
+        strength: Auditory system, electric fish, and noise.
+        Chaos 21, 047508 (2011);
+        :doi:`10.1063/1.3670512`.
+    van Hemmen, JL.  Vector strength after Goldberg, Brown, and von Mises:
+        biological and mathematical perspectives.  Biol Cybern.
+        2013 Aug;107(4):385-96. :doi:`10.1007/s00422-013-0561-7`.
+    van Hemmen, JL and Vollmayr, AN.  Resonating vector strength: what happens
+        when we vary the "probing" frequency while keeping the spike times
+        fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
+        :doi:`10.1007/s00422-013-0560-8`.
+    """
+    events = asarray(events)
+    period = asarray(period)
+    if events.ndim > 1:
+        raise ValueError("events cannot have dimensions more than 1")
+    if period.ndim > 1:
+        raise ValueError("period cannot have dimensions more than 1")
+
+    # we need to know later if period was originally a scalar
+    scalarperiod = not period.ndim
+
+    events = cp.atleast_2d(events)
+    period = cp.atleast_2d(period)
+    if (period <= 0).any():
+        raise ValueError("periods must be positive")
+
+    # this converts the times to vectors
+    vectors = cp.exp(cp.dot(2j * cp.pi / period.T, events))
+
+    # the vector strength is just the magnitude of the mean of the vectors
+    # the vector phase is the angle of the mean of the vectors
+    vectormean = cp.mean(vectors, axis=1)
+    strength = cp.abs(vectormean)
+    phase = angle(vectormean)
+
+    # if the original period was a scalar, return scalars
+    if scalarperiod:
+        strength = strength[0]
+        phase = phase[0]
+    return strength, phase
+
+
+def _spectral_helper(
+    x,
+    y,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    detrend="constant",
+    return_onesided=True,
+    scaling="density",
+    axis=-1,
+    mode="psd",
+    boundary=None,
+    padded=False,
+):
     """
     Calculate various forms of windowed FFTs for PSD, CSD, etc.
 
@@ -1135,31 +1386,37 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     -----
     Adapted from matplotlib.mlab
 
-    .. versionadded:: 0.16.0
     """
-    if mode not in ['psd', 'stft']:
-        raise ValueError("Unknown value for mode %s, must be one of: "
-                         "{'psd', 'stft'}" % mode)
+    if mode not in ["psd", "stft"]:
+        raise ValueError(
+            "Unknown value for mode %s, must be one of: "
+            "{'psd', 'stft'}" % mode
+        )
 
-    boundary_funcs = {'even': even_ext,
-                      'odd': odd_ext,
-                      'constant': const_ext,
-                      'zeros': zero_ext,
-                      None: None}
+    boundary_funcs = {
+        "even": _even_ext,
+        "odd": _odd_ext,
+        "constant": _const_ext,
+        "zeros": _zero_ext,
+        None: None,
+    }
 
     if boundary not in boundary_funcs:
-        raise ValueError("Unknown boundary option '{0}', must be one of: {1}"
-                         .format(boundary, list(boundary_funcs.keys())))
+        raise ValueError(
+            "Unknown boundary option '{0}', must be one of: {1}".format(
+                boundary, list(boundary_funcs.keys())
+            )
+        )
 
     # If x and y are the same object we can save ourselves some computation.
     same_data = y is x
 
-    if not same_data and mode != 'psd':
+    if not same_data and mode != "psd":
         raise ValueError("x and y must be equal if mode is 'stft'")
 
     axis = int(axis)
 
-    # Ensure we have np.arrays, get outdtype
+    # Ensure we have cp.arrays, get outdtype
     x = asarray(x)
     if not same_data:
         y = asarray(y)
@@ -1176,7 +1433,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
         try:
             outershape = cp.broadcast(cp.empty(xouter), cp.empty(youter)).shape
         except ValueError:
-            raise ValueError('x and y cannot be broadcast together.')
+            raise ValueError("x and y cannot be broadcast together.")
 
     if same_data:
         if x.size == 0:
@@ -1208,7 +1465,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     if nperseg is not None:  # if specified by user
         nperseg = int(nperseg)
         if nperseg < 1:
-            raise ValueError('nperseg must be a positive integer')
+            raise ValueError("nperseg must be a positive integer")
 
     # parse window; if array like, then set nperseg = win.shape
     win, nperseg = _triage_segments(window, nperseg, input_length=x.shape[-1])
@@ -1216,7 +1473,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     if nfft is None:
         nfft = nperseg
     elif nfft < nperseg:
-        raise ValueError('nfft must be greater than or equal to nperseg.')
+        raise ValueError("nfft must be greater than or equal to nperseg.")
     else:
         nfft = int(nfft)
 
@@ -1225,7 +1482,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
     else:
         noverlap = int(noverlap)
     if noverlap >= nperseg:
-        raise ValueError('noverlap must be less than nperseg.')
+        raise ValueError("noverlap must be less than nperseg.")
     nstep = nperseg - noverlap
 
     # Padding occurs after boundary extension, so that the extended signal ends
@@ -1252,11 +1509,15 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     # Handle detrending and window functions
     if not detrend:
+
         def detrend_func(d):
             return d
-    elif not hasattr(detrend, '__call__'):
+
+    elif not hasattr(detrend, "__call__"):
+
         def detrend_func(d):
-            return signaltools.detrend(d, type=detrend, axis=-1)
+            return filtering.detrend(d, type=detrend, axis=-1)
+
     elif axis != -1:
         # Wrap this function so that it receives a shape that it could
         # reasonably expect to receive.
@@ -1264,40 +1525,44 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
             d = cp.rollaxis(d, -1, axis)
             d = detrend(d)
             return cp.rollaxis(d, axis, len(d.shape))
+
     else:
         detrend_func = detrend
 
     if cp.result_type(win, cp.complex64) != outdtype:
         win = win.astype(outdtype)
 
-    if scaling == 'density':
+    if scaling == "density":
         scale = 1.0 / (fs * (win * win).sum())
-    elif scaling == 'spectrum':
-        scale = 1.0 / win.sum()**2
+    elif scaling == "spectrum":
+        scale = 1.0 / win.sum() ** 2
     else:
-        raise ValueError('Unknown scaling: %r' % scaling)
+        raise ValueError("Unknown scaling: %r" % scaling)
 
-    if mode == 'stft':
+    if mode == "stft":
         scale = cp.sqrt(scale)
 
     if return_onesided:
         if cp.iscomplexobj(x):
-            sides = 'twosided'
-            warnings.warn('Input data is complex, switching to '
-                          'return_onesided=False')
+            sides = "twosided"
+            warnings.warn(
+                "Input data is complex, switching to " "return_onesided=False"
+            )
         else:
-            sides = 'onesided'
+            sides = "onesided"
             if not same_data:
                 if cp.iscomplexobj(y):
-                    sides = 'twosided'
-                    warnings.warn('Input data is complex, switching to '
-                                  'return_onesided=False')
+                    sides = "twosided"
+                    warnings.warn(
+                        "Input data is complex, switching to "
+                        "return_onesided=False"
+                    )
     else:
-        sides = 'twosided'
+        sides = "twosided"
 
-    if sides == 'twosided':
+    if sides == "twosided":
         freqs = cp.fft.fftfreq(nfft, 1 / fs)
-    elif sides == 'onesided':
+    elif sides == "onesided":
         freqs = cp.fft.rfftfreq(nfft, 1 / fs)
 
     # Perform the windowed FFTs
@@ -1305,29 +1570,31 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 
     if not same_data:
         # All the same operations on the y data
-        result_y = _fft_helper(y, win, detrend_func, nperseg, noverlap, nfft,
-                               sides)
+        result_y = _fft_helper(
+            y, win, detrend_func, nperseg, noverlap, nfft, sides
+        )
         result = cp.conj(result) * result_y
-    elif mode == 'psd':
+    elif mode == "psd":
         result = cp.conj(result) * result
 
     result *= scale
-    if sides == 'onesided' and mode == 'psd':
+    if sides == "onesided" and mode == "psd":
         if nfft % 2:
             result[..., 1:] *= 2
         else:
             # Last point is unpaired Nyquist freq point, don't double
             result[..., 1:-1] *= 2
 
-    time = arange(nperseg / 2, x.shape[-1] - nperseg / 2 + 1,
-                  nperseg - noverlap) / float(fs)
+    time = arange(
+        nperseg / 2, x.shape[-1] - nperseg / 2 + 1, nperseg - noverlap
+    ) / float(fs)
     if boundary is not None:
         time -= (nperseg / 2) / fs
 
     result = result.astype(outdtype)
 
     # All imaginary parts are zero anyways
-    if same_data and mode != 'stft':
+    if same_data and mode != "stft":
         result = result.real
 
     # Output is going to have new last axis for time/window index, so a
@@ -1344,7 +1611,7 @@ def _spectral_helper(x, y, fs=1.0, window='hann', nperseg=None, noverlap=None,
 def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
     """
     Calculate windowed FFT, for internal use by
-    scipy.signal._spectral_helper
+    cusignal.spectral_analysis.spectral._spectral_helper
 
     This is a helper function that does the main FFT calculation for
     `_spectral helper`. All input validation is performed there, and the
@@ -1361,7 +1628,6 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
     -----
     Adapted from matplotlib.mlab
 
-    .. versionadded:: 0.16.0
     """
     # Created strided array of data segments
     if nperseg == 1 and noverlap == 0:
@@ -1372,7 +1638,7 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
         shape = x.shape[:-1] + ((x.shape[-1] - noverlap) // step, nperseg)
         strides = x.strides[:-1] + (step * x.strides[-1], x.strides[-1])
         # Need to optimize this in cuSignal
-        result = as_strided(x, shape=shape, strides=strides)
+        result = _as_strided(x, shape=shape, strides=strides)
 
     # Detrend each data segment individually
     result = detrend_func(result)
@@ -1381,7 +1647,7 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
     result = win * result
 
     # Perform the fft. Acts on last axis by default. Zero-pads automatically
-    if sides == 'twosided':
+    if sides == "twosided":
         func = fftpack.fft
     else:
         result = result.real
@@ -1432,23 +1698,26 @@ def _triage_segments(window, nperseg, input_length):
         if nperseg is None:
             nperseg = 256  # then change to default
         if nperseg > input_length:
-            warnings.warn('nperseg = {0:d} is greater than input length '
-                          ' = {1:d}, using nperseg = {1:d}'
-                          .format(nperseg, input_length))
+            warnings.warn(
+                "nperseg = {0:d} is greater than input length "
+                " = {1:d}, using nperseg = {1:d}".format(nperseg, input_length)
+            )
             nperseg = input_length
         win = get_window(window, nperseg)
     else:
         win = cp.asarray(window)
         if len(win.shape) != 1:
-            raise ValueError('window must be 1-D')
+            raise ValueError("window must be 1-D")
         if input_length < win.shape[-1]:
-            raise ValueError('window is longer than input signal')
+            raise ValueError("window is longer than input signal")
         if nperseg is None:
             nperseg = win.shape[0]
         elif nperseg is not None:
             if nperseg != win.shape[0]:
-                raise ValueError("value specified for nperseg is different"
-                                 " from length of window")
+                raise ValueError(
+                    "value specified for nperseg is different"
+                    " from length of window"
+                )
     return win, nperseg
 
 
@@ -1469,5 +1738,5 @@ def _median_bias(n):
     bias : float
         Calculated bias.
     """
-    ii_2 = 2 * arange(1., (n - 1) // 2 + 1)
-    return 1 + cp.sum(1. / (ii_2 + 1) - 1. / ii_2)
+    ii_2 = 2 * arange(1.0, (n - 1) // 2 + 1)
+    return 1 + cp.sum(1.0 / (ii_2 + 1) - 1.0 / ii_2)

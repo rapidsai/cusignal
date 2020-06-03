@@ -12,7 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from .signaltools import convolve
+from ..convolution.convolve import convolve
 
 
 def qmf(hk):
@@ -51,7 +51,7 @@ def morlet(M, w=5.0, s=1.0, complete=True):
 
     See Also
     --------
-    scipy.signal.gausspulse
+    cusignal.gausspulse
 
     Notes
     -----
@@ -117,15 +117,16 @@ def ricker(points, a):
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
 
     >>> points = 100
     >>> a = 4.0
-    >>> vec2 = signal.ricker(points, a)
+    >>> vec2 = cusignal.ricker(points, a)
     >>> print(len(vec2))
     100
-    >>> plt.plot(vec2)
+    >>> plt.plot(cp.asnumpy(vec2))
     >>> plt.show()
 
     """
@@ -172,19 +173,21 @@ def cwt(data, wavelet, widths):
     ::
 
         length = min(10 * width[ii], len(data))
-        cwt[ii,:] = signal.convolve(data, wavelet(length,
+        cwt[ii,:] = cusignal.convolve(data, wavelet(length,
                                     width[ii]), mode='same')
 
     Examples
     --------
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
-    >>> t = np.linspace(-1, 1, 200, endpoint=False)
-    >>> sig  = np.cos(2 * np.pi * 7 * t) + signal.gausspulse(t - 0.4, fc=2)
-    >>> widths = np.arange(1, 31)
-    >>> cwtmatr = signal.cwt(sig, signal.ricker, widths)
-    >>> plt.imshow(cwtmatr, extent=[-1, 1, 31, 1], cmap='PRGn', aspect='auto',
-    ...            vmax=abs(cwtmatr).max(), vmin=-abs(cwtmatr).max())
+    >>> t = cp.linspace(-1, 1, 200, endpoint=False)
+    >>> sig  = cp.cos(2 * cp.pi * 7 * t) + cusignal.gausspulse(t - 0.4, fc=2)
+    >>> widths = cp.arange(1, 31)
+    >>> cwtmatr = cusignal.cwt(sig, cusignal.ricker, widths)
+    >>> plt.imshow(cp.asnumpy(cwtmatr), extent=[-1, 1, 31, 1], cmap='PRGn',
+                   aspect='auto', vmax=abs(cwtmatr).max(),
+                   vmin=-abs(cwtmatr).max())
     >>> plt.show()
 
     """

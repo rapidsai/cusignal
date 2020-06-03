@@ -11,189 +11,205 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import cupy as cp
-from cusignal.test.utils import array_equal
 import cusignal
-import numpy as np
+import pytest
+
+from cusignal.test.utils import array_equal
 from scipy import signal
 
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_csd(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps)
-    gpu_x = cp.asarray(cpu_x)
-    gpu_y = cp.asarray(cpu_y)
+class TestSpectral:
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_csd(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_x, gpu_x = rand_data_gen(num_samps)
+        cpu_y, gpu_y = rand_data_gen(num_samps)
 
-    cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-    gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
 
-    assert array_equal(cpu_csd, gpu_csd)
+        assert array_equal(cpu_csd, gpu_csd)
 
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_csd_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
+        cpu_x, gpu_x = rand_complex_data_gen(num_samps)
+        cpu_y, gpu_y = rand_complex_data_gen(num_samps)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_csd_complex(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_x = cp.asarray(cpu_x)
-    gpu_y = cp.asarray(cpu_y)
+        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
 
-    cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-    gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+        assert array_equal(cpu_csd, gpu_csd)
 
-    assert array_equal(cpu_csd, gpu_csd)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("window", ["flattop", "nuttall"])
+    @pytest.mark.parametrize("scaling", ["spectrum", "density"])
+    def test_periodogram(self, rand_data_gen, num_samps, fs, window, scaling):
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
+        cpu_periodogram = signal.periodogram(
+            cpu_sig, fs, window=window, scaling=scaling
+        )
+        gpu_periodogram = cp.asnumpy(
+            cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
+        )
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('window', ['flattop', 'nuttall'])
-@pytest.mark.parametrize('scaling', ['spectrum', 'density'])
-def test_periodogram(num_samps, fs, window, scaling):
-    cpu_sig = np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+        assert array_equal(cpu_periodogram, gpu_periodogram)
 
-    cpu_periodogram = signal.periodogram(cpu_sig, fs, window=window,
-                                         scaling=scaling)
-    gpu_periodogram = cp.asnumpy(
-        cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
-    )
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("window", ["flattop", "nuttall"])
+    @pytest.mark.parametrize("scaling", ["spectrum", "density"])
+    def test_periodogram_complex(
+        self, rand_complex_data_gen, num_samps, fs, window, scaling
+    ):
+        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
 
-    assert array_equal(cpu_periodogram, gpu_periodogram)
+        _, cpu_periodogram = signal.periodogram(
+            cpu_sig, fs, window=window, scaling=scaling
+        )
+        _, gpu_periodogram = cusignal.periodogram(
+            gpu_sig, fs, window=window, scaling=scaling
+        )
+        gpu_periodogram = cp.asnumpy(gpu_periodogram)
 
+        assert array_equal(cpu_periodogram, gpu_periodogram)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('window', ['flattop', 'nuttall'])
-@pytest.mark.parametrize('scaling', ['spectrum', 'density'])
-def test_periodogram_complex(num_samps, fs, window, scaling):
-    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_welch(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
-    cf, cpu_periodogram = signal.periodogram(
-        cpu_sig, fs, window=window, scaling=scaling
-    )
-    gf, gpu_periodogram = cusignal.periodogram(
-        gpu_sig, fs, window=window, scaling=scaling
-    )
-    gpu_periodogram = cp.asnumpy(gpu_periodogram)
+        _, cPxx_spec = signal.welch(cpu_sig, fs, nperseg=nperseg)
+        _, gPxx_spec = cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+        gPxx_spec = cp.asnumpy(gPxx_spec)
 
-    assert array_equal(cpu_periodogram, gpu_periodogram)
+        assert array_equal(cPxx_spec, gPxx_spec)
 
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_welch_complex(
+        self, rand_complex_data_gen, num_samps, fs, nperseg
+    ):
+        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_welch(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+        _, cPxx_spec = signal.welch(cpu_sig, fs, nperseg=nperseg)
+        _, gPxx_spec = cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+        gPxx_spec = cp.asnumpy(gPxx_spec)
 
-    cf, cPxx_spec = signal.welch(cpu_sig, fs, nperseg=nperseg)
-    gf, gPxx_spec = cusignal.welch(gpu_sig, fs, nperseg=nperseg)
-    gPxx_spec = cp.asnumpy(gPxx_spec)
+        assert array_equal(cPxx_spec, gPxx_spec)
 
-    assert array_equal(cPxx_spec, gPxx_spec)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    def test_spectrogram(self, rand_data_gen, num_samps, fs):
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
+        _, _, cPxx_spec = signal.spectrogram(cpu_sig, fs)
+        _, _, gPxx_spec = cusignal.spectrogram(gpu_sig, fs)
+        gPxx_spec = cp.asnumpy(gPxx_spec)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_welch_complex(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+        assert array_equal(cPxx_spec, gPxx_spec)
 
-    cf, cPxx_spec = signal.welch(cpu_sig, fs, nperseg=nperseg)
-    gf, gPxx_spec = cusignal.welch(gpu_sig, fs, nperseg=nperseg)
-    gPxx_spec = cp.asnumpy(gPxx_spec)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    def test_spectrogram_complex(self, rand_complex_data_gen, num_samps, fs):
+        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
 
-    assert array_equal(cPxx_spec, gPxx_spec)
+        _, _, cPxx_spec = signal.spectrogram(cpu_sig, fs)
+        _, _, gPxx_spec = cusignal.spectrogram(gpu_sig, fs)
+        gPxx_spec = cp.asnumpy(gPxx_spec)
 
+        assert array_equal(cPxx_spec, gPxx_spec)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-def test_spectrogram(num_samps, fs):
-    cpu_sig = np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_coherence(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_x, gpu_x = rand_data_gen(num_samps)
+        cpu_y, gpu_y = rand_data_gen(num_samps)
 
-    cf, ct, cPxx_spec = signal.spectrogram(cpu_sig, fs)
-    gf, gt, gPxx_spec = cusignal.spectrogram(gpu_sig, fs)
-    gPxx_spec = cp.asnumpy(gPxx_spec)
+        _, cpu_coherence = signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+        _, gpu_coherence = cusignal.coherence(
+            gpu_x, gpu_y, fs, nperseg=nperseg
+        )
+        gpu_coherence = cp.asnumpy(gpu_coherence)
 
-    assert array_equal(cPxx_spec, gPxx_spec)
+        assert array_equal(cpu_coherence, gpu_coherence)
 
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_coherence_complex(
+        self, rand_complex_data_gen, num_samps, fs, nperseg
+    ):
+        cpu_x, gpu_x = rand_complex_data_gen(num_samps)
+        cpu_y, gpu_y = rand_complex_data_gen(num_samps)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-def test_spectrogram_complex(num_samps, fs):
-    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
+        _, cpu_coherence = signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+        _, gpu_coherence = cusignal.coherence(
+            gpu_x, gpu_y, fs, nperseg=nperseg
+        )
+        gpu_coherence = cp.asnumpy(gpu_coherence)
 
-    cf, ct, cPxx_spec = signal.spectrogram(cpu_sig, fs)
-    gf, gt, gPxx_spec = cusignal.spectrogram(gpu_sig, fs)
-    gPxx_spec = cp.asnumpy(gPxx_spec)
+        assert array_equal(cpu_coherence, gpu_coherence)
 
-    assert array_equal(cPxx_spec, gPxx_spec)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_stft(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
+        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
+        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+        gpu_stft = cp.asnumpy(gpu_stft)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_coherence(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps)
-    gpu_x = cp.asarray(cpu_x)
-    gpu_y = cp.asarray(cpu_y)
+        assert array_equal(cpu_stft, gpu_stft)
 
-    cf, cpu_coherence = signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
-    gf, gpu_coherence = cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
-    gpu_coherence = cp.asnumpy(gpu_coherence)
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_stft_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
+        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
 
-    assert array_equal(cpu_coherence, gpu_coherence)
+        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
+        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+        gpu_stft = cp.asnumpy(gpu_stft)
 
+        assert array_equal(cpu_stft, gpu_stft)
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_coherence_complex(num_samps, fs, nperseg):
-    cpu_x = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    cpu_y = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_x = cp.asarray(cpu_x)
-    gpu_y = cp.asarray(cpu_y)
+    @pytest.mark.parametrize("num_in_samps", [2 ** 10])
+    @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
+    @pytest.mark.parametrize("precenter", [True, False])
+    @pytest.mark.parametrize("normalize", [True, False])
+    @pytest.mark.parametrize("use_numba", [True, False])
+    def test_lombscargle(
+        self,
+        lombscargle_gen,
+        num_in_samps,
+        num_out_samps,
+        precenter,
+        normalize,
+        use_numba,
+    ):
 
-    cf, cpu_coherence = signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
-    gf, gpu_coherence = cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
-    gpu_coherence = cp.asnumpy(gpu_coherence)
+        cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
+            num_in_samps, num_out_samps
+        )
 
-    assert array_equal(cpu_coherence, gpu_coherence)
+        cpu_lombscargle = signal.lombscargle(
+            cpu_x, cpu_y, cpu_f, precenter, normalize
+        )
 
+        gpu_lombscargle = cp.asnumpy(
+            cusignal.lombscargle(
+                gpu_x, gpu_y, gpu_f, precenter, normalize, use_numba=use_numba,
+            )
+        )
 
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_stft(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
-
-    cf, ct, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
-    gf, gt, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
-    gpu_stft = cp.asnumpy(gpu_stft)
-
-    assert array_equal(cpu_stft, gpu_stft)
-
-
-@pytest.mark.parametrize('num_samps', [2**14])
-@pytest.mark.parametrize('fs', [1.0, 1e6])
-@pytest.mark.parametrize('nperseg', [1024, 2048])
-def test_stft_complex(num_samps, fs, nperseg):
-    cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-    gpu_sig = cp.asarray(cpu_sig)
-
-    cf, ct, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
-    gf, gt, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
-    gpu_stft = cp.asnumpy(gpu_stft)
-
-    assert array_equal(cpu_stft, gpu_stft)
+        assert array_equal(cpu_lombscargle, gpu_lombscargle)
