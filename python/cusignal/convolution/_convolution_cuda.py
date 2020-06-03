@@ -441,8 +441,8 @@ class _cupy_convolve_wrapper(object):
             out.shape[0],
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_convolve_2d_wrapper(object):
@@ -476,8 +476,8 @@ class _cupy_convolve_2d_wrapper(object):
             pick,
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(

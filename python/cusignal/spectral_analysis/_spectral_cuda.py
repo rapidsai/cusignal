@@ -212,8 +212,8 @@ class _cupy_lombscargle_wrapper(object):
             y_dot,
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
