@@ -676,8 +676,8 @@ class _cupy_predict_wrapper(object):
 
         kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_update_wrapper(object):
@@ -696,8 +696,8 @@ class _cupy_update_wrapper(object):
 
         kernel_args = (x.shape[0], x, z, H, P, R)
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
