@@ -758,7 +758,7 @@ def _populate_kernel_cache(
         module = cp.RawModule(
             code=cuda_code,
             options=("-std=c++11", "-use_fast_math"),
-            specializations=specializations,
+            name_expressions=specializations,
         )
 
         _cupy_kernel_cache[
