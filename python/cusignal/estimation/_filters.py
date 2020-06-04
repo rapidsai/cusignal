@@ -676,8 +676,8 @@ class _cupy_predict_wrapper(object):
 
         kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_update_wrapper(object):
@@ -696,8 +696,8 @@ class _cupy_update_wrapper(object):
 
         kernel_args = (x.shape[0], x, z, H, P, R)
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
@@ -758,16 +758,15 @@ def _populate_kernel_cache(
         module = cp.RawModule(
             code=cuda_code,
             options=("-std=c++11", "-use_fast_math"),
-            specializations=specializations,
+            name_expressions=specializations,
         )
-        kernels = [module.get_mangled_name(ker) for ker in specializations]
 
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.PREDICT)
-        ] = module.get_function(kernels[0])
+        ] = module.get_function(specializations[0])
         _cupy_kernel_cache[
             (str(numba_type), GPUKernel.UPDATE)
-        ] = module.get_function(kernels[1])
+        ] = module.get_function(specializations[1])
     else:
         sig = _numba_kalman_signature(numba_type)
         _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
