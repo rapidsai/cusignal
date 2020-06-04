@@ -89,7 +89,7 @@ def decimate(
     n=None,
     axis=-1,
     zero_phase=True,
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
     use_numba=False,
 ):
@@ -114,7 +114,7 @@ def decimate(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
@@ -301,7 +301,7 @@ def resample_poly(
     down,
     axis=0,
     window=("kaiser", 5.0),
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
     use_numba=False,
 ):
@@ -330,7 +330,7 @@ def resample_poly(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
@@ -457,7 +457,7 @@ def upfirdn(
     up=1,
     down=1,
     axis=-1,
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
     use_numba=False,
 ):
@@ -479,7 +479,7 @@ def upfirdn(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
