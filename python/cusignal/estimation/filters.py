@@ -26,10 +26,12 @@ class KalmanFilter(object):
         dim_z,
         dim_u=0,
         dtype=cp.float32,
+        cp_stream=cp.cuda.stream.Stream.null,
         use_numba=False,
     ):
 
         self.num_points = num_points
+        self.cp_stream = cp_stream
         self.use_numba = use_numba
 
         if dim_x < 1:
@@ -147,7 +149,7 @@ class KalmanFilter(object):
             self.blockspergrid,
             self.threadsperblock,
             self.predict_sem,
-            cp.cuda.stream.Stream(null=True),
+            self.cp_stream,
             self.use_numba,
             _filters.GPUKernel.PREDICT,
         )
@@ -157,7 +159,7 @@ class KalmanFilter(object):
             self.blockspergrid,
             self.threadsperblock,
             self.update_sem,
-            cp.cuda.stream.Stream(null=True),
+            self.cp_stream,
             self.use_numba,
             _filters.GPUKernel.UPDATE,
         )
