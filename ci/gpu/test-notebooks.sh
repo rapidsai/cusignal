@@ -5,9 +5,6 @@ NOTEBOOKS_DIR=${WORKSPACE}/notebooks
 NBTEST=${WORKSPACE}/ci/utils/nbtest.sh
 LIBCUDF_KERNEL_CACHE_PATH=${WORKSPACE}/.jitcache
 
-cd ${NOTEBOOKS_DIR}
-TOPLEVEL_NB_FOLDERS=$(find . -name *.ipynb |cut -d'/' -f2|sort -u)
-
 # Add notebooks that should be skipped here
 # (space-separated list of filenames without paths)
 
@@ -18,34 +15,40 @@ env
 
 EXITCODE=0
 
-# Always run nbtest in all TOPLEVEL_NB_FOLDERS, set EXITCODE to failure
-# if any run fails
-for folder in ${TOPLEVEL_NB_FOLDERS}; do
+for nb in $(find ${NOTEBOOKS_DIR} -name *.ipynb); do
+    nbBasename=$(basename ${nb})
+    # Output of find command looks like this: ./repos/<repo>/notebooks/<notebook> -name
+    # This grabs the <repo> element, skip CLX notebooks as they are not part of the runtime images yet
+    nbRepo=$(echo ${nb} | awk -F/ '{print $2}')
+
     echo "========================================"
-    echo "FOLDER: ${folder}"
+    echo "REPO: ${nbRepo}"
     echo "========================================"
-    cd ${NOTEBOOKS_DIR}/${folder}
-    for nb in $(find . -name "*.ipynb"); do
-        nbBasename=$(basename ${nb})
-        # Skip all NBs that use dask (in the code or even in their name)
-        if ((echo ${nb}|grep -qi dask) || \
-            (grep -q dask ${nb})); then
-            echo "--------------------------------------------------------------------------------"
-            echo "SKIPPING: ${nb} (suspected Dask usage, not currently automatable)"
-            echo "--------------------------------------------------------------------------------"
-        elif (echo " ${SKIPNBS} " | grep -q " ${nbBasename} "); then
-            echo "--------------------------------------------------------------------------------"
-            echo "SKIPPING: ${nb} (listed in skip list)"
-            echo "--------------------------------------------------------------------------------"
-        else
-            cd $(dirname ${nb})
-            nvidia-smi
-            ${NBTEST} ${nbBasename}
-            EXITCODE=$((EXITCODE | $?))
-            rm -rf ${LIBCUDF_KERNEL_CACHE_PATH}/*
-            cd ${NOTEBOOKS_DIR}/${folder}
-        fi
-    done
+
+    # Skip all NBs that use dask (in the code or even in their name)
+    if ((echo ${nb}|grep -qi dask) || \
+        (grep -q dask ${nb})); then
+        echo "--------------------------------------------------------------------------------"
+        echo "SKIPPING: ${nb} (suspected Dask usage, not currently automatable)"
+        echo "--------------------------------------------------------------------------------"
+    elif (echo " ${SKIPNBS} " | grep -q " ${nbBasename} "); then
+        echo "--------------------------------------------------------------------------------"
+        echo "SKIPPING: ${nb} (listed in skip list)"
+        echo "--------------------------------------------------------------------------------"
+    elif    
+	# All notebooks are run from the directory in which they are contained.
+        # This makes operations that assume relative paths easiest to understand
+        # and maintain, since most users assume relative paths are relative to
+        # the location of the notebook itself. After a run, the CWD must be
+        # returned to NOTEBOOKS_DIR, since the find operation returned paths
+        # relative to that dir.
+        cd $(dirname ${nb})
+        nvidia-smi
+        ${NBTEST} ${nbBasename}
+        EXITCODE=$((EXITCODE | $?))
+        rm -rf ${LIBCUDF_KERNEL_CACHE_PATH}/*
+        cd ${NOTEBOOKS_DIR}
+    fi
 done
 
 nvidia-smi
