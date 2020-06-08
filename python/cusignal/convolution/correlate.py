@@ -26,7 +26,7 @@ def correlate(
     in2,
     mode="full",
     method="auto",
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
 ):
     r"""
@@ -69,7 +69,7 @@ def correlate(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
@@ -179,7 +179,7 @@ def correlate2d(
     mode="full",
     boundary="fill",
     fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
     use_numba=False,
 ):
@@ -218,7 +218,7 @@ def correlate2d(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block

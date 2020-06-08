@@ -3,8 +3,10 @@
 ## New Features
 
 ## Improvements
+- PR #112 - Remove Numba kernels
 
 ## Bug Fixes
+- PR #116 - Fix stream usage on CuPy raw kernels
 
 # cuSignal 0.14 (Date TBD)
 

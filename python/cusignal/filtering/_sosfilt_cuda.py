@@ -188,8 +188,10 @@ class _cupy_sosfilt_wrapper(object):
             x,
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
+        with self.stream:
+            self.kernel(
+                self.grid, self.block, kernel_args, shared_mem=self.smem
+            )
 
 
 def _get_backend_kernel(dtype, grid, block, smem, stream, k_type):
