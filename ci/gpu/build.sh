@@ -49,7 +49,9 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     boost \
     "numba>=0.49.0" \
     "cupy>=7.2.0" \
-    pytest-benchmark
+    pytest-benchmark \
+    "ipython=7.3*" \
+    jupyterlab
 
 logger "Check versions..."
 python --version
