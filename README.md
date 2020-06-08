@@ -287,7 +287,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
 
 2. Create cuSignal conda environment
 
-    `conda create --name cusignal`
+    `conda create --name cusignal-dev`
 
 3. Activate conda environment
 
