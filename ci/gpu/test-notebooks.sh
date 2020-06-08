@@ -35,7 +35,7 @@ for nb in $(find ${NOTEBOOKS_DIR} -name *.ipynb); do
         echo "--------------------------------------------------------------------------------"
         echo "SKIPPING: ${nb} (listed in skip list)"
         echo "--------------------------------------------------------------------------------"
-    elif    
+    else    
 	# All notebooks are run from the directory in which they are contained.
         # This makes operations that assume relative paths easiest to understand
         # and maintain, since most users assume relative paths are relative to
