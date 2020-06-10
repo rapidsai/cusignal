@@ -13,12 +13,10 @@
 
 import cupy as cp
 import numpy as np
-import warnings
 
-from numba import cuda, int64, void
 from string import Template
 
-from ..utils._caches import _cupy_kernel_cache, _numba_kernel_cache
+from ..utils._caches import _cupy_kernel_cache
 from .convolution_utils import (
     FULL,
     SAME,
@@ -30,113 +28,6 @@ from .convolution_utils import (
     _valfrommode,
     _bvalfromboundary,
 )
-
-
-def _numba_convolve_2d(inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick):
-
-    y, x = cuda.grid(2)
-
-    if pick != 3:  # non-square
-        i = cp.int32(x + S0)
-    else:
-        i = cp.int32(x + S1)
-    j = cp.int32(y + S0)
-
-    oPixelPos = (x, y)
-    if (x < outH) and (y < outW):
-
-        temp: out.dtype = 0
-
-        if pick == 1:  # odd
-            for k in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                for l in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (cp.int32(-k + S0), cp.int32(-l + S0))
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        elif pick == 2:  # even
-            for k in range(cp.int32(-S0), cp.int32(S0)):
-                for l in range(cp.int32(-S0), cp.int32(S0)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (
-                        cp.int32(cp.int32(-k + S0) - 1),
-                        cp.int32(cp.int32(-l + S0) - 1),
-                    )
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        else:  # non-squares
-            for k in range(cp.int32(S0)):
-                for l in range(cp.int32(S1)):
-                    iPixelPos = (
-                        cp.int32(cp.int32(i + k) - S1),
-                        cp.int32(cp.int32(j + l) - S0),
-                    )
-                    coefPos = (
-                        cp.int32(cp.int32(-k + S0) - 1),
-                        cp.int32(cp.int32(-l + S1) - 1),
-                    )
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        out[oPixelPos] = temp
-
-
-def _numba_correlate_2d(
-    inp, inpW, inpH, kernel, S0, S1, out, outW, outH, pick
-):
-
-    y, x = cuda.grid(2)
-
-    if pick != 3:  # non-square
-        i = cp.int32(x + S0)
-    else:
-        i = cp.int32(x + S1)
-    j = cp.int32(y + S0)
-
-    oPixelPos = (x, y)
-    if (x < outH) and (y < outW):
-
-        temp: out.dtype = 0
-
-        if pick == 1:  # odd
-            for k in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                for l in range(cp.int32(-S0), cp.int32(S0 + 1)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        elif pick == 2:  # even
-            for k in range(cp.int32(-S0), cp.int32(S0)):
-                for l in range(cp.int32(-S0), cp.int32(S0)):
-                    iPixelPos = (cp.int32(i + k), cp.int32(j + l))
-                    coefPos = (cp.int32(k + S0), cp.int32(l + S0))
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        else:  # non-squares
-            for k in range(cp.int32(S0)):
-                for l in range(cp.int32(S1)):
-                    iPixelPos = (
-                        cp.int32(cp.int32(i + k) - S1),
-                        cp.int32(cp.int32(j + l) - S0),
-                    )
-                    coefPos = (k, l)
-                    temp += inp[iPixelPos] * kernel[coefPos]
-
-        out[oPixelPos] = temp
-
-
-def _numba_convolve_2d_signature(ty):
-    return void(
-        ty[:, :],  # inp
-        int64,  # inpW
-        int64,  # inpH
-        ty[:, :],  # kernel
-        int64,  # S0
-        int64,  # S1 - only used by non-squares
-        ty[:, :],  # out
-        int64,  # outW
-        int64,  # outH
-        int64,  # pick
-    )
 
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
@@ -441,8 +332,8 @@ class _cupy_convolve_wrapper(object):
             out.shape[0],
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_convolve_2d_wrapper(object):
@@ -476,56 +367,34 @@ class _cupy_convolve_2d_wrapper(object):
             pick,
         )
 
-        self.stream.use()
-        self.kernel(self.grid, self.block, kernel_args)
+        with self.stream:
+            self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(
-    dtype, grid, block, stream, use_numba, k_type,
+    dtype, grid, block, stream, k_type,
 ):
-    from ..utils.compile_kernels import _stream_cupy_to_numba, GPUKernel
+    from ..utils.compile_kernels import GPUKernel
 
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
-                return _cupy_convolve_wrapper(grid, block, stream, kernel)
-            elif (
-                k_type == GPUKernel.CONVOLVE2D
-                or k_type == GPUKernel.CORRELATE2D
-            ):
-                return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
-            else:
-                raise NotImplementedError(
-                    "No CuPY kernel found for k_type {}, datatype {}".format(
-                        k_type, dtype
-                    )
+    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    if kernel:
+        if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
+            return _cupy_convolve_wrapper(grid, block, stream, kernel)
+        elif (
+            k_type == GPUKernel.CONVOLVE2D
+            or k_type == GPUKernel.CORRELATE2D
+        ):
+            return _cupy_convolve_2d_wrapper(grid, block, stream, kernel)
+        else:
+            raise NotImplementedError(
+                "No CuPY kernel found for k_type {}, datatype {}".format(
+                    k_type, dtype
                 )
-        else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
             )
-
     else:
-        warnings.warn(
-            "Numba kernels will be removed in a later release",
-            FutureWarning,
-            stacklevel=4,
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
-
-        nb_stream = _stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
-
-        if kernel:
-            return kernel[grid, block, nb_stream]
-        else:
-            raise ValueError(
-                "Kernel {} not found in _numba_kernel_cache".format(k_type)
-            )
-
-    raise NotImplementedError(
-        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
-    )
 
 
 def _convolve_gpu(
@@ -543,23 +412,21 @@ def _convolve_gpu(
     blockspergrid = numSM * 20
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype.type, False, GPUKernel.CONVOLVE)
+        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE)
         kernel = _get_backend_kernel(
             out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
-            False,
             GPUKernel.CONVOLVE,
         )
     else:
-        _populate_kernel_cache(out.dtype.type, False, GPUKernel.CORRELATE)
+        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE)
         kernel = _get_backend_kernel(
             out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
-            False,
             GPUKernel.CORRELATE,
         )
 
@@ -577,7 +444,6 @@ def _convolve2d_gpu(
     use_convolve,
     fillvalue,
     cp_stream,
-    use_numba,
 ):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
@@ -661,25 +527,23 @@ def _convolve2d_gpu(
     )
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype.type, use_numba, GPUKernel.CONVOLVE2D)
+        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE2D)
         kernel = _get_backend_kernel(
             out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
-            use_numba,
             GPUKernel.CONVOLVE2D,
         )
     else:
         _populate_kernel_cache(
-            out.dtype.type, use_numba, GPUKernel.CORRELATE2D
+            out.dtype, GPUKernel.CORRELATE2D
         )
         kernel = _get_backend_kernel(
             out.dtype,
             blockspergrid,
             threadsperblock,
             cp_stream,
-            use_numba,
             GPUKernel.CORRELATE2D,
         )
 
@@ -749,7 +613,6 @@ def _convolve2d(
     fillvalue,
     cp_stream,
     autosync,
-    use_numba,
 ):
 
     val = _valfrommode(mode)
@@ -801,7 +664,7 @@ def _convolve2d(
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
     out = _convolve2d_gpu(
-        in1, out, in2, val, bval, use_convolve, fill, cp_stream, use_numba,
+        in1, out, in2, val, bval, use_convolve, fill, cp_stream,
     )
 
     if autosync is True:

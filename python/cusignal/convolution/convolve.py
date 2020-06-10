@@ -37,7 +37,7 @@ def convolve(
     in2,
     mode="full",
     method="auto",
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
 ):
     """
@@ -80,7 +80,7 @@ def convolve(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
@@ -347,9 +347,8 @@ def convolve2d(
     mode="full",
     boundary="fill",
     fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream(null=True),
+    cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
-    use_numba=False,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -386,7 +385,7 @@ def convolve2d(
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
+        run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
     autosync : bool, optional
         Option to automatically synchronize cp_stream. This will block
@@ -394,9 +393,6 @@ def convolve2d(
         false will allow asynchronous operation but might required
         manual synchronize later `cp_stream.synchronize()`.
         Default is True.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
@@ -441,7 +437,7 @@ def convolve2d(
         in1, in2 = in2, in1
 
     out = _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync, use_numba,
+        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync,
     )
     return out
 
