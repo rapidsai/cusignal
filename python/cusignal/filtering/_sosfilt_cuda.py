@@ -214,7 +214,7 @@ def _sosfilt(sos, x, zi, cp_stream, autosync):
     threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
-    _populate_kernel_cache(x.dtype.type, False, GPUKernel.SOSFILT)
+    _populate_kernel_cache(x.dtype, GPUKernel.SOSFILT)
 
     out_size = threadsperblock[0]
     z_size = zi.shape[1] * zi.shape[2]

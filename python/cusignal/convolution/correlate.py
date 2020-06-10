@@ -181,7 +181,6 @@ def correlate2d(
     fillvalue=0,
     cp_stream=cp.cuda.stream.Stream.null,
     autosync=True,
-    use_numba=False,
 ):
     """
     Cross-correlate two 2-dimensional arrays.
@@ -226,9 +225,6 @@ def correlate2d(
         false will allow asynchronous operation but might required
         manual synchronize later `cp_stream.synchronize()`
         Default is true.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
@@ -283,7 +279,6 @@ def correlate2d(
         fillvalue,
         cp_stream,
         autosync,
-        use_numba,
     )
 
     if swapped_inputs:

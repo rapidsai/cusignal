@@ -18,6 +18,8 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+cusignal.precompile_kernels()
+
 
 class BenchSpectral:
     @pytest.mark.benchmark(group="CSD")
@@ -389,7 +391,6 @@ class BenchSpectral:
                 self.cpu_version, cpu_x, cpu_y, cpu_f, precenter, normalize
             )
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_lombscargle_gpu(
             self,
             lombscargle_gen,
@@ -398,7 +399,6 @@ class BenchSpectral:
             num_out_samps,
             precenter,
             normalize,
-            use_numba,
         ):
             cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
                 num_in_samps, num_out_samps
@@ -410,7 +410,6 @@ class BenchSpectral:
                 gpu_f,
                 precenter,
                 normalize,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_x, cpu_y, cpu_f, precenter, normalize)

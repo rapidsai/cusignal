@@ -187,7 +187,6 @@ class TestSpectral:
     @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
     @pytest.mark.parametrize("precenter", [True, False])
     @pytest.mark.parametrize("normalize", [True, False])
-    @pytest.mark.parametrize("use_numba", [True, False])
     def test_lombscargle(
         self,
         lombscargle_gen,
@@ -195,7 +194,6 @@ class TestSpectral:
         num_out_samps,
         precenter,
         normalize,
-        use_numba,
     ):
 
         cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
@@ -208,7 +206,7 @@ class TestSpectral:
 
         gpu_lombscargle = cp.asnumpy(
             cusignal.lombscargle(
-                gpu_x, gpu_y, gpu_f, precenter, normalize, use_numba=use_numba,
+                gpu_x, gpu_y, gpu_f, precenter, normalize,
             )
         )
 

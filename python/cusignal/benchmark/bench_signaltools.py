@@ -19,6 +19,8 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+cusignal.precompile_kernels()
+
 
 class BenchSignaltools:
     @pytest.mark.benchmark(group="Resample")
@@ -78,7 +80,6 @@ class BenchSignaltools:
                 self.cpu_version, cpu_sig, up, down, window,
             )
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_resample_poly_gpu(
             self,
             linspace_data_gen,
@@ -87,7 +88,6 @@ class BenchSignaltools:
             up,
             down,
             window,
-            use_numba,
         ):
 
             cpu_sig, gpu_sig = linspace_data_gen(
@@ -99,7 +99,6 @@ class BenchSignaltools:
                 up,
                 down,
                 window=window,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sig, up, down, window)
@@ -122,7 +121,6 @@ class BenchSignaltools:
                 self.cpu_version, cpu_sig, up, down, axis,
             )
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_upfirdn_gpu(
             self,
             rand_data_gen,
@@ -131,7 +129,6 @@ class BenchSignaltools:
             up,
             down,
             axis,
-            use_numba,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
@@ -142,7 +139,6 @@ class BenchSignaltools:
                 up,
                 down,
                 axis,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -165,7 +161,6 @@ class BenchSignaltools:
                 self.cpu_version, cpu_sig, up, down, axis,
             )
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_upfirdn2d_gpu(
             self,
             rand_2d_data_gen,
@@ -174,7 +169,6 @@ class BenchSignaltools:
             up,
             down,
             axis,
-            use_numba,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -185,7 +179,6 @@ class BenchSignaltools:
                 up,
                 down,
                 axis,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -382,7 +375,6 @@ class BenchSignaltools:
             cpu_filt, _ = rand_2d_data_gen(num_taps)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_convolve2d_gpu(
             self,
             rand_2d_data_gen,
@@ -391,7 +383,6 @@ class BenchSignaltools:
             num_taps,
             boundary,
             mode,
-            use_numba,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -402,7 +393,6 @@ class BenchSignaltools:
                 gpu_filt,
                 boundary=boundary,
                 mode=mode,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
@@ -432,7 +422,6 @@ class BenchSignaltools:
             cpu_filt, _ = rand_2d_data_gen(num_taps)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
-        @pytest.mark.parametrize("use_numba", [True, False])
         def bench_correlate2d_gpu(
             self,
             rand_2d_data_gen,
@@ -441,7 +430,6 @@ class BenchSignaltools:
             num_taps,
             boundary,
             mode,
-            use_numba,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
@@ -452,7 +440,6 @@ class BenchSignaltools:
                 gpu_filt,
                 boundary=boundary,
                 mode=mode,
-                use_numba=use_numba,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
