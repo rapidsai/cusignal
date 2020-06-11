@@ -51,7 +51,9 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     "cupy>=7.2.0" \
     pytest-benchmark \
     "ipython=7.3*" \
-    jupyterlab
+    jupyterlab \
+    "torch>=1.4"
+    matplotlib
 
 logger "Check versions..."
 python --version

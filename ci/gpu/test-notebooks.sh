@@ -8,7 +8,7 @@ LIBCUDF_KERNEL_CACHE_PATH=${WORKSPACE}/.jitcache
 # Add notebooks that should be skipped here
 # (space-separated list of filenames without paths)
 
-SKIPNBS=""
+SKIPNBS="sdr_wfm_demod.ipynb sdr_integration.ipynb" 
 
 ## Check env
 env
