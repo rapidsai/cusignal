@@ -28,6 +28,9 @@ from ..convolution._convolution_cuda import (
 from ..spectral_analysis._spectral_cuda import (
     _cupy_lombscargle_src,
 )
+from ..reader._reader_cuda import (
+    _cupy_parse_sigmf_src,
+)
 from ..filtering._sosfilt_cuda import (
     _cupy_sosfilt_src,
 )
@@ -43,6 +46,7 @@ class GPUKernel(Enum):
     CORRELATE2D = 'correlate2d'
     CONVOLVE2D = 'convolve2d'
     LOMBSCARGLE = 'lombscargle'
+    PARSER_SIGMF = 'parser'
     SOSFILT = 'sosfilt'
     UPFIRDN = 'upfirdn'
     UPFIRDN2D = 'upfirdn2d'
@@ -61,6 +65,11 @@ _SUPPORTED_TYPES_CONVOLVE = {
 _SUPPORTED_TYPES_LOMBSCARGLE = {
     "float32": "float",
     "float64": "double",
+}
+
+_SUPPORTED_TYPES_PARSER_SIGMF = {
+    "complex64": "complex<float>",
+    "complex128": "complex<double>",
 }
 
 _SUPPORTED_TYPES_SOSFILT = {
@@ -88,6 +97,9 @@ def _get_supported_types(k_type):
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
+
+    elif k_type == GPUKernel.PARSER_SIGMF:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_PARSER_SIGMF
 
     elif k_type == GPUKernel.SOSFILT:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_SOSFILT
@@ -190,6 +202,17 @@ def _populate_kernel_cache(np_type, k_type):
         _cupy_kernel_cache[
             (str(np_type), k_type.value)
         ] = module.get_function("_cupy_lombscargle")
+
+    elif k_type == GPUKernel.PARSER_SIGMF:
+        src = _cupy_parse_sigmf_src.substitute(
+            datatype=c_type, header=header
+        )
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        _cupy_kernel_cache[
+            (str(np_type), k_type.value)
+        ] = module.get_function("_cupy_parse_sigmf")
 
     elif k_type == GPUKernel.SOSFILT:
         src = _cupy_sosfilt_src.substitute(

@@ -111,6 +111,10 @@ from cusignal.utils.arraytools import (
 from cusignal.utils.compile_kernels import (
     precompile_kernels,
 )
+from cusignal.reader.reader import (
+    read_bin,
+    parse_bin
+)
 
 # Versioneer
 from ._version import get_versions
