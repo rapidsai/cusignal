@@ -394,7 +394,7 @@ __device__ T inverse(
 
 
 template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
-__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
+__global__ void _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
         T * __restrict__ x_in,
@@ -405,6 +405,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
     __shared__ T s_A[DIM_X * DIM_X * 16];
     __shared__ T s_F[DIM_X * DIM_X * 16];
+    __shared__ T s_P[DIM_X * DIM_X * 16];
 
     const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
@@ -418,15 +419,17 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
     for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
+        T temp {};
+
         s_F[xx_idx + x_value] = F[tid_z * DIM_X * DIM_X + ty * DIM_X + tx];
-
-        __syncthreads();
-
         T alpha2 { alpha_sq[tid_z] };
         T localQ { Q[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] };
 
-        T temp {};
+        __syncthreads();
 
+        T localP { P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] };
+
+        temp = 0.0f;
         if ( tx == 0 ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
@@ -436,11 +439,16 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
             x_in[tid_z * DIM_X * 1 + ty * 1 + tx] = temp;
         }
 
+        s_P[xx_idx + x_value] = localP;
+
+        __syncthreads();
+
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_F[xx_idx + (ty * DIM_X + j)] *
-                P[tid_z * DIM_X * DIM_X + j * DIM_X + tx];
+                //P[tid_z * DIM_X * DIM_X + j * DIM_X + tx];
+                s_P[xx_idx + (tx * DIM_X + j)];
         }
         s_A[xx_idx + x_value] = temp;
 
