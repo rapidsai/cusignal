@@ -182,6 +182,9 @@ class KalmanFilter(object):
             print(self.update_kernel.kernel.num_regs)
             print(self.update_kernel.kernel.shared_size_bytes)
             print()
+            print(max_threads_per_block)
+            print(min_blocks_per_multiprocessor)
+            print()
 
     def predict(self):
 

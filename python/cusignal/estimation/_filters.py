@@ -82,7 +82,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
     s_buffer = cuda.shared.array(shape=0, dtype=float32)
 
     s_A = s_buffer[: (xx_block_size * 1)]
-    s_F = s_buffer[(xx_block_size * 1) :]
+    s_F = s_buffer[(xx_block_size * 1):]
 
     x_key = x * dim_x + y
 
@@ -150,20 +150,20 @@ def _numba_update(x_in, z_in, H, P, R):
     s_buffer = cuda.shared.array(shape=0, dtype=float32)
 
     s_A = s_buffer[: (xx_block_size * 1)]
-    s_B = s_buffer[(xx_block_size * 1) : (xx_block_size * 2)]
-    s_P = s_buffer[(xx_block_size * 2) : (xx_block_size * 3)]
-    s_H = s_buffer[(xx_block_size * 3) : (xx_block_size * 3 + xz_block_size)]
+    s_B = s_buffer[(xx_block_size * 1): (xx_block_size * 2)]
+    s_P = s_buffer[(xx_block_size * 2): (xx_block_size * 3)]
+    s_H = s_buffer[(xx_block_size * 3): (xx_block_size * 3 + xz_block_size)]
     s_K = s_buffer[
-        (xx_block_size * 3 + xz_block_size) : (
+        (xx_block_size * 3 + xz_block_size): (
             xx_block_size * 3 + xz_block_size * 2
         )
     ]
     s_R = s_buffer[
-        (xx_block_size * 3 + xz_block_size * 2) : (
+        (xx_block_size * 3 + xz_block_size * 2): (
             xx_block_size * 3 + xz_block_size * 2 + zz_block_size
         )
     ]
-    s_y = s_buffer[(xx_block_size * 3 + xz_block_size * 2 + zz_block_size) :]
+    s_y = s_buffer[(xx_block_size * 3 + xz_block_size * 2 + zz_block_size):]
 
     x_key = x * dim_x + y
     z_key = x * dim_z + y
@@ -394,7 +394,7 @@ __device__ T inverse(
 
 
 template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
-__global__ void _cupy_predict(
+__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
         T * __restrict__ x_in,
@@ -419,24 +419,23 @@ __global__ void _cupy_predict(
 
     for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
-        T temp {};
-
-        s_F[xx_idx + x_value] = F[tid_z * DIM_X * DIM_X + ty * DIM_X + tx];
-        T alpha2 { alpha_sq[tid_z] };
-        T localQ { Q[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] };
+        s_F[xx_idx + x_value] = F[tid_z * DIM_X * DIM_X + x_value];
 
         __syncthreads();
 
-        T localP { P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] };
+        T alpha2 { alpha_sq[tid_z] };
+        T localQ { Q[tid_z * DIM_X * DIM_X + x_value] };
+        T localP { P[tid_z * DIM_X * DIM_X + x_value] };
 
-        temp = 0.0f;
+        T temp {};
+
         if ( tx == 0 ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_F[xx_idx + (ty * DIM_X + j)] *
                     x_in[tid_z * DIM_X * 1 + j * 1 + tx];
             }
-            x_in[tid_z * DIM_X * 1 + ty * 1 + tx] = temp;
+            x_in[tid_z * DIM_X * 1 + ty * 1 + tx]   = temp;
         }
 
         s_P[xx_idx + x_value] = localP;
@@ -447,7 +446,6 @@ __global__ void _cupy_predict(
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
             temp += s_F[xx_idx + (ty * DIM_X + j)] *
-                //P[tid_z * DIM_X * DIM_X + j * DIM_X + tx];
                 s_P[xx_idx + (tx * DIM_X + j)];
         }
         s_A[xx_idx + x_value] = temp;
@@ -461,7 +459,7 @@ __global__ void _cupy_predict(
                 s_F[xx_idx + (tx * DIM_X + j)];
         }
 
-        P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] =
+        P[tid_z * DIM_X * DIM_X + x_value] =
             alpha2 * temp + localQ;
     }
 }
@@ -502,18 +500,19 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
     for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
-        s_P[xx_idx + x_value] = P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx];
-
         if ( ty < DIM_Z ) {
             s_H[xz_idx + x_value] =
-                H[tid_z * DIM_Z * DIM_X + ty * DIM_X + tx];
+                H[tid_z * DIM_Z * DIM_X + x_value];
         }
+
+        __syncthreads();
+
+        s_P[xx_idx + x_value] = P[tid_z * DIM_X * DIM_X + x_value];
 
         if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
             s_R[zz_idx + z_value] =
-                R[tid_z * DIM_Z * DIM_Z + ty * DIM_Z + tx];
+                R[tid_z * DIM_Z * DIM_Z + z_value];
         }
-        __syncthreads();
 
         T temp {};
 
@@ -529,6 +528,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
             s_y[threadIdx.z * DIM_Z * 1 + ty * 1 + tx] = temp_z - temp;
         }
+
+        __syncthreads();
 
         // Compute PHT : dot(self.P, self.H.T)
         temp = 0.0f;
@@ -635,7 +636,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
                 s_A[xx_idx + (tx * DIM_X + j)];
         }
 
-        s_P[xx_idx + (ty * DIM_X + tx)] = temp;
+        s_P[xx_idx + (x_value)] = temp;
 
         temp = 0.0f;
         if ( tx < DIM_Z ) {
@@ -658,8 +659,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
                 s_K[xz_idx + (tx * DIM_Z + j)];
         }
 
-        P[tid_z * DIM_X * DIM_X + ty * DIM_X + tx] =
-            s_P[xx_idx + (ty * DIM_X + tx)] + temp;
+        P[tid_z * DIM_X * DIM_X + x_value] =
+            s_P[xx_idx + (x_value)] + temp;
     }
 }
 
@@ -765,7 +766,7 @@ def _populate_kernel_cache(
         )
         module = cp.RawModule(
             code=cuda_code,
-            options=("-std=c++11", "-use_fast_math"),
+            options=("-std=c++11", "-use_fast_math", "-lineinfo"),
             name_expressions=specializations,
         )
 
