@@ -135,26 +135,32 @@ def decimate(
     Only FIR filter types are currently supported in cuSignal.
     """
 
-    x = asarray(x)
-    if isinstance(n, (list, ndarray)):
-        b = asarray(n)
-    else:
-        if n is None:
-            half_len = 10 * q  # reasonable cutoff for our sinc-like function
-            n = 2 * half_len
+    with cp_stream:
+        x = asarray(x)
+        if isinstance(n, (list, ndarray)):
+            b = asarray(n)
+        else:
+            if n is None:
+                half_len = (
+                    10 * q
+                )  # reasonable cutoff for our sinc-like function
+                n = 2 * half_len
 
-        b = firwin(n + 1, 1.0 / q, window="hamming")
+            b = firwin(n + 1, 1.0 / q, window="hamming")
 
-    sl = [slice(None)] * x.ndim
+        sl = [slice(None)] * x.ndim
 
-    if zero_phase:
-        y = resample_poly(x, 1, q, axis=axis, window=b)
-    else:
-        # upfirdn is generally faster than lfilter by a factor equal to the
-        # downsampling factor, since it only calculates the needed outputs
-        n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
-        y = upfirdn(b, x, 1, q, axis, cp_stream, autosync)
-        sl[axis] = slice(None, n_out, None)
+        if zero_phase:
+            y = resample_poly(x, 1, q, axis=axis, window=b)
+        else:
+            # upfirdn is generally faster than lfilter by a factor equal to the
+            # downsampling factor, since it only calculates the needed outputs
+            n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
+            y = upfirdn(b, x, 1, q, axis)
+            sl[axis] = slice(None, n_out, None)
+
+    if autosync is True:
+        cp_stream.synchronize()
 
     return y[tuple(sl)]
 
@@ -394,53 +400,61 @@ def resample_poly(
     >>> plt.legend(['resample', 'resamp_poly', 'data'], loc='best')
     >>> plt.show()
     """
-    x = asarray(x)
-    up = int(up)
-    down = int(down)
-    if up < 1 or down < 1:
-        raise ValueError("up and down must be >= 1")
 
-    # Determine our up and down factors
-    # Use a rational approimation to save computation time on really long
-    # signals
-    g_ = gcd(up, down)
-    up //= g_
-    down //= g_
-    if up == down == 1:
-        return x.copy()
-    n_out = x.shape[axis] * up
-    n_out = n_out // down + bool(n_out % down)
+    with cp_stream:
+        x = asarray(x)
+        up = int(up)
+        down = int(down)
+        if up < 1 or down < 1:
+            raise ValueError("up and down must be >= 1")
 
-    if isinstance(window, (list, ndarray)):
-        window = asarray(window)
-        if window.ndim > 1:
-            raise ValueError("window must be 1-D")
-        half_len = (window.size - 1) // 2
-        h = up * window
-    else:
-        half_len = 10 * max(up, down)
-        h = up * _design_resample_poly(up, down, window)
+        # Determine our up and down factors
+        # Use a rational approimation to save computation time on really long
+        # signals
+        g_ = gcd(up, down)
+        up //= g_
+        down //= g_
+        if up == down == 1:
+            return x.copy()
+        n_out = x.shape[axis] * up
+        n_out = n_out // down + bool(n_out % down)
 
-    # Zero-pad our filter to put the output samples at the center
-    n_pre_pad = down - half_len % down
-    n_post_pad = 0
-    n_pre_remove = (half_len + n_pre_pad) // down
-    # We should rarely need to do this given our filter lengths...
-    while (
-        _output_len(len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down)
-        < n_out + n_pre_remove
-    ):
-        n_post_pad += 1
+        if isinstance(window, (list, ndarray)):
+            window = asarray(window)
+            if window.ndim > 1:
+                raise ValueError("window must be 1-D")
+            half_len = (window.size - 1) // 2
+            h = up * window
+        else:
+            half_len = 10 * max(up, down)
+            h = up * _design_resample_poly(up, down, window)
 
-    h = cp.concatenate(
-        (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
-    )
-    n_pre_remove_end = n_pre_remove + n_out
+        # Zero-pad our filter to put the output samples at the center
+        n_pre_pad = down - half_len % down
+        n_post_pad = 0
+        n_pre_remove = (half_len + n_pre_pad) // down
+        # We should rarely need to do this given our filter lengths...
+        while (
+            _output_len(
+                len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down
+            )
+            < n_out + n_pre_remove
+        ):
+            n_post_pad += 1
 
-    # filter then remove excess
-    y = upfirdn(h, x, up, down, axis, cp_stream, autosync)
-    keep = [slice(None)] * x.ndim
-    keep[axis] = slice(n_pre_remove, n_pre_remove_end)
+        h = cp.concatenate(
+            (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+        )
+        n_pre_remove_end = n_pre_remove + n_out
+
+        # filter then remove excess
+        y = upfirdn(h, x, up, down, axis)
+        keep = [slice(None)] * x.ndim
+        keep[axis] = slice(n_pre_remove, n_pre_remove_end)
+
+    if autosync is True:
+        cp_stream.synchronize()
+
     return y[tuple(keep)]
 
 
@@ -538,9 +552,14 @@ def upfirdn(
            [ 6.,  7.],
            [ 6.,  7.]])
     """
-    x = cp.asarray(x)
-    ufd = _UpFIRDn(h, x.dtype, up, down)
-    # This is equivalent to (but faster than) using cp.apply_along_axis
-    return ufd.apply_filter(
-        x, axis, cp_stream=cp_stream, autosync=autosync
-    )
+
+    with cp_stream:
+        x = cp.asarray(x)
+        ufd = _UpFIRDn(h, x.dtype, up, down)
+        # This is equivalent to (but faster than) using cp.apply_along_axis
+        out = ufd.apply_filter(x, axis)
+
+    if autosync is True:
+        cp_stream.synchronize()
+
+    return out

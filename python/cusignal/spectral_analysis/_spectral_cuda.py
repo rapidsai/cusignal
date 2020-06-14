@@ -147,10 +147,7 @@ def _lombscargle(x, y, freqs, pgram, y_dot):
     _populate_kernel_cache(pgram.dtype, GPUKernel.LOMBSCARGLE)
 
     kernel = _get_backend_kernel(
-        pgram.dtype,
-        blockspergrid,
-        threadsperblock,
-        GPUKernel.LOMBSCARGLE,
+        pgram.dtype, blockspergrid, threadsperblock, GPUKernel.LOMBSCARGLE,
     )
 
     kernel(x, y, freqs, pgram, y_dot)

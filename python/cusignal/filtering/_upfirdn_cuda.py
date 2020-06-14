@@ -156,7 +156,7 @@ extern "C" {
 
 
 class _cupy_upfirdn_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -164,7 +164,6 @@ class _cupy_upfirdn_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -193,12 +192,11 @@ class _cupy_upfirdn_wrapper(object):
             out.shape[0],
         )
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_upfirdn2d_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -206,7 +204,6 @@ class _cupy_upfirdn2d_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -237,21 +234,20 @@ class _cupy_upfirdn2d_wrapper(object):
             out.shape[1],
         )
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(
-    dtype, grid, block, stream, k_type,
+    dtype, grid, block, k_type,
 ):
     from ..utils.compile_kernels import GPUKernel
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
     if kernel:
         if k_type == GPUKernel.UPFIRDN:
-            return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
+            return _cupy_upfirdn_wrapper(grid, block, kernel)
         elif k_type == GPUKernel.UPFIRDN2D:
-            return _cupy_upfirdn2d_wrapper(grid, block, stream, kernel)
+            return _cupy_upfirdn2d_wrapper(grid, block, kernel)
     else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
@@ -276,7 +272,7 @@ class _UpFIRDn(object):
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
 
     def apply_filter(
-        self, x, axis, cp_stream, autosync,
+        self, x, axis,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
         from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
@@ -311,20 +307,12 @@ class _UpFIRDn(object):
         if out.ndim == 1:
             _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN)
             kernel = _get_backend_kernel(
-                out.dtype,
-                blockspergrid,
-                threadsperblock,
-                cp_stream,
-                GPUKernel.UPFIRDN,
+                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN,
             )
         elif out.ndim == 2:
             _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN2D)
             kernel = _get_backend_kernel(
-                out.dtype,
-                blockspergrid,
-                threadsperblock,
-                cp_stream,
-                GPUKernel.UPFIRDN2D,
+                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN2D,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")
@@ -340,8 +328,5 @@ class _UpFIRDn(object):
             padded_len,
             out,
         )
-
-        if autosync is True:
-            cp_stream.synchronize()
 
         return out
