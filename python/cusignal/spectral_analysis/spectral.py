@@ -162,7 +162,7 @@ def lombscargle(
         else:
             y_in = y
 
-    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream)
+        _lombscargle(x, y_in, freqs, pgram, y_dot)
 
     if autosync is True:
         cp_stream.synchronize()
