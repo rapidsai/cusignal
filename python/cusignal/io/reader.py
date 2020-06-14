@@ -20,7 +20,7 @@ from ._reader_cuda import _parser
 
 
 def read_bin(
-    file, cp_stream=cp.cuda.stream.Stream.null, autosync=True,
+    file, cp_stream=cp.cuda.stream.Stream.null
 ):
     """
     Reads binary file input GPU memory.
@@ -34,12 +34,6 @@ def read_bin(
         of multiple non-default streams allow multiple kernels to
         run concurrently. Default is cp.cuda.stream.Stream.null
         or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -50,12 +44,13 @@ def read_bin(
 
     with open(file, "r+") as f:
         mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
+
         with cp_stream:
             out = cp.asarray(mm)
-        mm.close()
-
-    if autosync is True:
+        # Must synchronize stream before closing mmap
         cp_stream.synchronize()
+
+        mm.close()
 
     return out
 
@@ -145,7 +140,7 @@ def fromfile(
 
     """
 
-    binary = read_bin(file, cp_stream=cp_stream, autosync=autosync)
+    binary = read_bin(file, cp_stream)
     out = parse_bin(
         binary,
         format="sigmf",
