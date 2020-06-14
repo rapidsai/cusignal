@@ -157,6 +157,3 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
     )
 
     kernel(x, y, freqs, pgram, y_dot)
-
-    if autosync is True:
-        cp_stream.synchronize()
