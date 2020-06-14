@@ -118,7 +118,7 @@ def fromfile(
     format : str
         Dataset format specification to be used when unpacking binary.
     keep : bool, optional
-        Option whether to delete binary data after parsing..
+        Option whether to delete binary data on GPU after parsing.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
     cp_stream : CuPy stream, optional
