@@ -2,6 +2,7 @@
 
 ## New Features
 - PR #119 - Added code of conduct
+- PR #122 - GPU accelerated SigMF Reader
 
 ## Improvements
 - PR #112 - Remove Numba kernels

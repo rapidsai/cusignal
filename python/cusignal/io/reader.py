@@ -48,13 +48,15 @@ def read_bin(
 
     """
 
-    try:
-        with open(file, "r+") as f:
-            mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
-    except KeyError:  # FIX
-        raise NotImplementedError
-
-    out = cp.asarray(mm)
+    with cp.prof.time_range("try", 0):
+        try:
+            with open(file, "r+") as f:
+                with cp.prof.time_range("mmap", 1):
+                    mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
+                with cp.prof.time_range("asarray", 2):
+                    out = cp.asarray(mm)
+        except KeyError:  # FIX
+            raise NotImplementedError
 
     if autosync is True:
         cp_stream.synchronize()
