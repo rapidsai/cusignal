@@ -23,12 +23,12 @@ def read_bin(
     file, cp_stream=cp.cuda.stream.Stream.null, autosync=True,
 ):
     """
-    Reads and parses binary file input GPU memory
+    Reads binary file input GPU memory
 
     Parameters
     ----------
     file : str
-        A string of filename to be read/parsed/upacked to GPU.
+        A string of filename to be read to GPU.
     cp_stream : CuPy stream, optional
         Option allows upfirdn to run in a non-default stream. The use
         of multiple non-default streams allow multiple kernels to
@@ -75,12 +75,12 @@ def parse_bin(
     autosync=True,
 ):
     """
-    Reads and parses binary file input GPU memory
+    Parse binary file
 
     Parameters
     ----------
     in1 : array_like
-        The binary arrar to be parsed.
+        The binary array to be parsed.
     format : str
         Dataset format specification to be used when unpacking binary.
     keep : bool, optional
@@ -107,5 +107,51 @@ def parse_bin(
     """
 
     out = _parser(in1, format, keep, dtype, cp_stream, autosync)
+
+    return out
+
+
+def read_file(
+    file,
+    format,
+    keep=True,
+    dtype=np.complex64,
+    cp_stream=cp.cuda.stream.Stream.null,
+    autosync=True,
+):
+    """
+    Read and parse binary file to GPU memory
+
+    Parameters
+    ----------
+    file : str
+        A string of filename to be read/parsed/upacked to GPU.
+    format : str
+        Dataset format specification to be used when unpacking binary.
+    keep : bool, optional
+        Option whether to delete binary data after parsing..
+    dtype : data-type, optional
+        Any object that can be interpreted as a numpy data type.
+    cp_stream : CuPy stream, optional
+        Option allows upfirdn to run in a non-default stream. The use
+        of multiple non-default streams allow multiple kernels to
+        run concurrently. Default is cp.cuda.stream.Stream.null
+        or default stream.
+    autosync : bool, optional
+        Option to automatically synchronize cp_stream. This will block
+        the host code until kernel is finished on the GPU. Setting to
+        false will allow asynchronous operation but might required
+        manual synchronize later `cp_stream.synchronize()`.
+        Default is True.
+
+    Returns
+    -------
+    out : ndarray
+        An 1-dimensional array containing parsed binary data.
+
+    """
+
+    binary = read_bin(file)
+    out = parse_bin(binary, format="sigmf", dtype=dtype)
 
     return out
