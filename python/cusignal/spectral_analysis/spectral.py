@@ -139,31 +139,30 @@ def lombscargle(
     >>> plt.show()
     """
 
-    x = asarray(x, dtype=cp.float64)
-    y = asarray(y, dtype=cp.float64)
-    freqs = asarray(freqs, dtype=cp.float64)
     with cp_stream:
+        x = asarray(x, dtype=cp.float64)
+        y = asarray(y, dtype=cp.float64)
+        freqs = asarray(freqs, dtype=cp.float64)
         pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
 
-    assert x.ndim == 1
-    assert y.ndim == 1
-    assert freqs.ndim == 1
+        assert x.ndim == 1
+        assert y.ndim == 1
+        assert freqs.ndim == 1
 
-    # Check input sizes
-    if x.shape[0] != y.shape[0]:
-        raise ValueError("Input arrays do not have the same size.")
+        # Check input sizes
+        if x.shape[0] != y.shape[0]:
+            raise ValueError("Input arrays do not have the same size.")
 
-    with cp_stream:
         y_dot = cp.zeros(1, dtype=cp.float64)
         if normalize:
             cp.dot(y, y, out=y_dot)
 
-    if precenter:
-        y_in = y - y.mean()
-    else:
-        y_in = y
+        if precenter:
+            y_in = y - y.mean()
+        else:
+            y_in = y
 
-    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream, autosync)
+    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream)
 
     if autosync is True:
         cp_stream.synchronize()

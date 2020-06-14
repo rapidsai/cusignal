@@ -138,7 +138,7 @@ def _get_backend_kernel(dtype, grid, block, stream, k_type):
         )
 
 
-def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
+def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     device_id = cp.cuda.Device()
