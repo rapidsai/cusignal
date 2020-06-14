@@ -52,7 +52,9 @@ def read_bin(
         try:
             with open(file, "r+") as f:
                 with cp.prof.time_range("mmap", 1):
-                    mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
+                    mm = mmap(
+                        f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,
+                    )
                 with cp.prof.time_range("asarray", 2):
                     out = cp.asarray(mm)
         except KeyError:  # FIX
