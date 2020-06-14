@@ -23,7 +23,7 @@ def read_bin(
     file, cp_stream=cp.cuda.stream.Stream.null, autosync=True,
 ):
     """
-    Reads binary file input GPU memory
+    Reads binary file input GPU memory.
 
     Parameters
     ----------
@@ -48,17 +48,11 @@ def read_bin(
 
     """
 
-    with cp.prof.time_range("try", 0):
-        try:
-            with open(file, "r+") as f:
-                with cp.prof.time_range("mmap", 1):
-                    mm = mmap(
-                        f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,
-                    )
-                with cp.prof.time_range("asarray", 2):
-                    out = cp.asarray(mm)
-        except KeyError:  # FIX
-            raise NotImplementedError
+    with open(file, "r+") as f:
+        mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
+        with cp_stream:
+            out = cp.asarray(mm)
+        mm.close()
 
     if autosync is True:
         cp_stream.synchronize()
@@ -151,7 +145,14 @@ def fromfile(
 
     """
 
-    binary = read_bin(file)
-    out = parse_bin(binary, format="sigmf", dtype=dtype)
+    binary = read_bin(file, cp_stream=cp_stream, autosync=autosync)
+    out = parse_bin(
+        binary,
+        format="sigmf",
+        keep=keep,
+        dtype=dtype,
+        cp_stream=cp_stream,
+        autosync=autosync,
+    )
 
     return out
