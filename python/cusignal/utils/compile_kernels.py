@@ -28,7 +28,7 @@ from ..convolution._convolution_cuda import (
 from ..spectral_analysis._spectral_cuda import (
     _cupy_lombscargle_src,
 )
-from ..reader._reader_cuda import (
+from ..io._reader_cuda import (
     _cupy_parse_sigmf_src,
 )
 from ..filtering._sosfilt_cuda import (
