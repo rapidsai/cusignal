@@ -111,7 +111,7 @@ from cusignal.utils.arraytools import (
 from cusignal.utils.compile_kernels import (
     precompile_kernels,
 )
-from cusignal.reader.reader import (
+from cusignal.io.reader import (
     read_bin,
     parse_bin
 )

@@ -12,4 +12,4 @@
 # limitations under the License.
 
 
-from cusignal.reader.reader import read_bin, parse_bin
+from cusignal.io.reader import read_bin, parse_bin
