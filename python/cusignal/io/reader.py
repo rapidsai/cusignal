@@ -111,7 +111,7 @@ def parse_bin(
     return out
 
 
-def read_file(
+def fromfile(
     file,
     format,
     keep=True,
