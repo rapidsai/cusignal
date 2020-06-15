@@ -10,6 +10,7 @@
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
+- PR #127 - Fix selected documentation formatting errors
 
 
 # cuSignal 0.14 (03 Jun 2020)
