@@ -9,7 +9,7 @@
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
-- PR #124 - Utilize streams for transfers with CuPy raw kernel
+- PR #124 - Remove cp_stream and autosync
 
 # cuSignal 0.14 (03 Jun 2020)
 
