@@ -141,36 +141,42 @@ def correlate(
     >>> fig.show()
 
     """
-    in1 = cp.asarray(in1)
-    in2 = cp.asarray(in2)
+    with cp_stream:
+        in1 = cp.asarray(in1)
+        in2 = cp.asarray(in2)
 
-    if in1.ndim == in2.ndim == 0:
-        return in1 * in2.conj()
-    elif in1.ndim != in2.ndim:
-        raise ValueError("in1 and in2 should have the same dimensionality")
+        if in1.ndim == in2.ndim == 0:
+            return in1 * in2.conj()
+        elif in1.ndim != in2.ndim:
+            raise ValueError("in1 and in2 should have the same dimensionality")
 
-    # this either calls fftconvolve or this function with method=='direct'
-    if method in ("fft", "auto"):
-        return convolve(in1, _reverse_and_conj(in2), mode, method)
+        # this either calls fftconvolve or this function with method=='direct'
+        if method in ("fft", "auto"):
+            return convolve(in1, _reverse_and_conj(in2), mode, method)
 
-    elif method == "direct":
+        elif method == "direct":
 
-        if in1.ndim > 1:
-            raise ValueError("Direct method is only implemented for 1D")
+            if in1.ndim > 1:
+                raise ValueError("Direct method is only implemented for 1D")
 
-        swapped_inputs = in2.size > in1.size
+            swapped_inputs = in2.size > in1.size
 
-        if swapped_inputs:
-            in1, in2 = in2, in1
+            if swapped_inputs:
+                in1, in2 = in2, in1
 
-        return _convolution_cuda._convolve(
-            in1, in2, False, swapped_inputs, mode, cp_stream, autosync
-        )
+            out = _convolution_cuda._convolve(
+                in1, in2, False, swapped_inputs, mode
+            )
 
-    else:
-        raise ValueError(
-            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
-        )
+        else:
+            raise ValueError(
+                "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
+            )
+
+    if autosync is True:
+        cp_stream.synchronize()
+
+    return out
 
 
 def correlate2d(
@@ -260,28 +266,26 @@ def correlate2d(
     >>> ax_orig.plot(cp.asnumpy(x), cp.asnumpy(y), 'ro')
     >>> fig.show()
     """
-    in1 = cp.asarray(in1)
-    in2 = cp.asarray(in2)
 
-    if not in1.ndim == in2.ndim == 2:
-        raise ValueError("correlate2d inputs must both be 2D arrays")
+    with cp_stream:
+        in1 = cp.asarray(in1)
+        in2 = cp.asarray(in2)
 
-    swapped_inputs = _inputs_swap_needed(mode, in1.shape, in2.shape)
-    if swapped_inputs:
-        in1, in2 = in2, in1
+        if not in1.ndim == in2.ndim == 2:
+            raise ValueError("correlate2d inputs must both be 2D arrays")
 
-    out = _convolution_cuda._convolve2d(
-        in1,
-        in2.conj(),
-        0,
-        mode,
-        boundary,
-        fillvalue,
-        cp_stream,
-        autosync,
-    )
+        swapped_inputs = _inputs_swap_needed(mode, in1.shape, in2.shape)
+        if swapped_inputs:
+            in1, in2 = in2, in1
 
-    if swapped_inputs:
-        out = out[::-1, ::-1]
+        out = _convolution_cuda._convolve2d(
+            in1, in2.conj(), 0, mode, boundary, fillvalue,
+        )
+
+        if swapped_inputs:
+            out = out[::-1, ::-1]
+
+    if autosync is True:
+        cp_stream.synchronize()
 
     return out

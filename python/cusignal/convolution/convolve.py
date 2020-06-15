@@ -134,45 +134,52 @@ def convolve(
     >>> fig.show()
 
     """
-    volume = cp.asarray(in1)
-    kernel = cp.asarray(in2)
+    with cp_stream:
+        volume = cp.asarray(in1)
+        kernel = cp.asarray(in2)
 
-    if volume.ndim == kernel.ndim == 0:
-        return volume * kernel
-    elif volume.ndim != kernel.ndim:
-        raise ValueError("in1 and in2 should have the same dimensionality")
+        if volume.ndim == kernel.ndim == 0:
+            return volume * kernel
+        elif volume.ndim != kernel.ndim:
+            raise ValueError("in1 and in2 should have the same dimensionality")
 
-    if _inputs_swap_needed(mode, volume.shape, kernel.shape):
-        # Convolution is commutative; order doesn't have any effect on output
-        volume, kernel = kernel, volume
-
-    if method == "auto":
-        method = choose_conv_method(volume, kernel, mode=mode)
-
-    if method == "fft":
-        out = fftconvolve(volume, kernel, mode=mode)
-        result_type = cp.result_type(volume, kernel)
-        if result_type.kind in {"u", "i"}:
-            out = cp.around(out)
-        return out.astype(result_type)
-    elif method == "direct":
-
-        if volume.ndim > 1:
-            raise ValueError("Direct method is only implemented for 1D")
-
-        swapped_inputs = (mode != "valid") and (kernel.size > volume.size)
-
-        if swapped_inputs:
+        if _inputs_swap_needed(mode, volume.shape, kernel.shape):
+            # Convolution is commutative
+            # order doesn't have any effect on output
             volume, kernel = kernel, volume
 
-        return _convolution_cuda._convolve(
-            volume, kernel, True, swapped_inputs, mode, cp_stream, autosync
-        )
+        if method == "auto":
+            method = choose_conv_method(volume, kernel, mode=mode)
 
-    else:
-        raise ValueError(
-            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
-        )
+        if method == "fft":
+            out = fftconvolve(volume, kernel, mode=mode)
+            result_type = cp.result_type(volume, kernel)
+            if result_type.kind in {"u", "i"}:
+                out = cp.around(out)
+            return out.astype(result_type)
+        elif method == "direct":
+
+            if volume.ndim > 1:
+                raise ValueError("Direct method is only implemented for 1D")
+
+            swapped_inputs = (mode != "valid") and (kernel.size > volume.size)
+
+            if swapped_inputs:
+                volume, kernel = kernel, volume
+
+            out = _convolution_cuda._convolve(
+                volume, kernel, True, swapped_inputs, mode
+            )
+
+        else:
+            raise ValueError(
+                "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
+            )
+
+    if autosync is True:
+        cp_stream.synchronize()
+
+    return out
 
 
 def fftconvolve(in1, in2, mode="full", axes=None):
@@ -427,18 +434,23 @@ def convolve2d(
     >>> ax_ang.set_axis_off()
     >>> fig.show()
     """
-    in1 = cp.asarray(in1)
-    in2 = cp.asarray(in2)
+    with cp_stream:
+        in1 = cp.asarray(in1)
+        in2 = cp.asarray(in2)
 
-    if not in1.ndim == in2.ndim == 2:
-        raise ValueError("convolve2d inputs must both be 2D arrays")
+        if not in1.ndim == in2.ndim == 2:
+            raise ValueError("convolve2d inputs must both be 2D arrays")
 
-    if _inputs_swap_needed(mode, in1.shape, in2.shape):
-        in1, in2 = in2, in1
+        if _inputs_swap_needed(mode, in1.shape, in2.shape):
+            in1, in2 = in2, in1
 
-    out = _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync,
-    )
+        out = _convolution_cuda._convolve2d(
+            in1, in2, 1, mode, boundary, fillvalue,
+        )
+
+    if autosync is True:
+        cp_stream.synchronize()
+
     return out
 
 
