@@ -51,6 +51,7 @@ def lombscargle(
     When *normalize* is True the computed periodogram is normalized by
     the residuals of the data around a constant reference model (at zero).
     Input arrays should be one-dimensional and will be cast to float64.
+
     Parameters
     ----------
     x : array_like
@@ -79,10 +80,12 @@ def lombscargle(
     -------
     pgram : array_like
         Lomb-Scargle periodogram.
+
     Raises
     ------
     ValueError
         If the input arrays `x` and `y` do not have the same shape.
+
     Notes
     -----
     This subroutine calculates the periodogram using a slightly
@@ -91,6 +94,7 @@ def lombscargle(
     the input arrays for each frequency.
     The algorithm running time scales roughly as O(x * freqs) or O(N^2)
     for a large number of samples and frequencies.
+
     References
     ----------
     .. [1] N.R. Lomb "Least-squares frequency analysis of unequally spaced
@@ -101,6 +105,7 @@ def lombscargle(
     .. [3] R.H.D. Townsend, "Fast calculation of the Lomb-Scargle
            periodogram using graphics processing units.", The Astrophysical
            Journal Supplement Series, vol 191, pp. 247-253, 2010
+
     See Also
     --------
     istft: Inverse Short Time Fourier Transform
@@ -108,6 +113,7 @@ def lombscargle(
     welch: Power spectral density by Welch's method
     spectrogram: Spectrogram by Welch's method
     csd: Cross spectral density by Welch's method
+
     Examples
     --------
     >>> import cusignal
@@ -1239,17 +1245,17 @@ def vectorstrength(events, period):
 
     References
     ----------
-    van Hemmen, JL, Longtin, A, and Vollmayr, AN. Testing resonating vector
-        strength: Auditory system, electric fish, and noise.
-        Chaos 21, 047508 (2011);
-        :doi:`10.1063/1.3670512`.
-    van Hemmen, JL.  Vector strength after Goldberg, Brown, and von Mises:
-        biological and mathematical perspectives.  Biol Cybern.
-        2013 Aug;107(4):385-96. :doi:`10.1007/s00422-013-0561-7`.
-    van Hemmen, JL and Vollmayr, AN.  Resonating vector strength: what happens
-        when we vary the "probing" frequency while keeping the spike times
-        fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
-        :doi:`10.1007/s00422-013-0560-8`.
+    .. [1] van Hemmen, JL, Longtin, A, and Vollmayr, AN. Testing resonating
+           vector strength: Auditory system, electric fish, and noise.
+           Chaos 21, 047508 (2011);
+           :doi:`10.1063/1.3670512`.
+    .. [2] van Hemmen, JL. Vector strength after Goldberg, Brown, and
+           von Mises: biological and mathematical perspectives.  Biol Cybern.
+           2013 Aug;107(4):385-96. :doi:`10.1007/s00422-013-0561-7`.
+    .. [3] van Hemmen, JL and Vollmayr, AN.  Resonating vector strength:
+           what happens when we vary the "probing" frequency while keeping
+           the spike times fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
+           :doi:`10.1007/s00422-013-0560-8`.
     """
     events = asarray(events)
     period = asarray(period)
