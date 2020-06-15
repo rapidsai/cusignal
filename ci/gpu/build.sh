@@ -52,7 +52,7 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c pytorch -c conda-forg
     pytest-benchmark \
     "ipython=7.3*" \
     jupyterlab \
-    "pytorch>=1.4"
+    "pytorch>=1.4" \
     matplotlib
 
 logger "Check versions..."
