@@ -42,7 +42,7 @@ nvidia-smi
 
 logger "Activate conda env..."
 source activate gdf
-conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
+conda install -c rapidsai -c rapidsai-nightly -c nvidia -c pytorch -c conda-forge \
     cudatoolkit=${CUDA_REL} \
     "scipy>=1.3.0" \
     "numpy>=1.17.3" \
@@ -52,7 +52,7 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     pytest-benchmark \
     "ipython=7.3*" \
     jupyterlab \
-    "torch>=1.4"
+    "pytorch>=1.4"
     matplotlib
 
 logger "Check versions..."
