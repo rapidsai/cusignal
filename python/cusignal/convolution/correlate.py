@@ -22,10 +22,7 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def correlate(
-    in1,
-    in2,
-    mode="full",
-    method="auto",
+    in1, in2, mode="full", method="auto",
 ):
     r"""
     Cross-correlate two N-dimensional arrays.
@@ -162,11 +159,7 @@ def correlate(
 
 
 def correlate2d(
-    in1,
-    in2,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
+    in1, in2, mode="full", boundary="fill", fillvalue=0,
 ):
     """
     Cross-correlate two 2-dimensional arrays.

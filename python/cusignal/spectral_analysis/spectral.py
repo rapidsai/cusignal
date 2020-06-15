@@ -31,11 +31,7 @@ import warnings
 
 
 def lombscargle(
-    x,
-    y,
-    freqs,
-    precenter=False,
-    normalize=False,
+    x, y, freqs, precenter=False, normalize=False,
 ):
     """
     lombscargle(x, y, freqs)

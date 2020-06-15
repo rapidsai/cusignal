@@ -84,11 +84,7 @@ def _design_resample_poly(up, down, window):
 
 
 def decimate(
-    x,
-    q,
-    n=None,
-    axis=-1,
-    zero_phase=True,
+    x, q, n=None, axis=-1, zero_phase=True,
 ):
     """
     Downsample the signal after applying an anti-aliasing filter.
@@ -127,9 +123,7 @@ def decimate(
         b = asarray(n)
     else:
         if n is None:
-            half_len = (
-                10 * q
-            )  # reasonable cutoff for our sinc-like function
+            half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
 
         b = firwin(n + 1, 1.0 / q, window="hamming")
@@ -282,11 +276,7 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
 
 
 def resample_poly(
-    x,
-    up,
-    down,
-    axis=0,
-    window=("kaiser", 5.0),
+    x, up, down, axis=0, window=("kaiser", 5.0),
 ):
     """
     Resample `x` along the given axis using polyphase filtering.
@@ -404,9 +394,7 @@ def resample_poly(
     n_pre_remove = (half_len + n_pre_pad) // down
     # We should rarely need to do this given our filter lengths...
     while (
-        _output_len(
-            len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down
-        )
+        _output_len(len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down)
         < n_out + n_pre_remove
     ):
         n_post_pad += 1
@@ -425,11 +413,7 @@ def resample_poly(
 
 
 def upfirdn(
-    h,
-    x,
-    up=1,
-    down=1,
-    axis=-1,
+    h, x, up=1, down=1, axis=-1,
 ):
     """Upsample, FIR filter, and downsample
     Parameters

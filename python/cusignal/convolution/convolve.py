@@ -33,10 +33,7 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def convolve(
-    in1,
-    in2,
-    mode="full",
-    method="auto",
+    in1, in2, mode="full", method="auto",
 ):
     """
     Convolve two N-dimensional arrays.
@@ -331,11 +328,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
 
 def convolve2d(
-    in1,
-    in2,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
+    in1, in2, mode="full", boundary="fill", fillvalue=0,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -413,10 +406,9 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    return  _convolution_cuda._convolve2d(
+    return _convolution_cuda._convolve2d(
         in1, in2, 1, mode, boundary, fillvalue,
     )
-
 
 
 def choose_conv_method(in1, in2, mode="full", measure=False):

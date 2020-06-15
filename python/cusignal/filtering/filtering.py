@@ -168,10 +168,7 @@ def lfiltic(b, a, y, x=None):
 
 
 def sosfilt(
-    sos,
-    x,
-    axis=-1,
-    zi=None,
+    sos, x, axis=-1, zi=None,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -261,9 +258,7 @@ def sosfilt(
     if dtype.char not in "fdgFDGO":
         raise NotImplementedError("input type '%s' not supported" % dtype)
     if zi is not None:
-        zi = cp.array(
-            zi, dtype
-        )  # make a copy so that we can operate in place
+        zi = cp.array(zi, dtype)  # make a copy so that we can operate in place
         if zi.shape != x_zi_shape:
             raise ValueError(
                 "Invalid zi shape. With axis=%r, an input with "
@@ -296,9 +291,7 @@ def sosfilt(
 
     if shared_mem > max_smem:
         max_sections = (
-            max_smem
-            // (1 + zi.shape[2] + sos.shape[1])
-            // x.dtype.itemsize
+            max_smem // (1 + zi.shape[2] + sos.shape[1]) // x.dtype.itemsize
         )
         raise ValueError(
             "The number of sections ({}), requires too much "
@@ -317,9 +310,7 @@ def sosfilt(
     if sos.shape[0] > x.shape[1]:
         raise ValueError(
             "The number of samples ({}), must be greater "
-            "than the number of sections ({})".format(
-                x.shape[1], sos.shape[0]
-            )
+            "than the number of sections ({})".format(x.shape[1], sos.shape[0])
         )
 
     _sosfilt(sos, x, zi)
