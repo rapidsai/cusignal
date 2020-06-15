@@ -45,7 +45,7 @@ extern "C" {
 
 
 class _cupy_parser_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -53,33 +53,31 @@ class _cupy_parser_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(self, out_size, data_size, in1, out):
 
         kernel_args = (out_size, data_size, in1, out)
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(
-    dtype, grid, block, stream, k_type,
+    dtype, grid, block, k_type,
 ):
     from ..utils.compile_kernels import GPUKernel
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
     if kernel:
         if k_type == GPUKernel.PARSER_SIGMF:
-            return _cupy_parser_wrapper(grid, block, stream, kernel)
+            return _cupy_parser_wrapper(grid, block, kernel)
 
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
 
-def _parser(in1, format, keep, dtype, cp_stream, autosync):
+def _parser(in1, format, keep, dtype):
 
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
@@ -97,11 +95,7 @@ def _parser(in1, format, keep, dtype, cp_stream, autosync):
 
     _populate_kernel_cache(out.dtype, GPUKernel.PARSER_SIGMF)
     kernel = _get_backend_kernel(
-        out.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        GPUKernel.PARSER_SIGMF,
+        out.dtype, blockspergrid, threadsperblock, GPUKernel.PARSER_SIGMF,
     )
 
     kernel(out_size, data_size, in1, out)
@@ -109,8 +103,5 @@ def _parser(in1, format, keep, dtype, cp_stream, autosync):
     # Remove binary data
     if keep is False:
         del in1
-
-    if autosync is True:
-        cp_stream.synchronize()
 
     return out

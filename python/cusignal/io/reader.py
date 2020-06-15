@@ -19,9 +19,7 @@ from mmap import mmap, MAP_PRIVATE, PROT_READ
 from ._reader_cuda import _parser
 
 
-def read_bin(
-    file, cp_stream=cp.cuda.stream.Stream.null
-):
+def read_bin(file):
     """
     Reads binary file input GPU memory.
 
@@ -29,11 +27,6 @@ def read_bin(
     ----------
     file : str
         A string of filename to be read to GPU.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
 
     Returns
     -------
@@ -44,24 +37,14 @@ def read_bin(
 
     with open(file, "r+") as f:
         mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
-
-        with cp_stream:
-            out = cp.asarray(mm)
-        # Must synchronize stream before closing mmap
-        cp_stream.synchronize()
-
+        out = cp.asarray(mm)
         mm.close()
 
     return out
 
 
 def parse_bin(
-    in1,
-    format,
-    keep=True,
-    dtype=np.complex64,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    in1, format, keep=True, dtype=np.complex64,
 ):
     """
     Parse binary file
@@ -76,17 +59,6 @@ def parse_bin(
         Option whether to delete binary data after parsing..
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -95,18 +67,13 @@ def parse_bin(
 
     """
 
-    out = _parser(in1, format, keep, dtype, cp_stream, autosync)
+    out = _parser(in1, format, keep, dtype)
 
     return out
 
 
 def fromfile(
-    file,
-    format,
-    keep=True,
-    dtype=np.complex64,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    file, format, keep=True, dtype=np.complex64,
 ):
     """
     Read and parse binary file to GPU memory
@@ -121,17 +88,6 @@ def fromfile(
         Option whether to delete binary data on GPU after parsing.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -140,14 +96,7 @@ def fromfile(
 
     """
 
-    binary = read_bin(file, cp_stream)
-    out = parse_bin(
-        binary,
-        format="sigmf",
-        keep=keep,
-        dtype=dtype,
-        cp_stream=cp_stream,
-        autosync=autosync,
-    )
+    binary = read_bin(file)
+    out = parse_bin(binary, format="sigmf", keep=keep, dtype=dtype,)
 
     return out
