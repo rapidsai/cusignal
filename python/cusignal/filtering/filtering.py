@@ -172,8 +172,6 @@ def sosfilt(
     x,
     axis=-1,
     zi=None,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -202,17 +200,6 @@ def sosfilt(
         (i.e. all zeros) is assumed.
         Note that these initial conditions are *not* the same as the initial
         conditions given by `lfiltic` or `lfilter_zi`.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -259,95 +246,91 @@ def sosfilt(
     >>> y = cusignal.sosfilt(sos, x)
     """
 
-    with cp_stream:
-        x = asarray(x)
-        sos = asarray(sos)
-        if x.ndim == 0:
-            raise ValueError("x must be at least 1D")
-        sos, n_sections = _validate_sos(sos)
-        x_zi_shape = list(x.shape)
-        x_zi_shape[axis] = 2
-        x_zi_shape = tuple([n_sections] + x_zi_shape)
-        inputs = [sos, x]
-        if zi is not None:
-            inputs.append(np.asarray(zi))
-        dtype = cp.result_type(*inputs)
-        if dtype.char not in "fdgFDGO":
-            raise NotImplementedError("input type '%s' not supported" % dtype)
-        if zi is not None:
-            zi = cp.array(
-                zi, dtype
-            )  # make a copy so that we can operate in place
-            if zi.shape != x_zi_shape:
-                raise ValueError(
-                    "Invalid zi shape. With axis=%r, an input with "
-                    "shape %r, and an sos array with %d sections, zi "
-                    "must have shape %r, got %r."
-                    % (axis, x.shape, n_sections, x_zi_shape, zi.shape)
-                )
-            return_zi = True
-        else:
-            zi = cp.zeros(x_zi_shape, dtype=dtype)
-            return_zi = False
-        axis = axis % x.ndim  # make positive
-        x = cp.moveaxis(x, axis, -1)
-        zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
-        x_shape, zi_shape = x.shape, zi.shape
-        x = cp.reshape(x, (-1, x.shape[-1]))
-        x = cp.array(x, dtype, order="C")  # make a copy, can modify in place
-        zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
-        sos = sos.astype(dtype, copy=False)
-
-        d = cp.cuda.device.Device(0)
-        max_smem = d.attributes["MaxSharedMemoryPerBlock"]
-        max_tpb = d.attributes["MaxThreadsPerBlock"]
-
-        # Determine how much shared memory is needed
-        out_size = sos.shape[0]
-        z_size = zi.shape[1] * zi.shape[2]
-        sos_size = sos.shape[0] * sos.shape[1]
-        shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
-
-        if shared_mem > max_smem:
-            max_sections = (
-                max_smem
-                // (1 + zi.shape[2] + sos.shape[1])
-                // x.dtype.itemsize
-            )
+    x = asarray(x)
+    sos = asarray(sos)
+    if x.ndim == 0:
+        raise ValueError("x must be at least 1D")
+    sos, n_sections = _validate_sos(sos)
+    x_zi_shape = list(x.shape)
+    x_zi_shape[axis] = 2
+    x_zi_shape = tuple([n_sections] + x_zi_shape)
+    inputs = [sos, x]
+    if zi is not None:
+        inputs.append(np.asarray(zi))
+    dtype = cp.result_type(*inputs)
+    if dtype.char not in "fdgFDGO":
+        raise NotImplementedError("input type '%s' not supported" % dtype)
+    if zi is not None:
+        zi = cp.array(
+            zi, dtype
+        )  # make a copy so that we can operate in place
+        if zi.shape != x_zi_shape:
             raise ValueError(
-                "The number of sections ({}), requires too much "
-                "shared memory ({}B) > ({}B). \n"
-                "\n**Max sections possible ({})**".format(
-                    sos.shape[0], shared_mem, max_smem, max_sections
-                )
+                "Invalid zi shape. With axis=%r, an input with "
+                "shape %r, and an sos array with %d sections, zi "
+                "must have shape %r, got %r."
+                % (axis, x.shape, n_sections, x_zi_shape, zi.shape)
             )
+        return_zi = True
+    else:
+        zi = cp.zeros(x_zi_shape, dtype=dtype)
+        return_zi = False
+    axis = axis % x.ndim  # make positive
+    x = cp.moveaxis(x, axis, -1)
+    zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
+    x_shape, zi_shape = x.shape, zi.shape
+    x = cp.reshape(x, (-1, x.shape[-1]))
+    x = cp.array(x, dtype, order="C")  # make a copy, can modify in place
+    zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
+    sos = sos.astype(dtype, copy=False)
 
-        if sos.shape[0] > max_tpb:
-            raise ValueError(
-                "The number of sections ({}), must be less "
-                "than max threads per block ({})".format(sos.shape[0], max_tpb)
+    d = cp.cuda.device.Device(0)
+    max_smem = d.attributes["MaxSharedMemoryPerBlock"]
+    max_tpb = d.attributes["MaxThreadsPerBlock"]
+
+    # Determine how much shared memory is needed
+    out_size = sos.shape[0]
+    z_size = zi.shape[1] * zi.shape[2]
+    sos_size = sos.shape[0] * sos.shape[1]
+    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+
+    if shared_mem > max_smem:
+        max_sections = (
+            max_smem
+            // (1 + zi.shape[2] + sos.shape[1])
+            // x.dtype.itemsize
+        )
+        raise ValueError(
+            "The number of sections ({}), requires too much "
+            "shared memory ({}B) > ({}B). \n"
+            "\n**Max sections possible ({})**".format(
+                sos.shape[0], shared_mem, max_smem, max_sections
             )
+        )
 
-        if sos.shape[0] > x.shape[1]:
-            raise ValueError(
-                "The number of samples ({}), must be greater "
-                "than the number of sections ({})".format(
-                    x.shape[1], sos.shape[0]
-                )
+    if sos.shape[0] > max_tpb:
+        raise ValueError(
+            "The number of sections ({}), must be less "
+            "than max threads per block ({})".format(sos.shape[0], max_tpb)
+        )
+
+    if sos.shape[0] > x.shape[1]:
+        raise ValueError(
+            "The number of samples ({}), must be greater "
+            "than the number of sections ({})".format(
+                x.shape[1], sos.shape[0]
             )
+        )
 
-        _sosfilt(sos, x, zi)
-        x.shape = x_shape
-        x = cp.moveaxis(x, -1, axis)
-        if return_zi:
-            zi.shape = zi_shape
-            zi = cp.moveaxis(zi, [-2, -1], [0, axis + 1])
-            out = (x, zi)
-        else:
-            out = x
-
-    if autosync is True:
-        cp_stream.synchronize()
+    _sosfilt(sos, x, zi)
+    x.shape = x_shape
+    x = cp.moveaxis(x, -1, axis)
+    if return_zi:
+        zi.shape = zi_shape
+        zi = cp.moveaxis(zi, [-2, -1], [0, axis + 1])
+        out = (x, zi)
+    else:
+        out = x
 
     return out
 

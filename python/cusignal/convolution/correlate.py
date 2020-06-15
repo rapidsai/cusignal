@@ -26,8 +26,6 @@ def correlate(
     in2,
     mode="full",
     method="auto",
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     r"""
     Cross-correlate two N-dimensional arrays.
@@ -66,17 +64,6 @@ def correlate(
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).  See `convolve` Notes for more detail.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
-        Default is True.
 
     Returns
     -------
@@ -141,42 +128,37 @@ def correlate(
     >>> fig.show()
 
     """
-    with cp_stream:
-        in1 = cp.asarray(in1)
-        in2 = cp.asarray(in2)
 
-        if in1.ndim == in2.ndim == 0:
-            return in1 * in2.conj()
-        elif in1.ndim != in2.ndim:
-            raise ValueError("in1 and in2 should have the same dimensionality")
+    in1 = cp.asarray(in1)
+    in2 = cp.asarray(in2)
 
-        # this either calls fftconvolve or this function with method=='direct'
-        if method in ("fft", "auto"):
-            return convolve(in1, _reverse_and_conj(in2), mode, method)
+    if in1.ndim == in2.ndim == 0:
+        return in1 * in2.conj()
+    elif in1.ndim != in2.ndim:
+        raise ValueError("in1 and in2 should have the same dimensionality")
 
-        elif method == "direct":
+    # this either calls fftconvolve or this function with method=='direct'
+    if method in ("fft", "auto"):
+        return convolve(in1, _reverse_and_conj(in2), mode, method)
 
-            if in1.ndim > 1:
-                raise ValueError("Direct method is only implemented for 1D")
+    elif method == "direct":
 
-            swapped_inputs = in2.size > in1.size
+        if in1.ndim > 1:
+            raise ValueError("Direct method is only implemented for 1D")
 
-            if swapped_inputs:
-                in1, in2 = in2, in1
+        swapped_inputs = in2.size > in1.size
 
-            out = _convolution_cuda._convolve(
-                in1, in2, False, swapped_inputs, mode
-            )
+        if swapped_inputs:
+            in1, in2 = in2, in1
 
-        else:
-            raise ValueError(
-                "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
-            )
+        return _convolution_cuda._convolve(
+            in1, in2, False, swapped_inputs, mode
+        )
 
-    if autosync is True:
-        cp_stream.synchronize()
-
-    return out
+    else:
+        raise ValueError(
+            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
+        )
 
 
 def correlate2d(
@@ -185,8 +167,6 @@ def correlate2d(
     mode="full",
     boundary="fill",
     fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """
     Cross-correlate two 2-dimensional arrays.
@@ -220,17 +200,6 @@ def correlate2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
-        Default is true.
 
     Returns
     -------
@@ -267,25 +236,21 @@ def correlate2d(
     >>> fig.show()
     """
 
-    with cp_stream:
-        in1 = cp.asarray(in1)
-        in2 = cp.asarray(in2)
+    in1 = cp.asarray(in1)
+    in2 = cp.asarray(in2)
 
-        if not in1.ndim == in2.ndim == 2:
-            raise ValueError("correlate2d inputs must both be 2D arrays")
+    if not in1.ndim == in2.ndim == 2:
+        raise ValueError("correlate2d inputs must both be 2D arrays")
 
-        swapped_inputs = _inputs_swap_needed(mode, in1.shape, in2.shape)
-        if swapped_inputs:
-            in1, in2 = in2, in1
+    swapped_inputs = _inputs_swap_needed(mode, in1.shape, in2.shape)
+    if swapped_inputs:
+        in1, in2 = in2, in1
 
-        out = _convolution_cuda._convolve2d(
-            in1, in2.conj(), 0, mode, boundary, fillvalue,
-        )
+    out = _convolution_cuda._convolve2d(
+        in1, in2.conj(), 0, mode, boundary, fillvalue,
+    )
 
-        if swapped_inputs:
-            out = out[::-1, ::-1]
-
-    if autosync is True:
-        cp_stream.synchronize()
+    if swapped_inputs:
+        out = out[::-1, ::-1]
 
     return out

@@ -36,8 +36,6 @@ def lombscargle(
     freqs,
     precenter=False,
     normalize=False,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """
     lombscargle(x, y, freqs)
@@ -63,17 +61,6 @@ def lombscargle(
         Pre-center amplitudes by subtracting the mean.
     normalize : bool, optional
         Compute normalized periodogram.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -139,33 +126,29 @@ def lombscargle(
     >>> plt.show()
     """
 
-    with cp_stream:
-        x = asarray(x, dtype=cp.float64)
-        y = asarray(y, dtype=cp.float64)
-        freqs = asarray(freqs, dtype=cp.float64)
-        pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
+    x = asarray(x, dtype=cp.float64)
+    y = asarray(y, dtype=cp.float64)
+    freqs = asarray(freqs, dtype=cp.float64)
+    pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
 
-        assert x.ndim == 1
-        assert y.ndim == 1
-        assert freqs.ndim == 1
+    assert x.ndim == 1
+    assert y.ndim == 1
+    assert freqs.ndim == 1
 
-        # Check input sizes
-        if x.shape[0] != y.shape[0]:
-            raise ValueError("Input arrays do not have the same size.")
+    # Check input sizes
+    if x.shape[0] != y.shape[0]:
+        raise ValueError("Input arrays do not have the same size.")
 
-        y_dot = cp.zeros(1, dtype=cp.float64)
-        if normalize:
-            cp.dot(y, y, out=y_dot)
+    y_dot = cp.zeros(1, dtype=cp.float64)
+    if normalize:
+        cp.dot(y, y, out=y_dot)
 
-        if precenter:
-            y_in = y - y.mean()
-        else:
-            y_in = y
+    if precenter:
+        y_in = y - y.mean()
+    else:
+        y_in = y
 
-        _lombscargle(x, y_in, freqs, pgram, y_dot)
-
-    if autosync is True:
-        cp_stream.synchronize()
+    _lombscargle(x, y_in, freqs, pgram, y_dot)
 
     return pgram
 

@@ -89,8 +89,6 @@ def decimate(
     n=None,
     axis=-1,
     zero_phase=True,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """
     Downsample the signal after applying an anti-aliasing filter.
@@ -110,17 +108,6 @@ def decimate(
         Prevent shifting the outputs back by the filter's
         group delay when using an FIR filter. The default value of ``True`` is
         recommended, since a phase shift is generally not desired.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -135,32 +122,28 @@ def decimate(
     Only FIR filter types are currently supported in cuSignal.
     """
 
-    with cp_stream:
-        x = asarray(x)
-        if isinstance(n, (list, ndarray)):
-            b = asarray(n)
-        else:
-            if n is None:
-                half_len = (
-                    10 * q
-                )  # reasonable cutoff for our sinc-like function
-                n = 2 * half_len
+    x = asarray(x)
+    if isinstance(n, (list, ndarray)):
+        b = asarray(n)
+    else:
+        if n is None:
+            half_len = (
+                10 * q
+            )  # reasonable cutoff for our sinc-like function
+            n = 2 * half_len
 
-            b = firwin(n + 1, 1.0 / q, window="hamming")
+        b = firwin(n + 1, 1.0 / q, window="hamming")
 
-        sl = [slice(None)] * x.ndim
+    sl = [slice(None)] * x.ndim
 
-        if zero_phase:
-            y = resample_poly(x, 1, q, axis=axis, window=b)
-        else:
-            # upfirdn is generally faster than lfilter by a factor equal to the
-            # downsampling factor, since it only calculates the needed outputs
-            n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
-            y = upfirdn(b, x, 1, q, axis)
-            sl[axis] = slice(None, n_out, None)
-
-    if autosync is True:
-        cp_stream.synchronize()
+    if zero_phase:
+        y = resample_poly(x, 1, q, axis=axis, window=b)
+    else:
+        # upfirdn is generally faster than lfilter by a factor equal to the
+        # downsampling factor, since it only calculates the needed outputs
+        n_out = x.shape[axis] // q + bool(x.shape[axis] % q)
+        y = upfirdn(b, x, 1, q, axis)
+        sl[axis] = slice(None, n_out, None)
 
     return y[tuple(sl)]
 
@@ -304,8 +287,6 @@ def resample_poly(
     down,
     axis=0,
     window=("kaiser", 5.0),
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """
     Resample `x` along the given axis using polyphase filtering.
@@ -329,17 +310,6 @@ def resample_poly(
     window : string, tuple, or array_like, optional
         Desired window to use to design the low-pass filter, or the FIR filter
         coefficients to employ. See below for details.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -401,59 +371,55 @@ def resample_poly(
     >>> plt.show()
     """
 
-    with cp_stream:
-        x = asarray(x)
-        up = int(up)
-        down = int(down)
-        if up < 1 or down < 1:
-            raise ValueError("up and down must be >= 1")
+    x = asarray(x)
+    up = int(up)
+    down = int(down)
+    if up < 1 or down < 1:
+        raise ValueError("up and down must be >= 1")
 
-        # Determine our up and down factors
-        # Use a rational approimation to save computation time on really long
-        # signals
-        g_ = gcd(up, down)
-        up //= g_
-        down //= g_
-        if up == down == 1:
-            return x.copy()
-        n_out = x.shape[axis] * up
-        n_out = n_out // down + bool(n_out % down)
+    # Determine our up and down factors
+    # Use a rational approimation to save computation time on really long
+    # signals
+    g_ = gcd(up, down)
+    up //= g_
+    down //= g_
+    if up == down == 1:
+        return x.copy()
+    n_out = x.shape[axis] * up
+    n_out = n_out // down + bool(n_out % down)
 
-        if isinstance(window, (list, ndarray)):
-            window = asarray(window)
-            if window.ndim > 1:
-                raise ValueError("window must be 1-D")
-            half_len = (window.size - 1) // 2
-            h = up * window
-        else:
-            half_len = 10 * max(up, down)
-            h = up * _design_resample_poly(up, down, window)
+    if isinstance(window, (list, ndarray)):
+        window = asarray(window)
+        if window.ndim > 1:
+            raise ValueError("window must be 1-D")
+        half_len = (window.size - 1) // 2
+        h = up * window
+    else:
+        half_len = 10 * max(up, down)
+        h = up * _design_resample_poly(up, down, window)
 
-        # Zero-pad our filter to put the output samples at the center
-        n_pre_pad = down - half_len % down
-        n_post_pad = 0
-        n_pre_remove = (half_len + n_pre_pad) // down
-        # We should rarely need to do this given our filter lengths...
-        while (
-            _output_len(
-                len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down
-            )
-            < n_out + n_pre_remove
-        ):
-            n_post_pad += 1
-
-        h = cp.concatenate(
-            (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+    # Zero-pad our filter to put the output samples at the center
+    n_pre_pad = down - half_len % down
+    n_post_pad = 0
+    n_pre_remove = (half_len + n_pre_pad) // down
+    # We should rarely need to do this given our filter lengths...
+    while (
+        _output_len(
+            len(h) + n_pre_pad + n_post_pad, x.shape[axis], up, down
         )
-        n_pre_remove_end = n_pre_remove + n_out
+        < n_out + n_pre_remove
+    ):
+        n_post_pad += 1
 
-        # filter then remove excess
-        y = upfirdn(h, x, up, down, axis)
-        keep = [slice(None)] * x.ndim
-        keep[axis] = slice(n_pre_remove, n_pre_remove_end)
+    h = cp.concatenate(
+        (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+    )
+    n_pre_remove_end = n_pre_remove + n_out
 
-    if autosync is True:
-        cp_stream.synchronize()
+    # filter then remove excess
+    y = upfirdn(h, x, up, down, axis)
+    keep = [slice(None)] * x.ndim
+    keep[axis] = slice(n_pre_remove, n_pre_remove_end)
 
     return y[tuple(keep)]
 
@@ -464,8 +430,6 @@ def upfirdn(
     up=1,
     down=1,
     axis=-1,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
 ):
     """Upsample, FIR filter, and downsample
     Parameters
@@ -482,17 +446,6 @@ def upfirdn(
         The axis of the input data array along which to apply the
         linear filter. The filter is applied to each subarray along
         this axis. Default is -1.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -553,13 +506,7 @@ def upfirdn(
            [ 6.,  7.]])
     """
 
-    with cp_stream:
-        x = cp.asarray(x)
-        ufd = _UpFIRDn(h, x.dtype, up, down)
-        # This is equivalent to (but faster than) using cp.apply_along_axis
-        out = ufd.apply_filter(x, axis)
-
-    if autosync is True:
-        cp_stream.synchronize()
-
-    return out
+    x = cp.asarray(x)
+    ufd = _UpFIRDn(h, x.dtype, up, down)
+    # This is equivalent to (but faster than) using cp.apply_along_axis
+    return ufd.apply_filter(x, axis)
