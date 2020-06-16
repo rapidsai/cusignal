@@ -44,12 +44,11 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
-    "scipy>=1.3.0" \
-    "numpy>=1.17.3" \
-    boost \
-    "numba>=0.49.0" \
-    "cupy>=7.2.0" \
-    pytest-benchmark
+    "rapids-build-env=$MINOR_VERSION.*"
+
+# https://docs.rapids.ai/maintainers/depmgmt/ 
+# conda remove -f rapids-build-env rapids-notebook-env
+# conda install "your-pkg=1.0.0"
 
 logger "Check versions..."
 python --version
