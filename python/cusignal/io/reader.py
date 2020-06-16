@@ -49,33 +49,7 @@ def read_bin(file):
     return out
 
 
-def write_bin(file, binary):
-    """
-    Writes binary file to storage. This will overwrite if file exists.
-
-    Parameters
-    ----------
-    file : str
-        A string of filename to be read to GPU.
-    binary :
-        An 1-dimensional array containing packed binary data on GPU.
-
-    Returns
-    -------
-
-    """
-
-    # Get current stream, default or not.
-    stream = cp.cuda.get_current_stream()
-
-    binary = cp.asnumpy(binary)
-    stream.synchronize()
-
-    with open(file, "wb") as f:
-        f.write(binary)
-
-
-def unpack_bin(in1, spec, dtype, endianness='L'):
+def unpack_bin(in1, spec, dtype, endianness="L"):
     """
     Unpack binary file. If endianness is big-endian, it my be converted
     to little endian.
@@ -99,37 +73,6 @@ def unpack_bin(in1, spec, dtype, endianness='L'):
     """
 
     out = _unpack(in1, spec, dtype, endianness)
-
-    return out
-
-
-def pack_bin(
-    in1, spec, dtype, endianness='L',
-):
-    """
-    Pack binary file
-
-    Parameters
-    ----------
-    in1 : array_like
-        The ndarray array to be pack to binary.
-    spec : str
-        Dataset specification to be used when packing binary.
-    keep : bool, optional
-        Option whether to delete binary data after parsing.
-    dtype : data-type, optional
-        Any object that can be interpreted as a numpy data type.
-    endianness : {'L', 'B'}, optional
-        Data set byte order
-
-    Returns
-    -------
-    out : ndarray
-        An 1-dimensional array containing parsed binary data.
-
-    """
-
-    out = _pack(in1, spec, dtype, endianness)
 
     return out
 
