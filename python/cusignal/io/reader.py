@@ -48,7 +48,7 @@ def read_bin(file):
     return out
 
 
-def unpack_bin(in1, spec, dtype, endianness="L"):
+def unpack_bin(in1, dtype, endianness="L"):
     """
     Unpack binary file. If endianness is big-endian, it my be converted
     to little endian.
@@ -57,8 +57,6 @@ def unpack_bin(in1, spec, dtype, endianness="L"):
     ----------
     in1 : array_like
         The binary array to be unpack.
-    spec : str
-        Dataset specification to be used when unpacking binary.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
     endianness : {'L', 'B'}, optional
@@ -71,7 +69,7 @@ def unpack_bin(in1, spec, dtype, endianness="L"):
 
     """
 
-    out = _unpack(in1, spec, dtype, endianness)
+    out = _unpack(in1, dtype, endianness)
 
     return out
 
@@ -83,18 +81,12 @@ def read_sigmf(file):
     Parameters
     ----------
     file : str
-        A string of filename to be read/parsed/upacked to GPU.
-    # spec : str
-    #     Dataset specification to be used when unpacking binary.
-    keep : bool, optional
-        Option whether to delete binary data on GPU after parsing.
-    dtype : data-type, optional
-        Any object that can be interpreted as a numpy data type.
+        A string of filename to be read/unpacked to GPU.
 
     Returns
     -------
     out : ndarray
-        An 1-dimensional array containing parsed binary data.
+        An 1-dimensional array containing unpacked binary data.
 
     """
 
