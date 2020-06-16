@@ -164,7 +164,7 @@ def read_sigmf(file):
     binary = read_bin(file + data_ext)
 
     out = unpack_bin(
-        binary, spec="sigmf", dtype=data_type, endianness=endianness
+        binary, dtype=data_type, endianness=endianness
     )
 
     return out

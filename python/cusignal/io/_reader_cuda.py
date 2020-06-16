@@ -175,15 +175,15 @@ def _get_backend_kernel(
         )
 
 
-def _unpack(in1, format, dtype, endianness):
+def _unpack(binary, dtype, endianness):
 
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
-    data_size = cp.dtype(dtype).itemsize // in1.dtype.itemsize
+    data_size = cp.dtype(dtype).itemsize // binary.dtype.itemsize
 
-    out_size = in1.shape[0] // data_size
+    out_size = binary.shape[0] // data_size
 
-    out = cp.empty_like(in1, dtype=dtype, shape=out_size)
+    out = cp.empty_like(binary, dtype=dtype, shape=out_size)
 
     if endianness == "B":
         little = False
@@ -195,18 +195,14 @@ def _unpack(in1, format, dtype, endianness):
     blockspergrid = numSM * 20
     threadsperblock = 512
 
-    print(out.dtype)
-
     _populate_kernel_cache(out.dtype, GPUKernel.UNPACK_SIGMF)
     kernel = _get_backend_kernel(
         out.dtype, blockspergrid, threadsperblock, GPUKernel.UNPACK_SIGMF,
     )
 
-    kernel(out_size, data_size, little, in1, out)
-
-    cp.cuda.runtime.deviceSynchronize()
+    kernel(out_size, data_size, little, binary, out)
 
     # Remove binary data
-    del in1
+    del binary
 
     return out
