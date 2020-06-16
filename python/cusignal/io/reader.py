@@ -32,7 +32,7 @@ def read_bin(file):
     Returns
     -------
     out : ndarray
-        An 1-dimensional array containing parsed binary data.
+        An 1-dimensional array containing binary data.
 
     """
 
@@ -51,7 +51,7 @@ def read_bin(file):
 def unpack_bin(in1, dtype, endianness="L"):
     """
     Unpack binary file. If endianness is big-endian, it my be converted
-    to little endian.
+    to little endian for NVIDIA GPU compatibility.
 
     Parameters
     ----------
@@ -76,7 +76,7 @@ def unpack_bin(in1, dtype, endianness="L"):
 
 def read_sigmf(file):
     """
-    Read and parse binary file to GPU memory
+    Read and unpack binary file to GPU memory
 
     Parameters
     ----------
