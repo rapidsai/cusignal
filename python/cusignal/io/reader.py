@@ -15,7 +15,7 @@ import cupy as cp
 
 import json
 
-from mmap import mmap, MAP_PRIVATE, PROT_READ, MADV_WILLNEED
+from mmap import mmap, MAP_PRIVATE, PROT_READ
 
 from ._reader_cuda import _unpack
 
@@ -41,7 +41,6 @@ def read_bin(file):
 
     with open(file, "rb") as f:
         mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
-        mm.madvise(MADV_WILLNEED, 0)
         out = cp.asarray(mm)
         stream.synchronize()
         mm.close()
