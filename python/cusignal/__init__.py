@@ -11,16 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.acoustics.cepstrum import (
-    rceps,
-    cceps,
-    cceps_unwrap
-)
+from cusignal.acoustics.cepstrum import rceps, cceps, cceps_unwrap
 from cusignal.filtering.resample import (
     decimate,
     resample,
     resample_poly,
-    upfirdn
+    upfirdn,
 )
 from cusignal.filtering.filtering import (
     wiener,
@@ -29,24 +25,21 @@ from cusignal.filtering.filtering import (
     hilbert,
     hilbert2,
     detrend,
-    freq_shift
+    freq_shift,
 )
-from cusignal.convolution.correlate import (
-    correlate,
-    correlate2d
-)
+from cusignal.convolution.correlate import correlate, correlate2d
 from cusignal.convolution.convolve import (
     fftconvolve,
     choose_conv_method,
     convolve,
-    convolve2d
+    convolve2d,
 )
 from cusignal.filter_design.fir_filter_design import (
     kaiser_beta,
     kaiser_atten,
     firwin,
-    cmplx_sort
-) 
+    cmplx_sort,
+)
 from cusignal.windows.windows import (
     general_cosine,
     boxcar,
@@ -69,7 +62,7 @@ from cusignal.windows.windows import (
     chebwin,
     cosine,
     exponential,
-    get_window
+    get_window,
 )
 from cusignal.spectral_analysis.spectral import (
     lombscargle,
@@ -79,45 +72,36 @@ from cusignal.spectral_analysis.spectral import (
     spectrogram,
     stft,
     vectorstrength,
-    coherence
+    coherence,
 )
 from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
-    cspline1d
+    cspline1d,
 )
 from cusignal.waveforms.waveforms import (
     square,
     gausspulse,
     chirp,
-    unit_impulse
+    unit_impulse,
 )
-from cusignal.wavelets.wavelets import (
-    qmf,
-    morlet,
-    ricker,
-    cwt
-)
+from cusignal.wavelets.wavelets import qmf, morlet, ricker, cwt
 from cusignal.peak_finding.peak_finding import (
     argrelmin,
     argrelmax,
-    argrelextrema
+    argrelextrema,
 )
-from cusignal.utils.arraytools import (
-    get_shared_array,
-    get_shared_mem
-)
-from cusignal.utils.compile_kernels import (
-    precompile_kernels,
-)
+from cusignal.utils.arraytools import get_shared_array, get_shared_mem
+from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (
     read_bin,
-    parse_bin,
-    fromfile
+    unpack_bin,
+    read_sigmf,
 )
 
 # Versioneer
 from ._version import get_versions
-__version__ = get_versions()['version']
+
+__version__ = get_versions()["version"]
 del get_versions

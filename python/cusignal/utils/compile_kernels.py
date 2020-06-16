@@ -29,7 +29,7 @@ from ..spectral_analysis._spectral_cuda import (
     _cupy_lombscargle_src,
 )
 from ..io._reader_cuda import (
-    _cupy_parse_sigmf_src,
+    _cupy_unpack_sigmf_src,
 )
 from ..filtering._sosfilt_cuda import (
     _cupy_sosfilt_src,
@@ -46,7 +46,7 @@ class GPUKernel(Enum):
     CORRELATE2D = 'correlate2d'
     CONVOLVE2D = 'convolve2d'
     LOMBSCARGLE = 'lombscargle'
-    PARSER_SIGMF = 'parser'
+    UNPACK_SIGMF = 'unpack'
     SOSFILT = 'sosfilt'
     UPFIRDN = 'upfirdn'
     UPFIRDN2D = 'upfirdn2d'
@@ -67,9 +67,15 @@ _SUPPORTED_TYPES_LOMBSCARGLE = {
     "float64": "double",
 }
 
-_SUPPORTED_TYPES_PARSER_SIGMF = {
+_SUPPORTED_TYPES_SIGMF = {
+    "int8": "char",
+    "uint8": "unsigned char",
+    "int16": "short",
+    "uint16": "unsigned short",
+    "int32": "int",
+    "uint32": "unsigned int",
+    "float32": "float",
     "complex64": "complex<float>",
-    "complex128": "complex<double>",
 }
 
 _SUPPORTED_TYPES_SOSFILT = {
@@ -98,8 +104,8 @@ def _get_supported_types(k_type):
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
 
-    elif k_type == GPUKernel.PARSER_SIGMF:
-        SUPPORTED_TYPES = _SUPPORTED_TYPES_PARSER_SIGMF
+    elif k_type == GPUKernel.UNPACK_SIGMF:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_SIGMF
 
     elif k_type == GPUKernel.SOSFILT:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_SOSFILT
@@ -203,16 +209,33 @@ def _populate_kernel_cache(np_type, k_type):
             (str(np_type), k_type.value)
         ] = module.get_function("_cupy_lombscargle")
 
-    elif k_type == GPUKernel.PARSER_SIGMF:
-        src = _cupy_parse_sigmf_src.substitute(
-            datatype=c_type, header=header
+    elif k_type == GPUKernel.UNPACK_SIGMF:
+        if np_type == "int8":
+            flag = 0
+        elif np_type == "uint8":
+            flag = 1
+        elif np_type == "int16":
+            flag = 2
+        elif np_type == "uint16":
+            flag = 3
+        elif np_type == "int32":
+            flag = 4
+        elif np_type == "uint32":
+            flag = 5
+        elif np_type == "float32":
+            flag = 6
+        elif np_type == "complex64":
+            flag = 7
+
+        src = _cupy_unpack_sigmf_src.substitute(
+            datatype=c_type, header=header, flag=flag
         )
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[
             (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_parse_sigmf")
+        ] = module.get_function("_cupy_unpack_sigmf")
 
     elif k_type == GPUKernel.SOSFILT:
         src = _cupy_sosfilt_src.substitute(
