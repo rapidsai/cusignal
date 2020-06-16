@@ -103,7 +103,6 @@ def read_sigmf(file):
     if len(data_type) == 1:
         endianness = "N"
     elif len(data_type) == 2:
-        print(data_type[1])
         if data_type[1] == "le":
             endianness = "L"
         elif data_type[1] == "be":

@@ -102,9 +102,6 @@ extern "C" {
 
         for ( int tid = tx; tid < N; tid += stride ) {
 
-            if (tid == 0)
-                printf("%d\\n", FLAG);
-
             if ( little ) {
                 output[tid] = reinterpret_cast<${datatype}*>(input)[tid];
             } else {
@@ -152,10 +149,9 @@ class _cupy_reader_wrapper(object):
         self.block = block
         self.kernel = kernel
 
-    def __call__(self, out_size, data_size, little, in1, out):
+    def __call__(self, out_size, data_size, little, binary, out):
 
-        print(out.dtype)
-        kernel_args = (out_size, data_size, little, in1, out)
+        kernel_args = (out_size, data_size, little, binary, out)
 
         self.kernel(self.grid, self.block, kernel_args)
 
