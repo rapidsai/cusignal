@@ -165,6 +165,7 @@ def correlate2d(
     Cross-correlate two 2-dimensional arrays.
     Cross correlate `in1` and `in2` with output size determined by `mode`, and
     boundary conditions determined by `boundary` and `fillvalue`.
+
     Parameters
     ----------
     in1 : array_like
@@ -199,6 +200,7 @@ def correlate2d(
     correlate2d : ndarray
         A 2-dimensional array containing a subset of the discrete linear
         cross-correlation of `in1` with `in2`.
+
     Examples
     --------
     Use 2D cross-correlation to find the location of a template in a noisy
@@ -227,6 +229,7 @@ def correlate2d(
     >>> ax_corr.set_axis_off()
     >>> ax_orig.plot(cp.asnumpy(x), cp.asnumpy(y), 'ro')
     >>> fig.show()
+
     """
 
     in1 = cp.asarray(in1)

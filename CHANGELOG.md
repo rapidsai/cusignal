@@ -6,10 +6,14 @@
 
 ## Improvements
 - PR #112 - Remove Numba kernels
+- PR #121 - Add docs build script
+- PR #126 - Install dependencies via meta package
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
 - PR #124 - Remove cp_stream and autosync
+- PR #127 - Fix selected documentation formatting errors
+
 
 # cuSignal 0.14 (03 Jun 2020)
 

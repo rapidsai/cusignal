@@ -415,7 +415,9 @@ def resample_poly(
 def upfirdn(
     h, x, up=1, down=1, axis=-1,
 ):
-    """Upsample, FIR filter, and downsample
+    """
+    Upsample, FIR filter, and downsample
+
     Parameters
     ----------
     h : array_like
@@ -437,6 +439,7 @@ def upfirdn(
         The output signal array. Dimensions will be the same as `x` except
         for along `axis`, which will change size according to the `h`,
         `up`,  and `down` parameters.
+
     Notes
     -----
     The algorithm is an implementation of the block diagram shown on page 129
@@ -447,7 +450,7 @@ def upfirdn(
     FIR filtering of length ``N``, and downsampling by factor of Q is
     O(N*Q) per output sample. The polyphase implementation used here is
     O(N/P).
-    .. versionadded:: 0.18
+
     Examples
     --------
     Simple operations:

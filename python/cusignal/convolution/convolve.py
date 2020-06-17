@@ -368,12 +368,14 @@ def convolve2d(
     out : ndarray
         A 2-dimensional array containing a subset of the discrete linear
         convolution of `in1` with `in2`.
+
     Examples
     --------
     Compute the gradient of an image by 2D convolution with a complex Scharr
     operator.  (Horizontal operator is real, vertical is imaginary.)  Use
     symmetric boundary condition to avoid creating edges at the image
     boundaries.
+
     >>> import cusignal
     >>> import cupy as cp
     >>> from scipy import misc
@@ -395,6 +397,7 @@ def convolve2d(
     >>> ax_ang.set_title('Gradient orientation')
     >>> ax_ang.set_axis_off()
     >>> fig.show()
+
     """
 
     in1 = cp.asarray(in1)
