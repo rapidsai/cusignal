@@ -82,10 +82,7 @@ class TestConvolution:
 
         gpu_convolve2d = cp.asnumpy(
             cusignal.convolve2d(
-                gpu_sig,
-                gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
             )
         )
         assert array_equal(cpu_convolve2d, gpu_convolve2d)
@@ -105,10 +102,7 @@ class TestConvolution:
         )
         gpu_correlate2d = cp.asnumpy(
             cusignal.correlate2d(
-                gpu_sig,
-                gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
             )
         )
         assert array_equal(cpu_correlate2d, gpu_correlate2d)

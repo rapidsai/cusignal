@@ -35,21 +35,24 @@ class TestFiltering:
         gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
         assert array_equal(cpu_wfilt, gpu_wfilt)
 
+    def test_lfiltic(self):
+        cpu_window = 0
+        gpu_window = 0
+        assert array_equal(cpu_window, gpu_window)
+
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
     @pytest.mark.parametrize("num_samps", [100])
     def test_sosfilt(self, num_signals, num_samps):
         cpu_sig = np.random.rand(num_signals, num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
-        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output='sos')
+        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output="sos")
 
         cpu_sosfilt = signal.sosfilt(cpu_sos, cpu_sig)
 
         gpu_sos = cp.asarray(cpu_sos)
 
-        gpu_sosfilt = cp.asnumpy(
-            cusignal.sosfilt(gpu_sos, gpu_sig)
-        )
+        gpu_sosfilt = cp.asnumpy(cusignal.sosfilt(gpu_sos, gpu_sig))
 
         assert array_equal(cpu_sosfilt, gpu_sosfilt)
 
@@ -71,11 +74,6 @@ class TestFiltering:
         gpu_hilbert2 = cp.asnumpy(cusignal.hilbert2(gpu_sig))
         assert array_equal(cpu_hilbert2, gpu_hilbert2)
 
-    def test_lfiltic(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
-
     def test_detrend(self):
         cpu_window = 0
         gpu_window = 0
@@ -89,10 +87,10 @@ class TestFiltering:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
     @pytest.mark.parametrize("zero_phase", [True, False])
-    def test_decimate(self, num_samps, downsample_factor, zero_phase):
-        cpu_time = np.linspace(0, 10, num_samps, endpoint=False)
-        cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)
-        gpu_sig = cp.asarray(cpu_sig)
+    def test_decimate(
+        self, linspace_data_gen, num_samps, downsample_factor, zero_phase
+    ):
+        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
 
         cpu_decimate = signal.decimate(
             cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
@@ -133,9 +131,7 @@ class TestFiltering:
 
         cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
         gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(
-                gpu_sig, up, down, window=window
-            )
+            cusignal.resample_poly(gpu_sig, up, down, window=window)
         )
 
         assert array_equal(cpu_resample, gpu_resample)
@@ -149,9 +145,7 @@ class TestFiltering:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(
-            cusignal.upfirdn(h, gpu_sig, up, down)
-        )
+        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -164,8 +158,6 @@ class TestFiltering:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(
-            cusignal.upfirdn(h, gpu_sig, up, down)
-        )
+        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
 
         assert array_equal(cpu_resample, gpu_resample)
