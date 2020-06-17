@@ -14,13 +14,14 @@
 import cupy as cp
 
 import json
+import resource
 
 from mmap import mmap, MAP_PRIVATE, PROT_READ
 
 from ._reader_cuda import _unpack
 
 
-def read_bin(file):
+def read_bin(file, dtype=None, num_samples=0, offset=0):
     """
     Reads binary file input GPU memory.
 
@@ -28,7 +29,16 @@ def read_bin(file):
     ----------
     file : str
         A string of filename to be read to GPU.
-
+    dtype : data-type, optional
+        Any object that can be interpreted as a numpy data type.
+    num_samples : int, optional
+        Number of samples to be loaded to GPU. If set to 0,
+        read in all samples.
+    offset : int, optional
+        May be specified as a non-negative integer offset.
+        It is the number of samples before loading 'num_samples'.
+        'offset' must be a multiple of ALLOCATIONGRANULARITY which
+        is equal to PAGESIZE on Unix systems.
     Returns
     -------
     out : ndarray
@@ -39,8 +49,28 @@ def read_bin(file):
     # Get current stream, default or not.
     stream = cp.cuda.get_current_stream()
 
+    if num_samples < 0 or offset < 0:
+        raise ValueError("'num_samples' and 'offset' must be >= 0")
+
+    if dtype is None and (num_samples != 0 or offset != 0):
+        raise TypeError(
+            "'dtype' must be provided is 'num_samples'/'offset' != 0"
+        )
+
+    num_bytes_read = num_samples * cp.dtype(dtype).itemsize
+    offset *= cp.dtype(dtype).itemsize
+
+    if (offset % resource.getpagesize()) != 0:
+        raise ValueError("'offset' must be a multiple of the PAGESIZE")
+
     with open(file, "rb") as f:
-        mm = mmap(f.fileno(), 0, flags=MAP_PRIVATE, prot=PROT_READ,)
+        mm = mmap(
+            f.fileno(),
+            num_bytes_read,
+            flags=MAP_PRIVATE,
+            prot=PROT_READ,
+            offset=offset,
+        )
         out = cp.asarray(mm)
         stream.synchronize()
         mm.close()
@@ -74,7 +104,7 @@ def unpack_bin(in1, dtype, endianness="L"):
     return out
 
 
-def read_sigmf(file):
+def read_sigmf(file, num_samples=0, offset=0):
     """
     Read and unpack binary file to GPU memory
 
@@ -82,6 +112,14 @@ def read_sigmf(file):
     ----------
     file : str
         A string of filename to be read/unpacked to GPU.
+    num_samples : int, optional
+        Number of samples to be loaded to GPU. If set to 0,
+        read in all samples.
+    offset : int, optional
+        May be specified as a non-negative integer offset.
+        It is the number of samples before loading 'num_samples'.
+        'offset' must be a multiple of ALLOCATIONGRANULARITY which
+        is equal to PAGESIZE on Unix systems.
 
     Returns
     -------
@@ -152,10 +190,8 @@ def read_sigmf(file):
     else:
         raise NotImplementedError
 
-    binary = read_bin(file + data_ext)
+    binary = read_bin(file + data_ext, data_type, num_samples, offset)
 
-    out = unpack_bin(
-        binary, dtype=data_type, endianness=endianness
-    )
+    out = unpack_bin(binary, data_type, endianness)
 
     return out
