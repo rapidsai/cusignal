@@ -3,6 +3,7 @@
 
 ## New Features
 - PR #119 - Added code of conduct
+- PR #130 - Reorg tests and benchmarks to match #83 code refactor
 
 ## Improvements
 - PR #112 - Remove Numba kernels
