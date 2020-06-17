@@ -18,6 +18,8 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+# Missing
+# parzen
 
 class TestWindows:
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -41,6 +43,11 @@ class TestWindows:
     def test_triang(self, num_samps):
         cpu_window = signal.windows.triang(num_samps)
         gpu_window = cp.asnumpy(cusignal.windows.triang(num_samps))
+        assert array_equal(cpu_window, gpu_window)
+
+    def test_parzen(self, num_samps):
+        cpu_window = signal.windows.parzen(num_samps)
+        gpu_window = cp.asnumpy(cusignal.windows.parzen(num_samps))
         assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -142,6 +149,13 @@ class TestWindows:
         assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("at", [50, 100])
+    def test_chebwin(self, num_samps, at):
+        cpu_window = signal.windows.chebwin(num_samps, at)
+        gpu_window = cp.asnumpy(cusignal.windows.chebwin(num_samps, at))
+        assert array_equal(cpu_window, gpu_window)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
     def test_cosine(self, num_samps):
         cpu_window = signal.windows.cosine(num_samps)
         gpu_window = cp.asnumpy(cusignal.windows.cosine(num_samps))
@@ -153,5 +167,14 @@ class TestWindows:
         cpu_window = signal.windows.exponential(num_samps, tau=tau)
         gpu_window = cp.asnumpy(
             cusignal.windows.exponential(num_samps, tau=tau)
+        )
+        assert array_equal(cpu_window, gpu_window)
+
+    @pytest.mark.parametrize("window", ['triang', 'boxcar', 'nuttall'])
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    def test_get_window(self, window, num_samps):
+        cpu_window = signal.windows.get_window(window, num_samps)
+        gpu_window = cp.asnumpy(
+            cusignal.windows.get_window(window, num_samps)
         )
         assert array_equal(cpu_window, gpu_window)
