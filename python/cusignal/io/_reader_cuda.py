@@ -34,7 +34,9 @@ ${header}
     4 = int32
     5 = uint32
     6 = float32
-    7 = complex64
+    7 = float64
+    8 = complex64
+    9 = complex128
 */
 
 extern "C" {
@@ -125,10 +127,18 @@ extern "C" {
                     ${datatype} temp = swap_float(data);
                     output[tid] = temp;
                 #elif FLAG == 7
+                    ${datatype} temp = swap_float(data);
+                    output[tid] = temp;
+                #elif FLAG == 8
                     float real = swap_float(data.real());
                     float imag = swap_float(data.imag());
 
                     output[tid] = complex<float>(real, imag);
+                #elif FLAG == 9
+                    double real = swap_float(data.real());
+                    double imag = swap_float(data.imag());
+
+                    output[tid] = complex<double>(real, imag);
                 #endif
             }
         }

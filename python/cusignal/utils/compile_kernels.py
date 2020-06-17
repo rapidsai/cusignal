@@ -75,7 +75,9 @@ _SUPPORTED_TYPES_SIGMF = {
     "int32": "int",
     "uint32": "unsigned int",
     "float32": "float",
+    "float64": "double",
     "complex64": "complex<float>",
+    "complex128": "complex<double>"
 }
 
 _SUPPORTED_TYPES_SOSFILT = {
@@ -224,8 +226,12 @@ def _populate_kernel_cache(np_type, k_type):
             flag = 5
         elif np_type == "float32":
             flag = 6
-        elif np_type == "complex64":
+        elif np_type == "float64":
             flag = 7
+        elif np_type == "complex64":
+            flag = 8
+        elif np_type == "complex128":
+            flag = 9
 
         src = _cupy_unpack_sigmf_src.substitute(
             datatype=c_type, header=header, flag=flag

@@ -152,7 +152,9 @@ def read_sigmf(file, num_samples=0, offset=0):
 
     # Complex
     if data_type[0][0] == "c":
-        if data_type[0][1:] == "f32":
+        if data_type[0][1:] == "f64":
+            data_type = cp.complex128
+        elif data_type[0][1:] == "f32":
             data_type = cp.complex64
         elif data_type[0][1:] == "i32":
             data_type = cp.int32
@@ -170,7 +172,9 @@ def read_sigmf(file, num_samples=0, offset=0):
             raise NotImplementedError
     # Real
     elif data_type[0][0] == "r":
-        if data_type[0][1:] == "f32":
+        if data_type[0][1:] == "f64":
+            data_type = cp.float64
+        elif data_type[0][1:] == "f32":
             data_type = cp.float32
         elif data_type[0][1:] == "i32":
             data_type = cp.int32
