@@ -1,3 +1,4 @@
+
 # cuSignal 0.15.0 (Date TBD)
 
 ## New Features
@@ -6,11 +7,15 @@
 
 ## Improvements
 - PR #112 - Remove Numba kernels
+- PR #121 - Add docs build script
+- PR #126 - Install dependencies via meta package
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
+- PR #127 - Fix selected documentation formatting errors
 
-# cuSignal 0.14 (Date TBD)
+
+# cuSignal 0.14 (03 Jun 2020)
 
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
