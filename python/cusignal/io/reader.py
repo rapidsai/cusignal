@@ -258,7 +258,7 @@ def read_sigmf(file, num_samples=0, offset=0):
     return out
 
 
-def write_sigmf(file, data):
+def write_sigmf(file, data, append=True):
     """
     Read and unpack binary file to GPU memory
 
@@ -278,4 +278,4 @@ def write_sigmf(file, data):
 
     packed = pack_bin(data)
 
-    write_bin(file + data_ext, packed)
+    write_bin(file + data_ext, packed, append)
