@@ -15,9 +15,6 @@ import cupy as cp
 import numpy as np
 
 import json
-import resource
-
-from mmap import mmap, MAP_PRIVATE, PROT_READ
 
 from ._reader_cuda import _unpack, _pack
 
@@ -56,7 +53,7 @@ def pin_memory(size, dtype):
     return x_pinned_cpu_dst
 
 
-def read_bin(file, dtype=None, num_samples=0, offset=0):
+def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     """
     Reads binary file input GPU memory.
 
@@ -64,6 +61,8 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
     ----------
     file : str
         A string of filename to be read to GPU.
+    buffer : ndarray, optional
+        Pinned memory buffer to use when copying data from GPU.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
     num_samples : int, optional
@@ -84,31 +83,22 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
     # Get current stream, default or not.
     stream = cp.cuda.get_current_stream()
 
-    if num_samples < 0 or offset < 0:
-        raise ValueError("'num_samples' and 'offset' must be >= 0")
-
-    if dtype is None and (num_samples != 0 or offset != 0):
-        raise TypeError(
-            "'dtype' must be provided is 'num_samples'/'offset' != 0"
-        )
-
-    num_bytes_read = num_samples * cp.dtype(dtype).itemsize
+    # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
-    if (offset % resource.getpagesize()) != 0:
-        raise ValueError("'offset' must be a multiple of the PAGESIZE")
+    fp = np.memmap(file, mode='r', offset=offset, shape=num_samples)
 
-    with open(file, "rb") as f:
-        mm = mmap(
-            f.fileno(),
-            num_bytes_read,
-            flags=MAP_PRIVATE,
-            prot=PROT_READ,
-            offset=offset,
-        )
-        out = cp.asarray(mm)
-        stream.synchronize()
-        mm.close()
+    if buffer is not None:
+        out = cp.empty(buffer.shape, buffer.dtype)
+
+    if buffer is None:
+        buffer = np.asarray(fp)
+        out = cp.asarray(buffer)
+    else:
+        buffer[:] = fp[:]
+        out.set(buffer)
+
+    stream.synchronize()
 
     return out
 
@@ -204,7 +194,7 @@ def pack_bin(in1):
     return out
 
 
-def read_sigmf(file, num_samples=0, offset=0):
+def read_sigmf(file, buffer=None, num_samples=None, offset=0):
     """
     Read and unpack binary file to GPU memory
 
@@ -255,7 +245,7 @@ def read_sigmf(file, num_samples=0, offset=0):
         if data_type[0][1:] == "f64":
             data_type = cp.complex128
         elif data_type[0][1:] == "f32":
-            data_type = cp.complex128
+            data_type = cp.complex64
         elif data_type[0][1:] == "i32":
             data_type = cp.int32
         elif data_type[0][1:] == "u32":
@@ -294,7 +284,7 @@ def read_sigmf(file, num_samples=0, offset=0):
     else:
         raise NotImplementedError
 
-    binary = read_bin(file + data_ext, data_type, num_samples, offset)
+    binary = read_bin(file + data_ext, buffer, data_type, num_samples, offset)
 
     out = unpack_bin(binary, data_type, endianness)
 
