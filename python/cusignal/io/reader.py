@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 
 import json
 import resource
@@ -19,6 +20,40 @@ import resource
 from mmap import mmap, MAP_PRIVATE, PROT_READ
 
 from ._reader_cuda import _unpack, _pack
+
+
+# https://github.com/cupy/cupy/blob/master/examples/stream/cupy_memcpy.py
+def _pin_memory(array):
+    mem = cp.cuda.alloc_pinned_memory(array.nbytes)
+    ret = np.frombuffer(mem, array.dtype, array.size).reshape(array.shape)
+    ret[...] = array
+    return ret
+
+
+def pin_memory(size, dtype):
+    """
+    Create a pinned memory buffer.
+
+    Parameters
+    ----------
+    size : int or tuple of ints
+        Output shape.
+    dtype : data-type
+        Output data type.
+
+    Returns
+    -------
+    out : ndarray
+        Pinned memory numpy array.
+
+    """
+    pinned_memory_pool = cp.cuda.PinnedMemoryPool()
+    cp.cuda.set_pinned_memory_allocator(pinned_memory_pool.malloc)
+
+    x_cpu_dst = np.empty(size, dtype)
+    x_pinned_cpu_dst = _pin_memory(x_cpu_dst)
+
+    return x_pinned_cpu_dst
 
 
 def read_bin(file, dtype=None, num_samples=0, offset=0):
@@ -78,7 +113,7 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
     return out
 
 
-def write_bin(file, binary, append=True):
+def write_bin(file, binary, buffer=None, append=True):
     """
     Writes binary array to file.
 
@@ -88,6 +123,8 @@ def write_bin(file, binary, append=True):
         A string of filename to store output.
     binary : ndarray
         Binary array to be written to file.
+    buffer : ndarray, optional
+        Pinned memory buffer to use when copying data from GPU.
     append : bool, optional
         Append to file if created.
 
@@ -101,7 +138,10 @@ def write_bin(file, binary, append=True):
     # Get current stream, default or not.
     stream = cp.cuda.get_current_stream()
 
-    binary = cp.asnumpy(binary)
+    if buffer is None:
+        buffer = cp.asnumpy(binary)
+    else:
+        binary.get(out=buffer)
 
     if append is True:
         mode = "ab"
@@ -110,7 +150,7 @@ def write_bin(file, binary, append=True):
 
     with open(file, mode) as f:
         stream.synchronize()
-        f.write(binary)
+        f.write(buffer)
 
 
 def unpack_bin(binary, dtype, endianness="L"):
@@ -134,7 +174,7 @@ def unpack_bin(binary, dtype, endianness="L"):
 
     """
 
-    if endianness != "L" or endianness != "B":
+    if endianness != "L" and endianness != "B" and endianness != "N":
         raise ValueError("'endianness' should be 'L' or 'B'")
 
     out = _unpack(binary, dtype, endianness)
@@ -261,7 +301,7 @@ def read_sigmf(file, num_samples=0, offset=0):
     return out
 
 
-def write_sigmf(file, data, append=True):
+def write_sigmf(file, data, buffer=None, append=True):
     """
     Pack and write binary array to file>
 
@@ -271,6 +311,8 @@ def write_sigmf(file, data, append=True):
         A string of filename to be read/unpacked to GPU.
     binary : ndarray
         Binary array to be written to file.
+    buffer : ndarray, optional
+        Pinned memory buffer to use when copying data from GPU.
     append : bool, optional
         Append to file if created.
 
@@ -283,4 +325,4 @@ def write_sigmf(file, data, append=True):
 
     packed = pack_bin(data)
 
-    write_bin(file + data_ext, packed, append)
+    write_bin(file + data_ext, packed, buffer, append)

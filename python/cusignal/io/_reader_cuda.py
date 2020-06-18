@@ -283,7 +283,7 @@ def _pack(binary):
     data_size = binary.dtype.itemsize * binary.shape[0]
     out_size = data_size
 
-    out = cp.empty_like(binary, dtype=cp.byte, shape=out_size)
+    out = cp.empty_like(binary, dtype=cp.ubyte, shape=out_size)
 
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]

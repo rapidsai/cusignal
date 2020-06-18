@@ -19,4 +19,5 @@ from cusignal.io.reader import (
     pack_bin,
     read_sigmf,
     write_sigmf,
+    pin_memory
 )
