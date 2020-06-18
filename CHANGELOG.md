@@ -11,6 +11,7 @@
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
+- PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
 
 

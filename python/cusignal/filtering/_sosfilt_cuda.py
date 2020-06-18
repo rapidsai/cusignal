@@ -163,7 +163,7 @@ extern "C" {
 
 
 class _cupy_sosfilt_wrapper(object):
-    def __init__(self, grid, block, stream, smem, kernel):
+    def __init__(self, grid, block, smem, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -171,7 +171,6 @@ class _cupy_sosfilt_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.smem = smem
         self.kernel = kernel
 
@@ -188,16 +187,13 @@ class _cupy_sosfilt_wrapper(object):
             x,
         )
 
-        with self.stream:
-            self.kernel(
-                self.grid, self.block, kernel_args, shared_mem=self.smem
-            )
+        self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
 
 
-def _get_backend_kernel(dtype, grid, block, smem, stream, k_type):
+def _get_backend_kernel(dtype, grid, block, smem, k_type):
     kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
     if kernel:
-        return _cupy_sosfilt_wrapper(grid, block, stream, smem, kernel)
+        return _cupy_sosfilt_wrapper(grid, block, smem, kernel)
     else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
@@ -208,7 +204,7 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, k_type):
     )
 
 
-def _sosfilt(sos, x, zi, cp_stream, autosync):
+def _sosfilt(sos, x, zi):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
@@ -223,15 +219,7 @@ def _sosfilt(sos, x, zi, cp_stream, autosync):
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
 
     kernel = _get_backend_kernel(
-        x.dtype,
-        blockspergrid,
-        threadsperblock,
-        shared_mem,
-        cp_stream,
-        GPUKernel.SOSFILT,
+        x.dtype, blockspergrid, threadsperblock, shared_mem, GPUKernel.SOSFILT,
     )
 
     kernel(sos, x, zi)
-
-    if autosync is True:
-        cp_stream.synchronize()

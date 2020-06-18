@@ -31,13 +31,7 @@ import warnings
 
 
 def lombscargle(
-    x,
-    y,
-    freqs,
-    precenter=False,
-    normalize=False,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    x, y, freqs, precenter=False, normalize=False,
 ):
     """
     lombscargle(x, y, freqs)
@@ -64,17 +58,6 @@ def lombscargle(
         Pre-center amplitudes by subtracting the mean.
     normalize : bool, optional
         Compute normalized periodogram.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -167,7 +150,7 @@ def lombscargle(
     else:
         y_in = y
 
-    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream, autosync)
+    _lombscargle(x, y_in, freqs, pgram, y_dot)
 
     return pgram
 

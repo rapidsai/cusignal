@@ -98,7 +98,7 @@ extern "C" {
 
 
 class _cupy_lombscargle_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -106,7 +106,6 @@ class _cupy_lombscargle_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -123,22 +122,21 @@ class _cupy_lombscargle_wrapper(object):
             y_dot,
         )
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, stream, k_type):
+def _get_backend_kernel(dtype, grid, block, k_type):
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
     if kernel:
-        return _cupy_lombscargle_wrapper(grid, block, stream, kernel)
+        return _cupy_lombscargle_wrapper(grid, block, kernel)
     else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
 
-def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
+def _lombscargle(x, y, freqs, pgram, y_dot):
     from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     device_id = cp.cuda.Device()
@@ -149,14 +147,7 @@ def _lombscargle(x, y, freqs, pgram, y_dot, cp_stream, autosync):
     _populate_kernel_cache(pgram.dtype, GPUKernel.LOMBSCARGLE)
 
     kernel = _get_backend_kernel(
-        pgram.dtype,
-        blockspergrid,
-        threadsperblock,
-        cp_stream,
-        GPUKernel.LOMBSCARGLE,
+        pgram.dtype, blockspergrid, threadsperblock, GPUKernel.LOMBSCARGLE,
     )
 
     kernel(x, y, freqs, pgram, y_dot)
-
-    if autosync is True:
-        cp_stream.synchronize()
