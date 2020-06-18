@@ -20,7 +20,7 @@ from ..utils._caches import _cupy_kernel_cache
 
 # Custom Cupy raw kernel implementing binary readers
 # Matthew Nicely - mnicely@nvidia.com
-_cupy_unpack_sigmf_src = Template(
+_cupy_unpack_src = Template(
     """
 ${header}
 
@@ -72,7 +72,7 @@ extern "C" {
     }
 
     // Byte swap float
-    #elif FLAG > 5
+    #elif FLAG == 6 || FLAG == 8
     __device__ float swap_float( float val )
     {
         float retVal;
@@ -89,13 +89,31 @@ extern "C" {
 
         return retVal;
     }
+
+    #elif FLAG == 7 || FLAG == 9
+    __device__ double swap_float( double val )
+    {
+        double retVal;
+        char *doubleToConvert = reinterpret_cast<char*>(&val);
+        char *returnDouble = reinterpret_cast<char*>(&retVal);
+
+        int ds = sizeof(double); // data size
+
+        // swap the bytes into a temporary buffer
+        #pragma unroll 8
+        for ( int i = 0; i < ds; i++ ) {
+            returnDouble[i] = doubleToConvert[(ds - 1) - i];
+        }
+
+        return retVal;
+    }
+
     #endif
 
-    __global__ void _cupy_unpack_sigmf(
+    __global__ void _cupy_unpack(
         const size_t N,
-        const int data_size,
         const bool little,
-        unsigned int * __restrict__ input,
+        unsigned char * __restrict__ input,
         ${datatype} * __restrict__ output) {
 
          const int tx {
@@ -148,7 +166,31 @@ extern "C" {
 )
 
 
-class _cupy_reader_wrapper(object):
+_cupy_pack_src = Template(
+    """
+${header}
+
+extern "C" {
+
+    __global__ void _cupy_pack(
+        const size_t N,
+        ${datatype} * __restrict__ input,
+        unsigned char * __restrict__ output) {
+
+         const int tx {
+            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
+        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
+
+        for ( int tid = tx; tid < N; tid += stride ) {
+            output[tid] = reinterpret_cast<unsigned char*>(input)[tid];
+        }
+    }
+}
+"""
+)
+
+
+class _cupy_unpack_wrapper(object):
     def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
@@ -159,9 +201,27 @@ class _cupy_reader_wrapper(object):
         self.block = block
         self.kernel = kernel
 
-    def __call__(self, out_size, data_size, little, binary, out):
+    def __call__(self, out_size, little, binary, out):
 
-        kernel_args = (out_size, data_size, little, binary, out)
+        kernel_args = (out_size, little, binary, out)
+
+        self.kernel(self.grid, self.block, kernel_args)
+
+
+class _cupy_pack_wrapper(object):
+    def __init__(self, grid, block, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.kernel = kernel
+
+    def __call__(self, out_size, binary, out):
+
+        kernel_args = (out_size, binary, out)
 
         self.kernel(self.grid, self.block, kernel_args)
 
@@ -173,8 +233,10 @@ def _get_backend_kernel(
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
     if kernel:
-        if k_type == GPUKernel.UNPACK_SIGMF:
-            return _cupy_reader_wrapper(grid, block, kernel)
+        if k_type == GPUKernel.UNPACK:
+            return _cupy_unpack_wrapper(grid, block, kernel)
+        elif k_type == GPUKernel.PACK:
+            return _cupy_pack_wrapper(grid, block, kernel)
 
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
@@ -201,12 +263,39 @@ def _unpack(binary, dtype, endianness):
     blockspergrid = numSM * 20
     threadsperblock = 512
 
-    _populate_kernel_cache(out.dtype, GPUKernel.UNPACK_SIGMF)
+    _populate_kernel_cache(out.dtype, GPUKernel.UNPACK)
     kernel = _get_backend_kernel(
-        out.dtype, blockspergrid, threadsperblock, GPUKernel.UNPACK_SIGMF,
+        out.dtype, blockspergrid, threadsperblock, GPUKernel.UNPACK,
     )
 
-    kernel(out_size, data_size, little, binary, out)
+    kernel(out_size, little, binary, out)
+
+    # Remove binary data
+    del binary
+
+    return out
+
+
+def _pack(binary):
+
+    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
+
+    data_size = binary.dtype.itemsize * binary.shape[0]
+    out_size = data_size
+
+    out = cp.empty_like(binary, dtype=cp.byte, shape=out_size)
+
+    device_id = cp.cuda.Device()
+    numSM = device_id.attributes["MultiProcessorCount"]
+    blockspergrid = numSM * 20
+    threadsperblock = 512
+
+    _populate_kernel_cache(out.dtype, GPUKernel.PACK)
+    kernel = _get_backend_kernel(
+        out.dtype, blockspergrid, threadsperblock, GPUKernel.PACK,
+    )
+
+    kernel(out_size, binary, out)
 
     # Remove binary data
     del binary

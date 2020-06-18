@@ -96,8 +96,11 @@ from cusignal.utils.arraytools import get_shared_array, get_shared_mem
 from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (
     read_bin,
+    write_bin,
     unpack_bin,
+    pack_bin,
     read_sigmf,
+    write_sigmf,
 )
 
 # Versioneer

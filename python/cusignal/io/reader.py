@@ -18,7 +18,7 @@ import resource
 
 from mmap import mmap, MAP_PRIVATE, PROT_READ
 
-from ._reader_cuda import _unpack
+from ._reader_cuda import _unpack, _pack
 
 
 def read_bin(file, dtype=None, num_samples=0, offset=0):
@@ -41,7 +41,7 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
         is equal to PAGESIZE on Unix systems.
     Returns
     -------
-    out : ndarray
+    out : array_like
         An 1-dimensional array containing binary data.
 
     """
@@ -78,14 +78,49 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
     return out
 
 
-def unpack_bin(in1, dtype, endianness="L"):
+def write_bin(file, binary, append=True):
+    """
+    Writes binary array to file.
+
+    Parameters
+    ----------
+    file : str
+        A string of filename to store output.
+    binary : array_like
+        Binary array to be written to file.
+    append : bool, optional
+        Append to file if created.
+
+    Returns
+    -------
+    out : array_like
+        An 1-dimensional array containing binary data.
+
+    """
+
+    # Get current stream, default or not.
+    stream = cp.cuda.get_current_stream()
+
+    binary = cp.asnumpy(binary)
+
+    if append is True:
+        mode = "ab"
+    else:
+        mode = "wb"
+
+    with open(file, mode) as f:
+        stream.synchronize()
+        f.write(binary)
+
+
+def unpack_bin(binary, dtype, endianness="L"):
     """
     Unpack binary file. If endianness is big-endian, it my be converted
     to little endian for NVIDIA GPU compatibility.
 
     Parameters
     ----------
-    in1 : array_like
+    binary : array_like
         The binary array to be unpack.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
@@ -94,12 +129,34 @@ def unpack_bin(in1, dtype, endianness="L"):
 
     Returns
     -------
-    out : ndarray
+    out : array_like
         An 1-dimensional array containing unpacked binary data.
 
     """
 
-    out = _unpack(in1, dtype, endianness)
+    out = _unpack(binary, dtype, endianness)
+
+    return out
+
+
+def pack_bin(in1):
+    """
+    Pack binary arrary.
+    Data will be packed with little endian for NVIDIA GPU compatibility.
+
+    Parameters
+    ----------
+    in1 : array_like
+        The ndarray to be pack at binary.
+
+    Returns
+    -------
+    out : array_like
+        An 1-dimensional array containing packed binary data.
+
+    """
+
+    out = _pack(in1)
 
     return out
 
@@ -155,7 +212,7 @@ def read_sigmf(file, num_samples=0, offset=0):
         if data_type[0][1:] == "f64":
             data_type = cp.complex128
         elif data_type[0][1:] == "f32":
-            data_type = cp.complex64
+            data_type = cp.complex128
         elif data_type[0][1:] == "i32":
             data_type = cp.int32
         elif data_type[0][1:] == "u32":
@@ -199,3 +256,26 @@ def read_sigmf(file, num_samples=0, offset=0):
     out = unpack_bin(binary, data_type, endianness)
 
     return out
+
+
+def write_sigmf(file, data):
+    """
+    Read and unpack binary file to GPU memory
+
+    Parameters
+    ----------
+    file : str
+        A string of filename to be read/unpacked to GPU.
+
+    Returns
+    -------
+    out : ndarray
+        An 1-dimensional array containing unpacked binary data.
+
+    """
+
+    data_ext = ".sigmf-data"
+
+    packed = pack_bin(data)
+
+    write_bin(file + data_ext, packed)
