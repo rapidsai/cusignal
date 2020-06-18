@@ -92,7 +92,11 @@ from cusignal.peak_finding.peak_finding import (
     argrelmax,
     argrelextrema,
 )
-from cusignal.utils.arraytools import get_shared_array, get_shared_mem
+from cusignal.utils.arraytools import (
+    get_shared_array,
+    get_shared_mem,
+    get_pinned_array
+)
 from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (
     read_bin,
@@ -101,7 +105,6 @@ from cusignal.io.reader import (
     pack_bin,
     read_sigmf,
     write_sigmf,
-    pin_memory
 )
 
 # Versioneer

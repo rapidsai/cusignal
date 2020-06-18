@@ -348,3 +348,37 @@ def _as_strided(x, shape=None, strides=None):
 
     return cp.ndarray(shape=shape, dtype=x.dtype,
                       memptr=x.data, strides=strides)
+
+
+# https://github.com/cupy/cupy/blob/master/examples/stream/cupy_memcpy.py
+def _pin_memory(array):
+    mem = cp.cuda.alloc_pinned_memory(array.nbytes)
+    ret = np.frombuffer(mem, array.dtype, array.size).reshape(array.shape)
+    ret[...] = array
+    return ret
+
+
+def get_pinned_array(size, dtype):
+    """
+    Create a pinned memory buffer.
+
+    Parameters
+    ----------
+    size : int or tuple of ints
+        Output shape.
+    dtype : data-type
+        Output data type.
+
+    Returns
+    -------
+    out : ndarray
+        Pinned memory numpy array.
+
+    """
+    pinned_memory_pool = cp.cuda.PinnedMemoryPool()
+    cp.cuda.set_pinned_memory_allocator(pinned_memory_pool.malloc)
+
+    x_cpu_dst = np.empty(size, dtype)
+    x_pinned_cpu_dst = _pin_memory(x_cpu_dst)
+
+    return x_pinned_cpu_dst

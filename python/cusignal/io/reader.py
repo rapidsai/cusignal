@@ -19,43 +19,33 @@ import json
 from ._reader_cuda import _unpack, _pack
 
 
-# https://github.com/cupy/cupy/blob/master/examples/stream/cupy_memcpy.py
-def _pin_memory(array):
-    mem = cp.cuda.alloc_pinned_memory(array.nbytes)
-    ret = np.frombuffer(mem, array.dtype, array.size).reshape(array.shape)
-    ret[...] = array
-    return ret
+# https://hackersandslackers.com/extract-data-from-complex-json-python/
+def _extract_values(obj, key):
+    """Pull all values of specified key from nested JSON."""
+    arr = []
 
+    def extract(obj, arr, key):
+        """Recursively search for values of key in JSON tree."""
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if isinstance(v, (dict, list)):
+                    extract(v, arr, key)
+                elif k == key:
+                    arr.append(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                extract(item, arr, key)
+        return arr
 
-def pin_memory(size, dtype):
-    """
-    Create a pinned memory buffer.
-
-    Parameters
-    ----------
-    size : int or tuple of ints
-        Output shape.
-    dtype : data-type
-        Output data type.
-
-    Returns
-    -------
-    out : ndarray
-        Pinned memory numpy array.
-
-    """
-    pinned_memory_pool = cp.cuda.PinnedMemoryPool()
-    cp.cuda.set_pinned_memory_allocator(pinned_memory_pool.malloc)
-
-    x_cpu_dst = np.empty(size, dtype)
-    x_pinned_cpu_dst = _pin_memory(x_cpu_dst)
-
-    return x_pinned_cpu_dst
+    results = extract(obj, arr, key)
+    return results
 
 
 def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     """
-    Reads binary file input GPU memory.
+    Reads binary file into GPU memory.
+    Can be used as a building blocks for custom unpack/pack
+    data readers/writers.
 
     Parameters
     ----------
@@ -69,10 +59,9 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
         Number of samples to be loaded to GPU. If set to 0,
         read in all samples.
     offset : int, optional
-        May be specified as a non-negative integer offset.
-        It is the number of samples before loading 'num_samples'.
-        'offset' must be a multiple of ALLOCATIONGRANULARITY which
-        is equal to PAGESIZE on Unix systems.
+        In the file, array data starts at this offset.
+        Since offset is measured in bytes, it should normally
+        be a multiple of the byte-size of dtype.
     Returns
     -------
     out : ndarray
@@ -145,7 +134,8 @@ def write_bin(file, binary, buffer=None, append=True):
 
 def unpack_bin(binary, dtype, endianness="L"):
     """
-    Unpack binary file. If endianness is big-endian, it my be converted
+    Unpack binary file.
+    If endianness is big-endian, it my be converted
     to little endian for NVIDIA GPU compatibility.
 
     Parameters
@@ -194,14 +184,18 @@ def pack_bin(in1):
     return out
 
 
-def read_sigmf(file, buffer=None, num_samples=None, offset=0):
+def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
     """
-    Read and unpack binary file to GPU memory
+    Read and unpack binary file, with SigMF spec, to GPU memory.
 
     Parameters
     ----------
-    file : str
-        A string of filename to be read/unpacked to GPU.
+    data_file : str
+        File contain sigmf data.
+    meta_file : str
+        File contain sigmf meta.
+    buffer : ndarray, optional
+        Pinned memory buffer to use when copying data from GPU.
     num_samples : int, optional
         Number of samples to be loaded to GPU. If set to 0,
         read in all samples.
@@ -218,15 +212,12 @@ def read_sigmf(file, buffer=None, num_samples=None, offset=0):
 
     """
 
-    meta_ext = ".sigmf-meta"
-    data_ext = ".sigmf-data"
-
-    with open(file + meta_ext, "r") as f:
+    with open(meta_file, "r") as f:
         header = json.loads(f.read())
 
-    dataset_type = header["_metadata"]["global"]["core:datatype"]
+    dataset_type = _extract_values(header, 'core:datatype')
 
-    data_type = dataset_type.split("_")
+    data_type = dataset_type[0].split("_")
 
     if len(data_type) == 1:
         endianness = "N"
@@ -284,7 +275,7 @@ def read_sigmf(file, buffer=None, num_samples=None, offset=0):
     else:
         raise NotImplementedError
 
-    binary = read_bin(file + data_ext, buffer, data_type, num_samples, offset)
+    binary = read_bin(data_file, buffer, data_type, num_samples, offset)
 
     out = unpack_bin(binary, data_type, endianness)
 
@@ -293,7 +284,7 @@ def read_sigmf(file, buffer=None, num_samples=None, offset=0):
 
 def write_sigmf(file, data, buffer=None, append=True):
     """
-    Pack and write binary array to file>
+    Pack and write binary array to file, with SigMF spec.
 
     Parameters
     ----------
