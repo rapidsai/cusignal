@@ -41,7 +41,7 @@ def read_bin(file, dtype=None, num_samples=0, offset=0):
         is equal to PAGESIZE on Unix systems.
     Returns
     -------
-    out : array_like
+    out : ndarray
         An 1-dimensional array containing binary data.
 
     """
@@ -86,14 +86,14 @@ def write_bin(file, binary, append=True):
     ----------
     file : str
         A string of filename to store output.
-    binary : array_like
+    binary : ndarray
         Binary array to be written to file.
     append : bool, optional
         Append to file if created.
 
     Returns
     -------
-    out : array_like
+    out : ndarray
         An 1-dimensional array containing binary data.
 
     """
@@ -120,7 +120,7 @@ def unpack_bin(binary, dtype, endianness="L"):
 
     Parameters
     ----------
-    binary : array_like
+    binary : ndarray
         The binary array to be unpack.
     dtype : data-type, optional
         Any object that can be interpreted as a numpy data type.
@@ -129,10 +129,13 @@ def unpack_bin(binary, dtype, endianness="L"):
 
     Returns
     -------
-    out : array_like
+    out : ndarray
         An 1-dimensional array containing unpacked binary data.
 
     """
+
+    if endianness != "L" or endianness != "B":
+        raise ValueError("'endianness' should be 'L' or 'B'")
 
     out = _unpack(binary, dtype, endianness)
 
@@ -146,12 +149,12 @@ def pack_bin(in1):
 
     Parameters
     ----------
-    in1 : array_like
+    in1 : ndarray
         The ndarray to be pack at binary.
 
     Returns
     -------
-    out : array_like
+    out : ndarray
         An 1-dimensional array containing packed binary data.
 
     """
@@ -260,17 +263,19 @@ def read_sigmf(file, num_samples=0, offset=0):
 
 def write_sigmf(file, data, append=True):
     """
-    Read and unpack binary file to GPU memory
+    Pack and write binary array to file>
 
     Parameters
     ----------
     file : str
         A string of filename to be read/unpacked to GPU.
+    binary : ndarray
+        Binary array to be written to file.
+    append : bool, optional
+        Append to file if created.
 
     Returns
     -------
-    out : ndarray
-        An 1-dimensional array containing unpacked binary data.
 
     """
 
