@@ -81,13 +81,14 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
         out = cp.empty(buffer.shape, buffer.dtype)
 
     if buffer is None:
-        buffer = np.asarray(fp)
-        out = cp.asarray(buffer)
+        out = cp.asarray(fp)
     else:
         buffer[:] = fp[:]
         out.set(buffer)
 
     stream.synchronize()
+
+    del fp
 
     return out
 
