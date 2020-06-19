@@ -95,7 +95,8 @@ from cusignal.peak_finding.peak_finding import (
 from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem,
-    get_pinned_array
+    get_pinned_array,
+    get_pinned_mem,
 )
 from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (

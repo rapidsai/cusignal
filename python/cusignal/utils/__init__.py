@@ -14,5 +14,6 @@
 from cusignal.utils.arraytools import (
     get_shared_array,
     get_shared_mem,
-    get_pinned_array
+    get_pinned_array,
+    get_pinned_mem,
 )

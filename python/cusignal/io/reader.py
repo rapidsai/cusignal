@@ -129,7 +129,7 @@ def write_bin(file, binary, buffer=None, append=True):
 
     with open(file, mode) as f:
         stream.synchronize()
-        f.write(buffer)
+        buffer.tofile(f)
 
 
 def unpack_bin(binary, dtype, endianness="L"):
@@ -282,7 +282,7 @@ def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
     return out
 
 
-def write_sigmf(file, data, buffer=None, append=True):
+def write_sigmf(data_file, data, buffer=None, append=True):
     """
     Pack and write binary array to file, with SigMF spec.
 
@@ -302,8 +302,6 @@ def write_sigmf(file, data, buffer=None, append=True):
 
     """
 
-    data_ext = ".sigmf-data"
-
     packed = pack_bin(data)
 
-    write_bin(file + data_ext, packed, buffer, append)
+    write_bin(data_file, packed, buffer, append)
