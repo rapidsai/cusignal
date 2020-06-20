@@ -75,7 +75,7 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
-    fp = np.memmap(file, mode='r', offset=offset, shape=num_samples)
+    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples)
 
     if buffer is not None:
         out = cp.empty(buffer.shape, buffer.dtype)
@@ -216,7 +216,7 @@ def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
     with open(meta_file, "r") as f:
         header = json.loads(f.read())
 
-    dataset_type = _extract_values(header, 'core:datatype')
+    dataset_type = _extract_values(header, "core:datatype")
 
     data_type = dataset_type[0].split("_")
 
