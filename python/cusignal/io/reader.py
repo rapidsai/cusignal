@@ -185,7 +185,9 @@ def pack_bin(in1):
     return out
 
 
-def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
+def read_sigmf(
+    data_file, meta_file=None, buffer=None, num_samples=None, offset=0
+):
     """
     Read and unpack binary file, with SigMF spec, to GPU memory.
 
@@ -193,7 +195,7 @@ def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
     ----------
     data_file : str
         File contain sigmf data.
-    meta_file : str
+    meta_file : str, optional
         File contain sigmf meta.
     buffer : ndarray, optional
         Pinned memory buffer to use when copying data from GPU.
@@ -212,6 +214,12 @@ def read_sigmf(data_file, meta_file, buffer=None, num_samples=None, offset=0):
         An 1-dimensional array containing unpacked binary data.
 
     """
+
+    if meta_file is None:
+        meta_ext = ".sigmf-meta"
+
+        split_string = data_file.split(".")
+        meta_file = split_string[0] + meta_ext
 
     with open(meta_file, "r") as f:
         header = json.loads(f.read())
