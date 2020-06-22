@@ -11,9 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.utils.arraytools import (
-    get_shared_array,
-    get_shared_mem,
-    get_pinned_array,
-    get_pinned_mem,
+
+from cusignal.io.reader import (
+    read_bin,
+    write_bin,
+    unpack_bin,
+    pack_bin,
+    read_sigmf,
+    write_sigmf,
 )

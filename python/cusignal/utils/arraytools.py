@@ -47,7 +47,7 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
     return shared_mem_array
 
 
-# Return shared memory array - similar to np.zeros
+# Return shared memory array - similar to np.empty
 def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
                    portable=False, wc=True):
     """Return shared memory between GPU and CPU. Similar to numpy.zeros
@@ -68,6 +68,49 @@ def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
 
     return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order,
                              stream=stream, portable=portable, wc=wc)
+
+
+def get_pinned_array(data):
+    """Return populated pinned memory.
+
+    Parameters
+    ----------
+    data : cupy.ndarray or numpy.ndarray
+        The array to be copied to shared buffer
+    strides: int or None
+    order: char
+    """
+
+    mem = cp.cuda.alloc_pinned_memory(data.nbytes)
+    ret = np.frombuffer(mem, data.dtype, data.size).reshape(data.shape)
+    ret[...] = data
+
+    return ret
+
+
+def get_pinned_mem(shape, dtype):
+    """
+    Create a pinned memory allocation.
+
+    Parameters
+    ----------
+    size : int or tuple of ints
+        Output shape.
+    dtype : data-type
+        Output data type.
+
+    Returns
+    -------
+    out : ndarray
+        Pinned memory numpy array.
+
+    """
+
+    size = shape[0] * cp.dtype(dtype).itemsize
+    mem = cp.cuda.alloc_pinned_memory(size)
+    ret = np.frombuffer(mem, dtype, size)
+
+    return ret
 
 
 def _axis_slice(a, start=None, stop=None, step=None, axis=-1):
