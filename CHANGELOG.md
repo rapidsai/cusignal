@@ -3,7 +3,8 @@
 
 ## New Features
 - PR #119 - Added code of conduct
-- PR #130 - Reorg tests and benchmarks to match #83 code refactor
+- PR #122 - GPU accelerated SigMF Reader
+- PR #130 - Reorg tests and benchmarks to match #83 code refacto
 
 ## Improvements
 - PR #112 - Remove Numba kernels
@@ -12,6 +13,7 @@
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
+- PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
 
 

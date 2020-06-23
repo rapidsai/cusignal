@@ -13,6 +13,7 @@
 
 import cupy as cp
 
+from collections import OrderedDict
 from enum import Enum
 
 from ._caches import _cupy_kernel_cache
@@ -25,12 +26,9 @@ from ..convolution._convolution_cuda import (
     _cupy_correlate_src,
     _cupy_correlate_2d_src,
 )
-from ..spectral_analysis._spectral_cuda import (
-    _cupy_lombscargle_src,
-)
-from ..filtering._sosfilt_cuda import (
-    _cupy_sosfilt_src,
-)
+from ..spectral_analysis._spectral_cuda import _cupy_lombscargle_src
+from ..io._reader_cuda import _cupy_unpack_src, _cupy_pack_src
+from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
 from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_1d_src,
     _cupy_upfirdn_2d_src,
@@ -38,42 +36,61 @@ from ..filtering._upfirdn_cuda import (
 
 
 class GPUKernel(Enum):
-    CORRELATE = 'correlate'
-    CONVOLVE = 'convolve'
-    CORRELATE2D = 'correlate2d'
-    CONVOLVE2D = 'convolve2d'
-    LOMBSCARGLE = 'lombscargle'
-    SOSFILT = 'sosfilt'
-    UPFIRDN = 'upfirdn'
-    UPFIRDN2D = 'upfirdn2d'
+    CORRELATE = "correlate"
+    CONVOLVE = "convolve"
+    CORRELATE2D = "correlate2d"
+    CONVOLVE2D = "convolve2d"
+    LOMBSCARGLE = "lombscargle"
+    UNPACK = "unpack"
+    PACK = "pack"
+    SOSFILT = "sosfilt"
+    UPFIRDN = "upfirdn"
+    UPFIRDN2D = "upfirdn2d"
 
 
 # Numba type supported and corresponding C type
-_SUPPORTED_TYPES_CONVOLVE = {
-    "int32": "int",
-    "int64": "long int",
-    "float32": "float",
-    "float64": "double",
-    "complex64": "complex<float>",
-    "complex128": "complex<double>",
-}
+_SUPPORTED_TYPES_CONVOLVE = OrderedDict(
+    (
+        ("int32", "int"),
+        ("int64", "long int"),
+        ("float32", "float"),
+        ("float64", "double"),
+        ("complex64", "complex<float>"),
+        ("complex128", "complex<double>"),
+    )
+)
 
-_SUPPORTED_TYPES_LOMBSCARGLE = {
-    "float32": "float",
-    "float64": "double",
-}
+_SUPPORTED_TYPES_LOMBSCARGLE = OrderedDict(
+    (("float32", "float"), ("float64", "double"),)
+)
 
-_SUPPORTED_TYPES_SOSFILT = {
-    "float32": "float",
-    "float64": "double",
-}
+_SUPPORTED_TYPES_READER = OrderedDict(
+    (
+        ("int8", "char"),
+        ("uint8", "unsigned char"),
+        ("int16", "short"),
+        ("uint16", "unsigned short"),
+        ("int32", "int"),
+        ("uint32", "unsigned int"),
+        ("float32", "float"),
+        ("float64", "double"),
+        ("complex64", "complex<float>"),
+        ("complex128", "complex<double>"),
+    )
+)
 
-_SUPPORTED_TYPES_UPFIRDN = {
-    "float32": "float",
-    "float64": "double",
-    "complex64": "complex<float>",
-    "complex128": "complex<double>",
-}
+_SUPPORTED_TYPES_SOSFILT = OrderedDict(
+    (("float32", "float"), ("float64", "double"),)
+)
+
+_SUPPORTED_TYPES_UPFIRDN = OrderedDict(
+    (
+        ("float32", "float"),
+        ("float64", "double"),
+        ("complex64", "complex<float>"),
+        ("complex128", "complex<double>"),
+    )
+)
 
 
 def _get_supported_types(k_type):
@@ -88,6 +105,9 @@ def _get_supported_types(k_type):
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_LOMBSCARGLE
+
+    elif k_type == GPUKernel.UNPACK or k_type == GPUKernel.PACK:
+        SUPPORTED_TYPES = _SUPPORTED_TYPES_READER
 
     elif k_type == GPUKernel.SOSFILT:
         SUPPORTED_TYPES = _SUPPORTED_TYPES_SOSFILT
@@ -133,96 +153,105 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     # Instantiate the cupy kernel for this type and compile
-    if (c_type.find('complex') != -1):
+    if c_type.find("complex") != -1:
         header = "#include <cupy/complex.cuh>"
     else:
         header = ""
 
     if k_type == GPUKernel.CORRELATE:
-        src = _cupy_correlate_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_correlate_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_correlate")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_correlate"
+        )
 
     elif k_type == GPUKernel.CONVOLVE:
         src = _cupy_convolve_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_convolve")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_convolve"
+        )
 
     elif k_type == GPUKernel.CORRELATE2D:
-        src = _cupy_correlate_2d_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_correlate_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_correlate_2d")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_correlate_2d"
+        )
 
     elif k_type == GPUKernel.CONVOLVE2D:
-        src = _cupy_convolve_2d_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_convolve_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_convolve_2d")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_convolve_2d"
+        )
 
     elif k_type == GPUKernel.LOMBSCARGLE:
-        src = _cupy_lombscargle_src.substitute(
-            datatype=c_type, header=header
+        src = _cupy_lombscargle_src.substitute(datatype=c_type, header=header)
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_lombscargle"
+        )
+
+    elif k_type == GPUKernel.UNPACK:
+        flag = list(SUPPORTED_TYPES.keys()).index(np_type)
+
+        src = _cupy_unpack_src.substitute(
+            datatype=c_type, header=header, flag=flag
         )
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_lombscargle")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_unpack"
+        )
+
+    elif k_type == GPUKernel.PACK:
+
+        src = _cupy_pack_src.substitute(datatype=c_type, header=header)
+        module = cp.RawModule(
+            code=src, options=("-std=c++11", "-use_fast_math")
+        )
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_pack"
+        )
 
     elif k_type == GPUKernel.SOSFILT:
-        src = _cupy_sosfilt_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_sosfilt_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_sosfilt")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_sosfilt"
+        )
 
     elif k_type == GPUKernel.UPFIRDN:
-        src = _cupy_upfirdn_1d_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_upfirdn_1d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_upfirdn_1d")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_upfirdn_1d"
+        )
 
     elif k_type == GPUKernel.UPFIRDN2D:
-        src = _cupy_upfirdn_2d_src.substitute(
-            datatype=c_type, header=header
-        )
+        src = _cupy_upfirdn_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
             code=src, options=("-std=c++11", "-use_fast_math")
         )
-        _cupy_kernel_cache[
-            (str(np_type), k_type.value)
-        ] = module.get_function("_cupy_upfirdn_2d")
+        _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+            "_cupy_upfirdn_2d"
+        )
 
     else:
         raise NotImplementedError(

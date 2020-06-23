@@ -33,12 +33,7 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def convolve(
-    in1,
-    in2,
-    mode="full",
-    method="auto",
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    in1, in2, mode="full", method="auto",
 ):
     """
     Convolve two N-dimensional arrays.
@@ -77,17 +72,6 @@ def convolve(
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -134,6 +118,7 @@ def convolve(
     >>> fig.show()
 
     """
+
     volume = cp.asarray(in1)
     kernel = cp.asarray(in2)
 
@@ -143,7 +128,8 @@ def convolve(
         raise ValueError("in1 and in2 should have the same dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
-        # Convolution is commutative; order doesn't have any effect on output
+        # Convolution is commutative
+        # order doesn't have any effect on output
         volume, kernel = kernel, volume
 
     if method == "auto":
@@ -166,7 +152,7 @@ def convolve(
             volume, kernel = kernel, volume
 
         return _convolution_cuda._convolve(
-            volume, kernel, True, swapped_inputs, mode, cp_stream, autosync
+            volume, kernel, True, swapped_inputs, mode
         )
 
     else:
@@ -342,13 +328,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
 
 def convolve2d(
-    in1,
-    in2,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    in1, in2, mode="full", boundary="fill", fillvalue=0,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -382,17 +362,6 @@ def convolve2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -430,6 +399,7 @@ def convolve2d(
     >>> fig.show()
 
     """
+
     in1 = cp.asarray(in1)
     in2 = cp.asarray(in2)
 
@@ -439,10 +409,9 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    out = _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync,
+    return _convolution_cuda._convolve2d(
+        in1, in2, 1, mode, boundary, fillvalue,
     )
-    return out
 
 
 def choose_conv_method(in1, in2, mode="full", measure=False):
