@@ -16,7 +16,7 @@ import numpy as np
 
 import json
 
-from ._reader_cuda import _unpack, _pack
+from ._reader_cuda import _unpack
 
 
 # https://hackersandslackers.com/extract-data-from-complex-json-python/
@@ -93,46 +93,6 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     return out
 
 
-def write_bin(file, binary, buffer=None, append=True):
-    """
-    Writes binary array to file.
-
-    Parameters
-    ----------
-    file : str
-        A string of filename to store output.
-    binary : ndarray
-        Binary array to be written to file.
-    buffer : ndarray, optional
-        Pinned memory buffer to use when copying data from GPU.
-    append : bool, optional
-        Append to file if created.
-
-    Returns
-    -------
-    out : ndarray
-        An 1-dimensional array containing binary data.
-
-    """
-
-    # Get current stream, default or not.
-    stream = cp.cuda.get_current_stream()
-
-    if buffer is None:
-        buffer = cp.asnumpy(binary)
-    else:
-        binary.get(out=buffer)
-
-    if append is True:
-        mode = "ab"
-    else:
-        mode = "wb"
-
-    with open(file, mode) as f:
-        stream.synchronize()
-        buffer.tofile(f)
-
-
 def unpack_bin(binary, dtype, endianness="L"):
     """
     Unpack binary file.
@@ -159,28 +119,6 @@ def unpack_bin(binary, dtype, endianness="L"):
         raise ValueError("'endianness' should be 'L' or 'B'")
 
     out = _unpack(binary, dtype, endianness)
-
-    return out
-
-
-def pack_bin(in1):
-    """
-    Pack binary arrary.
-    Data will be packed with little endian for NVIDIA GPU compatibility.
-
-    Parameters
-    ----------
-    in1 : ndarray
-        The ndarray to be pack at binary.
-
-    Returns
-    -------
-    out : ndarray
-        An 1-dimensional array containing packed binary data.
-
-    """
-
-    out = _pack(in1)
 
     return out
 
@@ -289,28 +227,3 @@ def read_sigmf(
     out = unpack_bin(binary, data_type, endianness)
 
     return out
-
-
-def write_sigmf(data_file, data, buffer=None, append=True):
-    """
-    Pack and write binary array to file, with SigMF spec.
-
-    Parameters
-    ----------
-    file : str
-        A string of filename to be read/unpacked to GPU.
-    binary : ndarray
-        Binary array to be written to file.
-    buffer : ndarray, optional
-        Pinned memory buffer to use when copying data from GPU.
-    append : bool, optional
-        Append to file if created.
-
-    Returns
-    -------
-
-    """
-
-    packed = pack_bin(data)
-
-    write_bin(data_file, packed, buffer, append)
