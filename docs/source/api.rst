@@ -143,7 +143,7 @@ FFTPack Helper
 IO
 ============
 
-Array Tools
+Reader
 ------------
 
 .. automodule:: cusignal.io.reader
