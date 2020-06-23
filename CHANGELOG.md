@@ -9,6 +9,7 @@
 - PR #112 - Remove Numba kernels
 - PR #121 - Add docs build script
 - PR #126 - Install dependencies via meta package
+- PR #133 - Add IO module to cusignal docs
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
