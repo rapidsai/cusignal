@@ -22,12 +22,7 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def correlate(
-    in1,
-    in2,
-    mode="full",
-    method="auto",
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    in1, in2, mode="full", method="auto",
 ):
     r"""
     Cross-correlate two N-dimensional arrays.
@@ -66,17 +61,6 @@ def correlate(
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).  See `convolve` Notes for more detail.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
-        Default is True.
 
     Returns
     -------
@@ -141,6 +125,7 @@ def correlate(
     >>> fig.show()
 
     """
+
     in1 = cp.asarray(in1)
     in2 = cp.asarray(in2)
 
@@ -164,7 +149,7 @@ def correlate(
             in1, in2 = in2, in1
 
         return _convolution_cuda._convolve(
-            in1, in2, False, swapped_inputs, mode, cp_stream, autosync
+            in1, in2, False, swapped_inputs, mode
         )
 
     else:
@@ -174,18 +159,13 @@ def correlate(
 
 
 def correlate2d(
-    in1,
-    in2,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream.null,
-    autosync=True,
+    in1, in2, mode="full", boundary="fill", fillvalue=0,
 ):
     """
     Cross-correlate two 2-dimensional arrays.
     Cross correlate `in1` and `in2` with output size determined by `mode`, and
     boundary conditions determined by `boundary` and `fillvalue`.
+
     Parameters
     ----------
     in1 : array_like
@@ -214,23 +194,13 @@ def correlate2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream.null
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`
-        Default is true.
 
     Returns
     -------
     correlate2d : ndarray
         A 2-dimensional array containing a subset of the discrete linear
         cross-correlation of `in1` with `in2`.
+
     Examples
     --------
     Use 2D cross-correlation to find the location of a template in a noisy
@@ -259,7 +229,9 @@ def correlate2d(
     >>> ax_corr.set_axis_off()
     >>> ax_orig.plot(cp.asnumpy(x), cp.asnumpy(y), 'ro')
     >>> fig.show()
+
     """
+
     in1 = cp.asarray(in1)
     in2 = cp.asarray(in2)
 
@@ -271,14 +243,7 @@ def correlate2d(
         in1, in2 = in2, in1
 
     out = _convolution_cuda._convolve2d(
-        in1,
-        in2.conj(),
-        0,
-        mode,
-        boundary,
-        fillvalue,
-        cp_stream,
-        autosync,
+        in1, in2.conj(), 0, mode, boundary, fillvalue,
     )
 
     if swapped_inputs:
