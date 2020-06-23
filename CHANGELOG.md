@@ -52,6 +52,7 @@
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 - PR #103 - Update notebooks to match new code structure
 - PR #110 - Update README for 0.14 release
+- PR #113 - Add git commit to conda package
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 
