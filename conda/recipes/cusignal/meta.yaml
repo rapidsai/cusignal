@@ -29,6 +29,10 @@ requirements:
     - numba>=0.49.0
     - cupy>=7.2.0
 
+test:
+  imports:
+    - cusignal
+
 about:
   home: http://rapids.ai/
   license: Apache-2.0
