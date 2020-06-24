@@ -13,7 +13,6 @@ source:
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
   string: py{{ py_version }}_{{ GIT_DESCRIBE_HASH }}_{{ GIT_DESCRIBE_NUMBER }}
-  script: python python/setup.py install --single-version-externally-managed --record record.txt
   noarch: python
   script_env:
     - VERSION_SUFFIX
@@ -29,6 +28,10 @@ requirements:
     - boost
     - numba>=0.49.0
     - cupy>=7.2.0
+
+test:
+  imports:
+    - cusignal
 
 about:
   home: http://rapids.ai/

@@ -18,6 +18,7 @@
 - PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
 - PR #138 - Fix overflow issues in `upfirdn`
+- PR #139 - Fixes packaging of python package
 
 
 # cuSignal 0.14 (03 Jun 2020)
