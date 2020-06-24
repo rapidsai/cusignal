@@ -49,9 +49,7 @@ class TestSignaltools:
 
         cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
         gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(
-                gpu_sig, up, down, window=window
-            )
+            cusignal.resample_poly(gpu_sig, up, down, window=window)
         )
 
         assert array_equal(cpu_resample, gpu_resample)
@@ -67,9 +65,7 @@ class TestSignaltools:
 
         cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
         gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(
-                gpu_sig, up, down, window=window
-            )
+            cusignal.resample_poly(gpu_sig, up, down, window=window)
         )
 
         assert array_equal(cpu_resample, gpu_resample)
@@ -83,9 +79,7 @@ class TestSignaltools:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(
-            cusignal.upfirdn(h, gpu_sig, up, down)
-        )
+        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -98,9 +92,7 @@ class TestSignaltools:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(
-            cusignal.upfirdn(h, gpu_sig, up, down)
-        )
+        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -202,10 +194,7 @@ class TestSignaltools:
 
         gpu_convolve2d = cp.asnumpy(
             cusignal.convolve2d(
-                gpu_sig,
-                gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
             )
         )
         assert array_equal(cpu_convolve2d, gpu_convolve2d)
@@ -225,10 +214,7 @@ class TestSignaltools:
         )
         gpu_correlate2d = cp.asnumpy(
             cusignal.correlate2d(
-                gpu_sig,
-                gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
             )
         )
         assert array_equal(cpu_correlate2d, gpu_correlate2d)
@@ -258,14 +244,12 @@ class TestSignaltools:
         cpu_sig = np.random.rand(num_signals, num_samps)
         gpu_sig = cp.asarray(cpu_sig)
 
-        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output='sos')
+        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output="sos")
 
         cpu_sosfilt = signal.sosfilt(cpu_sos, cpu_sig)
 
         gpu_sos = cp.asarray(cpu_sos)
 
-        gpu_sosfilt = cp.asnumpy(
-            cusignal.sosfilt(gpu_sos, gpu_sig)
-        )
+        gpu_sosfilt = cp.asnumpy(cusignal.sosfilt(gpu_sos, gpu_sig))
 
         assert array_equal(cpu_sosfilt, gpu_sosfilt)
