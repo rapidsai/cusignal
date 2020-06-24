@@ -39,8 +39,8 @@ class TestSignaltools:
         assert array_equal(cpu_resample, gpu_resample)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 24])
-    @pytest.mark.parametrize("up", [2, 3, 7, 400])
-    @pytest.mark.parametrize("down", [1, 2, 9, 1333])
+    @pytest.mark.parametrize("up", [2, 3, 7])
+    @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
     def test_resample_poly(
         self, linspace_data_gen, num_samps, up, down, window
