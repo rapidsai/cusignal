@@ -67,7 +67,7 @@ extern "C" {
             static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
         const int stride { static_cast<int>(blockDim.x * gridDim.x) };
 
-        for ( int tid = t; tid < outW; tid += stride ) {
+        for ( size_t tid = t; tid < outW; tid += stride ) {
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
