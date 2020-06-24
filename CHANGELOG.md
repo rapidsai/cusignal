@@ -5,16 +5,19 @@
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
 - PR #130 - Reorg tests and benchmarks to match #83 code refacto
+- PR #136 - Split reader and writer in IO packages and update docs
 
 ## Improvements
 - PR #112 - Remove Numba kernels
 - PR #121 - Add docs build script
 - PR #126 - Install dependencies via meta package
+- PR #133 - Add IO module to cusignal docs
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
 - PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
+- PR #138 - Fix overflow issues in `upfirdn`
 
 
 # cuSignal 0.14 (03 Jun 2020)
@@ -52,6 +55,7 @@
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 - PR #103 - Update notebooks to match new code structure
 - PR #110 - Update README for 0.14 release
+- PR #113 - Add git commit to conda package
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 

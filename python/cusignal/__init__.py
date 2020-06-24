@@ -101,10 +101,12 @@ from cusignal.utils.arraytools import (
 from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (
     read_bin,
-    write_bin,
     unpack_bin,
-    pack_bin,
     read_sigmf,
+)
+from cusignal.io.writer import (
+    write_bin,
+    pack_bin,
     write_sigmf,
 )
 
