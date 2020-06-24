@@ -138,3 +138,21 @@ FFTPack Helper
 .. automodule:: cusignal.utils.fftpack_helper
     :members:
     :undoc-members:
+
+
+IO
+============
+
+Reader
+------------
+
+.. automodule:: cusignal.io.reader
+    :members:
+    :undoc-members:
+
+Writer
+------------
+
+.. automodule:: cusignal.io.writer
+    :members:
+    :undoc-members:

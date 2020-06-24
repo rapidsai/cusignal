@@ -27,7 +27,8 @@ from ..convolution._convolution_cuda import (
     _cupy_correlate_2d_src,
 )
 from ..spectral_analysis._spectral_cuda import _cupy_lombscargle_src
-from ..io._reader_cuda import _cupy_unpack_src, _cupy_pack_src
+from ..io._reader_cuda import _cupy_unpack_src
+from ..io._writer_cuda import _cupy_pack_src
 from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
 from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_1d_src,
