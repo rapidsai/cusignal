@@ -10,6 +10,7 @@
 - PR #112 - Remove Numba kernels
 - PR #121 - Add docs build script
 - PR #126 - Install dependencies via meta package
+- PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
 
 ## Bug Fixes
