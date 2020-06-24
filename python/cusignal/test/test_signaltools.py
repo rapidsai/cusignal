@@ -38,11 +38,29 @@ class TestSignaltools:
 
         assert array_equal(cpu_resample, gpu_resample)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("up", [2, 3, 7])
-    @pytest.mark.parametrize("down", [1, 2, 9])
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 24])
+    @pytest.mark.parametrize("up", [2, 3, 7, 400])
+    @pytest.mark.parametrize("down", [1, 2, 9, 1333])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
     def test_resample_poly(
+        self, linspace_data_gen, num_samps, up, down, window
+    ):
+        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
+
+        cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
+        gpu_resample = cp.asnumpy(
+            cusignal.resample_poly(
+                gpu_sig, up, down, window=window
+            )
+        )
+
+        assert array_equal(cpu_resample, gpu_resample)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 24])
+    @pytest.mark.parametrize("up", [400, 1234])
+    @pytest.mark.parametrize("down", [1333, 2123])
+    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    def test_resample_poly_big(
         self, linspace_data_gen, num_samps, up, down, window
     ):
         cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
