@@ -131,7 +131,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
         P[z_idx, x, y] = alpha_sq * temp + local_Q
 
         if z_idx == 0:
-            print("p", z_idx, x, y, P[z_idx, x, y])
+            print("p", z_idx, x, y, P[z_idx, x, y], s_A[xx_idx + x_key], x_in[z_idx, x, y])
 
 
 def _numba_update(x_in, z_in, H, P, R):
@@ -469,7 +469,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
             alpha2 * temp + localQ;
 
         if ( tid_z == 0 ) {
-            printf("p %d %d %d %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value]);
+            printf("p %d %d %d %f %f %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value], s_A[xx_idx + x_value], x_in[tid_z * DIM_X * 1 + ty * 1 + tx]);
         }
     }
 }
