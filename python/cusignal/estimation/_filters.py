@@ -79,7 +79,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
     xx_block_size = dim_x * dim_x * cuda.blockDim.z
     xx_idx = dim_x * dim_x * tz
 
-    s_buffer = cuda.shared.array(shape=0, dtype=float32)
+    s_buffer = cuda.shared.array(shape=0, dtype=float64)
 
     s_A = s_buffer[: (xx_block_size * 1)]
     s_F = s_buffer[(xx_block_size * 1):]
@@ -130,6 +130,9 @@ def _numba_predict(alpha, x_in, F, P, Q):
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
         P[z_idx, x, y] = alpha_sq * temp + local_Q
 
+        if z_idx == 0:
+            print("p", z_idx, x, y, P[z_idx, x, y])
+
 
 def _numba_update(x_in, z_in, H, P, R):
 
@@ -147,7 +150,7 @@ def _numba_update(x_in, z_in, H, P, R):
     xz_idx = dim_x * dim_z * tz
     zz_idx = dim_z * dim_z * tz
 
-    s_buffer = cuda.shared.array(shape=0, dtype=float32)
+    s_buffer = cuda.shared.array(shape=0, dtype=float64)
 
     s_A = s_buffer[: (xx_block_size * 1)]
     s_B = s_buffer[(xx_block_size * 1): (xx_block_size * 2)]
@@ -322,6 +325,9 @@ def _numba_update(x_in, z_in, H, P, R):
 
         P[z_idx, x, y] = temp + temp2
 
+        if z_idx == 0:
+            print("u", z_idx, x, y, P[z_idx, x, y])
+
 
 def _numba_kalman_signature(ty):
     return void(
@@ -461,6 +467,10 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
         P[tid_z * DIM_X * DIM_X + x_value] =
             alpha2 * temp + localQ;
+
+        if ( tid_z == 0 ) {
+            printf("p %d %d %d %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value]);
+        }
     }
 }
 
@@ -661,6 +671,10 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         P[tid_z * DIM_X * DIM_X + x_value] =
             s_P[xx_idx + (x_value)] + temp;
+
+        if ( tid_z == 0 ) {
+            printf("u %d %d %d %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value]);
+        }
     }
 }
 

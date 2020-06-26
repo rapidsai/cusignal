@@ -9,7 +9,7 @@ import itertools
 
 dim_x = 4
 dim_z = 2
-loops = 50
+loops = 1
 
 
 def run_test(num_points, iterations, numba, dt):
@@ -32,10 +32,10 @@ def run_test(num_points, iterations, numba, dt):
     # State Space Equations
     F = np.array(
         [
-            [1.0, 0.0, 1.0, 0.0],  # x = x0 + v_x*dt
-            [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
-            [0.0, 0.0, 1.0, 0.0],  # dx = v_x
-            [1.0, 0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0, 99.0],  # x = x0 + v_x*dt
+            [0.0, 1.0, 99.0, 1.0],  # y = y0 + v_y*dt
+            [0.0, 99.0, 1.0, 0.0],  # dx = v_x
+            [1.0, 0.0, 99.0, 1.0],
         ],  # dy = v_y
         dtype=dt,
     )
@@ -106,6 +106,8 @@ def run_test(num_points, iterations, numba, dt):
     start = time.time()
     for _ in range(loops):
         for i in range(iterations):
+            print("iteration =", i)
+            print()
 
             cuS.predict()
 
@@ -134,10 +136,10 @@ def run_test(num_points, iterations, numba, dt):
     del cuS
 
 
-num_points = [2 ** 12, 2 ** 16, 2 ** 17, 2 ** 18]
-iterations = [100]
+num_points = [2 ** 18]
+iterations = [2]
 numba = [True, False]
-dt = [np.float32, np.float64]
+dt = [np.float64]
 
 for p, i, n, d in itertools.product(num_points, iterations, numba, dt):
     run_test(p, i, n, d)
