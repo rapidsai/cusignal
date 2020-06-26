@@ -131,7 +131,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
         P[z_idx, x, y] = alpha_sq * temp + local_Q
 
         if z_idx == 0:
-            print("p", z_idx, x, y, P[z_idx, x, y], s_A[xx_idx + x_key], x_in[z_idx, x, y])
+            print("p", z_idx, x, y, P[z_idx, x, y], s_A[xx_idx + x_key], s_F[xx_idx + x_key], x_in[z_idx, x, y], )
 
 
 def _numba_update(x_in, z_in, H, P, R):
@@ -421,7 +421,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
     const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
 
-    const int x_value { ty * DIM_X + tx };
+    const int x_value { tx * DIM_X + ty };
 
     for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
@@ -451,8 +451,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_F[xx_idx + (ty * DIM_X + j)] *
-                s_P[xx_idx + (tx * DIM_X + j)];
+            temp += s_F[xx_idx + (tx * DIM_X + j)] *
+                s_P[xx_idx + (ty * DIM_X + j)];
         }
         s_A[xx_idx + x_value] = temp;
 
@@ -461,15 +461,15 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_A[xx_idx + (ty * DIM_X + j)] *
-                s_F[xx_idx + (tx * DIM_X + j)];
+            temp += s_A[xx_idx + (tx * DIM_X + j)] *
+                s_F[xx_idx + (ty * DIM_X + j)];
         }
 
         P[tid_z * DIM_X * DIM_X + x_value] =
             alpha2 * temp + localQ;
 
         if ( tid_z == 0 ) {
-            printf("p %d %d %d %f %f %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value], s_A[xx_idx + x_value], x_in[tid_z * DIM_X * 1 + ty * 1 + tx]);
+            printf("p %d %d %d %f %f %f %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value], s_A[xx_idx + x_value], s_F[xx_idx + x_value], x_in[tid_z * DIM_X * 1 + ty * 1 + tx]);
         }
     }
 }
