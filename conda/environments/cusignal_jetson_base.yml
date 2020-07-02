@@ -6,7 +6,7 @@ channels:
   - numba
   - c4aarch64
 dependencies:
-  - scipy
+  - scipy>=1.4.0,<1.5.0
   - numpy
   - matplotlib
   - numba>=0.49

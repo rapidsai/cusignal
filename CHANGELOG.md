@@ -19,6 +19,7 @@
 - PR #127 - Fix selected documentation formatting errors
 - PR #138 - Fix overflow issues in `upfirdn`
 - PR #139 - Fixes packaging of python package
+- PR #143 - Fix six package missing with Scipy 1.5
 
 
 # cuSignal 0.14 (03 Jun 2020)
