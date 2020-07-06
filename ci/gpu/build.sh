@@ -44,7 +44,7 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
-    "scipy>=1.3.0" \
+    "scipy>=1.4.0,<1.5.0" \
     "numpy>=1.17.3" \
     boost \
     "numba>=0.49.0" \
