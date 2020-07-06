@@ -26,7 +26,6 @@ from ..convolution._convolution_cuda import (
     _cupy_correlate_src,
     _cupy_correlate_2d_src,
 )
-from ..spectral_analysis._spectral_cuda import _cupy_lombscargle_src
 from ..io._reader_cuda import _cupy_unpack_src
 from ..io._writer_cuda import _cupy_pack_src
 from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
@@ -35,6 +34,7 @@ from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_2d_src,
 )
 
+dir = '/home/belt/workStuff/rapids/cusignal/python/cusignal'
 
 class GPUKernel(Enum):
     CORRELATE = "correlate"
@@ -196,13 +196,14 @@ def _populate_kernel_cache(np_type, k_type):
         )
 
     elif k_type == GPUKernel.LOMBSCARGLE:
-        src = _cupy_lombscargle_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/spectral_analysis/_spectral.ptx',
+            options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_lombscargle"
+            "_cupy_lombscargle_" + np_type
         )
+        print(module.options)
 
     elif k_type == GPUKernel.UNPACK:
         flag = list(SUPPORTED_TYPES.keys()).index(np_type)
