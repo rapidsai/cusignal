@@ -18,14 +18,6 @@ from enum import Enum
 
 from ._caches import _cupy_kernel_cache
 
-from ..convolution._convolution_cuda import (
-    _cupy_convolve_src,
-    _cupy_convolve_2d_src,
-)
-from ..convolution._convolution_cuda import (
-    _cupy_correlate_src,
-    _cupy_correlate_2d_src,
-)
 from ..io._reader_cuda import _cupy_unpack_src
 from ..io._writer_cuda import _cupy_pack_src
 from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
@@ -34,10 +26,7 @@ from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_2d_src,
 )
 
-dir = '/home/belt/workStuff/rapids/cusignal/cpp/cubin'
-
-# Maximum supported compute capability
-max_cc = 75
+dir = '/home/belt/workStuff/rapids/cusignal/cpp/fatbin'
 
 
 class GPUKernel(Enum):
@@ -164,39 +153,35 @@ def _populate_kernel_cache(np_type, k_type):
         header = ""
 
     if k_type == GPUKernel.CORRELATE:
-        src = _cupy_correlate_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/convolution/_convolution.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_correlate"
+            "_cupy_correlate_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CONVOLVE:
-        src = _cupy_convolve_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/convolution/_convolution.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_convolve"
+            "_cupy_convolve_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CORRELATE2D:
-        src = _cupy_correlate_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/convolution/_convolution.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_correlate_2d"
+            "_cupy_correlate2D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CONVOLVE2D:
-        src = _cupy_convolve_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/convolution/_convolution.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_convolve_2d"
+            "_cupy_convolve2D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.LOMBSCARGLE:

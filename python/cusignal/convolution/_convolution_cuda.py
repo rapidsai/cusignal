@@ -32,65 +32,6 @@ from .convolution_utils import (
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
-_cupy_convolve_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_convolve(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int mode,
-            const bool swapped_inputs,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
-
-        for ( int tid = tx; tid < outW; tid += stride ) {
-
-            ${datatype} temp {};
-
-            if ( mode == 0 ) {  // Valid
-                if ( tid >= 0 && tid < inpW ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        temp += inp[tid + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            } else if ( mode == 1 ) {   // Same
-                const int P1 { kerW / 2 };
-                int start {};
-                if ( !swapped_inputs ) {
-                    start = 0 - P1 + tid;
-                } else {
-                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
-                }
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            } else {    // Full
-                const int P1 { kerW - 1 };
-                int start { 0 - P1 + tid };
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            }
-
-            out[tid] = temp;
-        }
-    }
-}
-"""
-)
-
 _cupy_convolve_2d_src = Template(
     """
 $header
@@ -160,68 +101,6 @@ extern "C" {
                 }
             }
             out[oPixelPos.x * outW + oPixelPos.y] = temp;
-        }
-    }
-}
-"""
-)
-
-_cupy_correlate_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_correlate(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int mode,
-            const bool swapped_inputs,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
-
-        for ( int tid = tx; tid < outW; tid += stride ) {
-            ${datatype} temp {};
-
-            if ( mode == 0 ) {  // Valid
-                if ( tid >= 0 && tid < inpW ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        temp += inp[tid + j] * kernel[j];
-                    }
-                }
-            } else if ( mode == 1 ) {   // Same
-                const int P1 { kerW / 2 };
-                int start {};
-                if ( !swapped_inputs ) {
-                    start = 0 - P1 + tid;
-                } else {
-                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
-                }
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[j];
-                    }
-                }
-            } else {    // Full
-                const int P1 { kerW - 1 };
-                int start { 0 - P1 + tid };
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[j];
-                    }
-                }
-            }
-
-            if (swapped_inputs) {
-                out[outW - tid - 1] = temp; // TODO: Move to shared memory
-            } else {
-                out[tid] = temp;
-            }
         }
     }
 }
