@@ -20,7 +20,6 @@ from ._caches import _cupy_kernel_cache
 
 from ..io._reader_cuda import _cupy_unpack_src
 from ..io._writer_cuda import _cupy_pack_src
-from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
 
 
 dir = '/home/belt/workStuff/rapids/cusignal/cpp/fatbin'
@@ -213,12 +212,18 @@ def _populate_kernel_cache(np_type, k_type):
         )
 
     elif k_type == GPUKernel.SOSFILT:
-        src = _cupy_sosfilt_src.substitute(datatype=c_type, header=header)
+        # src = _cupy_sosfilt_src.substitute(datatype=c_type, header=header)
+        # module = cp.RawModule(
+        #     code=src, options=("-std=c++11", "-use_fast_math")
+        # )
+        # _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
+        #     "_cupy_sosfilt"
+        # )
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/filtering/_sosfilt.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_sosfilt"
+            "_cupy_sosfilt_" + str(np_type)
         )
 
     elif k_type == GPUKernel.UPFIRDN:
