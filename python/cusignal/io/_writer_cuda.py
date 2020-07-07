@@ -13,8 +13,6 @@
 
 import cupy as cp
 
-from string import Template
-
 from ..utils._caches import _cupy_kernel_cache
 
 

@@ -13,14 +13,11 @@
 
 import cupy as cp
 
-from collections import OrderedDict
 from enum import Enum
 
 from ._caches import _cupy_kernel_cache
 
-from ..io._reader_cuda import _cupy_unpack_src
-
-dir = '/home/belt/workStuff/rapids/cusignal/cpp/fatbin'
+dir = "/home/belt/workStuff/rapids/cusignal/cpp/fatbin"
 
 
 class GPUKernel(Enum):
@@ -36,49 +33,29 @@ class GPUKernel(Enum):
     UPFIRDN2D = "upfirdn2d"
 
 
-# Numba type supported and corresponding C type
-_SUPPORTED_TYPES_CONVOLVE = OrderedDict(
-    (
-        ("int32", "int"),
-        ("int64", "long int"),
-        ("float32", "float"),
-        ("float64", "double"),
-        ("complex64", "complex<float>"),
-        ("complex128", "complex<double>"),
-    )
-)
-
-_SUPPORTED_TYPES_LOMBSCARGLE = OrderedDict(
-    (("float32", "float"), ("float64", "double"),)
-)
-
-_SUPPORTED_TYPES_READER = OrderedDict(
-    (
-        ("int8", "char"),
-        ("uint8", "unsigned char"),
-        ("int16", "short"),
-        ("uint16", "unsigned short"),
-        ("int32", "int"),
-        ("uint32", "unsigned int"),
-        ("float32", "float"),
-        ("float64", "double"),
-        ("complex64", "complex<float>"),
-        ("complex128", "complex<double>"),
-    )
-)
-
-_SUPPORTED_TYPES_SOSFILT = OrderedDict(
-    (("float32", "float"), ("float64", "double"),)
-)
-
-_SUPPORTED_TYPES_UPFIRDN = OrderedDict(
-    (
-        ("float32", "float"),
-        ("float64", "double"),
-        ("complex64", "complex<float>"),
-        ("complex128", "complex<double>"),
-    )
-)
+_SUPPORTED_TYPES_CONVOLVE = [
+    "int32",
+    "int64",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
+_SUPPORTED_TYPES_LOMBSCARGLE = ["float32", "float64"]
+_SUPPORTED_TYPES_READER = [
+    "int8",
+    "uint8",
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
+_SUPPORTED_TYPES_SOSFILT = ["float32", "float64"]
+_SUPPORTED_TYPES_UPFIRDN = ["float32", "float64", "complex64", "complex128"]
 
 
 def _get_supported_types(k_type):
@@ -118,7 +95,7 @@ def _validate_input(dtype, k_type):
         # Point to types allowed for kernel
         SUPPORTED_TYPES = _get_supported_types(k)
 
-        d = list(dtype) if dtype else SUPPORTED_TYPES.keys()
+        d = list(dtype) if dtype else SUPPORTED_TYPES
 
         for np_type in d:
 
@@ -129,104 +106,72 @@ def _populate_kernel_cache(np_type, k_type):
 
     SUPPORTED_TYPES = _get_supported_types(k_type)
 
-    # Check dtypes from user input
-    try:
-        c_type = SUPPORTED_TYPES[str(np_type)]
-    except KeyError:
-        raise KeyError(
+    if np_type not in SUPPORTED_TYPES:
+        raise ValueError(
             "Datatype {} not found for '{}'".format(np_type, k_type.value)
         )
 
     if (str(np_type), k_type.value) in _cupy_kernel_cache:
         return
 
-    # Instantiate the cupy kernel for this type and compile
-    if c_type.find("complex") != -1:
-        header = "#include <cupy/complex.cuh>"
-    else:
-        header = ""
-
     if k_type == GPUKernel.CORRELATE:
-        module = cp.RawModule(
-            path=dir + '/convolution/_convolution.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_correlate_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CONVOLVE:
-        module = cp.RawModule(
-            path=dir + '/convolution/_convolution.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_convolve_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CORRELATE2D:
-        module = cp.RawModule(
-            path=dir + '/convolution/_convolution.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_correlate2D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.CONVOLVE2D:
-        module = cp.RawModule(
-            path=dir + '/convolution/_convolution.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_convolve2D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.LOMBSCARGLE:
         module = cp.RawModule(
-            path=dir + '/spectral_analysis/_spectral.fatbin',
+            path=dir + "/spectral_analysis/_spectral.fatbin",
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_lombscargle_" + str(np_type)
         )
 
     elif k_type == GPUKernel.UNPACK:
-        flag = list(SUPPORTED_TYPES.keys()).index(np_type)
-
-        src = _cupy_unpack_src.substitute(
-            datatype=c_type, header=header, flag=flag
-        )
-        module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
-        )
+        module = cp.RawModule(path=dir + "/io/_reader.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_unpack"
+            "_cupy_unpack_" + str(np_type)
         )
 
     elif k_type == GPUKernel.PACK:
-        module = cp.RawModule(
-            path=dir + '/io/_writer.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/io/_writer.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_pack_" + str(np_type)
         )
 
     elif k_type == GPUKernel.SOSFILT:
-        module = cp.RawModule(
-            path=dir + '/filtering/_sosfilt.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/filtering/_sosfilt.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_sosfilt_" + str(np_type)
         )
 
     elif k_type == GPUKernel.UPFIRDN:
-        module = cp.RawModule(
-            path=dir + '/filtering/_upfirdn.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/filtering/_upfirdn.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_upfirdn1D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.UPFIRDN2D:
-        module = cp.RawModule(
-            path=dir + '/filtering/_upfirdn.fatbin',
-        )
+        module = cp.RawModule(path=dir + "/filtering/_upfirdn.fatbin",)
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
             "_cupy_upfirdn2D_" + str(np_type)
         )
