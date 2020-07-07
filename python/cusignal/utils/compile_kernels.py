@@ -36,6 +36,9 @@ from ..filtering._upfirdn_cuda import (
 
 dir = '/home/belt/workStuff/rapids/cusignal/cpp/cubin'
 
+# Maximum supported compute capability
+max_cc = 75
+
 
 class GPUKernel(Enum):
     CORRELATE = "correlate"
@@ -197,22 +200,12 @@ def _populate_kernel_cache(np_type, k_type):
         )
 
     elif k_type == GPUKernel.LOMBSCARGLE:
-        cc = cp.cuda.Device().compute_capability
-
-        if int(cc) > 75:
-            cc = str(75)
-            ftype = '.ptx'
-        else:
-            ftype = '.cubin'
-
         module = cp.RawModule(
-            path=dir + '/spectral_analysis/_spectral.' + cc + ftype,
-            options=("-std=c++11", "-use_fast_math")
+            path=dir + '/spectral_analysis/_spectral.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_lombscargle_" + np_type
+            "_cupy_lombscargle_" + str(np_type)
         )
-        print(module.options)
 
     elif k_type == GPUKernel.UNPACK:
         flag = list(SUPPORTED_TYPES.keys()).index(np_type)
