@@ -21,10 +21,7 @@ from ._caches import _cupy_kernel_cache
 from ..io._reader_cuda import _cupy_unpack_src
 from ..io._writer_cuda import _cupy_pack_src
 from ..filtering._sosfilt_cuda import _cupy_sosfilt_src
-from ..filtering._upfirdn_cuda import (
-    _cupy_upfirdn_1d_src,
-    _cupy_upfirdn_2d_src,
-)
+
 
 dir = '/home/belt/workStuff/rapids/cusignal/cpp/fatbin'
 
@@ -225,21 +222,19 @@ def _populate_kernel_cache(np_type, k_type):
         )
 
     elif k_type == GPUKernel.UPFIRDN:
-        src = _cupy_upfirdn_1d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/filtering/_upfirdn.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_upfirdn_1d"
+            "_cupy_upfirdn1D_" + str(np_type)
         )
 
     elif k_type == GPUKernel.UPFIRDN2D:
-        src = _cupy_upfirdn_2d_src.substitute(datatype=c_type, header=header)
         module = cp.RawModule(
-            code=src, options=("-std=c++11", "-use_fast_math")
+            path=dir + '/filtering/_upfirdn.fatbin',
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
-            "_cupy_upfirdn_2d"
+            "_cupy_upfirdn2D_" + str(np_type)
         )
 
     else:

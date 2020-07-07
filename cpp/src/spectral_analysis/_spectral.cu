@@ -11,6 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+///////////////////////////////////////////////////////////////////////////////
+//                            LOMBSCARGLE                                    //
+///////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 __device__ void _cupy_lombscargle(
 		const int x_shape,

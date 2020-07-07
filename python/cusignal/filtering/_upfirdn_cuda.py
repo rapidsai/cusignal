@@ -14,7 +14,6 @@
 import cupy as cp
 
 from math import ceil
-from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
 
@@ -42,117 +41,6 @@ def _output_len(len_h, in_len, up, down):
     if nt % down > 0:
         need += 1
     return need
-
-
-# Custom Cupy raw kernel implementing upsample, filter, downsample operation
-# Matthew Nicely - mnicely@nvidia.com
-_cupy_upfirdn_1d_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_upfirdn_1d(
-            const ${datatype} * __restrict__ inp,
-            const ${datatype} * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int axis,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int t {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
-
-        for ( size_t tid = t; tid < outW; tid += stride ) {
-            int x_idx { static_cast<int>((tid * down) / up) % padded_len };
-            int h_idx { (tid * down) % up * h_per_phase };
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-
-            if ( x_conv_idx < 0 ) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            ${datatype} temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if ( x_c < x_shape_a && x_c >= 0 ) {
-                    temp += inp[x_c] * h_trans_flip[h_idx];
-                }
-                h_idx += 1;
-            }
-            out[tid] = temp;
-        }
-    }
-}
-"""
-)
-
-_cupy_upfirdn_2d_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_upfirdn_2d(
-            const ${datatype} * __restrict__ inp,
-            const int inpH,
-            const ${datatype} * __restrict__ h_trans_flip,
-            const int up,
-            const int down,
-            const int axis,
-            const int x_shape_a,
-            const int h_per_phase,
-            const int padded_len,
-            ${datatype} * __restrict__ out,
-            const int outW,
-            const int outH) {
-
-
-        const int ty {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int tx {
-            static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y) };
-
-        if ( (tx < outH) && (ty < outW) ) {
-            int x_idx {};
-            int h_idx {};
-
-            if ( axis == 1 ) {
-                x_idx = ( static_cast<int>(tx * down) / up ) % padded_len;
-                h_idx = (tx * down) % up * h_per_phase;
-            } else {
-                x_idx = ( static_cast<int>(ty * down) / up ) % padded_len;
-                h_idx = (ty * down) % up * h_per_phase;
-            }
-
-            int x_conv_idx { x_idx - h_per_phase + 1 };
-            if ( x_conv_idx < 0 ) {
-                h_idx -= x_conv_idx;
-                x_conv_idx = 0;
-            }
-
-            ${datatype} temp {};
-
-            for ( int x_c = x_conv_idx; x_c < (x_idx + 1); x_c++ ) {
-                if ( x_c < x_shape_a && x_c >= 0 ) {
-                    if (axis == 1) {
-                        temp += inp[ty * inpH + x_c] * h_trans_flip[h_idx];
-                    } else {
-                        temp += inp[x_c * inpH + tx] * h_trans_flip[h_idx];
-                    }
-                }
-                h_idx += 1;
-            }
-            out[ty * outH + tx] = temp;
-        }
-    }
-}
-"""
-)
 
 
 class _cupy_upfirdn_wrapper(object):
