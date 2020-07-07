@@ -2,11 +2,13 @@
 # cuSignal 0.15.0 (Date TBD)
 
 ## New Features
+- PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
 - PR #136 - Split reader and writer in IO packages and update docs
 - PR #146 - Add compatibility with Scipy 1.5.0
 - PR #148 - Load fatbin at runtime
+- PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
 
 ## Improvements
 - PR #112 - Remove Numba kernels
