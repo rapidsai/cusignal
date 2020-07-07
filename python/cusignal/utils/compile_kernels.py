@@ -34,7 +34,8 @@ from ..filtering._upfirdn_cuda import (
     _cupy_upfirdn_2d_src,
 )
 
-dir = '/home/belt/workStuff/rapids/cusignal/python/cusignal'
+dir = '/home/belt/workStuff/rapids/cusignal/cpp/cubin'
+
 
 class GPUKernel(Enum):
     CORRELATE = "correlate"
@@ -196,8 +197,16 @@ def _populate_kernel_cache(np_type, k_type):
         )
 
     elif k_type == GPUKernel.LOMBSCARGLE:
+        cc = cp.cuda.Device().compute_capability
+
+        if int(cc) > 75:
+            cc = str(75)
+            ftype = '.ptx'
+        else:
+            ftype = '.cubin'
+
         module = cp.RawModule(
-            path=dir + '/spectral_analysis/_spectral.ptx',
+            path=dir + '/spectral_analysis/_spectral.' + cc + ftype,
             options=("-std=c++11", "-use_fast_math")
         )
         _cupy_kernel_cache[(str(np_type), k_type.value)] = module.get_function(
