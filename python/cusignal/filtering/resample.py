@@ -416,7 +416,7 @@ def upfirdn(
     h, x, up=1, down=1, axis=-1,
 ):
     """
-    Upsample, FIR filter, and downsample
+    Upsample, FIR filter, and downsample.
 
     Parameters
     ----------
@@ -444,12 +444,16 @@ def upfirdn(
     -----
     The algorithm is an implementation of the block diagram shown on page 129
     of the Vaidyanathan text [1]_ (Figure 4.3-8d).
-    .. [1] P. P. Vaidyanathan, Multirate Systems and Filter Banks,
-       Prentice Hall, 1993.
+
     The direct approach of upsampling by factor of P with zero insertion,
     FIR filtering of length ``N``, and downsampling by factor of Q is
     O(N*Q) per output sample. The polyphase implementation used here is
     O(N/P).
+
+    References
+    ----------
+    .. [1] P. P. Vaidyanathan, Multirate Systems and Filter Banks,
+       Prentice Hall, 1993.
 
     Examples
     --------
