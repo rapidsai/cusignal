@@ -42,7 +42,7 @@ nvidia-smi
 
 logger "Activate conda env..."
 source activate gdf
-conda install -c rapidsai -c rapidsai-nightly -c nvidia -c pytorch -c conda-forge \
+conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
     "scipy>=1.3.0" \
     "numpy>=1.17.3" \
@@ -52,7 +52,6 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c pytorch -c conda-forg
     pytest-benchmark \
     "ipython=7.3*" \
     jupyterlab \
-    "pytorch>=1.4" \
     matplotlib
 
 logger "Check versions..."
@@ -66,7 +65,7 @@ conda list
 ################################################################################
 
 logger "Build cusignal..."
-$WORKSPACE/build.sh clean cusignal
+#$WORKSPACE/build.sh clean cusignal
 
 ################################################################################
 # TEST - Run GoogleTest and py.tests for cusignal
@@ -78,12 +77,15 @@ if hasArg --skip-tests; then
 fi
 
 logger "Check GPU usage..."
-nvidia-smi
+#nvidia-smi
 
 logger "Python pytest for cusignal..."
-cd $WORKSPACE/python
+#cd $WORKSPACE/python
 
-pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+#pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+
+conda remove -y openblas nomkl
+conda install -y -c pytorch "pytorch>=1.4"
 
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
