@@ -18,32 +18,6 @@ from string import Template
 from ..utils._caches import _cupy_kernel_cache
 
 
-# Custom Cupy raw kernel implementing binary writers
-# Matthew Nicely - mnicely@nvidia.com
-_cupy_pack_src = Template(
-    """
-${header}
-
-extern "C" {
-
-    __global__ void _cupy_pack(
-        const size_t N,
-        ${datatype} * __restrict__ input,
-        unsigned char * __restrict__ output) {
-
-         const int tx {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
-
-        for ( int tid = tx; tid < N; tid += stride ) {
-            output[tid] = reinterpret_cast<unsigned char*>(input)[tid];
-        }
-    }
-}
-"""
-)
-
-
 class _cupy_pack_wrapper(object):
     def __init__(self, grid, block, kernel):
         if isinstance(grid, int):

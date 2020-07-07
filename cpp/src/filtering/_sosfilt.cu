@@ -11,10 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <thrust/complex.h>
-
 ///////////////////////////////////////////////////////////////////////////////
-//                              UPFIRDN1D                                    //
+//                                SOSFILT                                    //
 ///////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
