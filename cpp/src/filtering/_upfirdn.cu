@@ -34,7 +34,7 @@ __device__ void _cupy_upfirdn1D( const T *__restrict__ inp,
 
     for ( size_t tid = t; tid < outW; tid += stride ) {
         int x_idx { static_cast<int>( ( tid * down ) / up ) % padded_len };
-        int h_idx { ( tid * down ) % up * h_per_phase };
+        int h_idx { static_cast<int>( ( tid * down ) % up * h_per_phase ) };
         int x_conv_idx { x_idx - h_per_phase + 1 };
 
         if ( x_conv_idx < 0 ) {

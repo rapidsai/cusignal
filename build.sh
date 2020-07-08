@@ -18,7 +18,7 @@ ARGS=$*
 # script, and that this script resides in the repo dir!
 REPODIR=$(cd $(dirname $0); pwd)
 
-VALIDARGS="clean cusignal -v -g -n --allgpuarch -h"
+VALIDARGS="clean cusignal -v -g -n -p --allgpuarch -h"
 HELP="$0 [clean] [cusignal] [-v] [-g] [-n] [--allgpuarch] [-h]
    clean        - remove all existing build artifacts and configuration (start
                   over)
@@ -26,6 +26,7 @@ HELP="$0 [clean] [cusignal] [-v] [-g] [-n] [--allgpuarch] [-h]
    -v           - verbose build mode
    -g           - build for debug
    -n           - no install step
+   -p           - Pass Xptxas options
    --allgpuarch - build for all supported GPU architectures
    -h           - print this text
 
@@ -104,6 +105,46 @@ else
     GPU_ARCH="-DGPU_ARCHS=ALL"
     echo "Building for *ALL* supported GPU architectures..."
 fi
+
+################################################################################
+# Build fatbins
+SRC="cpp/src"
+FAT="cpp/fatbin"
+FLAGS="-std=c++11"
+
+if hasArg -p; then
+    FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
+fi
+
+GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
+--generate-code arch=compute_35,code=sm_37 \
+--generate-code arch=compute_50,code=sm_50 \
+--generate-code arch=compute_50,code=sm_52 \
+--generate-code arch=compute_53,code=sm_53 \
+--generate-code arch=compute_60,code=sm_60 \
+--generate-code arch=compute_61,code=sm_61 \
+--generate-code arch=compute_62,code=sm_62 \
+--generate-code arch=compute_70,code=sm_70 \
+--generate-code arch=compute_72,code=sm_72 \
+--generate-code arch=compute_75,code=[sm_75,compute_75]"
+
+echo "Building Convolution kernels..."
+mkdir -p ${FAT}/convolution/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/convolution/_convolution.cu -odir ${FAT}/convolution/
+
+echo "Building Filtering kernels..."
+mkdir -p ${FAT}/filtering/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/filtering/_upfirdn.cu -odir ${FAT}/filtering/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/filtering/_sosfilt.cu -odir ${FAT}/filtering/
+
+echo "Building IO kernels..."
+mkdir -p ${FAT}/io/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/io/_reader.cu -odir ${FAT}/io/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/io/_writer.cu -odir ${FAT}/io/
+
+echo "Building Spectral kernels..."
+mkdir -p ${FAT}/spectral_analysis/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/spectral_analysis/_spectral.cu -odir ${FAT}/spectral_analysis/
 
 ################################################################################
 # Build and install the cusignal Python package
