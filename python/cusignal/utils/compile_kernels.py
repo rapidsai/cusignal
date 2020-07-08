@@ -258,10 +258,10 @@ def precompile_kernels(k_type=None, dtype=None):
     """
 
     warnings.warn(
-            "precompile_kernels() will be removed in a later release",
-            FutureWarning,
-            stacklevel=2,
-        )
+        "precompile_kernels() will be removed in a later release",
+        FutureWarning,
+        stacklevel=2,
+    )
 
     if k_type is not None and not isinstance(k_type, str):
         raise TypeError(

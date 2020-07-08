@@ -81,24 +81,14 @@ class BenchSignaltools:
             )
 
         def bench_resample_poly_gpu(
-            self,
-            linspace_data_gen,
-            benchmark,
-            num_samps,
-            up,
-            down,
-            window,
+            self, linspace_data_gen, benchmark, num_samps, up, down, window,
         ):
 
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
             )
             output = benchmark(
-                cusignal.resample_poly,
-                gpu_sig,
-                up,
-                down,
-                window=window,
+                cusignal.resample_poly, gpu_sig, up, down, window=window,
             )
 
             key = self.cpu_version(cpu_sig, up, down, window)
@@ -122,23 +112,12 @@ class BenchSignaltools:
             )
 
         def bench_upfirdn_gpu(
-            self,
-            rand_data_gen,
-            benchmark,
-            num_samps,
-            up,
-            down,
-            axis,
+            self, rand_data_gen, benchmark, num_samps, up, down, axis,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = benchmark(
-                cusignal.upfirdn,
-                [1, 1, 1],
-                gpu_sig,
-                up,
-                down,
-                axis,
+                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -162,23 +141,12 @@ class BenchSignaltools:
             )
 
         def bench_upfirdn2d_gpu(
-            self,
-            rand_2d_data_gen,
-            benchmark,
-            num_samps,
-            up,
-            down,
-            axis,
+            self, rand_2d_data_gen, benchmark, num_samps, up, down, axis,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = benchmark(
-                cusignal.upfirdn,
-                [1, 1, 1],
-                gpu_sig,
-                up,
-                down,
-                axis,
+                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -465,7 +433,7 @@ class BenchSignaltools:
             order,
             dtype,
         ):
-            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output='sos')
+            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
             cpu_sig = np.random.rand(num_signals, num_samps)
             cpu_sig = np.array(cpu_sig, dtype=dtype)
@@ -481,18 +449,14 @@ class BenchSignaltools:
             dtype,
         ):
 
-            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output='sos')
+            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
             gpu_sos = cp.asarray(cpu_sos)
             cpu_sig = np.random.rand(num_signals, num_samps)
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
-            output = benchmark(
-                cusignal.sosfilt,
-                gpu_sos,
-                gpu_sig,
-            )
+            output = benchmark(cusignal.sosfilt, gpu_sos, gpu_sig,)
 
             key = self.cpu_version(cpu_sos, cpu_sig)
             assert array_equal(cp.asnumpy(output), key)

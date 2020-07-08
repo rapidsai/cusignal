@@ -205,9 +205,7 @@ class TestSpectral:
         )
 
         gpu_lombscargle = cp.asnumpy(
-            cusignal.lombscargle(
-                gpu_x, gpu_y, gpu_f, precenter, normalize,
-            )
+            cusignal.lombscargle(gpu_x, gpu_y, gpu_f, precenter, normalize,)
         )
 
         assert array_equal(cpu_lombscargle, gpu_lombscargle)
