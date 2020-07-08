@@ -84,7 +84,7 @@ logger "Python pytest for cusignal..."
 
 #pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
 
-conda remove -y openblas nomkl
+conda remove -y blas nomkl
 conda install -y -c pytorch "pytorch>=1.4"
 
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
