@@ -12,10 +12,14 @@
 # limitations under the License.
 
 import cupy as cp
+import warnings
 
 from enum import Enum
 
 from ._caches import _cupy_kernel_cache
+
+# Display FutureWarnings only once per module
+warnings.simplefilter("once", FutureWarning)
 
 dir = "/../../cpp/fatbin"
 
@@ -252,6 +256,12 @@ def precompile_kernels(k_type=None, dtype=None):
     >>> cusignal.precompile_kernels('convolve2d', [np.float64])
     >>> cusignal.precompile_kernels('correlate', [np.float64])
     """
+
+    warnings.warn(
+            "precompile_kernels() will be removed in a later release",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     if k_type is not None and not isinstance(k_type, str):
         raise TypeError(
