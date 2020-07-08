@@ -129,22 +129,26 @@ GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
 --generate-code arch=compute_75,code=[sm_75,compute_75]"
 
 echo "Building Convolution kernels..."
-mkdir -p ${FAT}/convolution/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/convolution/_convolution.cu -odir ${FAT}/convolution/
+FOLDER="convolution"
+mkdir -p ${FAT}//${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_convolution.cu -odir ${FAT}/${FOLDER}/
 
 echo "Building Filtering kernels..."
-mkdir -p ${FAT}/filtering/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/filtering/_upfirdn.cu -odir ${FAT}/filtering/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/filtering/_sosfilt.cu -odir ${FAT}/filtering/
+FOLDER="filtering"
+mkdir -p ${FAT}/${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/
 
 echo "Building IO kernels..."
-mkdir -p ${FAT}/io/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/io/_reader.cu -odir ${FAT}/io/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/io/_writer.cu -odir ${FAT}/io/
+FOLDER="io"
+mkdir -p ${FAT}//${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/
 
 echo "Building Spectral kernels..."
-mkdir -p ${FAT}/spectral_analysis/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/spectral_analysis/_spectral.cu -odir ${FAT}/spectral_analysis/
+FOLDER="spectral_analysis"
+mkdir -p ${FAT}//${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/
 
 ################################################################################
 # Build and install the cusignal Python package
