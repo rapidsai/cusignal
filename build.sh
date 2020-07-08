@@ -26,7 +26,7 @@ HELP="$0 [clean] [cusignal] [-v] [-g] [-n] [--allgpuarch] [-h]
    -v           - verbose build mode
    -g           - build for debug
    -n           - no install step
-   -p           - Pass Xptxas options
+   -p           - Pass additional Xptxas options
    --allgpuarch - build for all supported GPU architectures
    -h           - print this text
 
@@ -109,7 +109,7 @@ fi
 ################################################################################
 # Build fatbins
 SRC="cpp/src"
-FAT="cpp/fatbin"
+FAT="cpp/fatbin/"
 FLAGS="-std=c++11"
 
 if hasArg -p; then

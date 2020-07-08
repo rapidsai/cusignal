@@ -15,13 +15,12 @@ import cupy as cp
 import warnings
 
 from enum import Enum
+from pathlib import Path
 
 from ._caches import _cupy_kernel_cache
 
 # Display FutureWarnings only once per module
 warnings.simplefilter("once", FutureWarning)
-
-dir = "/../../cpp/fatbin"
 
 
 class GPUKernel(Enum):
@@ -117,6 +116,12 @@ def _populate_kernel_cache(np_type, k_type):
 
     if (str(np_type), k_type.value) in _cupy_kernel_cache:
         return
+
+    mod_path = Path(__file__).parent
+    relative_path = '..'
+
+    dir = str((mod_path / relative_path).resolve())
+    print(dir)
 
     if k_type == GPUKernel.CORRELATE:
         module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)
