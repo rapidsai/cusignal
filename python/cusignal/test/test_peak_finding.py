@@ -11,32 +11,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-import cusignal
-import numpy as np
-import pytest
+# import cupy as cp
+# import cusignal
+# import numpy as np
+# import pytest
 
-from cusignal.test.utils import array_equal
-from scipy import signal
+# from cusignal.test.utils import array_equal
+# from scipy import signal
 
-# Missing
-# argrelmin
-# argrelmax
-# argrelextrema
+# # Missing
+# # argrelmin
+# # argrelmax
+# # argrelextrema
 
 
-class TestPeakFinding:
-    def test_argrelmin(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+# class TestPeakFinding:
+#     def test_argrelmin(self):
+#         cpu_window = 0
+#         gpu_window = 0
+#         assert array_equal(cpu_window, gpu_window)
 
-    def test_argrelmax(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+#     def test_argrelmax(self):
+#         cpu_window = 0
+#         gpu_window = 0
+#         assert array_equal(cpu_window, gpu_window)
 
-    def test_argrelextrema(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+#     def test_argrelextrema(self):
+#         cpu_window = 0
+#         gpu_window = 0
+#         assert array_equal(cpu_window, gpu_window)

@@ -35,10 +35,10 @@ class TestFiltering:
         gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
         assert array_equal(cpu_wfilt, gpu_wfilt)
 
-    def test_lfiltic(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_lfiltic(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
     @pytest.mark.parametrize("num_samps", [100])
@@ -74,15 +74,15 @@ class TestFiltering:
         gpu_hilbert2 = cp.asnumpy(cusignal.hilbert2(gpu_sig))
         assert array_equal(cpu_hilbert2, gpu_hilbert2)
 
-    def test_detrend(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_detrend(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
 
-    def test_freq_shift(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_freq_shift(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])

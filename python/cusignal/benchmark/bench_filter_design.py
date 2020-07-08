@@ -13,7 +13,8 @@
 
 import cupy as cp
 import cusignal
-import numpy as np
+
+# import numpy as np
 import pytest
 
 from cusignal.test.utils import array_equal
@@ -51,47 +52,47 @@ class BenchFilterDesign:
             key = self.cpu_version(num_samps, f1, f2)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="KaiserBeta")
-    class BenchKaiserBeta:
-        def cpu_version(self, cpu_sig):
-            return signal.kaiser_beta(cpu_sig)
+    # @pytest.mark.benchmark(group="KaiserBeta")
+    # class BenchKaiserBeta:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.kaiser_beta(cpu_sig)
 
-        def bench_kaiser_beta_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_kaiser_beta_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_kaiser_beta_gpu(self, benchmark):
+    #     def bench_kaiser_beta_gpu(self, benchmark):
 
-            output = benchmark(cusignal.kaiser_beta, gpu_sig)
+    #         output = benchmark(cusignal.kaiser_beta, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="KaiserAtten")
-    class BenchKaiserAtten:
-        def cpu_version(self, cpu_sig):
-            return signal.kaiser_atten(cpu_sig)
+    # @pytest.mark.benchmark(group="KaiserAtten")
+    # class BenchKaiserAtten:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.kaiser_atten(cpu_sig)
 
-        def bench_kaiser_atten_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_kaiser_atten_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_kaiser_atten_gpu(self, benchmark):
+    #     def bench_kaiser_atten_gpu(self, benchmark):
 
-            output = benchmark(cusignal.kaiser_atten, gpu_sig)
+    #         output = benchmark(cusignal.kaiser_atten, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="CmplxSort")
-    class BenchCmplxSort:
-        def cpu_version(self, cpu_sig):
-            return signal.cmplx_sort(cpu_sig)
+    # @pytest.mark.benchmark(group="CmplxSort")
+    # class BenchCmplxSort:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.cmplx_sort(cpu_sig)
 
-        def bench_cmplx_sort_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_cmplx_sort_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_cmplx_sort_gpu(self, benchmark):
+    #     def bench_cmplx_sort_gpu(self, benchmark):
 
-            output = benchmark(cusignal.cmplx_sort, gpu_sig)
+    #         output = benchmark(cusignal.cmplx_sort, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)

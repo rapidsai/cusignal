@@ -47,20 +47,20 @@ class BenchFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Lfiltic")
-    class BenchLfiltic:
-        def cpu_version(self, cpu_sig):
-            return signal.lfiltic(cpu_sig)
+    # @pytest.mark.benchmark(group="Lfiltic")
+    # class BenchLfiltic:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.lfiltic(cpu_sig)
 
-        def bench_lfiltic_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_lfiltic_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_lfiltic_gpu(self, benchmark):
+    #     def bench_lfiltic_gpu(self, benchmark):
 
-            output = benchmark(cusignal.lfiltic, gpu_sig)
+    #         output = benchmark(cusignal.lfiltic, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64, 128, 256, 512])
@@ -146,35 +146,35 @@ class BenchFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Detrend")
-    class BenchDetrend:
-        def cpu_version(self, cpu_sig):
-            return signal.detrend(cpu_sig)
+    # @pytest.mark.benchmark(group="Detrend")
+    # class BenchDetrend:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.detrend(cpu_sig)
 
-        def bench_detrend_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_detrend_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_detrend_gpu(self, benchmark):
+    #     def bench_detrend_gpu(self, benchmark):
 
-            output = benchmark(cusignal.detrend, gpu_sig)
+    #         output = benchmark(cusignal.detrend, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="FreqShift")
-    class BenchFreqShift:
-        def cpu_version(self, cpu_sig):
-            return signal.freq_shift(cpu_sig)
+    # @pytest.mark.benchmark(group="FreqShift")
+    # class BenchFreqShift:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.freq_shift(cpu_sig)
 
-        def bench_freq_shift_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_freq_shift_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_freq_shift_gpu(self, benchmark):
+    #     def bench_freq_shift_gpu(self, benchmark):
 
-            output = benchmark(cusignal.detrend, gpu_sig)
+    #         output = benchmark(cusignal.detrend, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])

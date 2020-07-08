@@ -61,7 +61,7 @@ class TestWavelets:
 
         assert array_equal(cpu_cwt, gpu_cwt)
 
-    def test_qmf(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_qmf(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)

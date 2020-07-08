@@ -111,17 +111,17 @@ class BenchWavelets:
             key = self.cpu_version(cpu_sig, wavelet, widths)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Qmf")
-    class BenchQmf:
-        def cpu_version(self, cpu_sig):
-            return signal.qmf(cpu_sig)
+    # @pytest.mark.benchmark(group="Qmf")
+    # class BenchQmf:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.qmf(cpu_sig)
 
-        def bench_qmf_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_qmf_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_qmf_gpu(self, benchmark):
+    #     def bench_qmf_gpu(self, benchmark):
 
-            output = benchmark(cusignal.qmf, gpu_sig)
+    #         output = benchmark(cusignal.qmf, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)

@@ -213,7 +213,7 @@ class TestSpectral:
 
         assert array_equal(cpu_coherence, gpu_coherence)
 
-    def test_vectorstrength(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_vectorstrength(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)

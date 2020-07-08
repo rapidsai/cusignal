@@ -418,17 +418,17 @@ class BenchSpectral:
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Vectorstrength")
-    class BenchVectorstrength:
-        def cpu_version(self, cpu_sig):
-            return signal.vectorstrength(cpu_sig)
+    # @pytest.mark.benchmark(group="Vectorstrength")
+    # class BenchVectorstrength:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.vectorstrength(cpu_sig)
 
-        def bench_vectorstrength_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     def bench_vectorstrength_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        def bench_vectorstrength_gpu(self, benchmark):
+    #     def bench_vectorstrength_gpu(self, benchmark):
 
-            output = benchmark(cusignal.vectorstrength, gpu_sig)
+    #         output = benchmark(cusignal.vectorstrength, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)

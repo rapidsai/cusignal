@@ -35,17 +35,17 @@ class TestFilterDesign:
         )
         assert array_equal(cpu_window, gpu_window)
 
-    def test_kaiser_beta(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_kaiser_beta(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
 
-    def test_kaiser_atten(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_kaiser_atten(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
 
-    def test_cmplx_sort(self):
-        cpu_window = 0
-        gpu_window = 0
-        assert array_equal(cpu_window, gpu_window)
+    # def test_cmplx_sort(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)

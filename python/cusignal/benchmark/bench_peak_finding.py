@@ -11,62 +11,62 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-import cusignal
-import numpy as np
-import pytest
+# import cupy as cp
+# import cusignal
+# import numpy as np
+# import pytest
 
-from cusignal.test.utils import array_equal
-from scipy import signal
+# from cusignal.test.utils import array_equal
+# from scipy import signal
 
-# Missing
-# argrelmin
-# argrelmax
-# argrelextrema
+# # Missing
+# # argrelmin
+# # argrelmax
+# # argrelextrema
 
 
-class BenchPeakFinding:
-    @pytest.mark.benchmark(group="Argrelmin")
-    class BenchArgrelmin:
-        def cpu_version(self, cpu_sig):
-            return signal.argrelmin(cpu_sig)
+# class BenchPeakFinding:
+#     @pytest.mark.benchmark(group="Argrelmin")
+#     class BenchArgrelmin:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelmin(cpu_sig)
 
-        def bench_argrelmin_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+#         def bench_argrelmin_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
 
-        def bench_argrelmin_gpu(self, benchmark):
+#         def bench_argrelmin_gpu(self, benchmark):
 
-            output = benchmark(cusignal.argrelmin, gpu_sig)
+#             output = benchmark(cusignal.argrelmin, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Argrelmax")
-    class BenchArgrelmax:
-        def cpu_version(self, cpu_sig):
-            return signal.argrelmax(cpu_sig)
+#     @pytest.mark.benchmark(group="Argrelmax")
+#     class BenchArgrelmax:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelmax(cpu_sig)
 
-        def bench_argrelmax_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+#         def bench_argrelmax_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
 
-        def bench_argrelmax_gpu(self, benchmark):
+#         def bench_argrelmax_gpu(self, benchmark):
 
-            output = benchmark(cusignal.argrelmax, gpu_sig)
+#             output = benchmark(cusignal.argrelmax, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Argrelextrema")
-    class BenchArgrelextrema:
-        def cpu_version(self, cpu_sig):
-            return signal.argrelextrema(cpu_sig)
+#     @pytest.mark.benchmark(group="Argrelextrema")
+#     class BenchArgrelextrema:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelextrema(cpu_sig)
 
-        def bench_argrelextrema_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+#         def bench_argrelextrema_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
 
-        def bench_argrelextrema_gpu(self, benchmark):
+#         def bench_argrelextrema_gpu(self, benchmark):
 
-            output = benchmark(cusignal.argrelextrema, gpu_sig)
+#             output = benchmark(cusignal.argrelextrema, gpu_sig)
 
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
