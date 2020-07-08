@@ -17,7 +17,7 @@ from enum import Enum
 
 from ._caches import _cupy_kernel_cache
 
-dir = "/home/belt/workStuff/rapids/cusignal/cpp/fatbin"
+dir = "/../../cpp/fatbin"
 
 
 class GPUKernel(Enum):
