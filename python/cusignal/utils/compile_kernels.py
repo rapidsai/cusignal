@@ -121,7 +121,6 @@ def _populate_kernel_cache(np_type, k_type):
     relative_path = '..'
 
     dir = str((mod_path / relative_path).resolve())
-    print(dir)
 
     if k_type == GPUKernel.CORRELATE:
         module = cp.RawModule(path=dir + "/convolution/_convolution.fatbin",)

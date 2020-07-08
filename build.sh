@@ -109,7 +109,7 @@ fi
 ################################################################################
 # Build fatbins
 SRC="cpp/src"
-FAT="cpp/fatbin/"
+FAT="python/cusignal"
 FLAGS="-std=c++11"
 
 if hasArg -p; then
@@ -149,6 +149,8 @@ echo "Building Spectral kernels..."
 FOLDER="spectral_analysis"
 mkdir -p ${FAT}//${FOLDER}/
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/ &
+
+wait
 
 ################################################################################
 # Build and install the cusignal Python package
