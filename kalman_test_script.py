@@ -26,39 +26,39 @@ def run_test(num_points, iterations, numba, dt):
     f_fpy = filterpy.kalman.KalmanFilter(dim_x=4, dim_z=2)
 
     initial_location = np.array(
-        # [[10.0, 10.0, -99.0, -99.0]], dtype=dt
-        [[10.0, 10.0, 0.0, 0.0]], dtype=dt
+        [[10.0, 10.0, -99.0, -99.0]], dtype=dt
+        # [[10.0, 10.0, 0.0, 0.0]], dtype=dt
     ).T  # x, y, v_x, v_y
 
     # State Space Equations
     F = np.array(
         [
-            # [1.1, 0.2, -1.3, 99.4],  # x = x0 + v_x*dt
-            # [0.1, -1.2, 99.3, 1.4],  # y = y0 + v_y*dt
-            # [0.1, 99.2, -1.3, 0.4],  # dx = v_x
-            # [1.1, -0.2, 99.3, -1.4],
-            [1.0, 0.0, 1.0, 0.0],  # x = x0 + v_x*dt
-            [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
-            [0.0, 0.0, 1.0, 0.0],  # dx = v_x
-            [1.0, 0.0, 0.0, 1.0],
+            [1.1, 0.2, -1.3, 99.4],  # x = x0 + v_x*dt
+            [0.1, -1.2, 99.3, 1.4],  # y = y0 + v_y*dt
+            [0.1, 99.2, -1.3, 0.4],  # dx = v_x
+            [1.1, -0.2, 99.3, -1.4],
+            # [1.0, 0.0, 1.0, 0.0],  # x = x0 + v_x*dt
+            # [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
+            # [0.0, 0.0, 1.0, 0.0],  # dx = v_x
+            # [1.0, 0.0, 0.0, 1.0],
         ],  # dy = v_y
         dtype=dt,
     )
 
     # Observability Input
     H = np.array(
-        # [[1.0, -80.0, 1.0, -80.0], [-60.0, 1.0, -60.0, 1.0]], dtype=dt  # x_0  # y_0
-        [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
+        [[1.0, -80.0, 1.0, -80.0], [-60.0, 1.0, -60.0, 1.0]], dtype=dt  # x_0  # y_0
+        # [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
     )
 
     initial_estimate_error = np.eye(dim_x, dtype=dt) * np.array(
-        # [1.9, -1.7, 2.6, -2.4], dtype=dt
-        [1.0, 1.0, 2.0, 2.0], dtype=dt
+        [1.9, -1.7, 2.6, -2.4], dtype=dt
+        # [1.0, 1.0, 2.0, 2.0], dtype=dt
     )
     measurement_noise = np.eye(dim_z, dtype=dt) * 0.01
     motion_noise = np.eye(dim_x, dtype=dt) * np.array(
-        # [10.1, -10.2, 10.3, -10.4], dtype=dt
-        [10.0, 10.0, 10.0, 10.0], dtype=dt
+        [10.1, -10.2, 10.3, -10.4], dtype=dt
+        # [10.0, 10.0, 10.0, 10.0], dtype=dt
     )
 
     f_fpy.x = initial_location
@@ -183,8 +183,10 @@ def run_test(num_points, iterations, numba, dt):
     print(cuS.x[-1, :, :])
     print()
 
-    np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), 1e-6)
-    np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), 1e-6)
+    rtol = 1e-5
+
+    np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
 
     print()
     print("Final")
@@ -200,12 +202,12 @@ def run_test(num_points, iterations, numba, dt):
     print(cuS.P[-1, :, :])
     print()
 
-    np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), 1e-6)
-    np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), 1e-6)
+    np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
-num_points = [2**18]
-iterations = [2048]
+num_points = [2**10]
+iterations = [100]
 numba = [True, False]
 dt = [np.float64]
 
