@@ -175,6 +175,8 @@ def run_test(num_points, iterations, numba, dt):
     print(f_fpy.x)
     print("predicted cusignal (First)")
     print(cuS.x[0, :, :])
+    print("predicted cusignal (First)")
+    print(cuS.x[1, :, :])
     print("predicted cusignal (Last)")
     print(cuS.x[-2, :, :])
     print("predicted cusignal (Last)")
@@ -190,6 +192,10 @@ def run_test(num_points, iterations, numba, dt):
     print(f_fpy.P)
     print("predicted cusignal (First)")
     print(cuS.P[0, :, :])
+    print("predicted cusignal (First)")
+    print(cuS.P[1, :, :])
+    print("predicted cusignal (Last)")
+    print(cuS.P[-2, :, :])
     print("predicted cusignal (Last)")
     print(cuS.P[-1, :, :])
     print()
@@ -198,8 +204,8 @@ def run_test(num_points, iterations, numba, dt):
     np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), 1e-6)
 
 
-num_points = [14]
-iterations = [4096]
+num_points = [2**18]
+iterations = [2048]
 numba = [True, False]
 dt = [np.float64]
 

@@ -115,7 +115,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += s_F[tz, x, j] * s_P[z_idx, j, y]
+            temp += s_F[tz, x, j] * s_P[tz, j, y]
 
         s_XX_A[tz, x, y] = temp
 
@@ -159,11 +159,23 @@ def _numba_update(x_in, z_in, H, P, R):
             z_idx, x, y,
         ]
 
+        s_XX_A[tz, x, y] = 0
+
+        s_XX_B[tz, x, y] = 0
+
+        if y < dim_z:
+            s_K[tz, x, y] = 0
+            s_XZ[tz, x, y] = 0
+
         if x < dim_z:
             s_H[tz, x, y] = H[z_idx, x, y]
 
         if x < dim_z and y < dim_z:
             s_R[tz, x, y] = R[z_idx, x, y]
+            s_ZZ[tz, x, y] = 0
+
+        if x < dim_z and y == 0:
+            s_y[tz, x, y] = 0
 
         cuda.syncthreads()
 
@@ -227,6 +239,10 @@ def _numba_update(x_in, z_in, H, P, R):
                 s_ZZ[tz, 1 - x, 1 - y]
                 / sign_det
             )
+
+        cuda.syncthreads()
+
+        if x < dim_z and y < dim_z:
             s_ZZ[tz, x, y] = temp
 
         cuda.syncthreads()
@@ -249,7 +265,7 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         if y == 0:
             for j in range(dim_z):
-                temp += s_K[tz, x, j] * s_y[tz, y, j]
+                temp += s_K[tz, x, j] * s_y[tz, j, y]
 
             x_in[z_idx, x, y] += temp
 
@@ -291,6 +307,8 @@ def _numba_update(x_in, z_in, H, P, R):
 
         s_P[tz, x, y] = temp
 
+        cuda.syncthreads()
+
         #  Compute dot(self.K, self.R) --> XZ
         temp: x_in.dtype = 0.0
         if y < dim_z:
@@ -300,8 +318,8 @@ def _numba_update(x_in, z_in, H, P, R):
                     * s_R[tz, j, y]
                 )
 
-        #  s_XX_A holds dot(self.K, self.R)
-        s_XZ[tz, x, y] = temp
+            #  s_XX_A holds dot(self.K, self.R)
+            s_XZ[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -770,7 +788,7 @@ def _populate_kernel_cache(
         )
         module = cp.RawModule(
             code=cuda_code,
-            options=("-std=c++11", "-use_fast_math", "-lineinfo"),
+            options=("-std=c++11", "-lineinfo"),
             name_expressions=specializations,
         )
 
@@ -783,8 +801,8 @@ def _populate_kernel_cache(
     else:
         sig = _numba_kalman_signature(numba_type)
         _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
-            sig, fastmath=True
+            sig, debug=True
         )(_numba_predict)
         _numba_kernel_cache[(str(numba_type), GPUKernel.UPDATE)] = cuda.jit(
-            sig, fastmath=True
+            sig, debug=True
         )(_numba_update)
