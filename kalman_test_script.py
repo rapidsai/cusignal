@@ -9,7 +9,8 @@ import itertools
 
 dim_x = 4
 dim_z = 2
-loops = 1
+loops = 256
+
 
 def run_test(num_points, iterations, numba, dt):
     print("num_points", num_points)
@@ -73,7 +74,7 @@ def run_test(num_points, iterations, numba, dt):
 
         f_fpy.Q = motion_noise
 
-        for _ in range(1):
+        for _ in range(num_points):
             for i in range(iterations):
 
                 f_fpy.predict()
@@ -129,8 +130,6 @@ def run_test(num_points, iterations, numba, dt):
             cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
 
             cuS.update()
-            # print("GPU")
-            # print("P", cuS.P[0, :, :])
 
             cp.cuda.runtime.deviceSynchronize()
 
@@ -150,10 +149,10 @@ def run_test(num_points, iterations, numba, dt):
     print(cuS.x[-1, :, :])
     print()
 
-    rtol = 1e-1
+    rtol = 1e-5
 
-    # np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
-    # np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
 
     print()
     print("Final")
@@ -169,12 +168,12 @@ def run_test(num_points, iterations, numba, dt):
     print(cuS.P[-1, :, :])
     print()
 
-    # np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
-    # np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
+    np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
-num_points = [2**17]
-iterations = [1]
+num_points = [4096]
+iterations = [1000]
 numba = [True, False]
 dt = [np.float64]
 
