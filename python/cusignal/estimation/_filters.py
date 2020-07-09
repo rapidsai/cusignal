@@ -348,7 +348,7 @@ __device__ T inverse(
     const int & idx,
     const int & tx,
     const int & ty,
-    T * s_XX_B) {
+    T * smem) {
 
     const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
 
@@ -357,16 +357,19 @@ __device__ T inverse(
 
     if ( DIM_Z == 2 ) {
         determinant = ( (
-            s_XX_B[idx + (0 * DIM_Z + 0)] *
-            s_XX_B[idx + (1 * DIM_Z + 1)] ) -
-            ( s_XX_B[idx + (1 * DIM_Z + 0)] *
-            s_XX_B[idx + (0 * DIM_Z + 1)] ) );
+            smem[idx + (0 * DIM_Z + 0)] *
+            smem[idx + (1 * DIM_Z + 1)] ) -
+            ( smem[idx + (1 * DIM_Z + 0)] *
+            smem[idx + (0 * DIM_Z + 1)] ) );
 
-        temp = s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+        temp = smem[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
 
         temp /= ( determinant * sign );
 
-    } else if ( DIM_Z == 3 ) {
+    }
+
+    /*
+    else if ( DIM_Z == 3 ) {
 
 #pragma unroll DIM_Z
         for (int i = 0; i < DIM_Z; i++) {
@@ -399,6 +402,8 @@ __device__ T inverse(
     } else {
         determinant = sign;
     }
+
+    */
 
     return ( temp );
 }
@@ -586,7 +591,11 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
             // Hardcoded for 2x2, 3x3
             //temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_XX_B );
             temp = inverse<T, DIM_Z>( zz_idx, tx, ty, s_ZZ );
+        }
 
+        __syncthreads();
+
+        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
             // s_XX_B hold SI - inverse system uncertainty
             //s_XX_B[xx_idx + z_value] = temp;
             s_ZZ[zz_idx + z_value] = temp;
