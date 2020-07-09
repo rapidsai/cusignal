@@ -70,7 +70,9 @@ def stream_cupy_to_numba(cp_stream):
 
 def _numba_predict(alpha, x_in, F, P, Q):
 
-    x, y, z = cuda.grid(3)
+    # y = threadIdx.x
+    # x = threadIdx.y
+    y, x, z = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
     tz = cuda.threadIdx.z
 
@@ -104,8 +106,9 @@ def _numba_predict(alpha, x_in, F, P, Q):
         ]
 
         #  Compute new self.x
+        #  x_in = 4x1
         temp: x_in.dtype = 0
-        if y == 0:
+        if y == 0:  # y = tx
             for j in range(dim_x):
                 temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
 
@@ -116,7 +119,7 @@ def _numba_predict(alpha, x_in, F, P, Q):
         for j in range(dim_x):
             temp += s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y]
 
-        s_A[xx_idx + x_key] = temp
+        s_A[xx_idx + x * dim_x + y] = temp
 
         cuda.syncthreads()
 
@@ -129,9 +132,6 @@ def _numba_predict(alpha, x_in, F, P, Q):
 
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
         P[z_idx, x, y] = alpha_sq * temp + local_Q
-
-        if z_idx == 0:
-            print("p", z_idx, x, y, P[z_idx, x, y], s_A[xx_idx + x_key], s_F[xx_idx + x_key], x_in[z_idx, x, y], )
 
 
 def _numba_update(x_in, z_in, H, P, R):
@@ -177,6 +177,8 @@ def _numba_update(x_in, z_in, H, P, R):
         s_P[xx_idx + x_key] = P[
             z_idx, x, y,
         ]
+
+        s_B[xx_idx + x_key] = 0  # Remove
 
         if x < dim_z:
             s_H[xz_idx + x_key] = H[z_idx, x, y]
@@ -325,9 +327,6 @@ def _numba_update(x_in, z_in, H, P, R):
 
         P[z_idx, x, y] = temp + temp2
 
-        if z_idx == 0:
-            print("u", z_idx, x, y, P[z_idx, x, y])
-
 
 def _numba_kalman_signature(ty):
     return void(
@@ -421,7 +420,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
     const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
 
-    const int x_value { tx * DIM_X + ty };
+    const int x_value { ty * DIM_X + tx };
 
     for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
 
@@ -435,6 +434,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
         T temp {};
 
+        // Compute self.x = dot(F, self.x)
         if ( tx == 0 ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
@@ -448,29 +448,29 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
         __syncthreads();
 
+        // Compute dot(F, self.P)
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_F[xx_idx + (tx * DIM_X + j)] *
-                s_P[xx_idx + (ty * DIM_X + j)];
+            temp += s_F[xx_idx + (ty * DIM_X + j)] *
+                s_P[xx_idx + (tx * DIM_X + j)];
         }
         s_A[xx_idx + x_value] = temp;
 
         __syncthreads();
 
+        // Compute dot(dot(F, self.P), F.T)
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_A[xx_idx + (tx * DIM_X + j)] *
-                s_F[xx_idx + (ty * DIM_X + j)];
+            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+                s_F[xx_idx + (tx * DIM_X + j)];
         }
 
+        // Compute self._alpha_sq * dot(dot(F, self.P), F.T) + Q
+        // Where temp = dot(dot(F, self.P), F.T)
         P[tid_z * DIM_X * DIM_X + x_value] =
             alpha2 * temp + localQ;
-
-        if ( tid_z == 0 ) {
-            printf("p %d %d %d %f %f %f %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value], s_A[xx_idx + x_value], s_F[xx_idx + x_value], x_in[tid_z * DIM_X * 1 + ty * 1 + tx]);
-        }
     }
 }
 
@@ -489,6 +489,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
     __shared__ T s_P[DIM_X * DIM_X * 16];
     __shared__ T s_H[DIM_Z * DIM_X * 16];
     __shared__ T s_K[DIM_X * DIM_Z * 16];
+    __shared__ T s_XZ[DIM_X * DIM_Z * 16];
     __shared__ T s_R[DIM_Z * DIM_Z * 16];
     __shared__ T s_y[DIM_Z * 1 * 16];
 
@@ -571,12 +572,6 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
 
-            //if (tx == 0 && ty == 0 && tz == 0) {
-            //    for (int i = 0; i< 9; i++) {
-            //        printf("%f\\n", s_B[xx_idx + i]);
-            //    }
-            //}
-
             // Compute linalg.inv(S)
             // Hardcoded for 2x2, 3x3
             temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_B );
@@ -648,6 +643,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         s_P[xx_idx + (x_value)] = temp;
 
+        // Compute dot(self.K, self.R)
         temp = 0.0f;
         if ( tx < DIM_Z ) {
 #pragma unroll DIM_Z
@@ -658,26 +654,26 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         }
 
         // s_A holds dot(self.K, self.R)
-        s_A[xx_idx + z_value] = temp;
+        // s_A[xx_idx + z_value] = temp;
+        s_A[xx_idx + ty * DIM_X + tx] = temp;
+        //s_XZ[xz_idx + z_value] = temp;
 
         __syncthreads();
 
+        // Compute dot(dot(self.K, self.R), self.K.T)
         temp = 0.0f;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
-            temp += s_A[xx_idx + (ty * DIM_Z + j)] *
+            //temp += s_XZ[xz_idx + (ty * DIM_Z + j) ] *
+            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+            //temp += s_A[xx_idx + (ty * DIM_Z + j)] *
                 s_K[xz_idx + (tx * DIM_Z + j)];
         }
 
         P[tid_z * DIM_X * DIM_X + x_value] =
             s_P[xx_idx + (x_value)] + temp;
-
-        if ( tid_z == 0 ) {
-            printf("u %d %d %d %f\\n", tid_z, ty, tx, P[tid_z * DIM_X * DIM_X + x_value]);
-        }
     }
 }
-
 """
 
 
