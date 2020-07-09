@@ -190,7 +190,7 @@ def run_test(num_points, iterations, numba, dt):
 
 num_points = [2]
 iterations = [4]
-numba = [False]
+numba = [True]
 dt = [np.float64]
 
 for p, i, n, d in itertools.product(num_points, iterations, numba, dt):

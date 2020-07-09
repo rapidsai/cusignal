@@ -78,20 +78,18 @@ def _numba_predict(alpha, x_in, F, P, Q):
 
     dim_x = P.shape[1]
 
-    xx_block_size = dim_x * dim_x * cuda.blockDim.z
-    xx_idx = dim_x * dim_x * tz
-
-    s_buffer = cuda.shared.array(shape=0, dtype=float64)
-
-    s_A = s_buffer[: (xx_block_size * 1)]
-    s_F = s_buffer[(xx_block_size * 1):]
-
-    x_key = x * dim_x + y
+    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_F = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
 
     #  Each i is a different point
     for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_F[xx_idx + x_key] = F[
+        s_F[tz, x, y] = F[
+            z_idx, x, y,
+        ]
+
+        s_P[tz, x, y] = P[
             z_idx, x, y,
         ]
 
@@ -110,16 +108,16 @@ def _numba_predict(alpha, x_in, F, P, Q):
         temp: x_in.dtype = 0
         if y == 0:  # y = tx
             for j in range(dim_x):
-                temp += s_F[xx_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
+                temp += s_F[tz, x, j] * x_in[z_idx, j, y]
 
             x_in[z_idx, x, y] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += s_F[xx_idx + (x * dim_x + j)] * P[z_idx, j, y]
+            temp += s_F[tz, x, j] * s_P[z_idx, j, y]
 
-        s_A[xx_idx + x * dim_x + y] = temp
+        s_XX_A[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -127,7 +125,8 @@ def _numba_predict(alpha, x_in, F, P, Q):
         temp: x_in.dtype = 0
         for j in range(dim_x):
             temp += (
-                s_A[xx_idx + (x * dim_x + j)] * s_F[xx_idx + (y * dim_x + j)]
+                s_XX_A[tz, x, j]
+                * s_F[tz, y, j]
             )
 
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
@@ -143,48 +142,26 @@ def _numba_update(x_in, z_in, H, P, R):
     dim_x = P.shape[1]
     dim_z = R.shape[1]
 
-    xx_block_size = dim_x * dim_x * cuda.blockDim.z
-    xz_block_size = dim_x * dim_z * cuda.blockDim.z
-    zz_block_size = dim_z * dim_z * cuda.blockDim.z
-    xx_idx = dim_x * dim_x * tz
-    xz_idx = dim_x * dim_z * tz
-    zz_idx = dim_z * dim_z * tz
-
-    s_buffer = cuda.shared.array(shape=0, dtype=float64)
-
-    s_A = s_buffer[: (xx_block_size * 1)]
-    s_B = s_buffer[(xx_block_size * 1): (xx_block_size * 2)]
-    s_P = s_buffer[(xx_block_size * 2): (xx_block_size * 3)]
-    s_H = s_buffer[(xx_block_size * 3): (xx_block_size * 3 + xz_block_size)]
-    s_K = s_buffer[
-        (xx_block_size * 3 + xz_block_size): (
-            xx_block_size * 3 + xz_block_size * 2
-        )
-    ]
-    s_R = s_buffer[
-        (xx_block_size * 3 + xz_block_size * 2): (
-            xx_block_size * 3 + xz_block_size * 2 + zz_block_size
-        )
-    ]
-    s_y = s_buffer[(xx_block_size * 3 + xz_block_size * 2 + zz_block_size):]
-
-    x_key = x * dim_x + y
-    z_key = x * dim_z + y
+    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_B = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
+    s_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
+    s_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
 
     #  Each i is a different point
     for z_idx in range(z, x_in.shape[0], strideZ):
 
-        s_P[xx_idx + x_key] = P[
+        s_P[tz, x, y] = P[
             z_idx, x, y,
         ]
 
-        s_B[xx_idx + x_key] = 0  # Remove
-
         if x < dim_z:
-            s_H[xz_idx + x_key] = H[z_idx, x, y]
+            s_H[tz, x, y] = H[z_idx, x, y]
 
         if x < dim_z and y < dim_z:
-            s_R[zz_idx + z_key] = R[z_idx, x, y]
+            s_R[tz, x, y] = R[z_idx, x, y]
 
         cuda.syncthreads()
 
@@ -193,21 +170,21 @@ def _numba_update(x_in, z_in, H, P, R):
         if x < dim_z and y == 0:
             temp_z: x_in.dtype = z_in[z_idx, x, y]
             for j in range(dim_x):
-                temp += s_H[xz_idx + (x * dim_x + j)] * x_in[z_idx, j, y]
+                temp += s_H[tz, x, j] * x_in[z_idx, j, y]
 
-            s_y[(dim_z * tz) + x] = temp_z - temp
+            s_y[tz, x, y] = temp_z - temp
 
         #  Compute PHT : dot(self.P, self.H.T)
         temp: x_in.dtype = 0.0
         if y < dim_z:
             for j in range(dim_x):
                 temp += (
-                    s_P[xx_idx + (x * dim_x + j)]
-                    * s_H[xz_idx + (y * dim_x + j)]
+                    s_P[tz, x, j]
+                    * s_H[tz, y, j]
                 )
 
-            #  s_A holds PHT
-            s_A[xx_idx + z_key] = temp
+            #  s_XX_A holds PHT
+            s_XX_A[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -216,12 +193,12 @@ def _numba_update(x_in, z_in, H, P, R):
         if x < dim_z and y < dim_z:
             for j in range(dim_x):
                 temp += (
-                    s_H[xz_idx + (x * dim_x + j)]
-                    * s_A[xx_idx + (j * dim_z + y)]
+                    s_H[tz, x, j]
+                    * s_XX_A[tz, j, y]
                 )
 
-            #  s_B holds S - system uncertainty
-            s_B[xx_idx + z_key] = temp + s_R[zz_idx + z_key]
+            #  s_XX_B holds S - system uncertainty
+            s_XX_B[tz, x, y] = temp + s_R[tz, x, y]
 
         cuda.syncthreads()
 
@@ -233,19 +210,22 @@ def _numba_update(x_in, z_in, H, P, R):
 
             #  sign * determinant
             sign_det = sign * (
-                (s_B[xx_idx + (0 * dim_z + 0)] * s_B[xx_idx + (1 * dim_z + 1)])
+                (
+                    s_XX_B[tz, 0, 0]
+                    * s_XX_B[tz, 1, 1]
+                )
                 - (
-                    s_B[xx_idx + (1 * dim_z + 0)]
-                    * s_B[xx_idx + (0 * dim_z + 1)]
+                    s_XX_B[tz, 1, 0]
+                    * s_XX_B[tz, 0, 1]
                 )
             )
 
-            #  s_B hold SI - inverse system uncertainty
+            #  s_XX_B hold SI - inverse system uncertainty
             temp = (
-                s_B[xx_idx + ((dim_z - 1 - x) * dim_z + (dim_z - 1 - y))]
+                s_XX_B[tz, 1 - x, 1 - y]
                 / sign_det
             )
-            s_B[xx_idx + z_key] = temp
+            s_XX_B[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -255,10 +235,10 @@ def _numba_update(x_in, z_in, H, P, R):
         if y < 2:
             for j in range(dim_z):
                 temp += (
-                    s_A[xx_idx + (x * dim_z + j)]
-                    * s_B[xx_idx + (y * dim_z + j)]
+                    s_XX_A[tz, x, j]
+                    * s_XX_B[tz, y, j]
                 )
-            s_K[xz_idx + z_key] = temp
+            s_K[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -266,7 +246,7 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         if y == 0:
             for j in range(dim_z):
-                temp += s_K[xz_idx + (x * dim_z + j)] * s_y[(dim_z * tz) + j]
+                temp += s_K[tz, x, j] * s_y[tz, y, j]
 
             x_in[z_idx, x, y] += temp
 
@@ -274,11 +254,11 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
-                s_K[xz_idx + (x * dim_z + j)] * s_H[xz_idx + (j * dim_x + y)]
+                s_K[tz, x, j] * s_H[tz, j, y]
             )
 
-        #  s_A holds I_KH
-        s_A[xx_idx + x_key] = (1.0 if x == y else 0.0) - temp
+        #  s_XX_A holds I_KH
+        s_XX_A[tz, x, y] = (1.0 if x == y else 0.0) - temp
 
         cuda.syncthreads()
 
@@ -289,11 +269,12 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
-                s_A[xx_idx + (x * dim_x + j)] * s_P[xx_idx + (j * dim_x + y)]
+                s_XX_A[tz, x, j]
+                * s_P[tz, j, y]
             )
 
-        #  s_A holds dot(I_KH, self.P)
-        s_B[xx_idx + x_key] = temp
+        #  s_XX_A holds dot(I_KH, self.P)
+        s_XX_B[tz, x, y] = temp
 
         cuda.syncthreads()
 
@@ -301,31 +282,35 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
-                s_B[xx_idx + (x * dim_x + j)] * s_A[xx_idx + (y * dim_x + j)]
+                s_XX_B[tz, x, j]
+                * s_XX_A[tz, y, j]
             )
 
+        s_P[tz, x, y] = temp
+
         #  Compute dot(self.K, self.R)
-        temp2: x_in.dtype = 0.0
+        temp: x_in.dtype = 0.0
         if y < dim_z:
             for j in range(dim_z):
-                temp2 += (
-                    s_K[xz_idx + (x * dim_z + j)]
-                    * s_R[zz_idx + (j * dim_z + y)]
+                temp += (
+                    s_K[tz, x, j]
+                    * s_R[tz, j, y]
                 )
 
-        #  s_A holds dot(self.K, self.R)
-        s_A[xx_idx + z_key] = temp2
+        #  s_XX_A holds dot(self.K, self.R)
+        s_XX_A[tz, x, y] = temp
 
         cuda.syncthreads()
 
         #  Compute dot(dot(self.K, self.R), self.K.T)
-        temp2: x_in.dtype = 0.0
+        temp: x_in.dtype = 0.0
         for j in range(dim_z):
-            temp2 += (
-                s_A[xx_idx + (x * dim_z + j)] * s_K[xz_idx + (y * dim_z + j)]
+            temp += (
+                s_XX_A[tz, x, j]
+                * s_K[tz, y, j]
             )
 
-        P[z_idx, x, y] = temp + temp2
+        P[z_idx, x, y] = temp + s_P[tz, x, y]
 
 
 def _numba_kalman_signature(ty):
@@ -342,7 +327,7 @@ __device__ T inverse(
     const int & idx,
     const int & tx,
     const int & ty,
-    T * s_B) {
+    T * s_XX_B) {
 
     const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
 
@@ -351,12 +336,12 @@ __device__ T inverse(
 
     if ( DIM_Z == 2 ) {
         determinant = ( (
-            s_B[idx + (0 * DIM_Z + 0)] *
-            s_B[idx + (1 * DIM_Z + 1)] ) -
-            ( s_B[idx + (1 * DIM_Z + 0)] *
-            s_B[idx + (0 * DIM_Z + 1)] ) );
+            s_XX_B[idx + (0 * DIM_Z + 0)] *
+            s_XX_B[idx + (1 * DIM_Z + 1)] ) -
+            ( s_XX_B[idx + (1 * DIM_Z + 0)] *
+            s_XX_B[idx + (0 * DIM_Z + 1)] ) );
 
-        temp = s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+        temp = s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
 
         temp /= ( determinant * sign );
 
@@ -364,21 +349,21 @@ __device__ T inverse(
 
 #pragma unroll DIM_Z
         for (int i = 0; i < DIM_Z; i++) {
-            determinant += ( s_B[idx + (0 * DIM_Z + i)] * (
-                s_B[idx + (1 * DIM_Z + ((i + 1) % DIM_Z))] *
-                s_B[idx + (2 * DIM_Z + ((i + 2) % DIM_Z))] -
-                s_B[idx + (1 * DIM_Z + ((i + 2) % DIM_Z))] *
-                s_B[idx + (2 * DIM_Z + ((i + 1) % DIM_Z))] ) );
+            determinant += ( s_XX_B[idx + (0 * DIM_Z + i)] * (
+                s_XX_B[idx + (1 * DIM_Z + ((i + 1) % DIM_Z))] *
+                s_XX_B[idx + (2 * DIM_Z + ((i + 2) % DIM_Z))] -
+                s_XX_B[idx + (1 * DIM_Z + ((i + 2) % DIM_Z))] *
+                s_XX_B[idx + (2 * DIM_Z + ((i + 1) % DIM_Z))] ) );
         }
 
         if (tx==0 && ty ==0 && (static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
             printf("d %f\\n", determinant);
         }
 
-        temp = s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))] *
-                s_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] -
-                s_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] *
-                s_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+        temp = s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))] *
+                s_XX_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] -
+                s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] *
+                s_XX_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
 
         if ((static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
             printf("t %f %d %d\\n", temp, tx, ty);
@@ -408,7 +393,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const T * __restrict__ Q
         ) {
 
-    __shared__ T s_A[DIM_X * DIM_X * 16];
+    __shared__ T s_XX_A[DIM_X * DIM_X * 16];
     __shared__ T s_F[DIM_X * DIM_X * 16];
     __shared__ T s_P[DIM_X * DIM_X * 16];
 
@@ -455,7 +440,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
             temp += s_F[xx_idx + (ty * DIM_X + j)] *
                 s_P[xx_idx + (tx * DIM_X + j)];
         }
-        s_A[xx_idx + x_value] = temp;
+        s_XX_A[xx_idx + x_value] = temp;
 
         __syncthreads();
 
@@ -463,7 +448,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+            temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
                 s_F[xx_idx + (tx * DIM_X + j)];
         }
 
@@ -484,12 +469,13 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         const T * __restrict__ R
         ) {
 
-    __shared__ T s_A[DIM_X * DIM_X * 16];
-    __shared__ T s_B[DIM_X * DIM_X * 16];
+    __shared__ T s_XX_A[DIM_X * DIM_X * 16];
+    __shared__ T s_XX_B[DIM_X * DIM_X * 16];
     __shared__ T s_P[DIM_X * DIM_X * 16];
     __shared__ T s_H[DIM_Z * DIM_X * 16];
     __shared__ T s_K[DIM_X * DIM_Z * 16];
     __shared__ T s_XZ[DIM_X * DIM_Z * 16];
+    __shared__ T s_ZZ[DIM_Z * DIM_Z * 16];
     __shared__ T s_R[DIM_Z * DIM_Z * 16];
     __shared__ T s_y[DIM_Z * 1 * 16];
 
@@ -527,7 +513,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         T temp {};
 
-        // Compute self.y : z = dot(self.H, self.x)
+        // Compute self.y : z = dot(self.H, self.x) --> Z1
         if ( ( tx == 0 ) && ( ty < DIM_Z ) ) {
             T temp_z { z_in[tid_z * DIM_Z * 1 + ty * 1 + tx] };
 
@@ -542,7 +528,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         __syncthreads();
 
-        // Compute PHT : dot(self.P, self.H.T)
+        // Compute PHT : dot(self.P, self.H.T) --> XZ
         temp = 0.0f;
         if ( tx < DIM_Z ) {
 #pragma unroll DIM_X
@@ -550,22 +536,25 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
                 temp += s_P[xx_idx + (ty * DIM_X + j)] *
                     s_H[xz_idx + (tx * DIM_X + j)];
             }
-            // s_A holds PHT
-            s_A[xx_idx + z_value] = temp;
+            // s_XX_A holds PHT
+            //s_XX_A[xx_idx + z_value] = temp;
+            s_XZ[xz_idx + z_value] = temp;
         }
 
         __syncthreads();
 
-        // Compute self.S : dot(self.H, PHT) + self.R
+        // Compute self.S : dot(self.H, PHT) + self.R --> ZZ
         temp = 0.0f;
         if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_H[xz_idx + (ty * DIM_X + j)] *
-                    s_A[xx_idx + (j * DIM_Z + tx)];
+                    //s_XX_A[xx_idx + (j * DIM_Z + tx)];
+                    s_XZ[xz_idx + (j * DIM_Z + tx)];
             }
-            // s_B holds S - system uncertainty
-            s_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
+            // s_XX_B holds S - system uncertainty
+            //s_XX_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
+            s_ZZ[zz_idx + z_value] = temp + s_R[zz_idx + z_value];
         }
 
         __syncthreads();
@@ -574,29 +563,33 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
             // Compute linalg.inv(S)
             // Hardcoded for 2x2, 3x3
-            temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_B );
+            //temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_XX_B );
+            temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_ZZ );
 
-            // s_B hold SI - inverse system uncertainty
-            s_B[xx_idx + z_value] = temp;
+            // s_XX_B hold SI - inverse system uncertainty
+            //s_XX_B[xx_idx + z_value] = temp;
+            s_ZZ[zz_idx + z_value] = temp;
         }
 
         __syncthreads();
 
-        //  Compute self.K : dot(PHT, self.SI)
+        //  Compute self.K : dot(PHT, self.SI) --> ZZ
         //  kalman gain
         temp = 0.0f;
         if ( tx < 2 ) {
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
-                temp += s_A[xx_idx + (ty * DIM_Z + j)] *
-                    s_B[xx_idx + (tx * DIM_Z + j)];
+                //temp += s_XX_A[xx_idx + (ty * DIM_Z + j)] *
+                temp += s_XZ[xz_idx + (ty * DIM_Z + j)] *
+                    //s_XX_B[xx_idx + (tx * DIM_Z + j)];
+                    s_ZZ[zz_idx + (tx * DIM_Z + j)];
             }
             s_K[xz_idx + z_value] = temp;
         }
 
         __syncthreads();
 
-        //  Compute self.x : self.x + cp.dot(self.K, self.y)
+        //  Compute self.x : self.x + cp.dot(self.K, self.y) --> X1
         temp = 0.0;
         if ( tx == 0 ) {
 #pragma unroll DIM_Z
@@ -607,43 +600,43 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
             x_in[tid_z * DIM_X * 1 + ty * 1 + tx] += temp;
         }
 
-        // Compute I_KH = self_I - dot(self.K, self.H)
+        // Compute I_KH = self_I - dot(self.K, self.H) --> XX
         temp = 0.0f;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
             temp += s_K[xz_idx + (ty * DIM_Z + j)] *
                 s_H[xz_idx + (j * DIM_X + tx)];
         }
-        // s_A holds I_KH
-        s_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
+        // s_XX_A holds I_KH
+        s_XX_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
 
         __syncthreads();
 
         // Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
         // dot(dot(self.K, self.R), self.K.T)
 
-        // Compute dot(I_KH, self.P)
+        // Compute dot(I_KH, self.P) --> XX
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_A[xx_idx + (ty * DIM_X + j)] *
+            temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
                 s_P[xx_idx + (j * DIM_X + tx)];
         }
-        s_B[xx_idx + x_value] = temp;
+        s_XX_B[xx_idx + x_value] = temp;
 
         __syncthreads();
 
-        // Compute dot(dot(I_KH, self.P), I_KH.T)
+        // Compute dot(dot(I_KH, self.P), I_KH.T) --> XX
         temp = 0.0f;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_B[xx_idx + (ty * DIM_X + j)] *
-                s_A[xx_idx + (tx * DIM_X + j)];
+            temp += s_XX_B[xx_idx + (ty * DIM_X + j)] *
+                s_XX_A[xx_idx + (tx * DIM_X + j)];
         }
 
         s_P[xx_idx + (x_value)] = temp;
 
-        // Compute dot(self.K, self.R)
+        // Compute dot(self.K, self.R) --> XZ
         temp = 0.0f;
         if ( tx < DIM_Z ) {
 #pragma unroll DIM_Z
@@ -651,22 +644,18 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
                 temp += s_K[xz_idx + (ty * DIM_Z + j)] *
                     s_R[zz_idx + (j * DIM_Z + tx)];
             }
-        }
 
-        // s_A holds dot(self.K, self.R)
-        // s_A[xx_idx + z_value] = temp;
-        s_A[xx_idx + ty * DIM_X + tx] = temp;
-        //s_XZ[xz_idx + z_value] = temp;
+            // s_XZ holds dot(self.K, self.R)
+            s_XZ[xz_idx + z_value] = temp;
+        }
 
         __syncthreads();
 
-        // Compute dot(dot(self.K, self.R), self.K.T)
+        // Compute dot(dot(self.K, self.R), self.K.T) --> XX
         temp = 0.0f;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
-            //temp += s_XZ[xz_idx + (ty * DIM_Z + j) ] *
-            temp += s_A[xx_idx + (ty * DIM_X + j)] *
-            //temp += s_A[xx_idx + (ty * DIM_Z + j)] *
+            temp += s_XZ[xz_idx + (ty * DIM_Z + j) ] *
                 s_K[xz_idx + (tx * DIM_Z + j)];
         }
 
@@ -719,7 +708,7 @@ class _cupy_update_wrapper(object):
             self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
+def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
 
     if not use_numba:
         kernel = _cupy_kernel_cache[(dtype.name, k_type)]
@@ -743,7 +732,7 @@ def _get_backend_kernel(dtype, grid, block, smem, stream, use_numba, k_type):
         kernel = _numba_kernel_cache[(dtype.name, k_type)]
 
         if kernel:
-            return kernel[grid, block, nb_stream, smem]
+            return kernel[grid, block, nb_stream]
         else:
             raise ValueError(
                 "Kernel {} not found in _numba_kernel_cache".format(k_type)

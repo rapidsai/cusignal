@@ -120,35 +120,34 @@ class KalmanFilter(object):
             min_blocks_per_multiprocessor,
         )
 
-        #  Only need this for Numba
-        A_size = self.dim_x * self.dim_x
-        F_size = self.dim_x * self.dim_x
-        B_size = self.dim_x * self.dim_x
-        P_size = self.dim_x * self.dim_x
-        H_size = self.dim_z * self.dim_x
-        K_size = self.dim_x * self.dim_z
-        R_size = self.dim_z * self.dim_z
-        y_size = self.dim_z * 1
+        # #  Only need this for Numba
+        # A_size = self.dim_x * self.dim_x
+        # F_size = self.dim_x * self.dim_x
+        # B_size = self.dim_x * self.dim_x
+        # P_size = self.dim_x * self.dim_x
+        # H_size = self.dim_z * self.dim_x
+        # K_size = self.dim_x * self.dim_z
+        # R_size = self.dim_z * self.dim_z
+        # y_size = self.dim_z * 1
 
-        predict_size = A_size + F_size
+        # predict_size = A_size + F_size
 
-        update_size = (
-            A_size + B_size + P_size + H_size + K_size + R_size + y_size
-        )
+        # update_size = (
+        #     A_size + B_size + P_size + H_size + K_size + R_size + y_size
+        # )
 
-        self.predict_sem = (
-            predict_size * self.threadsperblock[2] * self.x.dtype.itemsize
-        )
-        self.update_sem = (
-            update_size * self.threadsperblock[2] * self.x.dtype.itemsize
-        )
+        # self.predict_sem = (
+        #     predict_size * self.threadsperblock[2] * self.x.dtype.itemsize
+        # )
+        # self.update_sem = (
+        #     update_size * self.threadsperblock[2] * self.x.dtype.itemsize
+        # )
 
         # Retrieve kernel from cache
         self.predict_kernel = _filters._get_backend_kernel(
             self.x.dtype,
             self.blockspergrid,
             self.threadsperblock,
-            self.predict_sem,
             self.cp_stream,
             self.use_numba,
             _filters.GPUKernel.PREDICT,
@@ -158,7 +157,6 @@ class KalmanFilter(object):
             self.x.dtype,
             self.blockspergrid,
             self.threadsperblock,
-            self.update_sem,
             self.cp_stream,
             self.use_numba,
             _filters.GPUKernel.UPDATE,
