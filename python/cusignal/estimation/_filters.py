@@ -147,6 +147,8 @@ def _numba_update(x_in, z_in, H, P, R):
     s_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
     s_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
     s_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_XZ = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_ZZ = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
     s_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
     s_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
 
@@ -165,7 +167,7 @@ def _numba_update(x_in, z_in, H, P, R):
 
         cuda.syncthreads()
 
-        #  Compute self.y : z = dot(self.H, self.x)
+        #  Compute self.y : z = dot(self.H, self.x) --> Z1
         temp: x_in.dtype = 0.0
         if x < dim_z and y == 0:
             temp_z: x_in.dtype = z_in[z_idx, x, y]
@@ -174,7 +176,7 @@ def _numba_update(x_in, z_in, H, P, R):
 
             s_y[tz, x, y] = temp_z - temp
 
-        #  Compute PHT : dot(self.P, self.H.T)
+        #  Compute PHT : dot(self.P, self.H.T) --> XZ
         temp: x_in.dtype = 0.0
         if y < dim_z:
             for j in range(dim_x):
@@ -184,21 +186,22 @@ def _numba_update(x_in, z_in, H, P, R):
                 )
 
             #  s_XX_A holds PHT
-            s_XX_A[tz, x, y] = temp
+            s_XZ[tz, x, y] = temp
 
         cuda.syncthreads()
 
-        #  Compute self.S : dot(self.H, PHT) + self.R
+        #  Compute self.S : dot(self.H, PHT) + self.R --> ZZ
         temp: x_in.dtype = 0.0
         if x < dim_z and y < dim_z:
             for j in range(dim_x):
                 temp += (
                     s_H[tz, x, j]
-                    * s_XX_A[tz, j, y]
+                    * s_XZ[tz, j, y]
                 )
 
             #  s_XX_B holds S - system uncertainty
-            s_XX_B[tz, x, y] = temp + s_R[tz, x, y]
+            # s_XX_B[tz, x, y] = temp + s_R[tz, x, y]
+            s_ZZ[tz, x, y] = temp + s_R[tz, x, y]
 
         cuda.syncthreads()
 
@@ -211,38 +214,39 @@ def _numba_update(x_in, z_in, H, P, R):
             #  sign * determinant
             sign_det = sign * (
                 (
-                    s_XX_B[tz, 0, 0]
-                    * s_XX_B[tz, 1, 1]
+                    s_ZZ[tz, 0, 0]
+                    * s_ZZ[tz, 1, 1]
                 )
                 - (
-                    s_XX_B[tz, 1, 0]
-                    * s_XX_B[tz, 0, 1]
+                    s_ZZ[tz, 1, 0]
+                    * s_ZZ[tz, 0, 1]
                 )
             )
 
-            #  s_XX_B hold SI - inverse system uncertainty
+            #  s_ZZ hold SI - inverse system uncertainty
             temp = (
-                s_XX_B[tz, 1 - x, 1 - y]
+                s_ZZ[tz, 1 - x, 1 - y]
                 / sign_det
             )
-            s_XX_B[tz, x, y] = temp
+            s_ZZ[tz, x, y] = temp
 
         cuda.syncthreads()
 
-        #  Compute self.K : dot(PHT, self.SI)
+        #  Compute self.K : dot(PHT, self.SI) --> ZZ
         #  kalman gain
         temp: x_in.dtype = 0.0
         if y < 2:
             for j in range(dim_z):
                 temp += (
-                    s_XX_A[tz, x, j]
-                    * s_XX_B[tz, y, j]
+                    # s_XX_A[tz, x, j]
+                    s_XZ[tz, x, j]
+                    * s_ZZ[tz, y, j]
                 )
             s_K[tz, x, y] = temp
 
         cuda.syncthreads()
 
-        #  Compute self.x : self.x + cp.dot(self.K, self.y)
+        #  Compute self.x : self.x + cp.dot(self.K, self.y) --> X1
         temp: x_in.dtype = 0.0
         if y == 0:
             for j in range(dim_z):
@@ -250,7 +254,7 @@ def _numba_update(x_in, z_in, H, P, R):
 
             x_in[z_idx, x, y] += temp
 
-        #  Compute I_KH = self_I - dot(self.K, self.H)
+        #  Compute I_KH = self_I - dot(self.K, self.H) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
@@ -265,7 +269,7 @@ def _numba_update(x_in, z_in, H, P, R):
         #  Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
         #  dot(dot(self.K, self.R), self.K.T)
 
-        #  Compute dot(I_KH, self.P)
+        #  Compute dot(I_KH, self.P) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
@@ -273,12 +277,12 @@ def _numba_update(x_in, z_in, H, P, R):
                 * s_P[tz, j, y]
             )
 
-        #  s_XX_A holds dot(I_KH, self.P)
+        #  s_XX_B holds dot(I_KH, self.P)
         s_XX_B[tz, x, y] = temp
 
         cuda.syncthreads()
 
-        #  Compute dot(dot(I_KH, self.P), I_KH.T)
+        #  Compute dot(dot(I_KH, self.P), I_KH.T) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
@@ -288,7 +292,7 @@ def _numba_update(x_in, z_in, H, P, R):
 
         s_P[tz, x, y] = temp
 
-        #  Compute dot(self.K, self.R)
+        #  Compute dot(self.K, self.R) --> XZ
         temp: x_in.dtype = 0.0
         if y < dim_z:
             for j in range(dim_z):
@@ -298,15 +302,15 @@ def _numba_update(x_in, z_in, H, P, R):
                 )
 
         #  s_XX_A holds dot(self.K, self.R)
-        s_XX_A[tz, x, y] = temp
+        s_XZ[tz, x, y] = temp
 
         cuda.syncthreads()
 
-        #  Compute dot(dot(self.K, self.R), self.K.T)
+        #  Compute dot(dot(self.K, self.R), self.K.T) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
-                s_XX_A[tz, x, j]
+                s_XZ[tz, x, j]
                 * s_K[tz, y, j]
             )
 
