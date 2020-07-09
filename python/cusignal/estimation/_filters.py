@@ -70,8 +70,6 @@ def stream_cupy_to_numba(cp_stream):
 
 def _numba_predict(alpha, x_in, F, P, Q):
 
-    # y = blockIdx.x * blockDim.x + threadIdx.x
-    # x = blockIdx.y * blockDim.y + threadIdx.y
     _, _, tz = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
 
@@ -90,24 +88,24 @@ def _numba_predict(alpha, x_in, F, P, Q):
 
         s_XX_F[ltz, lty, ltx] = F[
             gtz, lty, ltx,
-        ]  # <-- GLOBAL
+        ]
 
         s_XX_P[ltz, lty, ltx] = P[
             gtz, lty, ltx,
-        ]  # <-- GLOBAL
+        ]
 
         cuda.syncthreads()
 
         #  Load alpha_sq and Q into registers
         alpha_sq = alpha[gtz, 0, 0]
-        local_Q = Q[gtz, lty, ltx]  # <-- GLOBAL  IN CUDA [gtz, ltx, lty]
+        local_Q = Q[gtz, lty, ltx]
 
         #  Compute new self.x
         #  x_in = 4x1
         temp: x_in.dtype = 0
         if ltx == 0:  # ltx = tx
             for j in range(dim_x):
-                temp += s_XX_F[ltz, lty, j] * x_in[gtz, j, ltx]  # <-- GLOBAL
+                temp += s_XX_F[ltz, lty, j] * x_in[gtz, j, ltx]
 
             x_in[gtz, lty, ltx] = temp
 
@@ -156,25 +154,13 @@ def _numba_update(x_in, z_in, H, P, R):
 
         s_XX_P[ltz, lty, ltx] = P[
             gtz, lty, ltx,
-        ]  # <-- GLOBAL
-
-        # s_XX_A[ltz, lty, ltx] = 0
-
-        # s_XX_B[ltz, lty, ltx] = 0
-
-        # if ltx < dim_z:
-        #     s_XZ_K[ltz, lty, ltx] = 0
-        #     s_XZ_A[ltz, lty, ltx] = 0
+        ]
 
         if lty < dim_z:
-            s_ZX_H[ltz, lty, ltx] = H[gtz, lty, ltx]  # <-- GLOBAL
+            s_ZX_H[ltz, lty, ltx] = H[gtz, lty, ltx]
 
         if lty < dim_z and ltx < dim_z:
-            s_ZZ_R[ltz, lty, ltx] = R[gtz, lty, ltx]  # <-- GLOBAL
-            # s_ZZ_A[ltz, lty, ltx] = 0
-
-        # if lty < dim_z and ltx == 0:
-        # s_Z1_y[ltz, lty, ltx] = 0
+            s_ZZ_R[ltz, lty, ltx] = R[gtz, lty, ltx]
 
         cuda.syncthreads()
 
@@ -182,18 +168,10 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         if lty < dim_z and ltx == 0:
             temp_z: x_in.dtype = z_in[gtz, lty, ltx]
-            # if gtz == 0:
-            #     print("z", z_in[gtz, lty, ltx], ltz, lty, ltx)
             for j in range(dim_x):
-                temp += s_ZX_H[ltz, lty, j] * x_in[gtz, j, ltx] # <-- GLOBAL
-                # if gtz == 0:
-                #     print("x", x_in[gtz, j, ltx], ltz, j, ltx, lty)
-
+                temp += s_ZX_H[ltz, lty, j] * x_in[gtz, j, ltx]
 
             s_Z1_y[ltz, lty, ltx] = temp_z - temp
-
-        # if ltz == 0 and ltx == 0:
-        #     print("i", x_in[ltz, lty, ltx])
 
         #  Compute PHT : dot(self.P, self.H.T) --> XZ
         temp: x_in.dtype = 0.0
@@ -261,9 +239,6 @@ def _numba_update(x_in, z_in, H, P, R):
 
             x_in[gtz, lty, ltx] += temp
 
-        # if ltz == 0 and ltx == 0:
-        #     print("o", x_in[ltz, lty, ltx])
-
         #  Compute I_KH = self_I - dot(self.K, self.H) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
@@ -312,7 +287,7 @@ def _numba_update(x_in, z_in, H, P, R):
         for j in range(dim_z):
             temp += s_XZ_A[ltz, lty, j] * s_XZ_K[ltz, ltx, j]
 
-        P[gtz, lty, ltx] = temp + s_XX_P[ltz, lty, ltx] # <-- GLOBAL
+        P[gtz, lty, ltx] = temp + s_XX_P[ltz, lty, ltx]
 
 
 def _numba_kalman_signature(ty):
@@ -494,8 +469,6 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
 
     const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
-
-    const int zz_idx { static_cast<int>( DIM_Z * DIM_Z * threadIdx.z ) };
 
     const int x_value { lty * DIM_X + ltx };
     const int z_value { lty * DIM_Z + ltx };
@@ -778,7 +751,7 @@ def _populate_kernel_cache(
         )
         module = cp.RawModule(
             code=cuda_code,
-            options=("-std=c++11", "-fmad=false",),
+            options=("-std=c++11", "-fmad=true",),
             name_expressions=specializations,
         )
 
