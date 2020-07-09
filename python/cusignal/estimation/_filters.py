@@ -81,9 +81,9 @@ def _numba_predict(alpha, x_in, F, P, Q):
 
     dim_x = P.shape[1]
 
-    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
-    s_XX_F = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
-    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
+    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_F = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
 
     #  Each i is a different point
     for gtz in range(tz, x_in.shape[0], strideZ):
@@ -141,15 +141,15 @@ def _numba_update(x_in, z_in, H, P, R):
     dim_x = P.shape[1]
     dim_z = R.shape[1]
 
-    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
-    s_XX_B = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
-    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float32)
-    s_ZX_H = cuda.shared.array(shape=(16, 2, 4), dtype=float32)
-    s_XZ_K = cuda.shared.array(shape=(16, 4, 2), dtype=float32)
-    s_XZ_A = cuda.shared.array(shape=(16, 4, 2), dtype=float32)
-    s_ZZ_A = cuda.shared.array(shape=(16, 2, 2), dtype=float32)
-    s_ZZ_R = cuda.shared.array(shape=(16, 2, 2), dtype=float32)
-    s_Z1_y = cuda.shared.array(shape=(16, 2, 1), dtype=float32)
+    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_B = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_ZX_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
+    s_XZ_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_XZ_A = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_ZZ_A = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
+    s_ZZ_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
+    s_Z1_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
 
     #  Each i is a different point
     for gtz in range(btz, x_in.shape[0], strideZ):
