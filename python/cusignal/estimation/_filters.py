@@ -200,7 +200,6 @@ def _numba_update(x_in, z_in, H, P, R):
                 )
 
             #  s_XX_B holds S - system uncertainty
-            # s_XX_B[tz, x, y] = temp + s_R[tz, x, y]
             s_ZZ[tz, x, y] = temp + s_R[tz, x, y]
 
         cuda.syncthreads()
@@ -568,7 +567,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
             // Compute linalg.inv(S)
             // Hardcoded for 2x2, 3x3
             //temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_XX_B );
-            temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_ZZ );
+            temp = inverse<T, DIM_Z>( zz_idx, tx, ty, s_ZZ );
 
             // s_XX_B hold SI - inverse system uncertainty
             //s_XX_B[xx_idx + z_value] = temp;
@@ -584,8 +583,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
                 //temp += s_XX_A[xx_idx + (ty * DIM_Z + j)] *
-                temp += s_XZ[xz_idx + (ty * DIM_Z + j)] *
                     //s_XX_B[xx_idx + (tx * DIM_Z + j)];
+                temp += s_XZ[xz_idx + (ty * DIM_Z + j)] *
                     s_ZZ[zz_idx + (tx * DIM_Z + j)];
             }
             s_K[xz_idx + z_value] = temp;
@@ -650,6 +649,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
             }
 
             // s_XZ holds dot(self.K, self.R)
+            //s_XX_A[xx_idx + ty * DIM_X + tx] = temp;
             s_XZ[xz_idx + z_value] = temp;
         }
 
@@ -659,6 +659,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         temp = 0.0f;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
+            //temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
             temp += s_XZ[xz_idx + (ty * DIM_Z + j) ] *
                 s_K[xz_idx + (tx * DIM_Z + j)];
         }
