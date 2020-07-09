@@ -6,7 +6,7 @@
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
 - PR #136 - Split reader and writer in IO packages and update docs
-- PR #146 - Add compatibility with Scipy 1.5.0
+- PR #146 - Add compatibility with Scipy 1.5.0; Default to SciPy > 1.5
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
 
 ## Improvements
