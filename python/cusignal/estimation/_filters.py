@@ -70,54 +70,53 @@ def stream_cupy_to_numba(cp_stream):
 
 def _numba_predict(alpha, x_in, F, P, Q):
 
-    # y = threadIdx.x
-    # x = threadIdx.y
-    y, x, z = cuda.grid(3)
+    # y = blockIdx.x * blockDim.x + threadIdx.x
+    # x = blockIdx.y * blockDim.y + threadIdx.y
+    _, _, tz = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
-    tz = cuda.threadIdx.z
+
+    ltx = cuda.threadIdx.x
+    lty = cuda.threadIdx.y
+    ltz = cuda.threadIdx.z
 
     dim_x = P.shape[1]
 
     s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_F = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_F = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
 
     #  Each i is a different point
-    for z_idx in range(z, x_in.shape[0], strideZ):
+    for gtz in range(tz, x_in.shape[0], strideZ):
 
-        s_F[tz, x, y] = F[
-            z_idx, x, y,
+        s_XX_F[ltz, ltx, lty] = F[
+            gtz, ltx, lty,
         ]
 
-        s_P[tz, x, y] = P[
-            z_idx, x, y,
+        s_XX_P[ltz, ltx, lty] = P[
+            gtz, ltx, lty,
         ]
 
         cuda.syncthreads()
 
         #  Load alpha_sq and Q into registers
-        alpha_sq = alpha[
-            z_idx, 0, 0,
-        ]
-        local_Q = Q[
-            z_idx, x, y,
-        ]
+        alpha_sq = alpha[gtz, 0, 0]
+        local_Q = Q[gtz, ltx, lty]
 
         #  Compute new self.x
         #  x_in = 4x1
         temp: x_in.dtype = 0
-        if y == 0:  # y = tx
+        if lty == 0:  # lty = tx
             for j in range(dim_x):
-                temp += s_F[tz, x, j] * x_in[z_idx, j, y]
+                temp += s_XX_F[ltz, ltx, j] * x_in[gtz, j, lty]
 
-            x_in[z_idx, x, y] = temp
+            x_in[gtz, ltx, lty] = temp
 
         #  Compute dot(self.F, self.P)
         temp: x_in.dtype = 0
         for j in range(dim_x):
-            temp += s_F[tz, x, j] * s_P[tz, j, y]
+            temp += s_XX_F[ltz, ltx, j] * s_XX_P[ltz, j, lty]
 
-        s_XX_A[tz, x, y] = temp
+        s_XX_A[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
@@ -125,159 +124,168 @@ def _numba_predict(alpha, x_in, F, P, Q):
         temp: x_in.dtype = 0
         for j in range(dim_x):
             temp += (
-                s_XX_A[tz, x, j]
-                * s_F[tz, y, j]
+                s_XX_A[ltz, ltx, j]
+                * s_XX_F[ltz, lty, j]
             )
 
         #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
-        P[z_idx, x, y] = alpha_sq * temp + local_Q
+        P[gtz, ltx, lty] = alpha_sq * temp + local_Q
 
 
 def _numba_update(x_in, z_in, H, P, R):
 
-    x, y, z = cuda.grid(3)
+    _, _, btz = cuda.grid(3)
     _, _, strideZ = cuda.gridsize(3)
-    tz = cuda.threadIdx.z
+
+    ltx = cuda.threadIdx.y
+    lty = cuda.threadIdx.x
+    ltz = cuda.threadIdx.z
 
     dim_x = P.shape[1]
     dim_z = R.shape[1]
 
     s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
     s_XX_B = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
-    s_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
-    s_XZ = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
-    s_ZZ = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
-    s_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
-    s_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
+    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
+    s_ZX_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
+    s_XZ_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_XZ_A = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
+    s_ZZ_A = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
+    s_ZZ_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
+    s_Z1_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
 
     #  Each i is a different point
-    for z_idx in range(z, x_in.shape[0], strideZ):
+    for gtz in range(btz, x_in.shape[0], strideZ):
 
-        s_P[tz, x, y] = P[
-            z_idx, x, y,
+        s_XX_P[ltz, ltx, lty] = P[
+            gtz, ltx, lty,
         ]
 
-        s_XX_A[tz, x, y] = 0
+        # s_XX_A[ltz, ltx, lty] = 0
 
-        s_XX_B[tz, x, y] = 0
+        # s_XX_B[ltz, ltx, lty] = 0
 
-        if y < dim_z:
-            s_K[tz, x, y] = 0
-            s_XZ[tz, x, y] = 0
+        # if lty < dim_z:
+        #     s_XZ_K[ltz, ltx, lty] = 0
+        #     s_XZ_A[ltz, ltx, lty] = 0
 
-        if x < dim_z:
-            s_H[tz, x, y] = H[z_idx, x, y]
+        if ltx < dim_z:
+            s_ZX_H[ltz, ltx, lty] = H[gtz, ltx, lty]
 
-        if x < dim_z and y < dim_z:
-            s_R[tz, x, y] = R[z_idx, x, y]
-            s_ZZ[tz, x, y] = 0
+        if ltx < dim_z and lty < dim_z:
+            s_ZZ_R[ltz, ltx, lty] = R[gtz, ltx, lty]
+            # s_ZZ_A[ltz, ltx, lty] = 0
 
-        if x < dim_z and y == 0:
-            s_y[tz, x, y] = 0
+        # if ltx < dim_z and lty == 0:
+            # s_Z1_y[ltz, ltx, lty] = 0
 
         cuda.syncthreads()
 
         #  Compute self.y : z = dot(self.H, self.x) --> Z1
         temp: x_in.dtype = 0.0
-        if x < dim_z and y == 0:
-            temp_z: x_in.dtype = z_in[z_idx, x, y]
+        if ltx < dim_z and lty == 0:
+            temp_z: x_in.dtype = z_in[gtz, ltx, lty]
             for j in range(dim_x):
-                temp += s_H[tz, x, j] * x_in[z_idx, j, y]
+                temp += s_ZX_H[ltz, ltx, j] * x_in[gtz, j, lty]
 
-            s_y[tz, x, y] = temp_z - temp
+            s_Z1_y[ltz, ltx, lty] = temp_z - temp
+
+        if ltz == 0 and lty == 0:
+            print("i", x_in[ltz, ltx, lty])
 
         #  Compute PHT : dot(self.P, self.H.T) --> XZ
         temp: x_in.dtype = 0.0
-        if y < dim_z:
+        if lty < dim_z:
             for j in range(dim_x):
                 temp += (
-                    s_P[tz, x, j]
-                    * s_H[tz, y, j]
+                    s_XX_P[ltz, ltx, j]
+                    * s_ZX_H[ltz, lty, j]
                 )
 
             #  s_XX_A holds PHT
-            s_XZ[tz, x, y] = temp
+            s_XZ_A[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
         #  Compute self.S : dot(self.H, PHT) + self.R --> ZZ
         temp: x_in.dtype = 0.0
-        if x < dim_z and y < dim_z:
+        if ltx < dim_z and lty < dim_z:
             for j in range(dim_x):
                 temp += (
-                    s_H[tz, x, j]
-                    * s_XZ[tz, j, y]
+                    s_ZX_H[ltz, ltx, j]
+                    * s_XZ_A[ltz, j, lty]
                 )
 
             #  s_XX_B holds S - system uncertainty
-            s_ZZ[tz, x, y] = temp + s_R[tz, x, y]
+            s_ZZ_A[ltz, ltx, lty] = temp + s_ZZ_R[ltz, ltx, lty]
 
         cuda.syncthreads()
 
-        if x < dim_z and y < dim_z:
+        if ltx < dim_z and lty < dim_z:
 
             #  Compute linalg.inv(S)
             #  Hardcoded for 2x2
-            sign = 1 if (x + y) % 2 == 0 else -1
+            sign = 1 if (ltx + lty) % 2 == 0 else -1
 
             #  sign * determinant
             sign_det = sign * (
                 (
-                    s_ZZ[tz, 0, 0]
-                    * s_ZZ[tz, 1, 1]
+                    s_ZZ_A[ltz, 0, 0]
+                    * s_ZZ_A[ltz, 1, 1]
                 )
                 - (
-                    s_ZZ[tz, 1, 0]
-                    * s_ZZ[tz, 0, 1]
+                    s_ZZ_A[ltz, 1, 0]
+                    * s_ZZ_A[ltz, 0, 1]
                 )
             )
 
-            #  s_ZZ hold SI - inverse system uncertainty
+            #  s_ZZ_A hold SI - inverse system uncertainty
             temp = (
-                s_ZZ[tz, 1 - x, 1 - y]
+                s_ZZ_A[ltz, 1 - ltx, 1 - lty]
                 / sign_det
             )
 
         cuda.syncthreads()
 
-        if x < dim_z and y < dim_z:
-            s_ZZ[tz, x, y] = temp
+        if ltx < dim_z and lty < dim_z:
+            s_ZZ_A[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
         #  Compute self.K : dot(PHT, self.SI) --> ZZ
         #  kalman gain
         temp: x_in.dtype = 0.0
-        if y < 2:
+        if lty < dim_z:
             for j in range(dim_z):
                 temp += (
                     # s_XX_A[tz, x, j]
-                    s_XZ[tz, x, j]
-                    * s_ZZ[tz, y, j]
+                    s_XZ_A[ltz, ltx, j]
+                    * s_ZZ_A[ltz, lty, j]
                 )
-            s_K[tz, x, y] = temp
+            s_XZ_K[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
-        #  Compute self.x : self.x + cp.dot(self.K, self.y) --> X1
+        #  Compute self.x : self.x + cp.dot(self.K, self.lty) --> X1
         temp: x_in.dtype = 0.0
-        if y == 0:
+        if lty == 0:
             for j in range(dim_z):
-                temp += s_K[tz, x, j] * s_y[tz, j, y]
+                temp += s_XZ_K[ltz, ltx, j] * s_Z1_y[ltz, j, lty]
 
-            x_in[z_idx, x, y] += temp
+            x_in[gtz, ltx, lty] += temp
+
+        if ltz == 0 and lty == 0:
+            print("o", x_in[ltz, ltx, lty])
 
         #  Compute I_KH = self_I - dot(self.K, self.H) --> XX
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
-                s_K[tz, x, j] * s_H[tz, j, y]
+                s_XZ_K[ltz, ltx, j] * s_ZX_H[ltz, j, lty]
             )
 
         #  s_XX_A holds I_KH
-        s_XX_A[tz, x, y] = (1.0 if x == y else 0.0) - temp
+        s_XX_A[ltz, ltx, lty] = (1.0 if ltx == lty else 0.0) - temp
 
         cuda.syncthreads()
 
@@ -288,12 +296,12 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
-                s_XX_A[tz, x, j]
-                * s_P[tz, j, y]
+                s_XX_A[ltz, ltx, j]
+                * s_XX_P[ltz, j, lty]
             )
 
         #  s_XX_B holds dot(I_KH, self.P)
-        s_XX_B[tz, x, y] = temp
+        s_XX_B[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
@@ -301,25 +309,25 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_x):
             temp += (
-                s_XX_B[tz, x, j]
-                * s_XX_A[tz, y, j]
+                s_XX_B[ltz, ltx, j]
+                * s_XX_A[ltz, lty, j]
             )
 
-        s_P[tz, x, y] = temp
+        s_XX_P[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
         #  Compute dot(self.K, self.R) --> XZ
         temp: x_in.dtype = 0.0
-        if y < dim_z:
+        if lty < dim_z:
             for j in range(dim_z):
                 temp += (
-                    s_K[tz, x, j]
-                    * s_R[tz, j, y]
+                    s_XZ_K[ltz, ltx, j]
+                    * s_ZZ_R[ltz, j, lty]
                 )
 
             #  s_XX_A holds dot(self.K, self.R)
-            s_XZ[tz, x, y] = temp
+            s_XZ_A[ltz, ltx, lty] = temp
 
         cuda.syncthreads()
 
@@ -327,11 +335,11 @@ def _numba_update(x_in, z_in, H, P, R):
         temp: x_in.dtype = 0.0
         for j in range(dim_z):
             temp += (
-                s_XZ[tz, x, j]
-                * s_K[tz, y, j]
+                s_XZ_A[ltz, ltx, j]
+                * s_XZ_K[ltz, lty, j]
             )
 
-        P[z_idx, x, y] = temp + s_P[tz, x, y]
+        P[gtz, ltx, lty] = temp + s_XX_P[ltz, ltx, lty]
 
 
 def _numba_kalman_signature(ty):
@@ -419,68 +427,68 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const T * __restrict__ Q
         ) {
 
-    __shared__ T s_XX_A[DIM_X * DIM_X * 16];
-    __shared__ T s_F[DIM_X * DIM_X * 16];
-    __shared__ T s_P[DIM_X * DIM_X * 16];
+    __shared__ T s_XX_A[16][DIM_X][DIM_X];
+    __shared__ T s_XX_F[16][DIM_X][DIM_X];
+    __shared__ T s_XX_P[16][DIM_X][DIM_X];
 
-    const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-    const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
-    const int tz { static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
+    const auto ltx = threadIdx.x;
+    const auto lty = threadIdx.y;
+    const auto ltz = threadIdx.z;
+
+    const int btz { static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z) };
 
     const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
 
-    const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
+    const int x_value { lty * DIM_X + ltx };
 
-    const int x_value { ty * DIM_X + tx };
+    for ( int gtz = btz; gtz < num_points; gtz += stride_z ) {
 
-    for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
-
-        s_F[xx_idx + x_value] = F[tid_z * DIM_X * DIM_X + x_value];
+        s_XX_F[ltz][lty][ltx] = F[gtz * DIM_X * DIM_X + x_value];
 
         __syncthreads();
 
-        T alpha2 { alpha_sq[tid_z] };
-        T localQ { Q[tid_z * DIM_X * DIM_X + x_value] };
-        T localP { P[tid_z * DIM_X * DIM_X + x_value] };
+        T alpha2 { alpha_sq[gtz] };
+        T localQ { Q[gtz * DIM_X * DIM_X + x_value] };
+        T localP { P[gtz * DIM_X * DIM_X + x_value] };
 
         T temp {};
 
         // Compute self.x = dot(F, self.x)
-        if ( tx == 0 ) {
+        if ( ltx == 0 ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
-                temp += s_F[xx_idx + (ty * DIM_X + j)] *
-                    x_in[tid_z * DIM_X * 1 + j * 1 + tx];
+                temp += s_XX_F[ltz][lty][j] *
+                    x_in[gtz * DIM_X * 1 + j * 1 + ltx]; //<-- LOOK
             }
-            x_in[tid_z * DIM_X * 1 + ty * 1 + tx]   = temp;
+            x_in[gtz * DIM_X * 1 + lty * 1 + ltx]   = temp; //<-- LOOK
         }
 
-        s_P[xx_idx + x_value] = localP;
+        s_XX_P[ltz][lty][ltx] = localP;
 
         __syncthreads();
 
         // Compute dot(F, self.P)
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_F[xx_idx + (ty * DIM_X + j)] *
-                s_P[xx_idx + (tx * DIM_X + j)];
+            temp += s_XX_F[ltz][lty][j] *
+                s_XX_P[ltz][j][ltx];
         }
-        s_XX_A[xx_idx + x_value] = temp;
+        s_XX_A[ltz][lty][ltx] = temp;
 
         __syncthreads();
 
         // Compute dot(dot(F, self.P), F.T)
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
-                s_F[xx_idx + (tx * DIM_X + j)];
+            temp += s_XX_A[ltz][lty][j] *
+                s_XX_F[ltz][ltx][j];
         }
 
         // Compute self._alpha_sq * dot(dot(F, self.P), F.T) + Q
         // Where temp = dot(dot(F, self.P), F.T)
-        P[tid_z * DIM_X * DIM_X + x_value] =
+        P[gtz * DIM_X * DIM_X + x_value] =
             alpha2 * temp + localQ;
     }
 }
@@ -495,150 +503,142 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         const T * __restrict__ R
         ) {
 
-    __shared__ T s_XX_A[DIM_X * DIM_X * 16];
-    __shared__ T s_XX_B[DIM_X * DIM_X * 16];
-    __shared__ T s_P[DIM_X * DIM_X * 16];
-    __shared__ T s_H[DIM_Z * DIM_X * 16];
-    __shared__ T s_K[DIM_X * DIM_Z * 16];
-    __shared__ T s_XZ[DIM_X * DIM_Z * 16];
-    __shared__ T s_ZZ[DIM_Z * DIM_Z * 16];
-    __shared__ T s_R[DIM_Z * DIM_Z * 16];
-    __shared__ T s_y[DIM_Z * 1 * 16];
+    __shared__ T s_XX_A[16][DIM_X][DIM_X];
+    __shared__ T s_XX_B[16][DIM_X][DIM_X];
+    __shared__ T s_XX_P[16][DIM_X][DIM_X];
+    __shared__ T s_ZX_H[16][DIM_Z][DIM_X];
+    __shared__ T s_XZ_K[16][DIM_X][DIM_Z];
+    __shared__ T s_XZ_A[16][DIM_X][DIM_Z];
+    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z];
+    __shared__ T s_ZZ_R[16][DIM_Z][DIM_Z];
+    __shared__ T s_Z1_y[16][DIM_Z][1];
 
-    const int tx {
-        static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-    const int ty {
-        static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
-    const int tz {
+    const auto ltx = threadIdx.x;
+    const auto lty = threadIdx.y;
+    const auto ltz = threadIdx.z;
+
+    const int btz {
         static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) };
 
     const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
 
-    const int xx_idx { static_cast<int>( DIM_X * DIM_X * threadIdx.z ) };
-    const int xz_idx { static_cast<int>( DIM_X * DIM_Z * threadIdx.z ) };
     const int zz_idx { static_cast<int>( DIM_Z * DIM_Z * threadIdx.z ) };
 
-    const int x_value { ty * DIM_X + tx };
-    const int z_value { ty * DIM_Z + tx };
+    const int x_value { lty * DIM_X + ltx };
+    const int z_value { lty * DIM_Z + ltx };
 
-    for ( int tid_z = tz; tid_z < num_points; tid_z += stride_z ) {
+    for ( int gtz = btz; gtz < num_points; gtz += stride_z ) {
 
-        if ( ty < DIM_Z ) {
-            s_H[xz_idx + x_value] =
-                H[tid_z * DIM_Z * DIM_X + x_value];
+        if ( lty < DIM_Z ) {
+            //s_ZX_H[xz_idx + x_value] =
+            s_ZX_H[ltz][lty][ltx] =
+                H[gtz * DIM_Z * DIM_X + x_value];
         }
 
         __syncthreads();
 
-        s_P[xx_idx + x_value] = P[tid_z * DIM_X * DIM_X + x_value];
+        s_XX_P[ltz][lty][ltx] = P[gtz * DIM_X * DIM_X + x_value];
 
-        if ( ( ty < DIM_Z ) && ( tx < DIM_Z ) ) {
-            s_R[zz_idx + z_value] =
-                R[tid_z * DIM_Z * DIM_Z + z_value];
+        if ( ( lty < DIM_Z ) && ( ltx < DIM_Z ) ) {
+            s_ZZ_R[ltz][lty][ltx] =
+                R[gtz * DIM_Z * DIM_Z + z_value];
         }
 
         T temp {};
 
         // Compute self.y : z = dot(self.H, self.x) --> Z1
-        if ( ( tx == 0 ) && ( ty < DIM_Z ) ) {
-            T temp_z { z_in[tid_z * DIM_Z * 1 + ty * 1 + tx] };
+        if ( ( ltx == 0 ) && ( lty < DIM_Z ) ) {
+            T temp_z { z_in[gtz * DIM_Z * 1 + lty * 1 + ltx] };
 
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
-                temp += s_H[xz_idx + (ty * DIM_X + j)] *
-                    x_in[tid_z * DIM_X * 1 + j * 1 + tx];
+                temp += s_ZX_H[ltz][lty][j] *
+                    x_in[gtz * DIM_X * 1 + j * 1 + ltx];
             }
 
-            s_y[threadIdx.z * DIM_Z * 1 + ty * 1 + tx] = temp_z - temp;
+            s_Z1_y[ltz][lty][ltx] = temp_z - temp;
         }
 
         __syncthreads();
 
         // Compute PHT : dot(self.P, self.H.T) --> XZ
-        temp = 0.0f;
-        if ( tx < DIM_Z ) {
+        temp = 0.0;
+        if ( ltx < DIM_Z ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
-                temp += s_P[xx_idx + (ty * DIM_X + j)] *
-                    s_H[xz_idx + (tx * DIM_X + j)];
+                temp += s_XX_P[ltz][lty][j] *
+                    s_ZX_H[ltz][ltx][j];
             }
             // s_XX_A holds PHT
-            //s_XX_A[xx_idx + z_value] = temp;
-            s_XZ[xz_idx + z_value] = temp;
+            s_XZ_A[ltz][lty][ltx] = temp;
         }
 
         __syncthreads();
 
         // Compute self.S : dot(self.H, PHT) + self.R --> ZZ
-        temp = 0.0f;
-        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
+        temp = 0.0;
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
-                temp += s_H[xz_idx + (ty * DIM_X + j)] *
-                    //s_XX_A[xx_idx + (j * DIM_Z + tx)];
-                    s_XZ[xz_idx + (j * DIM_Z + tx)];
+                temp += s_ZX_H[ltz][lty][j] *
+                    s_XZ_A[ltz][j][ltx];
             }
             // s_XX_B holds S - system uncertainty
-            //s_XX_B[xx_idx + z_value] = temp + s_R[zz_idx + z_value];
-            s_ZZ[zz_idx + z_value] = temp + s_R[zz_idx + z_value];
+            s_ZZ_A[ltz][lty][ltx] = temp + s_ZZ_R[ltz][lty][ltx];
         }
 
         __syncthreads();
 
-        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
             // Compute linalg.inv(S)
             // Hardcoded for 2x2, 3x3
-            //temp = inverse<T, DIM_Z>( xx_idx, tx, ty, s_XX_B );
-            temp = inverse<T, DIM_Z>( zz_idx, tx, ty, s_ZZ );
+            temp = inverse<T, DIM_Z>( zz_idx, ltx, lty, (T*)s_ZZ_A );
         }
 
         __syncthreads();
 
-        if ( ( tx < DIM_Z ) && ( ty < DIM_Z ) ) {
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
             // s_XX_B hold SI - inverse system uncertainty
-            //s_XX_B[xx_idx + z_value] = temp;
-            s_ZZ[zz_idx + z_value] = temp;
+            s_ZZ_A[ltz][lty][ltx] = temp;
         }
 
         __syncthreads();
 
         //  Compute self.K : dot(PHT, self.SI) --> ZZ
         //  kalman gain
-        temp = 0.0f;
-        if ( tx < 2 ) {
+        temp = 0.0;
+        if ( ltx < 2 ) {
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
-                //temp += s_XX_A[xx_idx + (ty * DIM_Z + j)] *
-                    //s_XX_B[xx_idx + (tx * DIM_Z + j)];
-                temp += s_XZ[xz_idx + (ty * DIM_Z + j)] *
-                    s_ZZ[zz_idx + (tx * DIM_Z + j)];
+                temp += s_XZ_A[ltz][lty][j] *
+                    s_ZZ_A[ltz][ltx][j];
             }
-            s_K[xz_idx + z_value] = temp;
+            s_XZ_K[ltz][lty][ltx] = temp;
         }
 
         __syncthreads();
 
         //  Compute self.x : self.x + cp.dot(self.K, self.y) --> X1
         temp = 0.0;
-        if ( tx == 0 ) {
+        if ( ltx == 0 ) {
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
-                temp += s_K[xz_idx + (ty * DIM_Z + j)] *
-                    s_y[threadIdx.z * DIM_Z + j];
+                temp += s_XZ_K[ltz][lty][j] *
+                s_Z1_y[ltz][j][ltx];
             }
-            x_in[tid_z * DIM_X * 1 + ty * 1 + tx] += temp;
+            x_in[gtz * DIM_X * 1 + lty * 1 + ltx] += temp;
         }
 
         // Compute I_KH = self_I - dot(self.K, self.H) --> XX
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
-            temp += s_K[xz_idx + (ty * DIM_Z + j)] *
-                s_H[xz_idx + (j * DIM_X + tx)];
+            temp += s_XZ_K[ltz][lty][j] *
+                s_ZX_H[ltz][j][ltx];
         }
         // s_XX_A holds I_KH
-        s_XX_A[xx_idx + x_value] = ( ( tx == ty ) ? 1 : 0 ) - temp;
+        s_XX_A[ltz][lty][ltx] = ( ( ltx == lty ) ? 1 : 0 ) - temp;
 
         __syncthreads();
 
@@ -646,53 +646,51 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         // dot(dot(self.K, self.R), self.K.T)
 
         // Compute dot(I_KH, self.P) --> XX
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
-                s_P[xx_idx + (j * DIM_X + tx)];
+            temp += s_XX_A[ltz][lty][j] *
+                s_XX_P[ltz][j][ltx];
         }
-        s_XX_B[xx_idx + x_value] = temp;
+        s_XX_B[ltz][lty][ltx] = temp;
 
         __syncthreads();
 
         // Compute dot(dot(I_KH, self.P), I_KH.T) --> XX
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_XX_B[xx_idx + (ty * DIM_X + j)] *
-                s_XX_A[xx_idx + (tx * DIM_X + j)];
+            temp += s_XX_B[ltz][lty][j] *
+                s_XX_A[ltz][ltx][j];
         }
 
-        s_P[xx_idx + (x_value)] = temp;
+        s_XX_P[ltz][lty][ltx] = temp;
 
         // Compute dot(self.K, self.R) --> XZ
-        temp = 0.0f;
-        if ( tx < DIM_Z ) {
+        temp = 0.0;
+        if ( ltx < DIM_Z ) {
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
-                temp += s_K[xz_idx + (ty * DIM_Z + j)] *
-                    s_R[zz_idx + (j * DIM_Z + tx)];
+                temp += s_XZ_K[ltz][lty][j] *
+                    s_ZZ_R[ltz][j][ltx];
             }
 
-            // s_XZ holds dot(self.K, self.R)
-            //s_XX_A[xx_idx + ty * DIM_X + tx] = temp;
-            s_XZ[xz_idx + z_value] = temp;
+            // s_XZ_A holds dot(self.K, self.R)
+            s_XZ_A[ltz][lty][ltx] = temp;
         }
 
         __syncthreads();
 
         // Compute dot(dot(self.K, self.R), self.K.T) --> XX
-        temp = 0.0f;
+        temp = 0.0;
 #pragma unroll DIM_Z
         for ( int j = 0; j < DIM_Z; j++ ) {
-            //temp += s_XX_A[xx_idx + (ty * DIM_X + j)] *
-            temp += s_XZ[xz_idx + (ty * DIM_Z + j) ] *
-                s_K[xz_idx + (tx * DIM_Z + j)];
+            temp += s_XZ_A[ltz][lty][j] *
+                s_XZ_K[ltz][ltx][j];
         }
 
-        P[tid_z * DIM_X * DIM_X + x_value] =
-            s_P[xx_idx + (x_value)] + temp;
+        P[gtz * DIM_X * DIM_X + x_value] =
+            s_XX_P[ltz][lty][ltx] + temp;
     }
 }
 """
@@ -797,7 +795,7 @@ def _populate_kernel_cache(
         )
         module = cp.RawModule(
             code=cuda_code,
-            options=("-std=c++11", "-lineinfo"),
+            options=("-std=c++11", "-fmad=true", ),
             name_expressions=specializations,
         )
 
@@ -810,8 +808,8 @@ def _populate_kernel_cache(
     else:
         sig = _numba_kalman_signature(numba_type)
         _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
-            sig, debug=True
+            sig
         )(_numba_predict)
         _numba_kernel_cache[(str(numba_type), GPUKernel.UPDATE)] = cuda.jit(
-            sig, debug=True
+            sig
         )(_numba_update)
