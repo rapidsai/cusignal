@@ -8,8 +8,8 @@ import time
 import itertools
 
 dim_x = 4
-dim_z = 2
-loops = 5
+dim_z = 3
+loops = 1
 
 
 def run_test(num_points, iterations, numba, dt):
@@ -23,7 +23,7 @@ def run_test(num_points, iterations, numba, dt):
         num_points, dim_x, dim_z, dtype=dt, use_numba=numba
     )
 
-    f_fpy = filterpy.kalman.KalmanFilter(dim_x=4, dim_z=2)
+    f_fpy = filterpy.kalman.KalmanFilter(dim_x=dim_x, dim_z=dim_z)
 
     # State Space Equations
     F = np.array(
@@ -32,14 +32,33 @@ def run_test(num_points, iterations, numba, dt):
             [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
             [0.0, 0.0, 1.0, 0.0],  # dx = v_x
             [1.0, 0.0, 0.0, 1.0],
+            # [1.1, 0.2, -1.3, 99.4],  # x = x0 + v_x*dt
+            # [0.1, -1.2, 99.3, 1.4],  # y = y0 + v_y*dt
+            # [0.1, 99.2, -1.3, 0.4],  # dx = v_x
+            # [1.1, -0.2, 99.3, -1.4],
         ],  # dy = v_y
         dtype=dt,
     )
 
     # Observability Input
-    H = np.array(
-        [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
-    )
+    if dim_z == 2:
+        H = np.array(
+            [[1.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
+        )
+    elif dim_z == 3:
+        H = np.array(
+            [[1.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0]], dtype=dt  # x_0  # y_0
+        )
+    elif dim_z == 4:
+        H = np.array(
+            [[1.0, 0.0, 1.0, 0.0],
+                [0.0, 1.0, 0.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                [0.0, 1.0, 1.0, 0.0]], dtype=dt  # x_0  # y_0
+        )
 
     initial_location = np.array(
         [[10.0, 10.0, 0.0, 0.0]], dtype=dt
@@ -75,19 +94,24 @@ def run_test(num_points, iterations, numba, dt):
 
         f_fpy.Q = motion_noise
 
-        for _ in range(num_points):
+        # z = np.asarray([0, 0, 0, 0], dtype=dt).T
+        z = np.zeros(dim_z, dtype=dt).T
+
+        for _ in range(1):
             for i in range(iterations):
 
                 f_fpy.predict()
 
                 # must be 2d for cuSignal.filter
-                z = np.array([i, i+1], dtype=dt).T
+
+                for j in range(dim_z):
+                    z[j] = j
 
                 f_fpy.update(z)
 
     print("CPU:", (time.time() - start) / loops)
 
-    z = cp.asarray([0, 0], dtype=dt).T  # must be 2d for cuSignal.filter
+    z = cp.zeros(dim_z, dtype=dt).T
     z = cp.atleast_2d(z)
     if z.shape[1] == dim_z:
         z = z.T
@@ -126,8 +150,8 @@ def run_test(num_points, iterations, numba, dt):
 
             cuS.predict()
 
-            z[0] = i
-            z[1] = i+1
+            for j in range(dim_z):
+                z[j] = j
 
             cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
 
@@ -166,7 +190,7 @@ def run_test(num_points, iterations, numba, dt):
     np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
-num_points = [65536]
+num_points = [4096]
 iterations = [1000]
 numba = [False]
 dt = [np.float64]

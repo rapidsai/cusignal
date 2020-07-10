@@ -41,7 +41,7 @@ class KalmanFilter(object):
         if dim_u < 0:
             raise ValueError("dim_u must be 0 or greater")
 
-        if dim_z > 3:
+        if dim_z > 4:
             raise ValueError(
                 "cuSignal KalmanFilter only works with dim_z = 2 currently"
             )

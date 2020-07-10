@@ -223,7 +223,6 @@ def _numba_update(x_in, z_in, H, P, R):
         if ltx < dim_z:
             for j in range(dim_z):
                 temp += (
-                    # s_XX_A[tz, x, j]
                     s_XZ_A[ltz, lty, j]
                     * s_ZZ_A[ltz, ltx, j]
                 )
@@ -309,11 +308,10 @@ __device__ T inverse(
 
     const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
 
-    T temp {};
+    T result {};
+    T sign_det {};
 
     if ( DIM_Z == 2 ) {
-        T sign_det = 0.0;
-
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
             // Hardcoded for 2x2
@@ -322,12 +320,14 @@ __device__ T inverse(
                 (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1])
                 );
 
-            temp = s_ZZ_A[ltz][1-lty][1-ltx] / sign_det;
+            int x { ltx == 0 ? 1 : 0 };  /* always either 0 or 1 */
+            int y { lty == 0 ? 1 : 0 };  /* always either 0 or 1 */
+
+            result = s_ZZ_A[ltz][y][x] / sign_det;
         }
     }
-    else if (DIM_Z == 3) {
-        T sign_det = 0.0;
-
+    else if ( DIM_Z == 3 ) {
+        // https://stackoverflow.com/questions/983999/simple-3x3-matrix-inverse-code-c
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
             // Hardcoded for 3x3
@@ -343,18 +343,144 @@ __device__ T inverse(
                 ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][0] ) )
             );
 
-            T invdet = 1 / sign_det;
-
             int x1 = ltx == 0 ? 1 : 0;  /* always either 0 or 1 */
             int x2 = ltx == 2 ? 1 : 2;  /* always either 1 or 2 */
             int y1 = lty == 0 ? 1 : 0;  /* always either 0 or 1 */
             int y2 = lty == 2 ? 1 : 2;  /* always either 1 or 2 */
 
-            temp = ( ( s_ZZ_A[ltz][x1][y1] * s_ZZ_A[ltz][x2][y2] ) -
-                ( s_ZZ_A[ltz][x1][y2] * s_ZZ_A[ltz][x2][y1] ) ) * invdet;
+            result = ( ( s_ZZ_A[ltz][x1][y1] * s_ZZ_A[ltz][x2][y2] ) -
+                ( s_ZZ_A[ltz][x1][y2] * s_ZZ_A[ltz][x2][y1] ) ) / sign_det;
         }
     }
-    return ( temp );
+    else if ( DIM_Z == 4 ) {
+        // https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
+
+            // Hardcoded for 4x4
+            T A2323 = ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][2] );
+            T A1323 = ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][1] );
+            T A1223 = ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][2] ) -
+                ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][1] );
+            T A0323 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][0] );
+            T A0223 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][2] ) -
+                ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][0] );
+            T A0123 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][1] ) -
+                ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][0] );
+            T A2313 = ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][2] );
+            T A1313 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][1] );
+            T A1213 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][2] ) -
+                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][1] );
+            T A2312 = ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][2] );
+            T A1312 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][1] );
+            T A1212 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][2] ) -
+                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][1] );
+            T A0313 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][0] );
+            T A0213 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][2] ) -
+                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][0] );
+            T A0312 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][3] ) -
+                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][0] );
+            T A0212 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][2] ) -
+                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][0] );
+            T A0113 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][1] ) -
+                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][0] );
+            T A0112 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][1] ) -
+                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][0] );
+
+            sign_det = static_cast<T>(sign) *
+            ( s_ZZ_A[ltz][0][0] * (
+                s_ZZ_A[ltz][1][1] * A2323 -
+                s_ZZ_A[ltz][1][2] * A1323 +
+                s_ZZ_A[ltz][1][3] * A1223 ) -
+            s_ZZ_A[ltz][0][1] * (
+                s_ZZ_A[ltz][1][0] * A2323 -
+                s_ZZ_A[ltz][1][2] * A0323 +
+                s_ZZ_A[ltz][1][3] * A0223 ) +
+            s_ZZ_A[ltz][0][2] * (
+                s_ZZ_A[ltz][1][0] * A1323 -
+                s_ZZ_A[ltz][1][1] * A0323 +
+                s_ZZ_A[ltz][1][3] * A0123 ) -
+            s_ZZ_A[ltz][0][03] * (
+                s_ZZ_A[ltz][1][0] * A1223 -
+                s_ZZ_A[ltz][1][1] * A0223 +
+                s_ZZ_A[ltz][1][2] * A0123 )
+            );
+
+            if ( ltx == 0 && lty == 0 ) {
+                result = ( s_ZZ_A[ltz][1][1] * A2323 -
+                s_ZZ_A[ltz][1][2] * A1323 +
+                s_ZZ_A[ltz][1][3] * A1223 ) / sign_det;
+            } else if ( ltx == 0 && lty == 1 ) {
+                result = ( s_ZZ_A[ltz][0][1] * A2323 -
+                s_ZZ_A[ltz][0][2] * A1323 +
+                s_ZZ_A[ltz][0][3] * A1223 ) / sign_det;
+            } else if ( ltx == 0 && lty == 2 ) {
+                result = ( s_ZZ_A[ltz][0][1] * A2313 -
+                s_ZZ_A[ltz][0][2] * A1313 +
+                s_ZZ_A[ltz][0][3] * A1213 ) / sign_det;
+            } else if ( ltx == 0 && lty == 3 ) {
+                result = ( s_ZZ_A[ltz][0][1] * A2312 -
+                s_ZZ_A[ltz][0][2] * A1312 +
+                s_ZZ_A[ltz][0][3] * A1212 ) / sign_det;
+            } else if ( ltx == 1 && lty == 0 ) {
+                result = ( s_ZZ_A[ltz][1][0] * A2323 -
+                s_ZZ_A[ltz][1][2] * A0323 +
+                s_ZZ_A[ltz][1][3] * A0223 ) / sign_det;
+            } else if ( ltx == 1 && lty == 1 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A2323 -
+                s_ZZ_A[ltz][0][2] * A0323 +
+                s_ZZ_A[ltz][0][3] * A0223 ) / sign_det;
+            } else if ( ltx == 1 && lty == 2 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A2313 -
+                s_ZZ_A[ltz][0][2] * A0313 +
+                s_ZZ_A[ltz][0][3] * A0213 ) / sign_det;
+            } else if ( ltx == 1 && lty == 3 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A2312 -
+                s_ZZ_A[ltz][0][2] * A0312 +
+                s_ZZ_A[ltz][0][3] * A0212 ) / sign_det;
+            } else if ( ltx == 2 && lty == 0 ) {
+                result = ( s_ZZ_A[ltz][1][0] * A1323 -
+                s_ZZ_A[ltz][1][1] * A0323 +
+                s_ZZ_A[ltz][1][3] * A0123 ) / sign_det;
+            } else if ( ltx == 2 && lty == 1 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1323 -
+                s_ZZ_A[ltz][0][1] * A0323 +
+                s_ZZ_A[ltz][0][3] * A0123 ) / sign_det;
+            } else if ( ltx == 2 && lty == 2 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1313 -
+                s_ZZ_A[ltz][0][1] * A0313 +
+                s_ZZ_A[ltz][0][3] * A0113 ) / sign_det;
+            } else if ( ltx == 2 && lty == 3 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1312 -
+                s_ZZ_A[ltz][0][1] * A0312 +
+                s_ZZ_A[ltz][0][3] * A0112 ) / sign_det;
+            } else if ( ltx == 3 && lty == 0 ) {
+                result = ( s_ZZ_A[ltz][1][0] * A1223 -
+                s_ZZ_A[ltz][1][1] * A0223 +
+                s_ZZ_A[ltz][1][2] * A0123 ) / sign_det;
+            } else if ( ltx == 3 && lty == 1 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1223 -
+                s_ZZ_A[ltz][0][1] * A0223 +
+                s_ZZ_A[ltz][0][2] * A0123 ) / sign_det;
+            } else if ( ltx == 3 && lty == 2 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1213 -
+                s_ZZ_A[ltz][0][1] * A0213 +
+                s_ZZ_A[ltz][0][2] * A0113 ) / sign_det;
+            } else if ( ltx == 3 && lty == 3 ) {
+                result = ( s_ZZ_A[ltz][0][0] * A1212 -
+                s_ZZ_A[ltz][0][1] * A0212 +
+                s_ZZ_A[ltz][0][2] * A0112 ) / sign_det;
+            }
+        }
+    }
+    return ( result );
 }
 
 
