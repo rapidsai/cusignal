@@ -301,27 +301,28 @@ def _numba_kalman_signature(ty):
 cuda_code = """
 template<typename T, int DIM_Z>
 __device__ T inverse(
-    const int & idx,
-    const int & tx,
-    const int & ty,
-    T * smem) {
+    const int & ltx,
+    const int & lty,
+    const int & ltz,
+    const T(&s_ZZ_A)[16][DIM_Z][DIM_Z]) {
 
-    const int sign { ( ( tx + ty ) % 2 == 0 ) ? 1 : -1 };
+    const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
 
-    T determinant {};
     T temp {};
 
     if ( DIM_Z == 2 ) {
-        determinant = ( (
-            smem[idx + (0 * DIM_Z + 0)] *
-            smem[idx + (1 * DIM_Z + 1)] ) -
-            ( smem[idx + (1 * DIM_Z + 0)] *
-            smem[idx + (0 * DIM_Z + 1)] ) );
+        T sign_det = 0.0;
 
-        temp = smem[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
-        temp /= ( determinant * sign );
+            // Compute linalg.inv(S)
+            // Hardcoded for 2x2
+            sign_det = static_cast<T>(sign) * (
+                (s_ZZ_A[ltz][0][0] * s_ZZ_A[ltz][1][1]) -
+                (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1]) );
 
+            temp = s_ZZ_A[ltz][1-lty][1-ltx] / sign_det;
+        }
     }
 
     /*
@@ -534,20 +535,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         __syncthreads();
 
-        T sign_det = 0.0;
-
-        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
-
-            // Compute linalg.inv(S)
-            // Hardcoded for 2x2
-            const int sign = ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1;
-
-            sign_det = static_cast<T>(sign) * (
-                (s_ZZ_A[ltz][0][0] * s_ZZ_A[ltz][1][1]) -
-                (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1]) );
-
-            temp = s_ZZ_A[ltz][1-lty][1-ltx] / sign_det; // [lty][ltz]
-        }
+        // Compute matrix inversion
+        temp = inverse(ltx, lty, ltz, s_ZZ_A);
 
         __syncthreads();
 
