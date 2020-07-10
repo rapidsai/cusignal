@@ -9,7 +9,7 @@ import itertools
 
 dim_x = 4
 dim_z = 2
-loops = 256
+loops = 5
 
 
 def run_test(num_points, iterations, numba, dt):
@@ -57,7 +57,8 @@ def run_test(num_points, iterations, numba, dt):
 
     # CPU
     start = time.time()
-    for _ in range(loops):
+    for l in range(loops):
+        print("CPU at", l)
 
         f_fpy.x = initial_location
 
@@ -93,7 +94,8 @@ def run_test(num_points, iterations, numba, dt):
 
     # GPU
     start = time.time()
-    for _ in range(loops):
+    for l in range(loops):
+        print("GPU at", l)
 
         cuS.x = cp.repeat(
             cp.asarray(initial_location[cp.newaxis, :, :]), num_points, axis=0
@@ -135,38 +137,38 @@ def run_test(num_points, iterations, numba, dt):
 
     print("GPU:", (time.time() - start) / loops)
 
-    print()
-    print("Final")
-    print("predicted filterpy")
-    print(f_fpy.x)
-    print("predicted cusignal (First)")
-    print(cuS.x[0, :, :])
-    print("predicted cusignal (Last)")
-    print(cuS.x[-1, :, :])
-    print()
+    # print()
+    # print("Final")
+    # print("predicted filterpy")
+    # print(f_fpy.x)
+    # print("predicted cusignal (First)")
+    # print(cuS.x[0, :, :])
+    # print("predicted cusignal (Last)")
+    # print(cuS.x[-1, :, :])
+    # print()
 
     rtol = 1e-5
 
     np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
     np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
 
-    print()
-    print("Final")
-    print("predicted filterpy")
-    print(f_fpy.P)
-    print("predicted cusignal (First)")
-    print(cuS.P[0, :, :])
-    print("predicted cusignal (Last)")
-    print(cuS.P[-1, :, :])
-    print()
+    # print()
+    # print("Final")
+    # print("predicted filterpy")
+    # print(f_fpy.P)
+    # print("predicted cusignal (First)")
+    # print(cuS.P[0, :, :])
+    # print("predicted cusignal (Last)")
+    # print(cuS.P[-1, :, :])
+    # print()
 
     np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
     np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
-num_points = [4096]
+num_points = [65536]
 iterations = [1000]
-numba = [True, False]
+numba = [False]
 dt = [np.float64]
 
 for p, i, n, d in itertools.product(num_points, iterations, numba, dt):

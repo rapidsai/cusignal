@@ -391,13 +391,13 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
     for ( int gtz = btz; gtz < num_points; gtz += stride_z ) {
 
-        s_XX_F[ltz][lty][ltx] = F[gtz * DIM_X * DIM_X + x_value]; // <-- GLOBAL
+        s_XX_F[ltz][lty][ltx] = F[gtz * DIM_X * DIM_X + x_value];
 
         __syncthreads();
 
         T alpha2 { alpha_sq[gtz] };
-        T localQ { Q[gtz * DIM_X * DIM_X + x_value] }; // <-- GLOBAL
-        T localP { P[gtz * DIM_X * DIM_X + x_value] }; // <-- GLOBAL
+        T localQ { Q[gtz * DIM_X * DIM_X + x_value] };
+        T localP { P[gtz * DIM_X * DIM_X + x_value] };
 
         T temp {};
 
@@ -406,9 +406,9 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_XX_F[ltz][lty][j] *
-                    x_in[gtz * DIM_X * 1 + j * 1 + ltx]; //<-- LOOK
+                    x_in[gtz * DIM_X * 1 + j * 1 + ltx];
             }
-            x_in[gtz * DIM_X * 1 + lty * 1 + ltx]   = temp; //<-- LOOK
+            x_in[gtz * DIM_X * 1 + lty * 1 + ltx]   = temp;
         }
 
         s_XX_P[ltz][lty][ltx] = localP;
@@ -437,7 +437,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         // Compute self._alpha_sq * dot(dot(F, self.P), F.T) + Q
         // Where temp = dot(dot(F, self.P), F.T)
         P[gtz * DIM_X * DIM_X + x_value] =
-            alpha2 * temp + localQ; // <-- GLOBAL
+            alpha2 * temp + localQ;
     }
 }
 
@@ -477,28 +477,28 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
         if ( lty < DIM_Z ) {
             s_ZX_H[ltz][lty][ltx] =
-                H[gtz * DIM_Z * DIM_X + x_value]; // <-- GLOBAL
+                H[gtz * DIM_Z * DIM_X + x_value];
         }
 
         __syncthreads();
 
-        s_XX_P[ltz][lty][ltx] = P[gtz * DIM_X * DIM_X + x_value]; // <-- GLOBAL
+        s_XX_P[ltz][lty][ltx] = P[gtz * DIM_X * DIM_X + x_value];
 
         if ( ( lty < DIM_Z ) && ( ltx < DIM_Z ) ) {
             s_ZZ_R[ltz][lty][ltx] =
-                R[gtz * DIM_Z * DIM_Z + z_value]; // <-- GLOBAL
+                R[gtz * DIM_Z * DIM_Z + z_value];
         }
 
         T temp {};
 
         // Compute self.y : z = dot(self.H, self.x) --> Z1
         if ( ( ltx == 0 ) && ( lty < DIM_Z ) ) {
-            T temp_z { z_in[gtz * DIM_Z + lty] }; // <-- GLOBAL
+            T temp_z { z_in[gtz * DIM_Z + lty] };
 
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_ZX_H[ltz][lty][j] *
-                    x_in[gtz * DIM_X + j]; // <-- GLOBAL x_in X1
+                    x_in[gtz * DIM_X + j];
             }
 
             s_Z1_y[ltz][lty][ltx] = temp_z - temp;
@@ -540,9 +540,6 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
             // Compute linalg.inv(S)
             // Hardcoded for 2x2
-            //temp = inverse<T, DIM_Z>( zz_idx, ltx, lty, (T*)s_ZZ_A );
-            // zz_idx = DIM_Z * DIM_Z * threadIdx.z (ltz)
-
             const int sign = ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1;
 
             sign_det = static_cast<T>(sign) * (
@@ -583,7 +580,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
                 temp += s_XZ_K[ltz][lty][j] *
                 s_Z1_y[ltz][j][ltx];
             }
-            x_in[gtz * DIM_X * 1 + lty * 1 + ltx] += temp; // <-- GLOBAL
+            x_in[gtz * DIM_X * 1 + lty * 1 + ltx] += temp;
         }
 
         // Compute I_KH = self_I - dot(self.K, self.H) --> XX
@@ -646,7 +643,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         }
 
         P[gtz * DIM_X * DIM_X + x_value] =
-            s_XX_P[ltz][lty][ltx] + temp; // <-- GLOBAL
+            s_XX_P[ltz][lty][ltx] + temp;
     }
 }
 """
