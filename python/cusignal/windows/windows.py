@@ -15,7 +15,6 @@ import cupy as cp
 from cupyx.scipy import fftpack, special
 from cupy import (array, ones, zeros, cos, arange, sqrt, pi, linspace, abs,
                   sin, exp)
-from scipy._lib.six import string_types
 
 import warnings
 
@@ -1792,7 +1791,7 @@ def get_window(window, Nx, fftbins=True):
             winstr = window[0]
             if len(window) > 1:
                 args = window[1:]
-        elif isinstance(window, string_types):
+        elif isinstance(window, str):
             if window in _needs_param:
                 raise ValueError("The '" + window + "' window needs one or "
                                  "more parameters -- pass a tuple.")

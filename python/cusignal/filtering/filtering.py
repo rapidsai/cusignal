@@ -41,6 +41,8 @@ from cupy import linalg
 import numpy as np
 
 from ..convolution.correlate import correlate
+from ..filter_design.filter_design_utils import _validate_sos
+from ._sosfilt_cuda import _sosfilt
 
 
 def wiener(im, mysize=None, noise=None):
@@ -163,6 +165,165 @@ def lfiltic(b, a, y, x=None):
         zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
 
     return zi
+
+
+def sosfilt(
+    sos, x, axis=-1, zi=None,
+):
+    """
+    Filter data along one dimension using cascaded second-order sections.
+    Filter a data sequence, `x`, using a digital IIR filter defined by
+    `sos`.
+
+    Parameters
+    ----------
+    sos : array_like
+        Array of second-order filter coefficients, must have shape
+        ``(n_sections, 6)``. Each row corresponds to a second-order
+        section, with the first three columns providing the numerator
+        coefficients and the last three providing the denominator
+        coefficients.
+    x : array_like
+        An N-dimensional input array.
+    axis : int, optional
+        The axis of the input data array along which to apply the
+        linear filter. The filter is applied to each subarray along
+        this axis.  Default is -1.
+    zi : array_like, optional
+        Initial conditions for the cascaded filter delays.  It is a (at
+        least 2D) vector of shape ``(n_sections, ..., 2, ...)``, where
+        ``..., 2, ...`` denotes the shape of `x`, but with ``x.shape[axis]``
+        replaced by 2.  If `zi` is None or is not given then initial rest
+        (i.e. all zeros) is assumed.
+        Note that these initial conditions are *not* the same as the initial
+        conditions given by `lfiltic` or `lfilter_zi`.
+
+    Returns
+    -------
+    y : ndarray
+        The output of the digital filter.
+    zf : ndarray, optional
+        If `zi` is None, this is not returned, otherwise, `zf` holds the
+        final filter delay values.
+    See Also
+    --------
+    zpk2sos, sos2zpk, sosfilt_zi, sosfiltfilt, sosfreqz
+
+    Notes
+    -----
+    WARNING: This is an experimental API and is prone to change in future
+    versions of cuSignal.
+
+    The filter function is implemented as a series of second-order filters
+    with direct-form II transposed structure. It is designed to minimize
+    numerical precision errors for high-order filters.
+
+    Limitations
+    -----------
+    1. The number of n_sections must be less than 513.
+    2. The number of samples must be greater than the number of sections
+
+    Examples
+    --------
+    sosfilt is a stable alternative to `lfilter` as using 2nd order sections
+    reduces numerical error. We are working on building out sos filter output,
+    so please submit GitHub feature requests as needed. You can also generate
+    a filter on CPU with scipy.signal and then move that to GPU for actual
+    filtering operations with `cp.asarray`.
+
+    Plot a 13th-order filter's impulse response using both `sosfilt`:
+    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> # Generate filter on CPU with Scipy.Signal
+    >>> sos = signal.ellip(13, 0.009, 80, 0.05, output='sos')
+    >>> # Move data to GPU
+    >>> sos = cp.asarray(sos)
+    >>> x = cp.random.randn(100_000_000)
+    >>> y = cusignal.sosfilt(sos, x)
+    """
+
+    x = asarray(x)
+    sos = asarray(sos)
+    if x.ndim == 0:
+        raise ValueError("x must be at least 1D")
+    sos, n_sections = _validate_sos(sos)
+    x_zi_shape = list(x.shape)
+    x_zi_shape[axis] = 2
+    x_zi_shape = tuple([n_sections] + x_zi_shape)
+    inputs = [sos, x]
+    if zi is not None:
+        inputs.append(np.asarray(zi))
+    dtype = cp.result_type(*inputs)
+    if dtype.char not in "fdgFDGO":
+        raise NotImplementedError("input type '%s' not supported" % dtype)
+    if zi is not None:
+        zi = cp.array(zi, dtype)  # make a copy so that we can operate in place
+        if zi.shape != x_zi_shape:
+            raise ValueError(
+                "Invalid zi shape. With axis=%r, an input with "
+                "shape %r, and an sos array with %d sections, zi "
+                "must have shape %r, got %r."
+                % (axis, x.shape, n_sections, x_zi_shape, zi.shape)
+            )
+        return_zi = True
+    else:
+        zi = cp.zeros(x_zi_shape, dtype=dtype)
+        return_zi = False
+    axis = axis % x.ndim  # make positive
+    x = cp.moveaxis(x, axis, -1)
+    zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
+    x_shape, zi_shape = x.shape, zi.shape
+    x = cp.reshape(x, (-1, x.shape[-1]))
+    x = cp.array(x, dtype, order="C")  # make a copy, can modify in place
+    zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
+    sos = sos.astype(dtype, copy=False)
+
+    d = cp.cuda.device.Device(0)
+    max_smem = d.attributes["MaxSharedMemoryPerBlock"]
+    max_tpb = d.attributes["MaxThreadsPerBlock"]
+
+    # Determine how much shared memory is needed
+    out_size = sos.shape[0]
+    z_size = zi.shape[1] * zi.shape[2]
+    sos_size = sos.shape[0] * sos.shape[1]
+    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+
+    if shared_mem > max_smem:
+        max_sections = (
+            max_smem // (1 + zi.shape[2] + sos.shape[1]) // x.dtype.itemsize
+        )
+        raise ValueError(
+            "The number of sections ({}), requires too much "
+            "shared memory ({}B) > ({}B). \n"
+            "\n**Max sections possible ({})**".format(
+                sos.shape[0], shared_mem, max_smem, max_sections
+            )
+        )
+
+    if sos.shape[0] > max_tpb:
+        raise ValueError(
+            "The number of sections ({}), must be less "
+            "than max threads per block ({})".format(sos.shape[0], max_tpb)
+        )
+
+    if sos.shape[0] > x.shape[1]:
+        raise ValueError(
+            "The number of samples ({}), must be greater "
+            "than the number of sections ({})".format(x.shape[1], sos.shape[0])
+        )
+
+    _sosfilt(sos, x, zi)
+    x.shape = x_shape
+    x = cp.moveaxis(x, -1, axis)
+    if return_zi:
+        zi.shape = zi_shape
+        zi = cp.moveaxis(zi, [-2, -1], [0, axis + 1])
+        out = (x, zi)
+    else:
+        out = x
+
+    return out
 
 
 def hilbert(x, N=None, axis=-1):

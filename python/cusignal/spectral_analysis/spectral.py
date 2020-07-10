@@ -14,7 +14,6 @@
 import cupy as cp
 from cupy import angle, arange, asarray, reshape, zeros
 from cupyx.scipy import fftpack
-from scipy._lib.six import string_types
 
 from ..windows.windows import get_window
 from ..utils.arraytools import (
@@ -31,14 +30,7 @@ import warnings
 
 
 def lombscargle(
-    x,
-    y,
-    freqs,
-    precenter=False,
-    normalize=False,
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    autosync=True,
-    use_numba=False,
+    x, y, freqs, precenter=False, normalize=False,
 ):
     """
     lombscargle(x, y, freqs)
@@ -52,6 +44,7 @@ def lombscargle(
     When *normalize* is True the computed periodogram is normalized by
     the residuals of the data around a constant reference model (at zero).
     Input arrays should be one-dimensional and will be cast to float64.
+
     Parameters
     ----------
     x : array_like
@@ -64,29 +57,17 @@ def lombscargle(
         Pre-center amplitudes by subtracting the mean.
     normalize : bool, optional
         Compute normalized periodogram.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
     pgram : array_like
         Lomb-Scargle periodogram.
+
     Raises
     ------
     ValueError
         If the input arrays `x` and `y` do not have the same shape.
+
     Notes
     -----
     This subroutine calculates the periodogram using a slightly
@@ -95,6 +76,7 @@ def lombscargle(
     the input arrays for each frequency.
     The algorithm running time scales roughly as O(x * freqs) or O(N^2)
     for a large number of samples and frequencies.
+
     References
     ----------
     .. [1] N.R. Lomb "Least-squares frequency analysis of unequally spaced
@@ -105,6 +87,7 @@ def lombscargle(
     .. [3] R.H.D. Townsend, "Fast calculation of the Lomb-Scargle
            periodogram using graphics processing units.", The Astrophysical
            Journal Supplement Series, vol 191, pp. 247-253, 2010
+
     See Also
     --------
     istft: Inverse Short Time Fourier Transform
@@ -112,6 +95,7 @@ def lombscargle(
     welch: Power spectral density by Welch's method
     spectrogram: Spectrogram by Welch's method
     csd: Cross spectral density by Welch's method
+
     Examples
     --------
     >>> import cusignal
@@ -165,7 +149,7 @@ def lombscargle(
     else:
         y_in = y
 
-    _lombscargle(x, y_in, freqs, pgram, y_dot, cp_stream, autosync, use_numba)
+    _lombscargle(x, y_in, freqs, pgram, y_dot)
 
     return pgram
 
@@ -1243,17 +1227,17 @@ def vectorstrength(events, period):
 
     References
     ----------
-    van Hemmen, JL, Longtin, A, and Vollmayr, AN. Testing resonating vector
-        strength: Auditory system, electric fish, and noise.
-        Chaos 21, 047508 (2011);
-        :doi:`10.1063/1.3670512`.
-    van Hemmen, JL.  Vector strength after Goldberg, Brown, and von Mises:
-        biological and mathematical perspectives.  Biol Cybern.
-        2013 Aug;107(4):385-96. :doi:`10.1007/s00422-013-0561-7`.
-    van Hemmen, JL and Vollmayr, AN.  Resonating vector strength: what happens
-        when we vary the "probing" frequency while keeping the spike times
-        fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
-        :doi:`10.1007/s00422-013-0560-8`.
+    .. [1] van Hemmen, JL, Longtin, A, and Vollmayr, AN. Testing resonating
+           vector strength: Auditory system, electric fish, and noise.
+           Chaos 21, 047508 (2011);
+           :doi:`10.1063/1.3670512`.
+    .. [2] van Hemmen, JL. Vector strength after Goldberg, Brown, and
+           von Mises: biological and mathematical perspectives.  Biol Cybern.
+           2013 Aug;107(4):385-96. :doi:`10.1007/s00422-013-0561-7`.
+    .. [3] van Hemmen, JL and Vollmayr, AN.  Resonating vector strength:
+           what happens when we vary the "probing" frequency while keeping
+           the spike times fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
+           :doi:`10.1007/s00422-013-0560-8`.
     """
     events = asarray(events)
     period = asarray(period)
@@ -1693,7 +1677,7 @@ def _triage_segments(window, nperseg, input_length):
     """
 
     # parse window; if array like, then set nperseg = win.shape
-    if isinstance(window, string_types) or isinstance(window, tuple):
+    if isinstance(window, str) or isinstance(window, tuple):
         # if nperseg not specified
         if nperseg is None:
             nperseg = 256  # then change to default

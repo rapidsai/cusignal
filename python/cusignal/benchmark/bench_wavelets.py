@@ -19,6 +19,11 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+cusignal.precompile_kernels()
+
+# Missing
+# qmf
+
 
 class BenchWavelets:
     @pytest.mark.benchmark(group="Morlet")
@@ -105,3 +110,18 @@ class BenchWavelets:
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)
             assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="Qmf")
+    # class BenchQmf:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.qmf(cpu_sig)
+
+    #     def bench_qmf_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def bench_qmf_gpu(self, benchmark):
+
+    #         output = benchmark(cusignal.qmf, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)

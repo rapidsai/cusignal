@@ -71,6 +71,21 @@ class BenchWindows:
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
 
+    @pytest.mark.benchmark(group="Parzen")
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    class BenchParzen:
+        def cpu_version(self, num_samps):
+            return signal.windows.parzen(num_samps)
+
+        def bench_parzen_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def bench_parzen_gpu(self, benchmark, num_samps):
+            output = benchmark(cusignal.windows.parzen, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Bohman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class BenchBohman:
@@ -280,6 +295,21 @@ class BenchWindows:
             key = self.cpu_version(num_samps, p, std)
             assert array_equal(cp.asnumpy(output), key)
 
+    @pytest.mark.benchmark(group="Chebwin")
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    class BenchChebwin:
+        def cpu_version(self, num_samps):
+            return signal.windows.chebwin(num_samps)
+
+        def bench_chebwin_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def bench_chebwin_gpu(self, benchmark, num_samps):
+            output = benchmark(cusignal.windows.cochebwinsine, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Cosine")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class BenchCosine:
@@ -311,4 +341,20 @@ class BenchWindows:
             )
 
             key = self.cpu_version(num_samps, tau)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="GetWindow")
+    @pytest.mark.parametrize("window", ["triang", "boxcar", "nuttall"])
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    class BenchGetWindow:
+        def cpu_version(self, window, num_samps):
+            return signal.windows.get_window(window, num_samps)
+
+        def bench_get_window_cpu(self, benchmark, window, num_samps):
+            benchmark(self.cpu_version, window, num_samps)
+
+        def bench_get_window_gpu(self, benchmark, window, num_samps):
+            output = benchmark(cusignal.windows.get_window, window, num_samps)
+
+            key = self.cpu_version(window, num_samps)
             assert array_equal(cp.asnumpy(output), key)

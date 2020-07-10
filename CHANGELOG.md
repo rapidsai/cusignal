@@ -1,4 +1,32 @@
-# cuSignal 0.14 (Date TBD)
+
+# cuSignal 0.15.0 (Date TBD)
+
+## New Features
+- PR #144 - Added AIR-T conda recipe
+- PR #119 - Added code of conduct
+- PR #122 - GPU accelerated SigMF Reader
+- PR #130 - Reorg tests and benchmarks to match #83 code refactor
+- PR #136 - Split reader and writer in IO packages and update docs
+- PR #146 - Add compatibility with Scipy 1.5.0
+- PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
+
+## Improvements
+- PR #112 - Remove Numba kernels
+- PR #121 - Add docs build script
+- PR #126 - Install dependencies via meta package
+- PR #132 - Add IO API guide Jupyter notebook
+- PR #133 - Add IO module to cusignal docs
+
+## Bug Fixes
+- PR #116 - Fix stream usage on CuPy raw kernels
+- PR #124 - Remove cp_stream and autosync
+- PR #127 - Fix selected documentation formatting errors
+- PR #138 - Fix overflow issues in `upfirdn`
+- PR #139 - Fixes packaging of python package
+- PR #143 - Fix six package missing with Scipy 1.5
+
+
+# cuSignal 0.14 (03 Jun 2020)
 
 ## New Features
 - PR #43 - Add pytest-benchmarks tests
@@ -10,6 +38,7 @@
 - PR #73 - Local gpuCI build script
 - PR #75 - Add accelerated `lfilter` method.
 - PR #82 - Implement `autosync` to synchronize raw kernels by default
+- PR #99 - Implement `sosfilt` as an alternative to `lfilter`
 
 ## Improvements
 - PR #40 - Ability to specify time/freq domain for resample.
@@ -32,6 +61,8 @@
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
 - PR #101 - Add notebook testing to CI
 - PR #103 - Update notebooks to match new code structure
+- PR #110 - Update README for 0.14 release
+- PR #113 - Add git commit to conda package
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 

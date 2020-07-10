@@ -23,6 +23,7 @@ def rceps(x, n=None, axis=-1):
     defined as the inverse Fourier transform of the log magnitude DFT
     (spectrum) of a signal. It's primarily used for source/speaker separation
     in speech signal processing
+
     Parameters
     ----------
     x : ndarray
@@ -31,6 +32,7 @@ def rceps(x, n=None, axis=-1):
         Size of Fourier Transform; If none, will use length of input array
     axis: int
         Direction for cepstrum calculation
+
     Returns
     -------
     ceps : ndarray

@@ -12,13 +12,11 @@
 # limitations under the License.
 
 import cupy as cp
-import warnings
 
 from math import ceil
-from numba import cuda, int64, void
 from string import Template
 
-from ..utils._caches import _cupy_kernel_cache, _numba_kernel_cache
+from ..utils._caches import _cupy_kernel_cache
 
 
 def _pad_h(h, up):
@@ -46,100 +44,6 @@ def _output_len(len_h, in_len, up, down):
     return need
 
 
-# Custom Numba kernel implementing upsample, filter, downsample operation
-# Matthew Nicely - mnicely@nvidia.com
-def _numba_upfirdn_1d(
-    x, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
-):
-
-    X = cuda.grid(1)
-    strideX = cuda.gridsize(1)
-
-    for i in range(X, cp.int32(out.shape[0]), strideX):
-
-        x_idx = cp.int32(cp.int32(cp.int32(i * down) // up) % padded_len)
-        h_idx = cp.int32(cp.int32(cp.int32(i * down) % up) * h_per_phase)
-
-        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        temp: out.dtype = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
-            if x_c < x_shape_a and x_c >= 0:
-                temp += x[x_c] * h_trans_flip[h_idx]
-            h_idx += 1
-
-        out[i] = temp
-
-
-def _numba_upfirdn_2d(
-    inp, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out
-):
-
-    y, x = cuda.grid(2)
-
-    if x < out.shape[1] and y < out.shape[0]:
-
-        if axis == 1:
-            x_idx = cp.int32(cp.int32(cp.int32(x * down) // up) % padded_len)
-            h_idx = cp.int32(cp.int32(cp.int32(x * down) % up) * h_per_phase)
-        else:
-            x_idx = cp.int32(cp.int32(cp.int32(y * down) // up) % padded_len)
-            h_idx = cp.int32(cp.int32(cp.int32(y * down) % up) * h_per_phase)
-
-        x_conv_idx = cp.int32(cp.int32(x_idx - h_per_phase) + 1)
-        if x_conv_idx < 0:
-            h_idx -= x_conv_idx
-            x_conv_idx = 0
-
-        temp: out.dtype = 0
-
-        # If axis = 0, we need to know each column in x.
-        for x_c in range(cp.int32(x_conv_idx), cp.int32(x_idx + 1)):
-            if x_c < x_shape_a and x_c >= 0:  # If inside input
-                # if multi-dimenstional array
-                if axis == 1:  # process columns
-                    temp += inp[y, x_c] * h_trans_flip[h_idx]
-                else:  # process rows
-                    temp += inp[x_c, x] * h_trans_flip[h_idx]
-
-            h_idx += 1
-
-        out[y, x] = temp
-
-
-def _numba_upfirdn_1d_signature(ty):
-    return void(
-        ty[:],  # x
-        ty[:],  # h_trans_flip
-        int64,  # up
-        int64,  # down
-        int64,  # axis
-        int64,  # x_shape_a
-        int64,  # h_per_phase
-        int64,  # padded_len
-        ty[:],  # out
-    )
-
-
-def _numba_upfirdn_2d_signature(ty):
-    return void(
-        ty[:, :],  # x
-        ty[:],  # h_trans_flip
-        int64,  # up
-        int64,  # down
-        int64,  # axis
-        int64,  # x_shape_a
-        int64,  # h_per_phase
-        int64,  # padded_len
-        ty[:, :],  # out
-    )
-
-
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
 # Matthew Nicely - mnicely@nvidia.com
 _cupy_upfirdn_1d_src = Template(
@@ -163,7 +67,7 @@ extern "C" {
             static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
         const int stride { static_cast<int>(blockDim.x * gridDim.x) };
 
-        for ( int tid = t; tid < outW; tid += stride ) {
+        for ( size_t tid = t; tid < outW; tid += stride ) {
             int x_idx { static_cast<int>((tid * down) / up) % padded_len };
             int h_idx { (tid * down) % up * h_per_phase };
             int x_conv_idx { x_idx - h_per_phase + 1 };
@@ -252,7 +156,7 @@ extern "C" {
 
 
 class _cupy_upfirdn_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -260,7 +164,6 @@ class _cupy_upfirdn_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -289,12 +192,11 @@ class _cupy_upfirdn_wrapper(object):
             out.shape[0],
         )
 
-        self.stream.use()
         self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_upfirdn2d_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -302,7 +204,6 @@ class _cupy_upfirdn2d_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -333,46 +234,24 @@ class _cupy_upfirdn2d_wrapper(object):
             out.shape[1],
         )
 
-        self.stream.use()
         self.kernel(self.grid, self.block, kernel_args)
 
 
 def _get_backend_kernel(
-    dtype, grid, block, stream, use_numba, k_type,
+    dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import _stream_cupy_to_numba, GPUKernel
+    from ..utils.compile_kernels import GPUKernel
 
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            if k_type == GPUKernel.UPFIRDN:
-                return _cupy_upfirdn_wrapper(grid, block, stream, kernel)
-            elif k_type == GPUKernel.UPFIRDN2D:
-                return _cupy_upfirdn2d_wrapper(grid, block, stream, kernel)
-        else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-            )
-
+    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    if kernel:
+        if k_type == GPUKernel.UPFIRDN:
+            return _cupy_upfirdn_wrapper(grid, block, kernel)
+        elif k_type == GPUKernel.UPFIRDN2D:
+            return _cupy_upfirdn2d_wrapper(grid, block, kernel)
     else:
-        warnings.warn(
-            "Numba kernels will be removed in a later release",
-            FutureWarning,
-            stacklevel=4,
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
-
-        nb_stream = _stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type.value)]
-        if kernel:
-            return kernel[grid, block, nb_stream]
-        else:
-            raise ValueError(
-                "Kernel {} not found in _numba_kernel_cache".format(k_type)
-            )
-
-    raise NotImplementedError(
-        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
-    )
 
 
 class _UpFIRDn(object):
@@ -393,7 +272,7 @@ class _UpFIRDn(object):
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
 
     def apply_filter(
-        self, x, axis, cp_stream, autosync, use_numba,
+        self, x, axis,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
         from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
@@ -426,28 +305,14 @@ class _UpFIRDn(object):
             threadsperblock = 512
 
         if out.ndim == 1:
-            _populate_kernel_cache(
-                out.dtype.type, use_numba, GPUKernel.UPFIRDN
-            )
+            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN)
             kernel = _get_backend_kernel(
-                out.dtype,
-                blockspergrid,
-                threadsperblock,
-                cp_stream,
-                use_numba,
-                GPUKernel.UPFIRDN,
+                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN,
             )
         elif out.ndim == 2:
-            _populate_kernel_cache(
-                out.dtype.type, use_numba, GPUKernel.UPFIRDN2D
-            )
+            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN2D)
             kernel = _get_backend_kernel(
-                out.dtype,
-                blockspergrid,
-                threadsperblock,
-                cp_stream,
-                use_numba,
-                GPUKernel.UPFIRDN2D,
+                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN2D,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")
@@ -463,8 +328,5 @@ class _UpFIRDn(object):
             padded_len,
             out,
         )
-
-        if autosync is True:
-            cp_stream.synchronize()
 
         return out

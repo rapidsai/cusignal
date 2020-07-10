@@ -44,6 +44,7 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
+<<<<<<< HEAD
     "scipy>=1.3.0" \
     "numpy>=1.17.3" \
     boost \
@@ -53,6 +54,13 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     "ipython=7.3*" \
     jupyterlab \
     matplotlib
+=======
+    "rapids-build-env=$MINOR_VERSION.*"
+
+# https://docs.rapids.ai/maintainers/depmgmt/ 
+# conda remove -f rapids-build-env rapids-notebook-env
+# conda install "your-pkg=1.0.0"
+>>>>>>> upstream/branch-0.15
 
 logger "Check versions..."
 python --version
@@ -65,7 +73,7 @@ conda list
 ################################################################################
 
 logger "Build cusignal..."
-#$WORKSPACE/build.sh clean cusignal
+$WORKSPACE/build.sh clean cusignal
 
 ################################################################################
 # TEST - Run GoogleTest and py.tests for cusignal
@@ -77,12 +85,12 @@ if hasArg --skip-tests; then
 fi
 
 logger "Check GPU usage..."
-#nvidia-smi
+nvidia-smi
 
 logger "Python pytest for cusignal..."
-#cd $WORKSPACE/python
+cd $WORKSPACE/python
 
-#pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
 
 conda remove -y blas nomkl
 conda install -y -c pytorch "pytorch>=1.4"
