@@ -190,6 +190,7 @@ def run_test(num_points, iterations, numba, dt):
     np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
+# num_points = [2 ** 14, 2 ** 15, 2 ** 16, 2 ** 17, 2 ** 18, 2 ** 19, 2 ** 20]
 num_points = [4096]
 iterations = [1000]
 numba = [False]
