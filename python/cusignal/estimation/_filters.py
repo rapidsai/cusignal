@@ -299,6 +299,7 @@ def _numba_kalman_signature(ty):
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
+// Compute linalg.inv(S)
 template<typename T, int DIM_Z>
 __device__ T inverse(
     const int & ltx,
@@ -315,53 +316,44 @@ __device__ T inverse(
 
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
-            // Compute linalg.inv(S)
             // Hardcoded for 2x2
             sign_det = static_cast<T>(sign) * (
                 (s_ZZ_A[ltz][0][0] * s_ZZ_A[ltz][1][1]) -
-                (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1]) );
+                (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1])
+                );
 
             temp = s_ZZ_A[ltz][1-lty][1-ltx] / sign_det;
         }
     }
+    else if (DIM_Z == 3) {
+        T sign_det = 0.0;
 
-    /*
-    else if ( DIM_Z == 3 ) {
+        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
-#pragma unroll DIM_Z
-        for (int i = 0; i < DIM_Z; i++) {
-            determinant += ( s_XX_B[idx + (0 * DIM_Z + i)] * (
-                s_XX_B[idx + (1 * DIM_Z + ((i + 1) % DIM_Z))] *
-                s_XX_B[idx + (2 * DIM_Z + ((i + 2) % DIM_Z))] -
-                s_XX_B[idx + (1 * DIM_Z + ((i + 2) % DIM_Z))] *
-                s_XX_B[idx + (2 * DIM_Z + ((i + 1) % DIM_Z))] ) );
+            // Hardcoded for 3x3
+            sign_det = static_cast<T>(sign) *
+            ( s_ZZ_A[ltz][0][0] * (
+                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][2] ) -
+                ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][1][2] ) ) -
+            s_ZZ_A[ltz][0][1] * (
+                ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][2] ) -
+                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][0] ) ) +
+            s_ZZ_A[ltz][0][2] * (
+                ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][1] ) -
+                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][0] ) )
+            );
+
+            T invdet = 1 / sign_det;
+
+            int x1 = ltx == 0 ? 1 : 0;  /* always either 0 or 1 */
+            int x2 = ltx == 2 ? 1 : 2;  /* always either 1 or 2 */
+            int y1 = lty == 0 ? 1 : 0;  /* always either 0 or 1 */
+            int y2 = lty == 2 ? 1 : 2;  /* always either 1 or 2 */
+
+            temp = ( ( s_ZZ_A[ltz][x1][y1] * s_ZZ_A[ltz][x2][y2] ) -
+                ( s_ZZ_A[ltz][x1][y2] * s_ZZ_A[ltz][x2][y1] ) ) * invdet;
         }
-
-        if (tx==0 && ty ==0 && (static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
-            printf("d %f\\n", determinant);
-        }
-
-        temp = s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))] *
-                s_XX_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] -
-                s_XX_B[idx + (((tx + 1) % DIM_Z) * DIM_Z + ((ty + 2) % DIM_Z))] *
-                s_XX_B[idx + (((tx + 2) % DIM_Z) * DIM_Z + ((ty + 1) % DIM_Z))];
-
-        if ((static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
-            printf("t %f %d %d\\n", temp, tx, ty);
-        }
-
-        temp /= ( determinant * sign );
-
-        if ((static_cast<int>( blockIdx.z * blockDim.z + threadIdx.z ) == 1)) {
-            printf("i %f %d %d\\n", temp, tx, ty);
-        }
-
-    } else {
-        determinant = sign;
     }
-
-    */
-
     return ( temp );
 }
 
@@ -441,6 +433,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
             alpha2 * temp + localQ;
     }
 }
+
 
 template<typename T, int DIM_X, int DIM_Z, int MAX_TPB, int MIN_BPSM>
 __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
@@ -550,7 +543,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         //  Compute self.K : dot(PHT, self.SI) --> ZZ
         //  kalman gain
         temp = 0.0;
-        if ( ltx < 2 ) {
+        if ( ltx < DIM_Z ) {
 #pragma unroll DIM_Z
             for ( int j = 0; j < DIM_Z; j++ ) {
                 temp += s_XZ_A[ltz][lty][j] *
