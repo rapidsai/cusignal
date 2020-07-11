@@ -354,6 +354,7 @@ __device__ T inverse(
     }
     else if ( DIM_Z == 4 ) {
         // https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+        // Highly unoptimal will be replaced in a later
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
 
             // Hardcoded for 4x4
@@ -494,9 +495,9 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
         const T * __restrict__ Q
         ) {
 
-    __shared__ T s_XX_A[16][DIM_X][DIM_X];
-    __shared__ T s_XX_F[16][DIM_X][DIM_X];
-    __shared__ T s_XX_P[16][DIM_X][DIM_X];
+    __shared__ T s_XX_A[16+1][DIM_X][DIM_X+1];
+    __shared__ T s_XX_F[16+1][DIM_X][DIM_X+1];
+    __shared__ T s_XX_P[16+1][DIM_X][DIM_X];
 
     const auto ltx = threadIdx.x;
     const auto lty = threadIdx.y;
@@ -571,14 +572,15 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         const T * __restrict__ R
         ) {
 
-    __shared__ T s_XX_A[16][DIM_X][DIM_X];
-    __shared__ T s_XX_B[16][DIM_X][DIM_X];
+    __shared__ T s_XX_A[16][DIM_X][DIM_X+1];
+    __shared__ T s_XX_B[16][DIM_X][DIM_X+1];
     __shared__ T s_XX_P[16][DIM_X][DIM_X];
     __shared__ T s_ZX_H[16][DIM_Z][DIM_X];
     __shared__ T s_XZ_K[16][DIM_X][DIM_Z];
     __shared__ T s_XZ_A[16][DIM_X][DIM_Z];
     __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z];
     __shared__ T s_ZZ_R[16][DIM_Z][DIM_Z];
+    __shared__ T s_ZZ_I[16][DIM_Z][DIM_Z];
     __shared__ T s_Z1_y[16][DIM_Z][1];
 
     const auto ltx = threadIdx.x;
@@ -607,6 +609,10 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         if ( ( lty < DIM_Z ) && ( ltx < DIM_Z ) ) {
             s_ZZ_R[ltz][lty][ltx] =
                 R[gtz * DIM_Z * DIM_Z + z_value];
+
+            if ( lty == ltx ) {
+                s_ZZ_I[ltz][lty][ltx] = 1.0;
+            }
         }
 
         T temp {};
