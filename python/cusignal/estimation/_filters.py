@@ -28,6 +28,7 @@ class GPUBackend(Enum):
     CUPY = 0
     NUMBA = 1
 
+
 _SUPPORTED_TYPES_KALMAN_FILTER = ["float32", "float64"]
 
 
@@ -426,15 +427,11 @@ def _get_backend_kernel(dtype, grid, block, k_type):
         )
 
 
-def _populate_kernel_cache(
-    np_type, dim_x, dim_z, max_tpb
-):
+def _populate_kernel_cache(np_type, dim_x, dim_z, max_tpb):
 
     # Check in np_type is a supported option
     if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
-        raise ValueError(
-            "Datatype {} not found for '{}'".format(np_type)
-        )
+        raise ValueError("Datatype {} not found for '{}'".format(np_type))
 
     if np_type == "float32":
         c_type = "float"
@@ -443,12 +440,8 @@ def _populate_kernel_cache(
 
     # Instantiate the cupy kernel for this type and compile
     specializations = (
-        "_cupy_predict<{}, {}, {}>".format(
-            c_type, dim_x, max_tpb
-        ),
-        "_cupy_update<{}, {}, {}, {}>".format(
-            c_type, dim_x, dim_z, max_tpb
-        ),
+        "_cupy_predict<{}, {}, {}>".format(c_type, dim_x, max_tpb),
+        "_cupy_update<{}, {}, {}, {}>".format(c_type, dim_x, dim_z, max_tpb),
     )
     module = cp.RawModule(
         code=cuda_code,
@@ -459,6 +452,6 @@ def _populate_kernel_cache(
     _cupy_kernel_cache[
         (str(np_type), GPUKernel.PREDICT)
     ] = module.get_function(specializations[0])
-    _cupy_kernel_cache[
-        (str(np_type), GPUKernel.UPDATE)
-    ] = module.get_function(specializations[1])
+    _cupy_kernel_cache[(str(np_type), GPUKernel.UPDATE)] = module.get_function(
+        specializations[1]
+    )

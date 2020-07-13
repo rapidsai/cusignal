@@ -26,16 +26,11 @@ class KalmanFilter(object):
     else:
         raise NotImplementedError(
             "Kalman Filter only compatible with CuPy v.8.0.0b4+"
-            )
+        )
 
     #  documentation
     def __init__(
-        self,
-        num_points,
-        dim_x,
-        dim_z,
-        dim_u=0,
-        dtype=cp.float32,
+        self, num_points, dim_x, dim_z, dim_u=0, dtype=cp.float32,
     ):
 
         self.num_points = num_points
@@ -111,10 +106,7 @@ class KalmanFilter(object):
         # Only need to populate cache once
         # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype,
-            self.dim_x,
-            self.dim_z,
-            max_threads_per_block,
+            self.x.dtype, self.dim_x, self.dim_z, max_threads_per_block,
         )
 
         # Retrieve kernel from cache
