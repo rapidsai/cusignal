@@ -12,9 +12,11 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 
 from enum import Enum
-from numba import cuda, void, float32, float64
+
+from ..utils._caches import _cupy_kernel_cache
 
 
 class GPUKernel(Enum):
@@ -26,273 +28,7 @@ class GPUBackend(Enum):
     CUPY = 0
     NUMBA = 1
 
-
-# Numba type supported and corresponding C type
-_SUPPORTED_TYPES = {
-    cp.float32: [float32, "float"],
-    cp.float64: [float64, "double"],
-}
-
-
-_numba_kernel_cache = {}
-_cupy_kernel_cache = {}
-
-
-# Use until functionality provided in Numba 0.49/0.50 available
-def stream_cupy_to_numba(cp_stream):
-    """
-    Notes:
-        1. The lifetime of the returned Numba stream should be as
-           long as the CuPy one, which handles the deallocation
-           of the underlying CUDA stream.
-        2. The returned Numba stream is assumed to live in the same
-           CUDA context as the CuPy one.
-        3. The implementation here closely follows that of
-           cuda.stream() in Numba.
-    """
-    from ctypes import c_void_p
-    import weakref
-
-    # get the pointer to actual CUDA stream
-    raw_str = cp_stream.ptr
-
-    # gather necessary ingredients
-    ctx = cuda.devices.get_context()
-    handle = c_void_p(raw_str)
-
-    # create a Numba stream
-    nb_stream = cuda.cudadrv.driver.Stream(
-        weakref.proxy(ctx), handle, finalizer=None
-    )
-
-    return nb_stream
-
-
-def _numba_predict(alpha, x_in, F, P, Q):
-
-    _, _, tz = cuda.grid(3)
-    _, _, strideZ = cuda.gridsize(3)
-
-    lty = cuda.threadIdx.x
-    ltx = cuda.threadIdx.y
-    ltz = cuda.threadIdx.z
-
-    dim_x = P.shape[1]
-
-    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_XX_F = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-
-    #  Each i is a different point
-    for gtz in range(tz, x_in.shape[0], strideZ):
-
-        s_XX_F[ltz, lty, ltx] = F[
-            gtz, lty, ltx,
-        ]
-
-        s_XX_P[ltz, lty, ltx] = P[
-            gtz, lty, ltx,
-        ]
-
-        cuda.syncthreads()
-
-        #  Load alpha_sq and Q into registers
-        alpha_sq = alpha[gtz, 0, 0]
-        local_Q = Q[gtz, lty, ltx]
-
-        #  Compute new self.x
-        #  x_in = 4x1
-        temp: x_in.dtype = 0
-        if ltx == 0:  # ltx = tx
-            for j in range(dim_x):
-                temp += s_XX_F[ltz, lty, j] * x_in[gtz, j, ltx]
-
-            x_in[gtz, lty, ltx] = temp
-
-        #  Compute dot(self.F, self.P)
-        temp: x_in.dtype = 0
-        for j in range(dim_x):
-            temp += s_XX_F[ltz, lty, j] * s_XX_P[ltz, j, ltx]
-
-        s_XX_A[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute dot(dot(self.F, self.P), self.F.T)
-        temp: x_in.dtype = 0
-        for j in range(dim_x):
-            temp += s_XX_A[ltz, lty, j] * s_XX_F[ltz, ltx, j]
-
-        #  Compute alpha^2 * dot(dot(self.F, self.P), self.F.T) + self.Q
-        P[gtz, lty, ltx] = alpha_sq * temp + local_Q
-
-
-def _numba_update(x_in, z_in, H, P, R):
-
-    _, _, btz = cuda.grid(3)
-    _, _, strideZ = cuda.gridsize(3)
-
-    lty = cuda.threadIdx.x
-    ltx = cuda.threadIdx.y
-    ltz = cuda.threadIdx.z
-
-    dim_x = P.shape[1]
-    dim_z = R.shape[1]
-
-    s_XX_A = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_XX_B = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_XX_P = cuda.shared.array(shape=(16, 4, 4), dtype=float64)
-    s_ZX_H = cuda.shared.array(shape=(16, 2, 4), dtype=float64)
-    s_XZ_K = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
-    s_XZ_A = cuda.shared.array(shape=(16, 4, 2), dtype=float64)
-    s_ZZ_A = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
-    s_ZZ_R = cuda.shared.array(shape=(16, 2, 2), dtype=float64)
-    s_Z1_y = cuda.shared.array(shape=(16, 2, 1), dtype=float64)
-
-    #  Each i is a different point
-    for gtz in range(btz, x_in.shape[0], strideZ):
-
-        s_XX_P[ltz, lty, ltx] = P[
-            gtz, lty, ltx,
-        ]
-
-        if lty < dim_z:
-            s_ZX_H[ltz, lty, ltx] = H[gtz, lty, ltx]
-
-        if lty < dim_z and ltx < dim_z:
-            s_ZZ_R[ltz, lty, ltx] = R[gtz, lty, ltx]
-
-        cuda.syncthreads()
-
-        #  Compute self.y : z = dot(self.H, self.x) --> Z1
-        temp: x_in.dtype = 0.0
-        if lty < dim_z and ltx == 0:
-            temp_z: x_in.dtype = z_in[gtz, lty, ltx]
-            for j in range(dim_x):
-                temp += s_ZX_H[ltz, lty, j] * x_in[gtz, j, ltx]
-
-            s_Z1_y[ltz, lty, ltx] = temp_z - temp
-
-        #  Compute PHT : dot(self.P, self.H.T) --> XZ
-        temp: x_in.dtype = 0.0
-        if ltx < dim_z:
-            for j in range(dim_x):
-                temp += s_XX_P[ltz, lty, j] * s_ZX_H[ltz, ltx, j]
-
-            #  s_XX_A holds PHT
-            s_XZ_A[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute self.S : dot(self.H, PHT) + self.R --> ZZ
-        temp: x_in.dtype = 0.0
-        if lty < dim_z and ltx < dim_z:
-            for j in range(dim_x):
-                temp += s_ZX_H[ltz, lty, j] * s_XZ_A[ltz, j, ltx]
-
-            #  s_XX_B holds S - system uncertainty
-            s_ZZ_A[ltz, lty, ltx] = temp + s_ZZ_R[ltz, lty, ltx]
-
-        cuda.syncthreads()
-
-        if lty < dim_z and ltx < dim_z:
-
-            #  Compute linalg.inv(S)
-            #  Hardcoded for 2x2
-            sign = 1 if (lty + ltx) % 2 == 0 else -1
-
-            #  sign * determinant
-            sign_det = float32(sign) * (
-                (s_ZZ_A[ltz, 0, 0] * s_ZZ_A[ltz, 1, 1])
-                - (s_ZZ_A[ltz, 1, 0] * s_ZZ_A[ltz, 0, 1])
-            )
-
-            #  s_ZZ_A hold SI - inverse system uncertainty
-            temp = s_ZZ_A[ltz, 1 - lty, 1 - ltx] / sign_det
-
-        cuda.syncthreads()
-
-        if lty < dim_z and ltx < dim_z:
-            s_ZZ_A[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute self.K : dot(PHT, self.SI) --> ZZ
-        #  kalman gain
-        temp: x_in.dtype = 0.0
-        if ltx < dim_z:
-            for j in range(dim_z):
-                temp += (
-                    s_XZ_A[ltz, lty, j]
-                    * s_ZZ_A[ltz, ltx, j]
-                )
-            s_XZ_K[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute self.x : self.x + cp.dot(self.K, self.ltx) --> X1
-        temp: x_in.dtype = 0.0
-        if ltx == 0:
-            for j in range(dim_z):
-                temp += s_XZ_K[ltz, lty, j] * s_Z1_y[ltz, j, ltx]
-
-            x_in[gtz, lty, ltx] += temp
-
-        #  Compute I_KH = self_I - dot(self.K, self.H) --> XX
-        temp: x_in.dtype = 0.0
-        for j in range(dim_z):
-            temp += s_XZ_K[ltz, lty, j] * s_ZX_H[ltz, j, ltx]
-
-        #  s_XX_A holds I_KH
-        s_XX_A[ltz, lty, ltx] = (1.0 if lty == ltx else 0.0) - temp
-
-        cuda.syncthreads()
-
-        #  Compute self.P = dot(dot(I_KH, self.P), I_KH.T) +
-        #  dot(dot(self.K, self.R), self.K.T)
-
-        #  Compute dot(I_KH, self.P) --> XX
-        temp: x_in.dtype = 0.0
-        for j in range(dim_x):
-            temp += s_XX_A[ltz, lty, j] * s_XX_P[ltz, j, ltx]
-
-        #  s_XX_B holds dot(I_KH, self.P)
-        s_XX_B[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute dot(dot(I_KH, self.P), I_KH.T) --> XX
-        temp: x_in.dtype = 0.0
-        for j in range(dim_x):
-            temp += s_XX_B[ltz, lty, j] * s_XX_A[ltz, ltx, j]
-
-        s_XX_P[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute dot(self.K, self.R) --> XZ
-        temp: x_in.dtype = 0.0
-        if ltx < dim_z:
-            for j in range(dim_z):
-                temp += s_XZ_K[ltz, lty, j] * s_ZZ_R[ltz, j, ltx]
-
-            #  s_XX_A holds dot(self.K, self.R)
-            s_XZ_A[ltz, lty, ltx] = temp
-
-        cuda.syncthreads()
-
-        #  Compute dot(dot(self.K, self.R), self.K.T) --> XX
-        temp: x_in.dtype = 0.0
-        for j in range(dim_z):
-            temp += s_XZ_A[ltz, lty, j] * s_XZ_K[ltz, ltx, j]
-
-        P[gtz, lty, ltx] = temp + s_XX_P[ltz, lty, ltx]
-
-
-def _numba_kalman_signature(ty):
-    return void(
-        ty[:, :, :], ty[:, :, :], ty[:, :, :], ty[:, :, :], ty[:, :, :],
-    )
+_SUPPORTED_TYPES_KALMAN_FILTER = ["float32", "float64"]
 
 
 # Custom Cupy raw kernel
@@ -351,7 +87,7 @@ __device__ T inverse(
 }
 
 
-template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
+template<typename T, int DIM_X, int MAX_TPB>
 __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
@@ -428,7 +164,7 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
 }
 
 
-template<typename T, int DIM_X, int DIM_Z, int MAX_TPB, int MIN_BPSM>
+template<typename T, int DIM_X, int DIM_Z, int MAX_TPB>
 __global__ void __launch_bounds__(MAX_TPB) _cupy_update(
         const int num_points,
         T * __restrict__ x_in,
@@ -632,7 +368,7 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_update(
 
 
 class _cupy_predict_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -640,7 +376,6 @@ class _cupy_predict_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(
@@ -649,12 +384,11 @@ class _cupy_predict_wrapper(object):
 
         kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
 class _cupy_update_wrapper(object):
-    def __init__(self, grid, block, stream, kernel):
+    def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
             grid = (grid,)
         if isinstance(block, int):
@@ -662,89 +396,69 @@ class _cupy_update_wrapper(object):
 
         self.grid = grid
         self.block = block
-        self.stream = stream
         self.kernel = kernel
 
     def __call__(self, x, z, H, P, R):
 
         kernel_args = (x.shape[0], x, z, H, P, R)
 
-        with self.stream:
-            self.kernel(self.grid, self.block, kernel_args)
+        self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, stream, use_numba, k_type):
+def _get_backend_kernel(dtype, grid, block, k_type):
 
-    if not use_numba:
-        kernel = _cupy_kernel_cache[(dtype.name, k_type)]
-        if kernel:
-            if k_type == GPUKernel.PREDICT:
-                return _cupy_predict_wrapper(grid, block, stream, kernel)
-            elif k_type == GPUKernel.UPDATE:
-                return _cupy_update_wrapper(grid, block, stream, kernel)
-            else:
-                raise NotImplementedError(
-                    "No CuPY kernel found for k_type {}, datatype {}".format(
-                        k_type, dtype
-                    )
-                )
+    print("dtype", str(dtype))
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
+    if kernel:
+        if k_type == GPUKernel.PREDICT:
+            return _cupy_predict_wrapper(grid, block, kernel)
+        elif k_type == GPUKernel.UPDATE:
+            return _cupy_update_wrapper(grid, block, kernel)
         else:
-            raise ValueError(
-                "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+            raise NotImplementedError(
+                "No CuPY kernel found for k_type {}, datatype {}".format(
+                    k_type, dtype
+                )
             )
     else:
-        nb_stream = stream_cupy_to_numba(stream)
-        kernel = _numba_kernel_cache[(dtype.name, k_type)]
-
-        if kernel:
-            return kernel[grid, block, nb_stream]
-        else:
-            raise ValueError(
-                "Kernel {} not found in _numba_kernel_cache".format(k_type)
-            )
-    raise NotImplementedError(
-        "No kernel found for k_type {}, datatype {}".format(k_type, dtype.name)
-    )
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+        )
 
 
 def _populate_kernel_cache(
-    np_type, use_numba, dim_x, dim_z, max_tpb, min_bpsm
+    np_type, dim_x, dim_z, max_tpb
 ):
 
     # Check in np_type is a supported option
-    try:
-        numba_type, c_type = _SUPPORTED_TYPES[np_type]
-
-    except ValueError:
-        raise Exception("No kernel found for datatype {}".format(np_type))
-
-    if not use_numba:
-        # Instantiate the cupy kernel for this type and compile
-        specializations = (
-            "_cupy_predict<{}, {}, {}, {}>".format(
-                c_type, dim_x, max_tpb, min_bpsm
-            ),
-            "_cupy_update<{}, {}, {}, {}, {}>".format(
-                c_type, dim_x, dim_z, max_tpb, min_bpsm
-            ),
-        )
-        module = cp.RawModule(
-            code=cuda_code,
-            options=("-std=c++11", "-fmad=true",),
-            name_expressions=specializations,
+    if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type)
         )
 
-        _cupy_kernel_cache[
-            (str(numba_type), GPUKernel.PREDICT)
-        ] = module.get_function(specializations[0])
-        _cupy_kernel_cache[
-            (str(numba_type), GPUKernel.UPDATE)
-        ] = module.get_function(specializations[1])
+    if np_type == "float32":
+        c_type = "float"
     else:
-        sig = _numba_kalman_signature(numba_type)
-        _numba_kernel_cache[(str(numba_type), GPUKernel.PREDICT)] = cuda.jit(
-            sig
-        )(_numba_predict)
-        _numba_kernel_cache[(str(numba_type), GPUKernel.UPDATE)] = cuda.jit(
-            sig
-        )(_numba_update)
+        c_type = "double"
+
+    # Instantiate the cupy kernel for this type and compile
+    specializations = (
+        "_cupy_predict<{}, {}, {}>".format(
+            c_type, dim_x, max_tpb
+        ),
+        "_cupy_update<{}, {}, {}, {}>".format(
+            c_type, dim_x, dim_z, max_tpb
+        ),
+    )
+    module = cp.RawModule(
+        code=cuda_code,
+        options=("-std=c++11", "-fmad=true",),
+        name_expressions=specializations,
+    )
+
+    _cupy_kernel_cache[
+        (str(np_type), GPUKernel.PREDICT)
+    ] = module.get_function(specializations[0])
+    _cupy_kernel_cache[
+        (str(np_type), GPUKernel.UPDATE)
+    ] = module.get_function(specializations[1])

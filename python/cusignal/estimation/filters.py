@@ -36,13 +36,9 @@ class KalmanFilter(object):
         dim_z,
         dim_u=0,
         dtype=cp.float32,
-        cp_stream=cp.cuda.stream.Stream.null,
-        use_numba=False,
     ):
 
         self.num_points = num_points
-        self.cp_stream = cp_stream
-        self.use_numba = use_numba
 
         if dim_x < 1:
             raise ValueError("dim_x must be 1 or greater")
@@ -110,24 +106,15 @@ class KalmanFilter(object):
         self.threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
         self.blockspergrid = (1, 1, numSM * 20)
 
-        max_available_threadsperblock = d.attributes[
-            "MaxThreadsPerMultiProcessor"
-        ]
-
         max_threads_per_block = self.dim_x * self.dim_x * threads_z_axis
-        min_blocks_per_multiprocessor = (
-            max_available_threadsperblock // max_threads_per_block
-        )
 
         # Only need to populate cache once
         # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype.type,
-            self.use_numba,
+            self.x.dtype,
             self.dim_x,
             self.dim_z,
             max_threads_per_block,
-            min_blocks_per_multiprocessor,
         )
 
         # Retrieve kernel from cache
@@ -135,8 +122,6 @@ class KalmanFilter(object):
             self.x.dtype,
             self.blockspergrid,
             self.threadsperblock,
-            self.cp_stream,
-            self.use_numba,
             _filters.GPUKernel.PREDICT,
         )
 
@@ -144,31 +129,28 @@ class KalmanFilter(object):
             self.x.dtype,
             self.blockspergrid,
             self.threadsperblock,
-            self.cp_stream,
-            self.use_numba,
             _filters.GPUKernel.UPDATE,
         )
 
-        if use_numba is False:
-            print("Predict")
-            print(self.predict_kernel.kernel.const_size_bytes)
-            print(self.predict_kernel.kernel.local_size_bytes)
-            print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
-            print(self.predict_kernel.kernel.max_threads_per_block)
-            print(self.predict_kernel.kernel.num_regs)
-            print(self.predict_kernel.kernel.shared_size_bytes)
-            print()
-            print("Update")
-            print(self.update_kernel.kernel.const_size_bytes)
-            print(self.update_kernel.kernel.local_size_bytes)
-            print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
-            print(self.update_kernel.kernel.max_threads_per_block)
-            print(self.update_kernel.kernel.num_regs)
-            print(self.update_kernel.kernel.shared_size_bytes)
-            print()
-            print(max_threads_per_block)
-            print(min_blocks_per_multiprocessor)
-            print()
+        # print("Predict")
+        # print(self.predict_kernel.kernel.const_size_bytes)
+        # print(self.predict_kernel.kernel.local_size_bytes)
+        # print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
+        # print(self.predict_kernel.kernel.max_threads_per_block)
+        # print(self.predict_kernel.kernel.num_regs)
+        # print(self.predict_kernel.kernel.shared_size_bytes)
+        # print()
+        # print("Update")
+        # print(self.update_kernel.kernel.const_size_bytes)
+        # print(self.update_kernel.kernel.local_size_bytes)
+        # print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
+        # print(self.update_kernel.kernel.max_threads_per_block)
+        # print(self.update_kernel.kernel.num_regs)
+        # print(self.update_kernel.kernel.shared_size_bytes)
+        # print()
+        # print(max_threads_per_block)
+        # print(min_blocks_per_multiprocessor)
+        # print()
 
     def predict(self):
 
