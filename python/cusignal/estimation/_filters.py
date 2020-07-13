@@ -298,17 +298,64 @@ def _numba_kalman_signature(ty):
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
+#define INV 0
+
 // Compute linalg.inv(S)
 template<typename T, int DIM_Z>
 __device__ T inverse(
     const int & ltx,
     const int & lty,
     const int & ltz,
-    const T(&s_ZZ_A)[16][DIM_Z][DIM_Z+1]) {
-
-    const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
+    T(&s_ZZ_A)[16][DIM_Z][DIM_Z+1],
+    T(&s_ZZ_I)[16][DIM_Z][DIM_Z]) {
 
     T result {};
+
+#if INV == 0
+    T temp {};
+
+    // Interchange the row of matrix
+    if ( lty == 0 && ltx < DIM_Z) {
+        for ( int i = DIM_Z - 1; i > 0; i-- ) {
+            if ( s_ZZ_A[ltz][i - 1][0] < s_ZZ_A[ltz][i][0] ) {
+                temp = s_ZZ_A[ltz][i][ltx];
+                s_ZZ_A[ltz][i][ltx] = s_ZZ_A[ltz][i - 1][ltx];
+                s_ZZ_A[ltz][i - 1][ltx] = temp;
+
+                temp = s_ZZ_I[ltz][i][ltx];
+                s_ZZ_I[ltz][i][ltx] = s_ZZ_I[ltz][i - 1][ltx];
+                s_ZZ_I[ltz][i - 1][ltx] = temp;
+            }
+        }
+    }
+
+    // Replace a row by sum of itself and a
+    // constant multiple of another row of the matrix
+    if ( lty < DIM_Z && ltx < DIM_Z ) {
+        for ( int i = 0; i < DIM_Z; i++ ) {
+            T temp2 = s_ZZ_I[ltz][i][ltx];
+
+            if ( lty != i ) {
+                temp = s_ZZ_A[ltz][lty][i] / s_ZZ_A[ltz][i][i];
+                s_ZZ_A[ltz][lty][ltx] -= s_ZZ_A[ltz][i][ltx] * temp;
+                s_ZZ_I[ltz][lty][ltx] -= s_ZZ_I[ltz][i][ltx] * temp;
+            }
+        }
+    }
+
+    // Multiply each row by a nonzero integer.
+    // Divide row element by the diagonal element
+    if ( lty < DIM_Z && ltx < DIM_Z ) {
+        temp = s_ZZ_A[ltz][lty][lty];
+        s_ZZ_A[ltz][lty][ltx] = s_ZZ_A[ltz][lty][ltx] / temp;
+        s_ZZ_I[ltz][lty][ltx] = s_ZZ_I[ltz][lty][ltx] / temp;
+    }
+
+    result = s_ZZ_I[ltz][lty][ltx];
+
+#elif INV == 2
+    const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
+
     T sign_det {};
 
     if ( DIM_Z == 2 ) {
@@ -481,7 +528,9 @@ __device__ T inverse(
             }
         }
     }
-    return ( result );
+
+#endif
+    return (result);
 }
 
 
@@ -612,6 +661,8 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
 
             if ( lty == ltx ) {
                 s_ZZ_I[ltz][lty][ltx] = 1.0;
+            } else {
+                s_ZZ_I[ltz][lty][ltx] = 0.0;
             }
         }
 
@@ -661,9 +712,13 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         __syncthreads();
 
         // Compute matrix inversion
-        temp = inverse(ltx, lty, ltz, s_ZZ_A);
+        temp = inverse(ltx, lty, ltz, s_ZZ_A, s_ZZ_I);
 
         __syncthreads();
+
+        //if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
+        //    printf("2. %0.1f %0.7f\\n", s_ZZ_A[ltz][lty][ltx], s_ZZ_I[ltz][lty][ltx]);
+        //}
 
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
             // s_XX_B hold SI - inverse system uncertainty
