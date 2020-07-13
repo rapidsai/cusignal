@@ -9,12 +9,15 @@ import itertools
 from cupy import prof
 
 dim_x = 4
-dim_z = 4
+dim_z = 2
 loops = 5
 iterations = 1000
 
 cpu_baseline32 = 0.0
 cpu_baseline64 = 0.0
+
+debug = None
+test = None
 
 
 def main(dt, num_points):
@@ -175,7 +178,7 @@ def main(dt, num_points):
 
         for _ in range(iterations):
 
-            with cp.prof.time_range("predict", 0):
+            with prof.time_range("predict", 0):
                 cuS.predict()
 
             with cp.prof.time_range("z", 0):
@@ -196,33 +199,37 @@ def main(dt, num_points):
     print("Speed Up", cpu_time / gpu_time)
     print()
 
-    # print()
-    # print("Final")
-    # print("predicted filterpy")
-    # print(f_fpy.x)
-    # print("predicted cusignal (First)")
-    # print(cuS.x[0, :, :])
-    # print("predicted cusignal (Last)")
-    # print(cuS.x[-1, :, :])
-    # print()
+    if debug is not None:
+        print()
+        print("Final")
+        print("predicted filterpy")
+        print(f_fpy.x)
+        print("predicted cusignal (First)")
+        print(cuS.x[0, :, :])
+        print("predicted cusignal (Last)")
+        print(cuS.x[-1, :, :])
+        print()
 
     rtol = 1e-3
 
-    np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
-    np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
+    if test is not None:
+        np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
+        np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
 
-    # print()
-    # print("Final")
-    # print("predicted filterpy")
-    # print(f_fpy.P)
-    # print("predicted cusignal (First)")
-    # print(cuS.P[0, :, :])
-    # print("predicted cusignal (Last)")
-    # print(cuS.P[-1, :, :])
-    # print()
+    if debug is not None:
+        print()
+        print("Final")
+        print("predicted filterpy")
+        print(f_fpy.P)
+        print("predicted cusignal (First)")
+        print(cuS.P[0, :, :])
+        print("predicted cusignal (Last)")
+        print(cuS.P[-1, :, :])
+        print()
 
-    np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
-    np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
+    if test is not None:
+        np.testing.assert_allclose(f_fpy.P, cuS.P[0, :, :].get(), rtol)
+        np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
 if __name__ == "__main__":
