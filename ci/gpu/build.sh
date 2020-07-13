@@ -44,7 +44,7 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
-    "rapids-build-env=$MINOR_VERSION.*"
+    "rapids-build-env=$MINOR_VERSION.*" \
     "rapids-notebook-env=$MINOR_VERSION."
 
 # https://docs.rapids.ai/maintainers/depmgmt/ 
