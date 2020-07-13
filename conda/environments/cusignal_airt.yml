@@ -1,11 +1,11 @@
-name: cusignal-dev
+name: cusignal
 channels:
   - conda-forge
   - nvidia
   - defaults
   - numba
-  - c4aarch64
 dependencies:
+  - python=3.6.9
   - scipy>=1.4.0,<1.5.0
   - numpy
   - matplotlib

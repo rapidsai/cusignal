@@ -2,15 +2,20 @@
 # cuSignal 0.15.0 (Date TBD)
 
 ## New Features
+- PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
+- PR #130 - Reorg tests and benchmarks to match #83 code refactor
 - PR #136 - Split reader and writer in IO packages and update docs
+- PR #146 - Add compatibility with Scipy 1.5.0
+- PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
 - PR #69 - Multi-point Kalman Filter
 
 ## Improvements
 - PR #112 - Remove Numba kernels
 - PR #121 - Add docs build script
 - PR #126 - Install dependencies via meta package
+- PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
 
 ## Bug Fixes
@@ -18,6 +23,9 @@
 - PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
 - PR #138 - Fix overflow issues in `upfirdn`
+- PR #139 - Fixes packaging of python package
+- PR #143 - Fix six package missing with Scipy 1.5
+- PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 
 
 # cuSignal 0.14 (03 Jun 2020)

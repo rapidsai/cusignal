@@ -14,7 +14,6 @@
 import cupy as cp
 from cupy import angle, arange, asarray, reshape, zeros
 from cupyx.scipy import fftpack
-from scipy._lib.six import string_types
 
 from ..windows.windows import get_window
 from ..utils.arraytools import (
@@ -1678,7 +1677,7 @@ def _triage_segments(window, nperseg, input_length):
     """
 
     # parse window; if array like, then set nperseg = win.shape
-    if isinstance(window, string_types) or isinstance(window, tuple):
+    if isinstance(window, str) or isinstance(window, tuple):
         # if nperseg not specified
         if nperseg is None:
             nperseg = 256  # then change to default
