@@ -5,6 +5,7 @@
 - PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
+- PR #130 - Reorg tests and benchmarks to match #83 code refactor
 - PR #136 - Split reader and writer in IO packages and update docs
 - PR #146 - Add compatibility with Scipy 1.5.0
 - PR #148 - Load fatbin at runtime
@@ -24,6 +25,7 @@
 - PR #138 - Fix overflow issues in `upfirdn`
 - PR #139 - Fixes packaging of python package
 - PR #143 - Fix six package missing with Scipy 1.5
+- PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 
 
 # cuSignal 0.14 (03 Jun 2020)
