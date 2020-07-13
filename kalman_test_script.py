@@ -6,22 +6,24 @@ import filterpy.kalman
 import cusignal
 import time
 import itertools
+from cupy import prof
 
 dim_x = 4
-dim_z = 3
+dim_z = 4
 loops = 1
+iterations = 1000
+
+cpu_baseline32 = 0.0
+cpu_baseline64 = 0.0
 
 
-def run_test(num_points, iterations, numba, dt):
+def main(num_points, dt):
     print("num_points", num_points)
     print("iterations", iterations)
-    print("use_numba", numba)
     print("data type", dt)
     print("loops", loops)
 
-    cuS = cusignal.KalmanFilter(
-        num_points, dim_x, dim_z, dtype=dt, use_numba=numba
-    )
+    cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, dtype=dt)
 
     f_fpy = filterpy.kalman.KalmanFilter(dim_x=dim_x, dim_z=dim_z)
 
@@ -43,21 +45,23 @@ def run_test(num_points, iterations, numba, dt):
     # Observability Input
     if dim_z == 2:
         H = np.array(
-            [[1.0, 0.0, 1.0, 0.0],
-                [0.0, 1.0, 0.0, 1.0]], dtype=dt  # x_0  # y_0
+            [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0]],
+            dtype=dt,  # x_0  # y_0
         )
     elif dim_z == 3:
         H = np.array(
-            [[1.0, 0.0, 1.0, 0.0],
-                [0.0, 1.0, 0.0, 1.0],
-                [1.0, 1.0, 1.0, 1.0]], dtype=dt  # x_0  # y_0
+            [[1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
+            dtype=dt,  # x_0  # y_0
         )
     elif dim_z == 4:
         H = np.array(
-            [[1.0, 0.0, 1.0, 0.0],
+            [
+                [1.0, 0.0, 1.0, 0.0],
                 [0.0, 1.0, 0.0, 1.0],
                 [1.0, 1.0, 1.0, 1.0],
-                [0.0, 1.0, 1.0, 0.0]], dtype=dt  # x_0  # y_0
+                [0.0, 1.0, 1.0, 0.0],
+            ],
+            dtype=dt,  # x_0  # y_0
         )
 
     initial_location = np.array(
@@ -77,7 +81,12 @@ def run_test(num_points, iterations, numba, dt):
     # CPU
     start = time.time()
     for l in range(loops):
-        print("CPU at", l)
+        # print("CPU at", l)
+
+        if num_points == 4096:
+            cpu_points = num_points
+        else:
+            cpu_points = 1
 
         f_fpy.x = initial_location
 
@@ -94,22 +103,40 @@ def run_test(num_points, iterations, numba, dt):
 
         f_fpy.Q = motion_noise
 
-        # z = np.asarray([0, 0, 0, 0], dtype=dt).T
         z = np.zeros(dim_z, dtype=dt).T
 
-        for _ in range(1):
-            for i in range(iterations):
+        for _ in range(cpu_points):
+            for _ in range(iterations):
 
                 f_fpy.predict()
 
                 # must be 2d for cuSignal.filter
-
                 for j in range(dim_z):
                     z[j] = j
 
                 f_fpy.update(z)
 
-    print("CPU:", (time.time() - start) / loops)
+    global cpu_baseline32
+    global cpu_baseline64
+
+    if num_points == 4096:
+        if dt == np.float32:
+            cpu_baseline32 = (time.time() - start) / loops
+            cpu_time = cpu_baseline32
+            # print("CPU Baseline:", cpu_baseline32)
+        else:
+            cpu_baseline64 = (time.time() - start) / loops
+            cpu_time = cpu_baseline64
+            # print("CPU Baseline:", cpu_baseline64)
+    else:
+        if dt == np.float32:
+            cpu_time = (cpu_baseline32) * (num_points / 4096)
+            # print("CPU:", cpu_time)
+        else:
+            cpu_time = (cpu_baseline64) * (num_points / 4096)
+            # print("CPU:", cpu_time)
+
+    print("CPU:", cpu_time)
 
     z = cp.zeros(dim_z, dtype=dt).T
     z = cp.atleast_2d(z)
@@ -119,7 +146,7 @@ def run_test(num_points, iterations, numba, dt):
     # GPU
     start = time.time()
     for l in range(loops):
-        print("GPU at", l)
+        # print("GPU at", l)
 
         cuS.x = cp.repeat(
             cp.asarray(initial_location[cp.newaxis, :, :]), num_points, axis=0
@@ -133,9 +160,9 @@ def run_test(num_points, iterations, numba, dt):
 
         # Covariance Matrix
         cuS.P = cp.repeat(
-            cp.asarray(
-                initial_estimate_error[cp.newaxis, :, :]
-            ), num_points, axis=0
+            cp.asarray(initial_estimate_error[cp.newaxis, :, :]),
+            num_points,
+            axis=0,
         )
 
         cuS.R = cp.repeat(
@@ -146,20 +173,28 @@ def run_test(num_points, iterations, numba, dt):
             cp.asarray(motion_noise[cp.newaxis, :, :]), num_points, axis=0
         )
 
-        for i in range(iterations):
+        for _ in range(iterations):
 
-            cuS.predict()
+            with cp.prof.time_range("predict", 0):
+                cuS.predict()
 
-            for j in range(dim_z):
-                z[j] = j
+            with cp.prof.time_range("z", 0):
+                for j in range(dim_z):
+                    z[j] = j
 
-            cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
+            with cp.prof.time_range("repeat", 0):
+                cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
 
-            cuS.update()
+            with cp.prof.time_range("update", 0):
+                cuS.update()
 
             cp.cuda.runtime.deviceSynchronize()
 
-    print("GPU:", (time.time() - start) / loops)
+    gpu_time = (time.time() - start) / loops
+    print("GPU:", gpu_time)
+
+    print("Speed Up", cpu_time / gpu_time)
+    print()
 
     # print()
     # print("Final")
@@ -171,7 +206,7 @@ def run_test(num_points, iterations, numba, dt):
     # print(cuS.x[-1, :, :])
     # print()
 
-    rtol = 1e-5
+    rtol = 1e-3
 
     np.testing.assert_allclose(f_fpy.x, cuS.x[0, :, :].get(), rtol)
     np.testing.assert_allclose(f_fpy.x, cuS.x[-1, :, :].get(), rtol)
@@ -190,11 +225,19 @@ def run_test(num_points, iterations, numba, dt):
     np.testing.assert_allclose(f_fpy.P, cuS.P[-1, :, :].get(), rtol)
 
 
-# num_points = [2 ** 14, 2 ** 15, 2 ** 16, 2 ** 17, 2 ** 18, 2 ** 19, 2 ** 20]
-num_points = [4096]
-iterations = [1000]
-numba = [False]
-dt = [np.float64]
+if __name__ == "__main__":
+    num_points = [
+        4096,
+        2 ** 14,
+        2 ** 15,
+        2 ** 16,
+        2 ** 17,
+        2 ** 18,
+        2 ** 19,
+        2 ** 20,
+    ]
 
-for p, i, n, d in itertools.product(num_points, iterations, numba, dt):
-    run_test(p, i, n, d)
+    dt = [np.float32, np.float64]
+
+    for p, d in itertools.product(num_points, dt):
+        main(p, d)

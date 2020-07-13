@@ -422,7 +422,6 @@ class _cupy_update_wrapper(object):
 
 def _get_backend_kernel(dtype, grid, block, k_type):
 
-    print("dtype", str(dtype))
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
         if k_type == GPUKernel.PREDICT:
@@ -445,7 +444,9 @@ def _populate_kernel_cache(np_type, dim_x, dim_z, max_tpb):
 
     # Check in np_type is a supported option
     if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
-        raise ValueError("Datatype {} not found for Kalman Filter".format(np_type))
+        raise ValueError(
+            "Datatype {} not found for Kalman Filter".format(np_type)
+        )
 
     if np_type == "float32":
         c_type = "float"
