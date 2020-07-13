@@ -304,7 +304,7 @@ __device__ T inverse(
     const int & ltx,
     const int & lty,
     const int & ltz,
-    const T(&s_ZZ_A)[16][DIM_Z][DIM_Z]) {
+    const T(&s_ZZ_A)[16][DIM_Z][DIM_Z+1]) {
 
     const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
 
@@ -578,7 +578,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
     __shared__ T s_ZX_H[16][DIM_Z][DIM_X];
     __shared__ T s_XZ_K[16][DIM_X][DIM_Z];
     __shared__ T s_XZ_A[16][DIM_X][DIM_Z];
-    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z];
+    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z+1];
     __shared__ T s_ZZ_R[16][DIM_Z][DIM_Z];
     __shared__ T s_ZZ_I[16][DIM_Z][DIM_Z];
     __shared__ T s_Z1_y[16][DIM_Z][1];
