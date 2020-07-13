@@ -61,27 +61,39 @@ __device__ T inverse(
         }
     }
 
-    if ( lty < DIM_Z && ltx < DIM_Z ) {
-
-        // Replace a row by sum of itself and a
-        // constant multiple of another row of the matrix
+    // Replace a row by sum of itself and a
+    // constant multiple of another row of the matrix
 #pragma unroll DIM_Z
-        for ( int i = 0; i < DIM_Z; i++ ) {
-            T temp2 = s_ZZ_I[ltz][i][ltx];
-
+    for ( int i = 0; i < DIM_Z; i++ ) {
+        if ( lty < DIM_Z && ltx < DIM_Z ) {
             if ( lty != i ) {
                 temp = s_ZZ_A[ltz][lty][i] / s_ZZ_A[ltz][i][i];
+            }
+        }
+
+        __syncthreads();
+        if ( lty < DIM_Z && ltx < DIM_Z ) {
+            if ( lty != i ) {
                 s_ZZ_A[ltz][lty][ltx] -= s_ZZ_A[ltz][i][ltx] * temp;
                 s_ZZ_I[ltz][lty][ltx] -= s_ZZ_I[ltz][i][ltx] * temp;
             }
         }
+        __syncthreads();
+    }
 
+    if ( lty < DIM_Z && ltx < DIM_Z ) {
         // Multiply each row by a nonzero integer.
         // Divide row element by the diagonal element
         temp = s_ZZ_A[ltz][lty][lty];
+    }
+    __syncthreads();
+
+    if ( lty < DIM_Z && ltx < DIM_Z ) {
         s_ZZ_A[ltz][lty][ltx] = s_ZZ_A[ltz][lty][ltx] / temp;
         s_ZZ_I[ltz][lty][ltx] = s_ZZ_I[ltz][lty][ltx] / temp;
     }
+
+    __syncthreads();
 
     return ( s_ZZ_I[ltz][lty][ltx] );
 }
@@ -128,9 +140,10 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
 #pragma unroll DIM_X
             for ( int j = 0; j < DIM_X; j++ ) {
                 temp += s_XX_F[ltz][lty][j] *
-                    x_in[gtz * DIM_X * 1 + j * 1 + ltx];
+                    x_in[gtz * DIM_X + j + ltx];
             }
-            x_in[gtz * DIM_X * 1 + lty * 1 + ltx]   = temp;
+            // x_in[gtz * DIM_X * 1 + lty * 1 + ltx]
+            x_in[gtz * DIM_X + lty + ltx]   = temp;
         }
 
         s_XX_P[ltz][lty][ltx] = localP;
@@ -152,9 +165,11 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         temp = 0.0;
 #pragma unroll DIM_X
         for ( int j = 0; j < DIM_X; j++ ) {
-            temp += s_XX_A[ltz][lty][j] *
+            temp += s_XX_A[ltz][lty][j] *   //133
                 s_XX_F[ltz][ltx][j];
         }
+
+        __syncthreads();
 
         // Compute self._alpha_sq * dot(dot(F, self.P), F.T) + Q
         // Where temp = dot(dot(F, self.P), F.T)
@@ -444,7 +459,7 @@ def _populate_kernel_cache(np_type, dim_x, dim_z, max_tpb):
     )
     module = cp.RawModule(
         code=cuda_code,
-        options=("-std=c++11", "-fmad=true",),
+        options=("-std=c++11", "-lineinfo", "-fmad=true",),
         name_expressions=specializations,
     )
 
