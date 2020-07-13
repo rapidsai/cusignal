@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import numpy as np
 
 from enum import Enum
 
