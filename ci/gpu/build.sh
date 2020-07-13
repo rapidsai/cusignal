@@ -44,23 +44,12 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
-<<<<<<< HEAD
-    "scipy>=1.3.0" \
-    "numpy>=1.17.3" \
-    boost \
-    "numba>=0.49.0" \
-    "cupy>=7.2.0" \
-    pytest-benchmark \
-    "ipython=7.3*" \
-    jupyterlab \
-    matplotlib
-=======
     "rapids-build-env=$MINOR_VERSION.*"
+    "rapids-notebook-env=$MINOR_VERSION."
 
 # https://docs.rapids.ai/maintainers/depmgmt/ 
 # conda remove -f rapids-build-env rapids-notebook-env
 # conda install "your-pkg=1.0.0"
->>>>>>> upstream/branch-0.15
 
 logger "Check versions..."
 python --version
@@ -92,7 +81,7 @@ cd $WORKSPACE/python
 
 pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
 
-conda remove -y blas nomkl
+conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
 conda install -y -c pytorch "pytorch>=1.4"
 
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
