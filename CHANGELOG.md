@@ -5,6 +5,7 @@
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
 - PR #136 - Split reader and writer in IO packages and update docs
+- PR #69 - Multi-point Kalman Filter
 
 ## Improvements
 - PR #112 - Remove Numba kernels
