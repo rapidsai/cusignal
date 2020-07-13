@@ -298,40 +298,38 @@ def _numba_kalman_signature(ty):
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
-#define INV 0
-
 // Compute linalg.inv(S)
 template<typename T, int DIM_Z>
 __device__ T inverse(
     const int & ltx,
     const int & lty,
     const int & ltz,
-    T(&s_ZZ_A)[16][DIM_Z][DIM_Z+1],
+    T(&s_ZZ_A)[16][DIM_Z][DIM_Z],
     T(&s_ZZ_I)[16][DIM_Z][DIM_Z]) {
 
-    T result {};
-
-#if INV == 0
     T temp {};
 
     // Interchange the row of matrix
     if ( lty == 0 && ltx < DIM_Z) {
+#pragma unroll ( DIM_Z - 1 )
         for ( int i = DIM_Z - 1; i > 0; i-- ) {
             if ( s_ZZ_A[ltz][i - 1][0] < s_ZZ_A[ltz][i][0] ) {
-                temp = s_ZZ_A[ltz][i][ltx];
-                s_ZZ_A[ltz][i][ltx] = s_ZZ_A[ltz][i - 1][ltx];
-                s_ZZ_A[ltz][i - 1][ltx] = temp;
+                    temp = s_ZZ_A[ltz][i][ltx];
+                    s_ZZ_A[ltz][i][ltx] = s_ZZ_A[ltz][i - 1][ltx];
+                    s_ZZ_A[ltz][i - 1][ltx] = temp;
 
-                temp = s_ZZ_I[ltz][i][ltx];
-                s_ZZ_I[ltz][i][ltx] = s_ZZ_I[ltz][i - 1][ltx];
-                s_ZZ_I[ltz][i - 1][ltx] = temp;
+                    temp = s_ZZ_I[ltz][i][ltx];
+                    s_ZZ_I[ltz][i][ltx] = s_ZZ_I[ltz][i - 1][ltx];
+                    s_ZZ_I[ltz][i - 1][ltx] = temp;
             }
         }
     }
 
-    // Replace a row by sum of itself and a
-    // constant multiple of another row of the matrix
     if ( lty < DIM_Z && ltx < DIM_Z ) {
+
+        // Replace a row by sum of itself and a
+        // constant multiple of another row of the matrix
+#pragma unroll DIM_Z
         for ( int i = 0; i < DIM_Z; i++ ) {
             T temp2 = s_ZZ_I[ltz][i][ltx];
 
@@ -341,201 +339,20 @@ __device__ T inverse(
                 s_ZZ_I[ltz][lty][ltx] -= s_ZZ_I[ltz][i][ltx] * temp;
             }
         }
-    }
 
-    // Multiply each row by a nonzero integer.
-    // Divide row element by the diagonal element
-    if ( lty < DIM_Z && ltx < DIM_Z ) {
+        // Multiply each row by a nonzero integer.
+        // Divide row element by the diagonal element
         temp = s_ZZ_A[ltz][lty][lty];
         s_ZZ_A[ltz][lty][ltx] = s_ZZ_A[ltz][lty][ltx] / temp;
         s_ZZ_I[ltz][lty][ltx] = s_ZZ_I[ltz][lty][ltx] / temp;
     }
 
-    result = s_ZZ_I[ltz][lty][ltx];
-
-#elif INV == 2
-    const int sign { ( ( ltx + lty ) % 2 == 0 ) ? 1 : -1 };
-
-    T sign_det {};
-
-    if ( DIM_Z == 2 ) {
-        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
-
-            // Hardcoded for 2x2
-            sign_det = static_cast<T>(sign) * (
-                (s_ZZ_A[ltz][0][0] * s_ZZ_A[ltz][1][1]) -
-                (s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][0][1])
-                );
-
-            int x { ltx == 0 ? 1 : 0 };  /* always either 0 or 1 */
-            int y { lty == 0 ? 1 : 0 };  /* always either 0 or 1 */
-
-            result = s_ZZ_A[ltz][y][x] / sign_det;
-        }
-    }
-    else if ( DIM_Z == 3 ) {
-        // https://stackoverflow.com/questions/983999/simple-3x3-matrix-inverse-code-c
-        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
-
-            // Hardcoded for 3x3
-            sign_det = static_cast<T>(sign) *
-            ( s_ZZ_A[ltz][0][0] * (
-                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][2] ) -
-                ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][1][2] ) ) -
-            s_ZZ_A[ltz][0][1] * (
-                ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][2] ) -
-                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][0] ) ) +
-            s_ZZ_A[ltz][0][2] * (
-                ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][1] ) -
-                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][0] ) )
-            );
-
-            int x1 = ltx == 0 ? 1 : 0;  /* always either 0 or 1 */
-            int x2 = ltx == 2 ? 1 : 2;  /* always either 1 or 2 */
-            int y1 = lty == 0 ? 1 : 0;  /* always either 0 or 1 */
-            int y2 = lty == 2 ? 1 : 2;  /* always either 1 or 2 */
-
-            result = ( ( s_ZZ_A[ltz][x1][y1] * s_ZZ_A[ltz][x2][y2] ) -
-                ( s_ZZ_A[ltz][x1][y2] * s_ZZ_A[ltz][x2][y1] ) ) / sign_det;
-        }
-    }
-    else if ( DIM_Z == 4 ) {
-        // https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
-        // Highly unoptimal will be replaced in a later
-        if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
-
-            // Hardcoded for 4x4
-            T A2323 = ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][2] );
-            T A1323 = ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][1] );
-            T A1223 = ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][2] ) -
-                ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][1] );
-            T A0323 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][2][3] * s_ZZ_A[ltz][3][0] );
-            T A0223 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][2] ) -
-                ( s_ZZ_A[ltz][2][2] * s_ZZ_A[ltz][3][0] );
-            T A0123 = ( s_ZZ_A[ltz][2][0] * s_ZZ_A[ltz][3][1] ) -
-                ( s_ZZ_A[ltz][2][1] * s_ZZ_A[ltz][3][0] );
-            T A2313 = ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][2] );
-            T A1313 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][1] );
-            T A1213 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][2] ) -
-                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][1] );
-            T A2312 = ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][2] );
-            T A1312 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][1] );
-            T A1212 = ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][2] ) -
-                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][1] );
-            T A0313 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][3][0] );
-            T A0213 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][2] ) -
-                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][3][0] );
-            T A0312 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][3] ) -
-                ( s_ZZ_A[ltz][1][3] * s_ZZ_A[ltz][2][0] );
-            T A0212 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][2] ) -
-                ( s_ZZ_A[ltz][1][2] * s_ZZ_A[ltz][2][0] );
-            T A0113 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][3][1] ) -
-                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][3][0] );
-            T A0112 = ( s_ZZ_A[ltz][1][0] * s_ZZ_A[ltz][2][1] ) -
-                ( s_ZZ_A[ltz][1][1] * s_ZZ_A[ltz][2][0] );
-
-            sign_det = static_cast<T>(sign) *
-            ( s_ZZ_A[ltz][0][0] * (
-                s_ZZ_A[ltz][1][1] * A2323 -
-                s_ZZ_A[ltz][1][2] * A1323 +
-                s_ZZ_A[ltz][1][3] * A1223 ) -
-            s_ZZ_A[ltz][0][1] * (
-                s_ZZ_A[ltz][1][0] * A2323 -
-                s_ZZ_A[ltz][1][2] * A0323 +
-                s_ZZ_A[ltz][1][3] * A0223 ) +
-            s_ZZ_A[ltz][0][2] * (
-                s_ZZ_A[ltz][1][0] * A1323 -
-                s_ZZ_A[ltz][1][1] * A0323 +
-                s_ZZ_A[ltz][1][3] * A0123 ) -
-            s_ZZ_A[ltz][0][03] * (
-                s_ZZ_A[ltz][1][0] * A1223 -
-                s_ZZ_A[ltz][1][1] * A0223 +
-                s_ZZ_A[ltz][1][2] * A0123 )
-            );
-
-            if ( ltx == 0 && lty == 0 ) {
-                result = ( s_ZZ_A[ltz][1][1] * A2323 -
-                s_ZZ_A[ltz][1][2] * A1323 +
-                s_ZZ_A[ltz][1][3] * A1223 ) / sign_det;
-            } else if ( ltx == 0 && lty == 1 ) {
-                result = ( s_ZZ_A[ltz][0][1] * A2323 -
-                s_ZZ_A[ltz][0][2] * A1323 +
-                s_ZZ_A[ltz][0][3] * A1223 ) / sign_det;
-            } else if ( ltx == 0 && lty == 2 ) {
-                result = ( s_ZZ_A[ltz][0][1] * A2313 -
-                s_ZZ_A[ltz][0][2] * A1313 +
-                s_ZZ_A[ltz][0][3] * A1213 ) / sign_det;
-            } else if ( ltx == 0 && lty == 3 ) {
-                result = ( s_ZZ_A[ltz][0][1] * A2312 -
-                s_ZZ_A[ltz][0][2] * A1312 +
-                s_ZZ_A[ltz][0][3] * A1212 ) / sign_det;
-            } else if ( ltx == 1 && lty == 0 ) {
-                result = ( s_ZZ_A[ltz][1][0] * A2323 -
-                s_ZZ_A[ltz][1][2] * A0323 +
-                s_ZZ_A[ltz][1][3] * A0223 ) / sign_det;
-            } else if ( ltx == 1 && lty == 1 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A2323 -
-                s_ZZ_A[ltz][0][2] * A0323 +
-                s_ZZ_A[ltz][0][3] * A0223 ) / sign_det;
-            } else if ( ltx == 1 && lty == 2 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A2313 -
-                s_ZZ_A[ltz][0][2] * A0313 +
-                s_ZZ_A[ltz][0][3] * A0213 ) / sign_det;
-            } else if ( ltx == 1 && lty == 3 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A2312 -
-                s_ZZ_A[ltz][0][2] * A0312 +
-                s_ZZ_A[ltz][0][3] * A0212 ) / sign_det;
-            } else if ( ltx == 2 && lty == 0 ) {
-                result = ( s_ZZ_A[ltz][1][0] * A1323 -
-                s_ZZ_A[ltz][1][1] * A0323 +
-                s_ZZ_A[ltz][1][3] * A0123 ) / sign_det;
-            } else if ( ltx == 2 && lty == 1 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1323 -
-                s_ZZ_A[ltz][0][1] * A0323 +
-                s_ZZ_A[ltz][0][3] * A0123 ) / sign_det;
-            } else if ( ltx == 2 && lty == 2 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1313 -
-                s_ZZ_A[ltz][0][1] * A0313 +
-                s_ZZ_A[ltz][0][3] * A0113 ) / sign_det;
-            } else if ( ltx == 2 && lty == 3 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1312 -
-                s_ZZ_A[ltz][0][1] * A0312 +
-                s_ZZ_A[ltz][0][3] * A0112 ) / sign_det;
-            } else if ( ltx == 3 && lty == 0 ) {
-                result = ( s_ZZ_A[ltz][1][0] * A1223 -
-                s_ZZ_A[ltz][1][1] * A0223 +
-                s_ZZ_A[ltz][1][2] * A0123 ) / sign_det;
-            } else if ( ltx == 3 && lty == 1 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1223 -
-                s_ZZ_A[ltz][0][1] * A0223 +
-                s_ZZ_A[ltz][0][2] * A0123 ) / sign_det;
-            } else if ( ltx == 3 && lty == 2 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1213 -
-                s_ZZ_A[ltz][0][1] * A0213 +
-                s_ZZ_A[ltz][0][2] * A0113 ) / sign_det;
-            } else if ( ltx == 3 && lty == 3 ) {
-                result = ( s_ZZ_A[ltz][0][0] * A1212 -
-                s_ZZ_A[ltz][0][1] * A0212 +
-                s_ZZ_A[ltz][0][2] * A0112 ) / sign_det;
-            }
-        }
-    }
-
-#endif
-    return (result);
+    return ( s_ZZ_I[ltz][lty][ltx] );
 }
 
 
 template<typename T, int DIM_X, int MAX_TPB, int MIN_BPSM>
-__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
+__global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
         T * __restrict__ x_in,
@@ -612,7 +429,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_predict(
 
 
 template<typename T, int DIM_X, int DIM_Z, int MAX_TPB, int MIN_BPSM>
-__global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
+__global__ void __launch_bounds__(MAX_TPB) _cupy_update(
         const int num_points,
         T * __restrict__ x_in,
         const T * __restrict__ z_in,
@@ -627,7 +444,7 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
     __shared__ T s_ZX_H[16][DIM_Z][DIM_X];
     __shared__ T s_XZ_K[16][DIM_X][DIM_Z];
     __shared__ T s_XZ_A[16][DIM_X][DIM_Z];
-    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z+1];
+    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z];
     __shared__ T s_ZZ_R[16][DIM_Z][DIM_Z];
     __shared__ T s_ZZ_I[16][DIM_Z][DIM_Z];
     __shared__ T s_Z1_y[16][DIM_Z][1];
@@ -715,10 +532,6 @@ __global__ void __launch_bounds__(MAX_TPB, MIN_BPSM) _cupy_update(
         temp = inverse(ltx, lty, ltz, s_ZZ_A, s_ZZ_I);
 
         __syncthreads();
-
-        //if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
-        //    printf("2. %0.1f %0.7f\\n", s_ZZ_A[ltz][lty][ltx], s_ZZ_I[ltz][lty][ltx]);
-        //}
 
         if ( ( ltx < DIM_Z ) && ( lty < DIM_Z ) ) {
             // s_XX_B hold SI - inverse system uncertainty
