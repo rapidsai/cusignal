@@ -24,6 +24,7 @@
 - PR #138 - Fix overflow issues in `upfirdn`
 - PR #139 - Fixes packaging of python package
 - PR #143 - Fix six package missing with Scipy 1.5
+- PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 
 
 # cuSignal 0.14 (03 Jun 2020)
