@@ -10,14 +10,14 @@ from cupy import prof
 
 dim_x = 4
 dim_z = 4
-loops = 1
+loops = 5
 iterations = 1000
 
 cpu_baseline32 = 0.0
 cpu_baseline64 = 0.0
 
 
-def main(num_points, dt):
+def main(dt, num_points):
     print("num_points", num_points)
     print("iterations", iterations)
     print("data type", dt)
@@ -239,5 +239,5 @@ if __name__ == "__main__":
 
     dt = [np.float32, np.float64]
 
-    for p, d in itertools.product(num_points, dt):
-        main(p, d)
+    for d, p in itertools.product(dt, num_points):
+        main(d, p)
