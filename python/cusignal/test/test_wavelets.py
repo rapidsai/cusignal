@@ -19,6 +19,9 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+# Missing
+# qmf
+
 
 class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -57,3 +60,8 @@ class TestWavelets:
         )
 
         assert array_equal(cpu_cwt, gpu_cwt)
+
+    # def test_qmf(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)

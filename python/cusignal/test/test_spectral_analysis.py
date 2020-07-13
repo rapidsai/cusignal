@@ -18,31 +18,37 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
+# Missing
+# vectorstrength
+
 
 class TestSpectral:
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    def test_csd(self, rand_data_gen, num_samps, fs, nperseg):
-        cpu_x, gpu_x = rand_data_gen(num_samps)
-        cpu_y, gpu_y = rand_data_gen(num_samps)
+    @pytest.mark.parametrize("num_in_samps", [2 ** 10])
+    @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
+    @pytest.mark.parametrize("precenter", [True, False])
+    @pytest.mark.parametrize("normalize", [True, False])
+    def test_lombscargle(
+        self,
+        lombscargle_gen,
+        num_in_samps,
+        num_out_samps,
+        precenter,
+        normalize,
+    ):
 
-        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+        cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
+            num_in_samps, num_out_samps
+        )
 
-        assert array_equal(cpu_csd, gpu_csd)
+        cpu_lombscargle = signal.lombscargle(
+            cpu_x, cpu_y, cpu_f, precenter, normalize
+        )
 
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    def test_csd_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
-        cpu_x, gpu_x = rand_complex_data_gen(num_samps)
-        cpu_y, gpu_y = rand_complex_data_gen(num_samps)
+        gpu_lombscargle = cp.asnumpy(
+            cusignal.lombscargle(gpu_x, gpu_y, gpu_f, precenter, normalize,)
+        )
 
-        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
-
-        assert array_equal(cpu_csd, gpu_csd)
+        assert array_equal(cpu_lombscargle, gpu_lombscargle)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
@@ -107,6 +113,30 @@ class TestSpectral:
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_csd(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_x, gpu_x = rand_data_gen(num_samps)
+        cpu_y, gpu_y = rand_data_gen(num_samps)
+
+        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+
+        assert array_equal(cpu_csd, gpu_csd)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_csd_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
+        cpu_x, gpu_x = rand_complex_data_gen(num_samps)
+        cpu_y, gpu_y = rand_complex_data_gen(num_samps)
+
+        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+
+        assert array_equal(cpu_csd, gpu_csd)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
     def test_spectrogram(self, rand_data_gen, num_samps, fs):
         cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
@@ -126,6 +156,30 @@ class TestSpectral:
         gPxx_spec = cp.asnumpy(gPxx_spec)
 
         assert array_equal(cPxx_spec, gPxx_spec)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_stft(self, rand_data_gen, num_samps, fs, nperseg):
+        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+
+        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
+        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+        gpu_stft = cp.asnumpy(gpu_stft)
+
+        assert array_equal(cpu_stft, gpu_stft)
+
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    def test_stft_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
+        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
+
+        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
+        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+        gpu_stft = cp.asnumpy(gpu_stft)
+
+        assert array_equal(cpu_stft, gpu_stft)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
@@ -159,55 +213,7 @@ class TestSpectral:
 
         assert array_equal(cpu_coherence, gpu_coherence)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    def test_stft(self, rand_data_gen, num_samps, fs, nperseg):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
-        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
-        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
-        gpu_stft = cp.asnumpy(gpu_stft)
-
-        assert array_equal(cpu_stft, gpu_stft)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    def test_stft_complex(self, rand_complex_data_gen, num_samps, fs, nperseg):
-        cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-
-        _, _, cpu_stft = signal.stft(cpu_sig, fs, nperseg=nperseg)
-        _, _, gpu_stft = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
-        gpu_stft = cp.asnumpy(gpu_stft)
-
-        assert array_equal(cpu_stft, gpu_stft)
-
-    @pytest.mark.parametrize("num_in_samps", [2 ** 10])
-    @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
-    @pytest.mark.parametrize("precenter", [True, False])
-    @pytest.mark.parametrize("normalize", [True, False])
-    def test_lombscargle(
-        self,
-        lombscargle_gen,
-        num_in_samps,
-        num_out_samps,
-        precenter,
-        normalize,
-    ):
-
-        cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
-            num_in_samps, num_out_samps
-        )
-
-        cpu_lombscargle = signal.lombscargle(
-            cpu_x, cpu_y, cpu_f, precenter, normalize
-        )
-
-        gpu_lombscargle = cp.asnumpy(
-            cusignal.lombscargle(
-                gpu_x, gpu_y, gpu_f, precenter, normalize,
-            )
-        )
-
-        assert array_equal(cpu_lombscargle, gpu_lombscargle)
+    # def test_vectorstrength(self):
+    #     cpu_window = 0
+    #     gpu_window = 0
+    #     assert array_equal(cpu_window, gpu_window)
