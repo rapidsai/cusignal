@@ -28,6 +28,7 @@
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 - PR #150 - Fix upfirdn output len for Scipy 1.5
 - PR #155 - Update CI local docker build
+- PR #153 - Fix issue with incorrect docker image being used in local build script
 
 # cuSignal 0.14 (03 Jun 2020)
 
