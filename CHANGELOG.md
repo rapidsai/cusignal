@@ -7,9 +7,9 @@
 - PR #122 - GPU accelerated SigMF Reader
 - PR #130 - Reorg tests and benchmarks to match #83 code refactor
 - PR #136 - Split reader and writer in IO packages and update docs
-- PR #146 - Add compatibility with Scipy 1.5.0
-- PR #148 - Load fatbin at runtime
+- PR #146 - Add compatibility with Scipy 1.5.0; Default to SciPy > 1.5
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
+- PR #148 - Load fatbin at runtime
 
 ## Improvements
 - PR #112 - Remove Numba kernels
@@ -26,8 +26,8 @@
 - PR #139 - Fixes packaging of python package
 - PR #143 - Fix six package missing with Scipy 1.5
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
+- PR #150 - Fix upfirdn output len for Scipy 1.5
 - PR #155 - Update CI local docker build
-
 
 # cuSignal 0.14 (03 Jun 2020)
 
