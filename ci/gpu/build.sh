@@ -58,51 +58,51 @@ $CXX --version
 conda list
 
 ################################################################################
-logger "Build fatbins..."
-# Build fatbins
-SRC="cpp/src"
-FAT="python/cusignal"
-FLAGS="-std=c++11"
+# logger "Build fatbins..."
+# # Build fatbins
+# SRC="cpp/src"
+# FAT="python/cusignal"
+# FLAGS="-std=c++11"
 
-if hasArg -p; then
-    FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
-fi
+# if hasArg -p; then
+#     FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
+# fi
 
-GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
---generate-code arch=compute_35,code=sm_37 \
---generate-code arch=compute_50,code=sm_50 \
---generate-code arch=compute_50,code=sm_52 \
---generate-code arch=compute_53,code=sm_53 \
---generate-code arch=compute_60,code=sm_60 \
---generate-code arch=compute_61,code=sm_61 \
---generate-code arch=compute_62,code=sm_62 \
---generate-code arch=compute_70,code=sm_70 \
---generate-code arch=compute_72,code=sm_72 \
---generate-code arch=compute_75,code=[sm_75,compute_75]"
+# GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
+# --generate-code arch=compute_35,code=sm_37 \
+# --generate-code arch=compute_50,code=sm_50 \
+# --generate-code arch=compute_50,code=sm_52 \
+# --generate-code arch=compute_53,code=sm_53 \
+# --generate-code arch=compute_60,code=sm_60 \
+# --generate-code arch=compute_61,code=sm_61 \
+# --generate-code arch=compute_62,code=sm_62 \
+# --generate-code arch=compute_70,code=sm_70 \
+# --generate-code arch=compute_72,code=sm_72 \
+# --generate-code arch=compute_75,code=[sm_75,compute_75]"
 
-echo "Building Convolution kernels..."
-FOLDER="convolution"
-mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_convolution.cu -odir ${FAT}/${FOLDER}/ &
+# echo "Building Convolution kernels..."
+# FOLDER="convolution"
+# mkdir -p ${FAT}/${FOLDER}/
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_convolution.cu -odir ${FAT}/${FOLDER}/ &
 
-echo "Building Filtering kernels..."
-FOLDER="filtering"
-mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
+# echo "Building Filtering kernels..."
+# FOLDER="filtering"
+# mkdir -p ${FAT}/${FOLDER}/
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
 
-echo "Building IO kernels..."
-FOLDER="io"
-mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
+# echo "Building IO kernels..."
+# FOLDER="io"
+# mkdir -p ${FAT}/${FOLDER}/
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
 
-echo "Building Spectral kernels..."
-FOLDER="spectral_analysis"
-mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/ &
+# echo "Building Spectral kernels..."
+# FOLDER="spectral_analysis"
+# mkdir -p ${FAT}/${FOLDER}/
+# nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/ &
 
-wait
+# wait
 
 ################################################################################
 
