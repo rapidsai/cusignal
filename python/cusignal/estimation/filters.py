@@ -96,31 +96,35 @@ class KalmanFilter(object):
 
         # Allocate GPU resources
         threads_z_axis = 16
-        d = cp.cuda.device.Device(0)
+        d = cp.cuda.device.Device()
         numSM = d.attributes["MultiProcessorCount"]
-        self.threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
-        self.blockspergrid = (1, 1, numSM * 20)
+        threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
+        blockspergrid = (1, 1, numSM * 20)
 
         max_threads_per_block = self.dim_x * self.dim_x * threads_z_axis
 
         # Only need to populate cache once
         # At class initialization
         _filters._populate_kernel_cache(
-            self.x.dtype, self.dim_x, self.dim_z, max_threads_per_block,
+            self.x.dtype,
+            threads_z_axis,
+            self.dim_x,
+            self.dim_z,
+            max_threads_per_block,
         )
 
         # Retrieve kernel from cache
         self.predict_kernel = _filters._get_backend_kernel(
             self.x.dtype,
-            self.blockspergrid,
-            self.threadsperblock,
+            blockspergrid,
+            threadsperblock,
             _filters.GPUKernel.PREDICT,
         )
 
         self.update_kernel = _filters._get_backend_kernel(
             self.x.dtype,
-            self.blockspergrid,
-            self.threadsperblock,
+            blockspergrid,
+            threadsperblock,
             _filters.GPUKernel.UPDATE,
         )
 

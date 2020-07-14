@@ -25,7 +25,6 @@ class GPUKernel(Enum):
 
 class GPUBackend(Enum):
     CUPY = 0
-    NUMBA = 1
 
 
 _SUPPORTED_TYPES_KALMAN_FILTER = ["float32", "float64"]
@@ -99,7 +98,7 @@ __device__ T inverse(
 }
 
 
-template<typename T, int DIM_X, int MAX_TPB>
+template<typename T, int BLOCKS, int DIM_X, int MAX_TPB>
 __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
@@ -109,9 +108,9 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         const T * __restrict__ Q
         ) {
 
-    __shared__ T s_XX_A[16+1][DIM_X][DIM_X+1];
-    __shared__ T s_XX_F[16+1][DIM_X][DIM_X+1];
-    __shared__ T s_XX_P[16+1][DIM_X][DIM_X];
+    __shared__ T s_XX_A[BLOCKS][DIM_X][DIM_X];
+    __shared__ T s_XX_F[BLOCKS][DIM_X][DIM_X];
+    __shared__ T s_XX_P[BLOCKS][DIM_X][DIM_X];
 
     const auto ltx = threadIdx.x;
     const auto lty = threadIdx.y;
@@ -179,7 +178,7 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
 }
 
 
-template<typename T, int DIM_X, int DIM_Z, int MAX_TPB>
+template<typename T, int BLOCKS, int DIM_X, int DIM_Z, int MAX_TPB>
 __global__ void __launch_bounds__(MAX_TPB) _cupy_update(
         const int num_points,
         T * __restrict__ x_in,
@@ -189,16 +188,16 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_update(
         const T * __restrict__ R
         ) {
 
-    __shared__ T s_XX_A[16][DIM_X][DIM_X+1];
-    __shared__ T s_XX_B[16][DIM_X][DIM_X+1];
-    __shared__ T s_XX_P[16][DIM_X][DIM_X];
-    __shared__ T s_ZX_H[16][DIM_Z][DIM_X];
-    __shared__ T s_XZ_K[16][DIM_X][DIM_Z];
-    __shared__ T s_XZ_A[16][DIM_X][DIM_Z];
-    __shared__ T s_ZZ_A[16][DIM_Z][DIM_Z];
-    __shared__ T s_ZZ_R[16][DIM_Z][DIM_Z];
-    __shared__ T s_ZZ_I[16][DIM_Z][DIM_Z];
-    __shared__ T s_Z1_y[16][DIM_Z][1];
+    __shared__ T s_XX_A[BLOCKS][DIM_X][DIM_X];
+    __shared__ T s_XX_B[BLOCKS][DIM_X][DIM_X];
+    __shared__ T s_XX_P[BLOCKS][DIM_X][DIM_X];
+    __shared__ T s_ZX_H[BLOCKS][DIM_Z][DIM_X];
+    __shared__ T s_XZ_K[BLOCKS][DIM_X][DIM_Z];
+    __shared__ T s_XZ_A[BLOCKS][DIM_X][DIM_Z];
+    __shared__ T s_ZZ_A[BLOCKS][DIM_Z][DIM_Z];
+    __shared__ T s_ZZ_R[BLOCKS][DIM_Z][DIM_Z];
+    __shared__ T s_ZZ_I[BLOCKS][DIM_Z][DIM_Z];
+    __shared__ T s_Z1_y[BLOCKS][DIM_Z][1];
 
     const auto ltx = threadIdx.x;
     const auto lty = threadIdx.y;
@@ -440,7 +439,7 @@ def _get_backend_kernel(dtype, grid, block, k_type):
         )
 
 
-def _populate_kernel_cache(np_type, dim_x, dim_z, max_tpb):
+def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, max_tpb):
 
     # Check in np_type is a supported option
     if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
@@ -455,8 +454,10 @@ def _populate_kernel_cache(np_type, dim_x, dim_z, max_tpb):
 
     # Instantiate the cupy kernel for this type and compile
     specializations = (
-        "_cupy_predict<{}, {}, {}>".format(c_type, dim_x, max_tpb),
-        "_cupy_update<{}, {}, {}, {}>".format(c_type, dim_x, dim_z, max_tpb),
+        "_cupy_predict<{}, {}, {}, {}>".format(c_type, blocks, dim_x, max_tpb),
+        "_cupy_update<{}, {}, {}, {}, {}>".format(
+            c_type, blocks, dim_x, dim_z, max_tpb
+        ),
     )
     module = cp.RawModule(
         code=cuda_code,
