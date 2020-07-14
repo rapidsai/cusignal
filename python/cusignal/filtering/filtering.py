@@ -606,6 +606,108 @@ def freq_shift(x, freq, fs):
     return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
 
 
+def channelize_poly(x, h, n_chans, order='C'):
+    """
+    Polyphase channelize signal into n channels
+
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+    order : {'C', 'F', 'A'}, optional
+        See numpy reshape for more detail; F for MATLAB
+        data, C for scipy.signal/cusignal
+
+    Returns
+    ----------
+    yy : channelized output matrix
+
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h)/n_chans)
+
+    # number of outputs
+    n_pts = int(len(x)/n_chans)
+
+    # order F if input from MATLAB
+    hh = np.matrix(np.reshape(h, (n_chans, n_taps), order=order))
+    vv = np.zeros(n_chans)
+    yy = np.zeros((n_chans, n_pts), dtype=np.complex128)
+    reg = np.zeros((n_chans, n_taps))
+
+    # instead of n_chans here, this could be channel separation
+    for i, nn in enumerate(range(0, len(x), n_chans)):
+        reg[:, 1:n_taps] = reg[:, 0:n_taps-1]
+        reg[:, 0] = np.conj(np.flipud(x[nn:nn+n_chans]))
+        for mm in range(n_chans):
+            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+        yy[:, i] = np.conj(np.fft.fft(vv))
+
+    return yy
+
+
+def channelize_poly_gpu(x, h, n_chans, order='C'):
+    """
+    Polyphase channelize signal into n channels
+
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+    order : {'C', 'F', 'A'}, optional
+        See numpy reshape for more detail; F for MATLAB
+        data, C for scipy.signal/cusignal
+
+    Returns
+    ----------
+    yy : channelized output matrix
+
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+    h = asarray(h)
+    x = asarray(x)
+    
+    # number of taps in each h_n filter
+    n_taps = int(len(h)/n_chans)
+
+    # number of outputs
+    n_pts = int(len(x)/n_chans)
+
+    # order F if input from MATLAB
+    hh = cp.matrix(cp.reshape(h, (n_chans, n_taps), order=order))
+    vv = cp.zeros(n_chans)
+    yy = cp.zeros((n_chans, n_pts), dtype=cp.complex128)
+    reg = cp.zeros((n_chans, n_taps))
+
+    # instead of n_chans here, this could be channel separation
+    for i, nn in enumerate(range(0, len(x), n_chans)):
+        reg[:, 1:n_taps] = reg[:, 0:n_taps-1]
+        reg[:, 0] = cp.conj(cp.flipud(x[nn:nn+n_chans]))
+        for mm in range(n_chans):
+            vv[mm] = cp.array(reg[mm, :] * hh[mm, :].H)
+        yy[:, i] = cp.conj(fftpack.fft(vv))
+
+    return yy
+
+
 def _prod(iterable):
     """
     Product of a list of numbers.

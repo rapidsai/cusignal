@@ -25,6 +25,8 @@ from cusignal.filtering.filtering import (
     hilbert,
     hilbert2,
     detrend,
+    channelize_poly,
+    channelize_poly_gpu,
     freq_shift,
 )
 from cusignal.convolution.correlate import correlate, correlate2d
