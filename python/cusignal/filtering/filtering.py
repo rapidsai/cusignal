@@ -684,7 +684,7 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
     """
     h = asarray(h)
     x = asarray(x)
-    
+
     # number of taps in each h_n filter
     n_taps = int(len(h)/n_chans)
 
@@ -692,7 +692,7 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
     n_pts = int(len(x)/n_chans)
 
     # order F if input from MATLAB
-    hh = cp.matrix(cp.reshape(h, (n_chans, n_taps), order=order))
+    hh = cp.reshape(h, (n_chans, n_taps), order=order)
     vv = cp.zeros(n_chans)
     yy = cp.zeros((n_chans, n_pts), dtype=cp.complex128)
     reg = cp.zeros((n_chans, n_taps))
@@ -702,7 +702,7 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
         reg[:, 1:n_taps] = reg[:, 0:n_taps-1]
         reg[:, 0] = cp.conj(cp.flipud(x[nn:nn+n_chans]))
         for mm in range(n_chans):
-            vv[mm] = cp.array(reg[mm, :] * hh[mm, :].H)
+            vv[mm] = cp.dot(reg[mm, :], cp.conj(cp.transpose(hh[mm, :])))
         yy[:, i] = cp.conj(fftpack.fft(vv))
 
     return yy
