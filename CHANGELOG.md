@@ -10,6 +10,7 @@
 - PR #146 - Add compatibility with Scipy 1.5.0
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
 - PR #69 - Multi-point Kalman Filter
+- PR #158 - Add debug flag for debugging
 
 ## Improvements
 - PR #112 - Remove Numba kernels
