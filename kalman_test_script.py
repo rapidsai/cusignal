@@ -26,7 +26,7 @@ def main(dt, num_points):
     print("data type", dt)
     print("loops", loops)
 
-    cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, dtype=dt)
+    cuS = cusignal.KalmanFilter(dim_x, dim_z, points=num_points, dtype=dt)
 
     f_fpy = filterpy.kalman.KalmanFilter(dim_x=dim_x, dim_z=dim_z)
 
