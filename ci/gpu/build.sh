@@ -49,7 +49,7 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
 # https://docs.rapids.ai/maintainers/depmgmt/ 
 logger "Conda install custom..."
 conda remove --force rapids-build-env rapids-notebook-env
-conda install -c conda-forge scipy
+conda install -c conda-forge scipy>=1.5.0,<2
 
 logger "Check versions..."
 python --version
