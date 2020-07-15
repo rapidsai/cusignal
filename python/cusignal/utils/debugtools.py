@@ -12,3 +12,24 @@
 # limitations under the License.
 
 import os
+
+
+def print_atts(func):
+    if "CUSIGNAL_DEV_DEBUG" in os.environ:
+        print("name:", func.kernel.name)
+        print("max_threads_per_block:", func.kernel.max_threads_per_block)
+        print("num_regs:", func.kernel.num_regs)
+        print(
+            "max_dynamic_shared_size_bytes:",
+            func.kernel.max_dynamic_shared_size_bytes,
+        )
+        print("shared_size_bytes:", func.kernel.shared_size_bytes)
+        print(
+            "preferred_shared_memory_carveout:",
+            func.kernel.preferred_shared_memory_carveout,
+        )
+        print("const_size_bytes:", func.kernel.const_size_bytes)
+        print("local_size_bytes:", func.kernel.local_size_bytes)
+        print("ptx_version:", func.kernel.ptx_version)
+        print("binary_version:", func.kernel.binary_version)
+        print()

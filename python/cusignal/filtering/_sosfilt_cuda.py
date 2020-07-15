@@ -14,6 +14,7 @@
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 # Custom Cupy raw kernel implementing lombscargle operation
@@ -223,3 +224,5 @@ def _sosfilt(sos, x, zi):
     )
 
     kernel(sos, x, zi)
+
+    print_atts(kernel)

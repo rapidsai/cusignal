@@ -12,10 +12,10 @@
 # limitations under the License.
 
 import cupy as cp
-import os
 import pkg_resources
 
 from . import _filters
+from ..utils.debugtools import print_atts
 
 
 class KalmanFilter(object):
@@ -129,23 +129,8 @@ class KalmanFilter(object):
             _filters.GPUKernel.UPDATE,
         )
 
-        if 'CUSIGNAL_DEV_DEBUG' in os.environ:
-            print("Predict")
-            print(self.predict_kernel.kernel.const_size_bytes)
-            print(self.predict_kernel.kernel.local_size_bytes)
-            print(self.predict_kernel.kernel.max_dynamic_shared_size_bytes)
-            print(self.predict_kernel.kernel.max_threads_per_block)
-            print(self.predict_kernel.kernel.num_regs)
-            print(self.predict_kernel.kernel.shared_size_bytes)
-            print()
-            print("Update")
-            print(self.update_kernel.kernel.const_size_bytes)
-            print(self.update_kernel.kernel.local_size_bytes)
-            print(self.update_kernel.kernel.max_dynamic_shared_size_bytes)
-            print(self.update_kernel.kernel.max_threads_per_block)
-            print(self.update_kernel.kernel.num_regs)
-            print(self.update_kernel.kernel.shared_size_bytes)
-            print()
+        print_atts(self.predict_kernel)
+        print_atts(self.predict_kernel)
 
     def predict(self):
 

@@ -16,6 +16,7 @@ import cupy as cp
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 # Custom Cupy raw kernel implementing lombscargle operation
@@ -151,3 +152,5 @@ def _lombscargle(x, y, freqs, pgram, y_dot):
     )
 
     kernel(x, y, freqs, pgram, y_dot)
+
+    print_atts(kernel)
