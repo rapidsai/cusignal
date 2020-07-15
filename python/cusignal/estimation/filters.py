@@ -19,19 +19,29 @@ from . import _filters
 
 class KalmanFilter(object):
 
-    # Check CuPy version
-    ver = pkg_resources.get_distribution("cupy").version
-    if ver != "8.0.0b4" or ver != "8.0.0rc1" or ver != "8.0.0":
-        pass
-    else:
-        raise NotImplementedError(
-            "Kalman Filter only compatible with CuPy v.8.0.0b4+"
-        )
+    """
+    TBD
 
-    #  documentation
+    Parameters
+    ----------
+    in : TBD
+
+    Returns
+    -------
+    out : TBD
+
+    """
+
     def __init__(
         self, num_points, dim_x, dim_z, dim_u=0, dtype=cp.float32,
     ):
+
+        # Check CuPy version
+        ver = pkg_resources.get_distribution("cupy").version
+        if ver != "8.0.0b4" or ver != "8.0.0rc1" or ver != "8.0.0":
+            raise NotImplementedError(
+                "Kalman Filter only compatible with CuPy v.8.0.0b4+"
+            )
 
         self.num_points = num_points
 
