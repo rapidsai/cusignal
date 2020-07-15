@@ -10,8 +10,8 @@ from cupy import prof
 
 dim_x = 4
 dim_z = 4
-loops = 1
-iterations = 1
+loops = 10
+iterations = 250
 
 cpu_baseline32 = 0.0
 cpu_baseline64 = 0.0
