@@ -16,8 +16,9 @@ from numba import cuda
 import numpy as np
 
 
-def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
-                     wc=True):
+def get_shared_array(
+    data, strides=None, order="C", stream=0, portable=False, wc=True
+):
     """Return populated shared memory between GPU and CPU.
 
     Parameters
@@ -36,10 +37,15 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
     dtype = data.dtype
 
     # Allocate mapped, shared memory in Numba
-    shared_mem_array = cuda.mapped_array(shape, dtype=dtype,
-                                         strides=strides,
-                                         order=order, stream=stream,
-                                         portable=portable, wc=wc)
+    shared_mem_array = cuda.mapped_array(
+        shape,
+        dtype=dtype,
+        strides=strides,
+        order=order,
+        stream=stream,
+        portable=portable,
+        wc=wc,
+    )
 
     # Load data into array space
     shared_mem_array[:] = data
@@ -48,8 +54,15 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
 
 
 # Return shared memory array - similar to np.empty
-def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
-                   portable=False, wc=True):
+def get_shared_mem(
+    shape,
+    dtype=np.float32,
+    strides=None,
+    order="C",
+    stream=0,
+    portable=False,
+    wc=True,
+):
     """Return shared memory between GPU and CPU. Similar to numpy.zeros
 
     Parameters
@@ -66,8 +79,15 @@ def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
     wc : bool
     """
 
-    return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order,
-                             stream=stream, portable=portable, wc=wc)
+    return cuda.mapped_array(
+        shape,
+        dtype=dtype,
+        strides=strides,
+        order=order,
+        stream=stream,
+        portable=portable,
+        wc=wc,
+    )
 
 
 def get_pinned_array(data):
@@ -204,17 +224,20 @@ def _odd_ext(x, n, axis=-1):
     if n < 1:
         return x
     if n > x.shape[axis] - 1:
-        raise ValueError(("The extension length n (%d) is too big. " +
-                         "It must not exceed x.shape[axis]-1, which is %d.")
-                         % (n, x.shape[axis] - 1))
+        raise ValueError(
+            (
+                "The extension length n (%d) is too big. "
+                + "It must not exceed x.shape[axis]-1, which is %d."
+            )
+            % (n, x.shape[axis] - 1)
+        )
     left_end = _axis_slice(x, start=0, stop=1, axis=axis)
     left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
     right_end = _axis_slice(x, start=-1, axis=axis)
     right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
-    ext = cp.concatenate((2 * left_end - left_ext,
-                          x,
-                          2 * right_end - right_ext),
-                         axis=axis)
+    ext = cp.concatenate(
+        (2 * left_end - left_ext, x, 2 * right_end - right_ext), axis=axis
+    )
     return ext
 
 
@@ -258,15 +281,16 @@ def _even_ext(x, n, axis=-1):
     if n < 1:
         return x
     if n > x.shape[axis] - 1:
-        raise ValueError(("The extension length n (%d) is too big. " +
-                         "It must not exceed x.shape[axis]-1, which is %d.")
-                         % (n, x.shape[axis] - 1))
+        raise ValueError(
+            (
+                "The extension length n (%d) is too big. "
+                + "It must not exceed x.shape[axis]-1, which is %d."
+            )
+            % (n, x.shape[axis] - 1)
+        )
     left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
     right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
-    ext = cp.concatenate((left_ext,
-                          x,
-                          right_ext),
-                         axis=axis)
+    ext = cp.concatenate((left_ext, x, right_ext), axis=axis)
     return ext
 
 
@@ -320,10 +344,7 @@ def _const_ext(x, n, axis=-1):
     left_ext = ones * left_end
     right_end = _axis_slice(x, start=-1, axis=axis)
     right_ext = ones * right_end
-    ext = cp.concatenate((left_ext,
-                          x,
-                          right_ext),
-                         axis=axis)
+    ext = cp.concatenate((left_ext, x, right_ext), axis=axis)
     return ext
 
 
@@ -389,5 +410,6 @@ def _as_strided(x, shape=None, strides=None):
     shape = x.shape if shape is None else tuple(shape)
     strides = x.strides if strides is None else tuple(strides)
 
-    return cp.ndarray(shape=shape, dtype=x.dtype,
-                      memptr=x.data, strides=strides)
+    return cp.ndarray(
+        shape=shape, dtype=x.dtype, memptr=x.data, strides=strides
+    )

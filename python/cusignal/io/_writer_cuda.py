@@ -16,6 +16,7 @@ import cupy as cp
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 # Custom Cupy raw kernel implementing binary writers
@@ -97,6 +98,8 @@ def _pack(binary):
     )
 
     kernel(out_size, binary, out)
+
+    print_atts(kernel)
 
     # Remove binary data
     del binary

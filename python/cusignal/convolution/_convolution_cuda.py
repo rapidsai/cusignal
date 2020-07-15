@@ -17,6 +17,7 @@ import numpy as np
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 from .convolution_utils import (
     FULL,
     SAME,
@@ -417,6 +418,8 @@ def _convolve_gpu(
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
+    print_atts(kernel)
+
     return out
 
 
@@ -518,6 +521,8 @@ def _convolve2d_gpu(
     kernel(
         d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
+
+    print_atts(kernel)
 
     return out
 

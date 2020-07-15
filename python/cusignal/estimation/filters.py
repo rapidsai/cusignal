@@ -15,6 +15,7 @@ import cupy as cp
 import pkg_resources
 
 from . import _filters
+from ..utils.debugtools import print_atts
 
 
 class KalmanFilter(object):
@@ -286,6 +287,9 @@ class KalmanFilter(object):
             threadsperblock,
             _filters.GPUKernel.UPDATE,
         )
+
+        print_atts(self.predict_kernel)
+        print_atts(self.predict_kernel)
 
     def predict(self):
         """
