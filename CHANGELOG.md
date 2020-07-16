@@ -18,6 +18,7 @@
 - PR #126 - Install dependencies via meta package
 - PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
+- PR #160 - Update KF functionality
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
