@@ -496,7 +496,7 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
     _cupy_kernel_cache[
         (str(np_type), GPUKernel.PREDICT)
     ] = module.get_function(specializations[0])
-    
+
     _cupy_kernel_cache[(str(np_type), GPUKernel.UPDATE)] = module.get_function(
         specializations[1]
     )
