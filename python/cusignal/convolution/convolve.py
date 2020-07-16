@@ -105,7 +105,7 @@ def convolve(
 
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_win, ax_filt) = plt.subplots(3, 1, sharex=True)
-    >>> ax_orig.plot(sig)
+    >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('Original pulse')
     >>> ax_orig.margins(0, 0.1)
     >>> ax_win.plot(cp.asnumpy(win))
