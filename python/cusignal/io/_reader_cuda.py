@@ -16,6 +16,7 @@ import cupy as cp
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 # Custom Cupy raw kernel implementing binary readers
@@ -225,6 +226,8 @@ def _unpack(binary, dtype, endianness):
     )
 
     kernel(out_size, little, binary, out)
+
+    print_atts(kernel)
 
     # Remove binary data
     del binary

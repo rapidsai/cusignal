@@ -2,6 +2,7 @@
 # cuSignal 0.15.0 (Date TBD)
 
 ## New Features
+- PR #69 - Multi-point Kalman Filter
 - PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
@@ -9,6 +10,7 @@
 - PR #136 - Split reader and writer in IO packages and update docs
 - PR #146 - Add compatibility with Scipy 1.5.0
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
+- PR #158 - Add debug flag for debugging
 - PR #161 - Basic implementation of polyphase channelizer
 
 ## Improvements
@@ -17,6 +19,7 @@
 - PR #126 - Install dependencies via meta package
 - PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
+- PR #160 - Update KF functionality
 
 ## Bug Fixes
 - PR #116 - Fix stream usage on CuPy raw kernels
@@ -26,7 +29,8 @@
 - PR #139 - Fixes packaging of python package
 - PR #143 - Fix six package missing with Scipy 1.5
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
-
+- PR #153 - Fix issue with incorrect docker image being used in local build script
+- PR #157 - Add docs for Kalman Filter
 
 # cuSignal 0.14 (03 Jun 2020)
 

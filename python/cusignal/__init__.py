@@ -11,7 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.acoustics.cepstrum import rceps, cceps, cceps_unwrap
+from cusignal.acoustics.cepstrum import (
+    rceps,
+    cceps,
+    cceps_unwrap
+)
+from cusignal.estimation.filters import (
+    KalmanFilter
+)
 from cusignal.filtering.resample import (
     decimate,
     resample,
