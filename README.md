@@ -4,7 +4,7 @@
 
 The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://github.com/cupy/cupy), [Numba](https://github.com/numba/numba), and the RAPIDS ecosystem for GPU accelerated signal processing. In some cases, cuSignal is a direct port of [Scipy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) to leverage GPU compute resources via CuPy but also contains Numba CUDA and Raw CuPy CUDA kernels for additional speedups for selected functions. cuSignal achieves its best gains on large signals and compute intensive functions but stresses online processing with zero-copy memory (pinned, mapped) between CPU and GPU.
 
-**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/master/README.md) ensure you are on the latest branch.
+**NOTE:** For the latest stable [README.md](https://github.com/rapidsai/cusignal/blob/main/README.md) ensure you are on the latest branch.
 
 ## Table of Contents
 * [Quick Start](#quick-start)
@@ -22,7 +22,7 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 
 
 ## Quick Start
-cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/master/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
+cuSignal has an API that mimics SciPy Signal. In depth functionality is displayed in the [notebooks](https://github.com/rapidsai/cusignal/blob/main/notebooks) section of the repo, but let's examine the workflow for **Polyphase Resampling** under multiple scenarios:
 
 **Scipy Signal (CPU)**
 ```python
@@ -349,7 +349,7 @@ As with the standard pytest tool, the user can use the `-v` and `-k` flags for v
 
 ## Contributing Guide
 
-Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/master/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
+Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/main/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
 
 ## cuSignal Blogs and Talks
 * Announcement Talk - GTC DC 2019 - [Recording](https://on-demand.gputechconf.com/gtcdc/2019/video/dc91165-cusignal-gpu-acceleration-of-scipy-signal/) | [Slides](https://on-demand.gputechconf.com/gtcdc/2019/pdf/dc91165-cusignal-gpu-acceleration-of-scipy-signal.pdf)
