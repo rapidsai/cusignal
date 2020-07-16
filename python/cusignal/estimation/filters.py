@@ -14,7 +14,7 @@
 import cupy as cp
 import pkg_resources
 
-from . import _filters
+from . import _filters_cuda
 from ..utils.debugtools import print_atts
 
 
@@ -35,40 +35,44 @@ class KalmanFilter(object):
         you are tracking the position and velocity of an object in two
         dimensions, dim_x would be 4.
         This is used to set the default size of P, Q, and u
+
     dim_z : int
         Number of of measurement inputs. For example, if the sensor
         provides you with position in (x,y), dim_z would be 2.
+
     dim_u : int (optional)
         Size of the control input, if it is being used.
         Default value of 0 indicates it is not used.
+
     points : int (optional)
         Number of Kalman Filter points to track.
+
     dtype : dtype (optional)
         Data type of compute.
 
     Attributes
     ----------
-    x : numpy.array(points, dim_x, 1)
+    x : array(points, dim_x, 1)
         Current state estimate. Any call to update() or predict() updates
         this variable.
 
-    P : numpy.array(points, dim_x, dim_x)
+    P : array(points, dim_x, dim_x)
         Current state covariance matrix. Any call to update() or predict()
         updates this variable.
 
-    z : numpy.array(points, dim_z, 1)
+    z : array(points, dim_z, 1)
         Last measurement used in update(). Read only.
 
-    R : numpy.array(points, dim_z, dim_z)
+    R : array(points, dim_z, dim_z)
         Measurement noise matrix
 
-    Q : numpy.array(points, dim_x, dim_x)
+    Q : array(points, dim_x, dim_x)
         Process noise matrix
 
-    F : numpy.array(points, dim_x, dim_x)
+    F : array(points, dim_x, dim_x)
         State Transition matrix
 
-    H : numpy.array(points, dim_z, dim_x)
+    H : array(points, dim_z, dim_x)
         Measurement function
 
     _alpha_sq : float (points, 1, 1)
@@ -171,7 +175,7 @@ class KalmanFilter(object):
         .. code::
 
             kf.predict()
-            z = get_sensor_reading()
+            z = get_sensor_reading() (dim_z, 1)
             kf.z = cp.repeat(z[cp.newaxis, :, :], points, axis=0)
             kf.update()
 
@@ -197,7 +201,7 @@ class KalmanFilter(object):
 
         # Check CuPy version
         ver = pkg_resources.get_distribution("cupy").version
-        if ver != "8.0.0b4" or ver != "8.0.0rc1" or ver != "8.0.0":
+        if ver != "8.0.0b4" and ver != "8.0.0rc1" and ver != "8.0.0":
             raise NotImplementedError(
                 "Kalman Filter only compatible with CuPy v.8.0.0b4+"
             )
@@ -230,7 +234,7 @@ class KalmanFilter(object):
             axis=0,
         )  # process uncertainty
 
-        # self.B = None  # control transition matrix
+        self.B = None  # control transition matrix
 
         self.F = cp.repeat(
             cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
@@ -265,54 +269,138 @@ class KalmanFilter(object):
 
         # Only need to populate cache once
         # At class initialization
-        _filters._populate_kernel_cache(
+        _filters_cuda._populate_kernel_cache(
             self.x.dtype,
             threads_z_axis,
             self.dim_x,
             self.dim_z,
+            self.dim_u,
             max_threads_per_block,
         )
 
         # Retrieve kernel from cache
-        self.predict_kernel = _filters._get_backend_kernel(
+        self.predict_kernel = _filters_cuda._get_backend_kernel(
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            _filters.GPUKernel.PREDICT,
+            _filters_cuda.GPUKernel.PREDICT,
         )
 
-        self.update_kernel = _filters._get_backend_kernel(
+        self.update_kernel = _filters_cuda._get_backend_kernel(
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            _filters.GPUKernel.UPDATE,
+            _filters_cuda.GPUKernel.UPDATE,
         )
 
         print_atts(self.predict_kernel)
-        print_atts(self.predict_kernel)
+        print_atts(self.update_kernel)
 
-    def predict(self):
+    def predict(self, u=None, B=None, F=None, Q=None):
         """
         Predict next state (prior) using the Kalman filter state propagation
         equations.
 
         Parameters
         ----------
+        u : narray, default 0
+            Optional control vector.
+
+        B : array(points, dim_x, dim_u), or None
+            Optional control transition matrix; a value of None
+            will cause the filter to use `self.B`.
+
+        F : array(points, dim_x, dim_x), or None
+            Optional state transition matrix; a value of None
+            will cause the filter to use `self.F`.
+
+        Q : array(points, dim_x, dim_x), scalar, or None
+            Optional process noise matrix; a value of None will cause the
+            filter to use `self.Q`.
 
         """
+
+        # B will be ignored until implemented
+        if u is not None:
+            raise NotImplementedError(
+                "Control Matrix implementation in process"
+            )
+
+        # if u is not None:
+        #     u = cp.asarray(u)
+
+        if B is None:
+            B = self.B
+        else:
+            B = cp.asarray(B)
+
+        if F is None:
+            F = self.F
+        else:
+            F = cp.asarray(F)
+
+        if Q is None:
+            Q = self.Q
+        elif cp.isscalar(Q):
+            Q = cp.repeat(
+                (cp.identity(self.dim_x, dtype=self.x.dtype) * Q)[
+                    cp.newaxis, :, :
+                ],
+                self.points,
+                axis=0,
+            )
+        else:
+            Q = cp.asarray(Q)
 
         self.predict_kernel(
-            self._alpha_sq, self.x, self.F, self.P, self.Q,
+            self._alpha_sq, self.x, u, B, F, self.P, Q,
         )
 
-    def update(self):
+    def update(self, z, R=None, H=None):
         """
-        Update Kalman Filter.
+        Add a new measurement (z) to the Kalman filter.
 
         Parameters
         ----------
+        z : array(points, dim_z, 1)
+            measurement for this update. z can be a scalar if dim_z is 1,
+            otherwise it must be convertible to a column vector.
+            If you pass in a value of H, z must be a column vector the
+            of the correct size.
+
+        R : array(points, dim_z, dim_z), scalar, or None
+            Optionally provide R to override the measurement noise for this
+            one call, otherwise  self.R will be used.
+
+        H : array(points, dim_z, dim_x), or None
+
+            Optionally provide H to override the measurement function for this
+            one call, otherwise self.H will be used.
         """
 
+        if z is None:
+            return
+
+        if R is None:
+            R = self.R
+        elif cp.isscalar(R):
+            R = cp.repeat(
+                (cp.identity(self.dim_z, dtype=self.x.dtype) * R)[
+                    cp.newaxis, :, :
+                ],
+                self.points,
+                axis=0,
+            )
+        else:
+            R = cp.asarray(R)
+
+        if H is None:
+            H = self.H
+        else:
+            H = cp.asarray(H)
+
+        z = cp.asarray(z)
+
         self.update_kernel(
-            self.x, self.z, self.H, self.P, self.R,
+            self.x, z, H, self.P, R,
         )
