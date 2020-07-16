@@ -9,7 +9,7 @@
 - PR #136 - Split reader and writer in IO packages and update docs
 - PR #146 - Add compatibility with Scipy 1.5.0
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
-- PR #153 - Basic implementation of polyphase channelizer
+- PR #161 - Basic implementation of polyphase channelizer
 
 ## Improvements
 - PR #112 - Remove Numba kernels
