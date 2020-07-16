@@ -634,10 +634,10 @@ def channelize_poly(x, h, n_chans, order='C'):
     """
 
     # number of taps in each h_n filter
-    n_taps = int(len(h)/n_chans)
+    n_taps = int(len(h) / n_chans)
 
     # number of outputs
-    n_pts = int(len(x)/n_chans)
+    n_pts = int(len(x) / n_chans)
 
     # order F if input from MATLAB
     hh = np.matrix(np.reshape(h, (n_chans, n_taps), order=order))
@@ -647,8 +647,8 @@ def channelize_poly(x, h, n_chans, order='C'):
 
     # instead of n_chans here, this could be channel separation
     for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0:n_taps-1]
-        reg[:, 0] = np.conj(np.flipud(x[nn:nn+n_chans]))
+        reg[:, 1:n_taps] = reg[:, 0:n_taps - 1]
+        reg[:, 0] = np.conj(np.flipud(x[nn:nn + n_chans]))
         for mm in range(n_chans):
             vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
         yy[:, i] = np.conj(np.fft.fft(vv))
@@ -686,10 +686,10 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
     x = asarray(x)
 
     # number of taps in each h_n filter
-    n_taps = int(len(h)/n_chans)
+    n_taps = int(len(h) / n_chans)
 
     # number of outputs
-    n_pts = int(len(x)/n_chans)
+    n_pts = int(len(x) / n_chans)
 
     # order F if input from MATLAB
     hh = cp.reshape(h, (n_chans, n_taps), order=order)
@@ -699,8 +699,8 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
 
     # instead of n_chans here, this could be channel separation
     for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0:n_taps-1]
-        reg[:, 0] = cp.conj(cp.flipud(x[nn:nn+n_chans]))
+        reg[:, 1:n_taps] = reg[:, 0:n_taps - 1]
+        reg[:, 0] = cp.conj(cp.flipud(x[nn:nn + n_chans]))
         for mm in range(n_chans):
             vv[mm] = cp.dot(reg[mm, :], cp.conj(cp.transpose(hh[mm, :])))
         yy[:, i] = cp.conj(fftpack.fft(vv))
