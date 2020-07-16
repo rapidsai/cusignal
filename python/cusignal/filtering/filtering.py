@@ -702,7 +702,7 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
         reg[:, 1:n_taps] = reg[:, 0:n_taps - 1]
         reg[:, 0] = cp.conj(cp.flipud(x[nn:nn + n_chans]))
         for mm in range(n_chans):
-            vv[mm] = cp.dot(reg[mm, :], cp.conj(cp.transpose(hh[mm, :])))
+            vv[mm] = cp.dot(reg[mm, :], cp.conj(hh[mm, :]))
         yy[:, i] = cp.conj(fftpack.fft(vv))
 
     return yy
