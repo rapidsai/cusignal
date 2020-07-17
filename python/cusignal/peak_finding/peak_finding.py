@@ -105,13 +105,13 @@ def argrelmin(data, axis=0, order=1):
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmin(x)
-    (array([1, 5]),)
+    (array([1, 5, 7]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelmin(y, axis=1)
-    (array([0, 2]), array([2, 1]))
+    (array([0, 0, 2]), array([0, 2, 1]))
 
     """
     data = cp.asarray(data)
@@ -157,13 +157,13 @@ def argrelmax(data, axis=0, order=1):
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmax(x)
-    (array([3, 6]),)
+    (array([0, 3, 6]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelmax(y, axis=1)
-    (array([0]), array([1]))
+    (array([0, 0, 2]), array([1 ,3, 0]))
     """
     data = cp.asarray(data)
     return argrelextrema(data, cp.greater, axis, order)
@@ -202,14 +202,14 @@ def argrelextrema(data, comparator, axis=0, order=1):
     >>> from cusignal import argrelextrema
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
-    >>> argrelextrema(x, np.greater)
-    (array([3, 6]),)
+    >>> argrelextrema(x, cp.greater)
+    (array([0, 3, 6]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelextrema(y, cp.less, axis=1)
-    (array([0, 2]), array([2, 1]))
+    (array([0, 0, 2]), array([0, 2, 1]))
 
     """
     data = cp.asarray(data)
