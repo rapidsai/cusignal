@@ -103,16 +103,15 @@ def correlate(
 
     >>> import cusignal
     >>> import cupy as cp
-    >>> sig = cp.repeat([0., 1., 1., 0., 1., 0., 0., 1.], 128)
+    >>> sig = cp.repeat(cp.array([0., 1., 1., 0., 1., 0., 0., 1.]), 128)
     >>> sig_noise = sig + cp.random.randn(len(sig))
     >>> corr = cusignal.correlate(sig_noise, cp.ones(128), mode='same') / 128
 
     >>> import matplotlib.pyplot as plt
     >>> clock = cp.arange(64, len(sig), 128)
-    >>> fig, (cp.asnumpy(ax_orig), cp.asnumpy(ax_noise), \
-        cp.asnumpy(ax_corr)) = plt.subplots(3, 1, sharex=True)
-    >>> ax_orig.plot(sig)
-    >>> ax_orig.plot(clock, sig[clock], 'ro')
+    >>> fig, (ax_orig, ax_noise, ax_corr) = plt.subplots(3, 1, sharex=True)
+    >>> ax_orig.plot(cp.asnumpy(sig))
+    >>> ax_orig.plot(cp.asnumpy(clock), cp.asnumpy(sig[clock]), 'ro')
     >>> ax_orig.set_title('Original signal')
     >>> ax_noise.plot(cp.asnumpy(sig_noise))
     >>> ax_noise.set_title('Signal with noise')
@@ -216,8 +215,7 @@ def correlate2d(
         mode='same')
     >>> y, x = cp.unravel_index(cp.argmax(corr), corr.shape)  # find the match
     >>> import matplotlib.pyplot as plt
-    >>> fig, (cp.asnumpy(ax_orig), cp.asnumpy(ax_template), \
-        cp.asnumpy(ax_corr)) = plt.subplots(3, 1, figsize=(6, 15))
+    >>> fig, (ax_orig, ax_template, ax_corr) = plt.subplots(3, 1, figsize=(6, 15))
     >>> ax_orig.imshow(cp.asnumpy(face), cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()

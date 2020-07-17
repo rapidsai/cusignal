@@ -21,6 +21,7 @@
 - PR #160 - Update KF functionality
 
 ## Bug Fixes
+- PR #164 - Fix typos in the rest of the example code.
 - PR #162 - Fix typo in example plotting code
 - PR #116 - Fix stream usage on CuPy raw kernels
 - PR #124 - Remove cp_stream and autosync
