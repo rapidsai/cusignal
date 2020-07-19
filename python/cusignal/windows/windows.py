@@ -13,8 +13,19 @@
 
 import cupy as cp
 from cupyx.scipy import fftpack, special
-from cupy import (array, ones, zeros, cos, arange, sqrt, pi, linspace, abs,
-                  sin, exp)
+from cupy import (
+    array,
+    ones,
+    zeros,
+    cos,
+    arange,
+    sqrt,
+    pi,
+    linspace,
+    abs,
+    sin,
+    exp,
+)
 
 import warnings
 
@@ -22,7 +33,7 @@ import warnings
 def _len_guards(M):
     """Handle small or incorrect window lengths"""
     if int(M) != M or M < 0:
-        raise ValueError('Window length M must be a non-negative integer')
+        raise ValueError("Window length M must be a non-negative integer")
     return M <= 1
 
 
@@ -302,8 +313,9 @@ def parzen(M, sym=True):
     na = cp.extract(n < -(M - 1) / 4.0, n)
     nb = cp.extract(abs(n) <= (M - 1) / 4.0, n)
     wa = 2 * (1 - abs(na) / (M / 2.0)) ** 3.0
-    wb = (1 - 6 * (abs(nb) / (M / 2.0)) ** 2.0 +
-          6 * (abs(nb) / (M / 2.0)) ** 3.0)
+    wb = (
+        1 - 6 * (abs(nb) / (M / 2.0)) ** 2.0 + 6 * (abs(nb) / (M / 2.0)) ** 3.0
+    )
     w = cp.r_[wa, wb, wa[::-1]]
 
     return _truncate(w, needs_trunc)
@@ -715,8 +727,11 @@ def bartlett(M, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     n = arange(0, M)
-    w = cp.where(cp.less_equal(n, (M - 1) / 2.0),
-                 2.0 * n / (M - 1), 2.0 - 2.0 * n / (M - 1))
+    w = cp.where(
+        cp.less_equal(n, (M - 1) / 2.0),
+        2.0 * n / (M - 1),
+        2.0 - 2.0 * n / (M - 1),
+    )
 
     return _truncate(w, needs_trunc)
 
@@ -867,7 +882,7 @@ def tukey(M, alpha=0.5, sym=True):
         return ones(M)
 
     if alpha <= 0:
-        return ones(M, 'd')
+        return ones(M, "d")
     elif alpha >= 1.0:
         return hann(M, sym=sym)
 
@@ -875,9 +890,9 @@ def tukey(M, alpha=0.5, sym=True):
 
     n = arange(0, M)
     width = int(cp.floor(alpha * (M - 1) / 2.0))
-    n1 = n[0:width + 1]
-    n2 = n[width + 1:M - width - 1]
-    n3 = n[M - width - 1:]
+    n1 = n[0 : width + 1]
+    n2 = n[width + 1 : M - width - 1]
+    n3 = n[M - width - 1 :]
 
     w1 = 0.5 * (1 + cos(pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
     w2 = ones(n2.shape)
@@ -1030,7 +1045,7 @@ def general_hamming(M, alpha, sym=True):
     .. [4] Matthieu Bourbigot ESA, "Sentinel-1 Product Definition",
            https://sentinel.esa.int/documents/247904/1877131/Sentinel-1-Product-Definition
     """
-    return general_cosine(M, [alpha, 1. - alpha], sym)
+    return general_cosine(M, [alpha, 1.0 - alpha], sym)
 
 
 def hamming(M, sym=True):
@@ -1112,7 +1127,7 @@ def hamming(M, sym=True):
     if M < 1:
         return array([])
     if M == 1:
-        return ones(1, 'd')
+        return ones(1, "d")
     odd = M % 2
     if not sym and not odd:
         M = M + 1
@@ -1233,14 +1248,15 @@ def kaiser(M, beta, sym=True):
     if M < 1:
         return array([])
     if M == 1:
-        return ones(1, 'd')
+        return ones(1, "d")
     odd = M % 2
     if not sym and not odd:
         M = M + 1
     n = arange(0, M)
     alpha = (M - 1) / 2.0
-    w = (special.i0(beta * sqrt(1 - ((n - alpha) / alpha) ** 2.0)) /
-         special.i0(beta))
+    w = special.i0(beta * sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
+        beta
+    )
     if not sym and not odd:
         w = w[:-1]
     return w
@@ -1305,7 +1321,7 @@ def gaussian(M, std, sym=True):
 
     n = arange(0, M) - (M - 1.0) / 2.0
     sig2 = 2 * std * std
-    w = exp(-n ** 2 / sig2)
+    w = exp(-(n ** 2) / sig2)
 
     return _truncate(w, needs_trunc)
 
@@ -1469,19 +1485,21 @@ def chebwin(M, at, sym=True):
 
     """
     if abs(at) < 45:
-        warnings.warn("This window is not suitable for spectral analysis "
-                      "for attenuation values lower than about 45dB because "
-                      "the equivalent noise bandwidth of a Chebyshev window "
-                      "does not grow monotonically with increasing sidelobe "
-                      "attenuation when the attenuation is smaller than "
-                      "about 45 dB.")
+        warnings.warn(
+            "This window is not suitable for spectral analysis "
+            "for attenuation values lower than about 45dB because "
+            "the equivalent noise bandwidth of a Chebyshev window "
+            "does not grow monotonically with increasing sidelobe "
+            "attenuation when the attenuation is smaller than "
+            "about 45 dB."
+        )
     if _len_guards(M):
         return ones(M)
     M, needs_trunc = _extend(M, sym)
 
     # compute the parameter beta
     order = M - 1.0
-    beta = cp.cosh(1.0 / order * cp.arccosh(10 ** (abs(at) / 20.)))
+    beta = cp.cosh(1.0 / order * cp.arccosh(10 ** (abs(at) / 20.0)))
     k = cp.arange(0, M) * 1.0
     x = beta * cp.cos(pi * k / M)
     # Find the window's DFT coefficients
@@ -1498,12 +1516,12 @@ def chebwin(M, at, sym=True):
         w = cp.real(fftpack.fft(p))
         n = (M + 1) // 2
         w = w[:n]
-        w = cp.concatenate((w[n - 1:0:-1], w))
+        w = cp.concatenate((w[n - 1 : 0 : -1], w))
     else:
-        p = p * exp(1.j * pi / M * cp.arange(0, M))
+        p = p * exp(1.0j * pi / M * cp.arange(0, M))
         w = cp.real(fftpack.fft(p))
         n = M // 2 + 1
-        w = cp.concatenate((w[n - 1:0:-1], w[1:n]))
+        w = cp.concatenate((w[n - 1 : 0 : -1], w[1:n]))
     w = w / cp.max(w)
 
     return _truncate(w, needs_trunc)
@@ -1564,12 +1582,12 @@ def cosine(M, sym=True):
         return ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = sin(pi / M * (arange(0, M) + .5))
+    w = sin(pi / M * (arange(0, M) + 0.5))
 
     return _truncate(w, needs_trunc)
 
 
-def exponential(M, center=None, tau=1., sym=True):
+def exponential(M, center=None, tau=1.0, sym=True):
     r"""Return an exponential (or Poisson) window.
 
     Parameters
@@ -1671,28 +1689,32 @@ def _fftautocorr(x):
 
 
 _win_equiv_raw = {
-    ('barthann', 'brthan', 'bth'): (barthann, False),
-    ('bartlett', 'bart', 'brt'): (bartlett, False),
-    ('blackman', 'black', 'blk'): (blackman, False),
-    ('blackmanharris', 'blackharr', 'bkh'): (blackmanharris, False),
-    ('bohman', 'bman', 'bmn'): (bohman, False),
-    ('boxcar', 'box', 'ones',
-        'rect', 'rectangular'): (boxcar, False),
-    ('chebwin', 'cheb'): (chebwin, True),
-    ('cosine', 'halfcosine'): (cosine, False),
-    ('exponential', 'poisson'): (exponential, True),
-    ('flattop', 'flat', 'flt'): (flattop, False),
-    ('gaussian', 'gauss', 'gss'): (gaussian, True),
-    ('general gaussian', 'general_gaussian',
-        'general gauss', 'general_gauss', 'ggs'): (general_gaussian, True),
-    ('hamming', 'hamm', 'ham'): (hamming, False),
-    ('hanning', 'hann', 'han'): (hann, False),
-    ('kaiser', 'ksr'): (kaiser, True),
-    ('nuttall', 'nutl', 'nut'): (nuttall, False),
-    ('parzen', 'parz', 'par'): (parzen, False),
+    ("barthann", "brthan", "bth"): (barthann, False),
+    ("bartlett", "bart", "brt"): (bartlett, False),
+    ("blackman", "black", "blk"): (blackman, False),
+    ("blackmanharris", "blackharr", "bkh"): (blackmanharris, False),
+    ("bohman", "bman", "bmn"): (bohman, False),
+    ("boxcar", "box", "ones", "rect", "rectangular"): (boxcar, False),
+    ("chebwin", "cheb"): (chebwin, True),
+    ("cosine", "halfcosine"): (cosine, False),
+    ("exponential", "poisson"): (exponential, True),
+    ("flattop", "flat", "flt"): (flattop, False),
+    ("gaussian", "gauss", "gss"): (gaussian, True),
+    (
+        "general gaussian",
+        "general_gaussian",
+        "general gauss",
+        "general_gauss",
+        "ggs",
+    ): (general_gaussian, True),
+    ("hamming", "hamm", "ham"): (hamming, False),
+    ("hanning", "hann", "han"): (hann, False),
+    ("kaiser", "ksr"): (kaiser, True),
+    ("nuttall", "nutl", "nut"): (nuttall, False),
+    ("parzen", "parz", "par"): (parzen, False),
     # ('slepian', 'slep', 'optimal', 'dpss', 'dss'): (slepian, True),
-    ('triangle', 'triang', 'tri'): (triang, False),
-    ('tukey', 'tuk'): (tukey, True),
+    ("triangle", "triang", "tri"): (triang, False),
+    ("tukey", "tuk"): (tukey, True),
 }
 
 # Fill dict with all valid window name strings
@@ -1793,13 +1815,16 @@ def get_window(window, Nx, fftbins=True):
                 args = window[1:]
         elif isinstance(window, str):
             if window in _needs_param:
-                raise ValueError("The '" + window + "' window needs one or "
-                                 "more parameters -- pass a tuple.")
+                raise ValueError(
+                    "The '" + window + "' window needs one or "
+                    "more parameters -- pass a tuple."
+                )
             else:
                 winstr = window
         else:
-            raise ValueError("%s as window type is not supported." %
-                             str(type(window)))
+            raise ValueError(
+                "%s as window type is not supported." % str(type(window))
+            )
 
         try:
             winfunc = _win_equiv[winstr]
