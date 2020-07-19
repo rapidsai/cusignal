@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import pkg_resources
 
 from . import _filters_cuda
 from ..utils.debugtools import print_atts
