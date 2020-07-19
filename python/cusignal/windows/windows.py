@@ -1029,7 +1029,8 @@ def general_hamming(M, alpha, sym=True):
     ...     A = fft(window, 2048) / (len(window)/2.0)
     ...     freq = cp.linspace(-0.5, 0.5, len(A))
     ...     response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
-    ...     freq_plot.plot(cp.asnumpy(freq), cp.asnumpy(response), label="{:.2f}".format(alpha))
+    ...     freq_plot.plot(cp.asnumpy(freq), cp.asnumpy(response),
+    ...         label="{:.2f}".format(alpha))
     >>> freq_plot.legend(loc="upper right")
     >>> spatial_plot.legend(loc="upper right")
 

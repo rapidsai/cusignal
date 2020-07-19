@@ -216,7 +216,7 @@ def correlate2d(
     >>> y, x = cp.unravel_index(cp.argmax(corr), corr.shape)  # find the match
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_template, ax_corr) =
-    >>>     plt.subplots(3, 1, figsize=(6, 15))
+    ...     plt.subplots(3, 1, figsize=(6, 15))
     >>> ax_orig.imshow(cp.asnumpy(face), cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()
