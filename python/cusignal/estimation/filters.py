@@ -200,8 +200,14 @@ class KalmanFilter(object):
     ):
 
         # Check CuPy version
-        ver = pkg_resources.get_distribution("cupy").version
-        if ver != "8.0.0b4" and ver != "8.0.0rc1" and ver != "8.0.0":
+        # Update to only check for v8.X in cuSignal 0.16
+        ver = cp.__version__
+        if (
+            ver != "8.0.0b4"
+            and ver != "8.0.0b5"
+            and ver != "8.0.0rc1"
+            and ver != "8.0.0"
+        ):
             raise NotImplementedError(
                 "Kalman Filter only compatible with CuPy v.8.0.0b4+"
             )
