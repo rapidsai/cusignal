@@ -32,6 +32,7 @@
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 - PR #153 - Fix issue with incorrect docker image being used in local build script
 - PR #157 - Add docs for Kalman Filter
+- PR #168 - Fix issues with NumPy 1.19
 
 # cuSignal 0.14 (03 Jun 2020)
 
