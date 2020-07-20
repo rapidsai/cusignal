@@ -26,7 +26,7 @@ def main(dt, num_points):
     print("data type", dt)
     print("loops", loops)
 
-    cuS = cusignal.KalmanFilter(num_points, dim_x, dim_z, dtype=dt)
+    cuS = cusignal.KalmanFilter(dim_x, dim_z, points=num_points, dtype=dt)
 
     f_fpy = filterpy.kalman.KalmanFilter(dim_x=dim_x, dim_z=dim_z)
 
@@ -37,10 +37,6 @@ def main(dt, num_points):
             [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
             [0.0, 0.0, 1.0, 0.0],  # dx = v_x
             [1.0, 0.0, 0.0, 1.0],
-            # [1.1, 0.2, -1.3, 99.4],  # x = x0 + v_x*dt
-            # [0.1, -1.2, 99.3, 1.4],  # y = y0 + v_y*dt
-            # [0.1, 99.2, -1.3, 0.4],  # dx = v_x
-            # [1.1, -0.2, 99.3, -1.4],
         ],  # dy = v_y
         dtype=dt,
     )
@@ -81,6 +77,8 @@ def main(dt, num_points):
         [10.0, 10.0, 10.0, 10.0], dtype=dt
     )
 
+    np.random.seed(1234)
+
     # CPU
     start = time.time()
     for l in range(loops):
@@ -106,16 +104,12 @@ def main(dt, num_points):
 
         f_fpy.Q = motion_noise
 
-        z = np.zeros(dim_z, dtype=dt).T
-
         for _ in range(cpu_points):
             for _ in range(iterations):
 
                 f_fpy.predict()
 
-                # must be 2d for cuSignal.filter
-                for j in range(dim_z):
-                    z[j] = j
+                z = np.random.random_sample(dim_z).astype(dt).T
 
                 f_fpy.update(z)
 
@@ -141,10 +135,7 @@ def main(dt, num_points):
 
     print("CPU:", cpu_time)
 
-    z = cp.zeros(dim_z, dtype=dt).T
-    z = cp.atleast_2d(z)
-    if z.shape[1] == dim_z:
-        z = z.T
+    np.random.seed(1234)
 
     # GPU
     start = time.time()
@@ -181,15 +172,11 @@ def main(dt, num_points):
             with prof.time_range("predict", 0):
                 cuS.predict()
 
-            with cp.prof.time_range("z", 0):
-                for j in range(dim_z):
-                    z[j] = j
-
-            with cp.prof.time_range("repeat", 0):
-                cuS.z = cp.repeat(z[cp.newaxis, :, :], num_points, axis=0)
+            z = np.atleast_2d(np.random.random_sample(dim_z).astype(dt)).T
+            z = np.repeat(z[np.newaxis, :, :], num_points, axis=0)
 
             with cp.prof.time_range("update", 0):
-                cuS.update()
+                cuS.update(z)
 
             cp.cuda.runtime.deviceSynchronize()
 

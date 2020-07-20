@@ -12,6 +12,7 @@
 # limitations under the License.
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 class _cupy_sosfilt_wrapper(object):
@@ -75,3 +76,5 @@ def _sosfilt(sos, x, zi):
     )
 
     kernel(sos, x, zi)
+
+    print_atts(kernel)

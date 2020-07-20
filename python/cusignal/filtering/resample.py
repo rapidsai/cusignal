@@ -227,7 +227,8 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     >>> xnew = cp.linspace(0, 10, 100, endpoint=False)
 
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(x, y, 'go-', xnew, f, '.-', 10, y[0], 'ro')
+    >>> plt.plot(cp.asnumpy(x), cp.asnumpy(y), 'go-', cp.asnumpy(xnew), \
+                cp.asnumpy(f), '.-', 10, cp.asnumpy(y[0]), 'ro')
     >>> plt.legend(['data', 'resampled'], loc='best')
     >>> plt.show()
     """
@@ -345,7 +346,8 @@ def resample_poly(
     sample of the next cycle for the FFT method, and gets closer to zero
     for the polyphase method:
 
-    >>> from scipy import signal
+    >>> import cusignal
+    >>> import cupy as cp
 
     >>> x = cp.linspace(0, 10, 20, endpoint=False)
     >>> y = cp.cos(-x**2/6.0)
@@ -354,9 +356,10 @@ def resample_poly(
     >>> xnew = cp.linspace(0, 10, 100, endpoint=False)
 
     >>> import matplotlib.pyplot as plt
-    >>> plt.plot(xnew, f_fft, 'b.-', xnew, f_poly, 'r.-')
-    >>> plt.plot(x, y, 'ko-')
-    >>> plt.plot(10, y[0], 'bo', 10, 0., 'ro')  # boundaries
+    >>> plt.plot(cp.asnumpy(xnew), cp.asnumpy(f_fft), 'b.-', \
+                 cp.asnumpy(xnew), cp.asnumpy(f_poly), 'r.-')
+    >>> plt.plot(cp.asnumpy(x), cp.asnumpy(y), 'ko-')
+    >>> plt.plot(10, cp.asnumpy(y[0]), 'bo', 10, 0., 'ro')  # boundaries
     >>> plt.legend(['resample', 'resamp_poly', 'data'], loc='best')
     >>> plt.show()
     """

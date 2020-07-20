@@ -14,6 +14,7 @@
 import cupy as cp
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 class _cupy_pack_wrapper(object):
@@ -69,6 +70,8 @@ def _pack(binary):
     )
 
     kernel(out_size, binary, out)
+
+    print_atts(kernel)
 
     # Remove binary data
     del binary

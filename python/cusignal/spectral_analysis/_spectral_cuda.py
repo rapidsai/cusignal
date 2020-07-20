@@ -14,6 +14,7 @@
 import cupy as cp
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 class _cupy_lombscargle_wrapper(object):
@@ -70,3 +71,5 @@ def _lombscargle(x, y, freqs, pgram, y_dot):
     )
 
     kernel(x, y, freqs, pgram, y_dot)
+
+    print_atts(kernel)
