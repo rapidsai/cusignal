@@ -15,7 +15,7 @@ import os
 
 
 def print_atts(func):
-    if os.environ.get('CUSIGNAL_DEV_DEBUG') == 'True':
+    if os.environ.get("CUSIGNAL_DEV_DEBUG") == "True":
         print("name:", func.kernel.name)
         print("max_threads_per_block:", func.kernel.max_threads_per_block)
         print("num_regs:", func.kernel.num_regs)
