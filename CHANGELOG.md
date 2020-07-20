@@ -33,6 +33,7 @@
 - PR #150 - Fix upfirdn output len for Scipy 1.5
 - PR #153 - Fix issue with incorrect docker image being used in local build script
 - PR #157 - Add docs for Kalman Filter
+- PR #167 - Fix issues with NumPy 1.19
 
 # cuSignal 0.14 (03 Jun 2020)
 
