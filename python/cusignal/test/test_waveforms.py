@@ -26,7 +26,8 @@ class TestWaveforms:
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
         cpu_pwm = signal.square(cpu_time, duty)
-        gpu_pwm = cp.asnumpy(cusignal.square(gpu_time, duty))
+        gpu_pwm = cusignal.square(gpu_time, duty)
+        gpu_pwm = cp.asnumpy(gpu_pwm)
 
         assert array_equal(cpu_pwm, gpu_pwm)
 
@@ -35,10 +36,13 @@ class TestWaveforms:
     def test_gausspulse(self, time_data_gen, num_samps, fc):
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
-        cpu_pwm = signal.gausspulse(cpu_time, fc, retquad=True, retenv=True)
-        gpu_pwm = cp.asnumpy(
-            cusignal.gausspulse(gpu_time, fc, retquad=True, retenv=True)
+        _, _, cpu_pwm = signal.gausspulse(
+            cpu_time, fc, retquad=True, retenv=True
         )
+        _, _, gpu_pwm = cusignal.gausspulse(
+            gpu_time, fc, retquad=True, retenv=True
+        )
+        gpu_pwm = cp.asnumpy(gpu_pwm)
 
         assert array_equal(cpu_pwm, gpu_pwm)
 
@@ -51,7 +55,8 @@ class TestWaveforms:
         cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
 
         cpu_chirp = signal.chirp(cpu_time, f0, t1, f1, method)
-        gpu_chirp = cp.asnumpy(cusignal.chirp(gpu_time, f0, t1, f1, method))
+        gpu_chirp = cusignal.chirp(gpu_time, f0, t1, f1, method)
+        gpu_chirp = cp.asnumpy(gpu_chirp)
 
         assert array_equal(cpu_chirp, gpu_chirp)
 
@@ -59,6 +64,7 @@ class TestWaveforms:
     @pytest.mark.parametrize("idx", ["mid"])
     def test_unit_impulse(self, num_samps, idx):
         cpu_uimp = signal.unit_impulse(num_samps, idx)
-        gpu_uimp = cp.asnumpy(cusignal.unit_impulse(num_samps, idx))
+        gpu_uimp = cusignal.unit_impulse(num_samps, idx)
+        gpu_uimp = cp.asnumpy(gpu_uimp)
 
         assert array_equal(cpu_uimp, gpu_uimp)

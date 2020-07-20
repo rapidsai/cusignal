@@ -32,7 +32,8 @@ class TestFiltering:
         gpu_sig = cp.asarray(cpu_sig)
 
         cpu_wfilt = signal.wiener(cpu_sig)
-        gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
+        gpu_wfilt = cusignal.wiener(gpu_sig)
+        gpu_wfilt = cp.asnumpy(gpu_wfilt)
         assert array_equal(cpu_wfilt, gpu_wfilt)
 
     # def test_lfiltic(self):
@@ -51,8 +52,8 @@ class TestFiltering:
         cpu_sosfilt = signal.sosfilt(cpu_sos, cpu_sig)
 
         gpu_sos = cp.asarray(cpu_sos)
-
-        gpu_sosfilt = cp.asnumpy(cusignal.sosfilt(gpu_sos, gpu_sig))
+        gpu_sosfilt = cusignal.sosfilt(gpu_sos, gpu_sig)
+        gpu_sosfilt = cp.asnumpy(gpu_sosfilt)
 
         assert array_equal(cpu_sosfilt, gpu_sosfilt)
 
@@ -62,7 +63,8 @@ class TestFiltering:
         gpu_sig = cp.asarray(cpu_sig)
 
         cpu_hilbert = signal.hilbert(cpu_sig)
-        gpu_hilbert = cp.asnumpy(cusignal.hilbert(gpu_sig))
+        gpu_hilbert = cusignal.hilbert(gpu_sig)
+        gpu_hilbert = cp.asnumpy(gpu_hilbert)
         assert array_equal(cpu_hilbert, gpu_hilbert)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -71,7 +73,8 @@ class TestFiltering:
         gpu_sig = cp.asarray(cpu_sig)
 
         cpu_hilbert2 = signal.hilbert2(cpu_sig)
-        gpu_hilbert2 = cp.asnumpy(cusignal.hilbert2(gpu_sig))
+        gpu_hilbert2 = cusignal.hilbert2(gpu_sig)
+        gpu_hilbert2 = cp.asnumpy(gpu_hilbert2)
         assert array_equal(cpu_hilbert2, gpu_hilbert2)
 
     # def test_detrend(self):
@@ -95,11 +98,10 @@ class TestFiltering:
         cpu_decimate = signal.decimate(
             cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
         )
-        gpu_decimate = cp.asnumpy(
-            cusignal.decimate(
-                gpu_sig, downsample_factor, zero_phase=zero_phase
-            )
+        gpu_decimate = cusignal.decimate(
+            gpu_sig, downsample_factor, zero_phase=zero_phase
         )
+        gpu_decimate = cp.asnumpy(gpu_decimate)
 
         assert array_equal(cpu_decimate, gpu_decimate)
 
@@ -114,9 +116,10 @@ class TestFiltering:
         cpu_resample = signal.resample(
             cpu_sig, resample_num_samps, window=window
         )
-        gpu_resample = cp.asnumpy(
-            cusignal.resample(gpu_sig, resample_num_samps, window=window)
+        gpu_resample = cusignal.resample(
+            gpu_sig, resample_num_samps, window=window
         )
+        gpu_resample = cp.asnumpy(gpu_resample)
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -130,9 +133,8 @@ class TestFiltering:
         cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
 
         cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
-        gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(gpu_sig, up, down, window=window)
-        )
+        gpu_resample = cusignal.resample_poly(gpu_sig, up, down, window=window)
+        gpu_resample = cp.asnumpy(gpu_resample)
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -146,9 +148,8 @@ class TestFiltering:
         cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
 
         cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
-        gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(gpu_sig, up, down, window=window)
-        )
+        gpu_resample = cusignal.resample_poly(gpu_sig, up, down, window=window)
+        gpu_resample = cp.asnumpy(gpu_resample)
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -161,7 +162,8 @@ class TestFiltering:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
+        gpu_resample = cusignal.upfirdn(h, gpu_sig, up, down)
+        gpu_resample = cp.asnumpy(gpu_resample)
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -174,7 +176,8 @@ class TestFiltering:
         h = [1, 1, 1]
 
         cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
+        gpu_resample = cusignal.upfirdn(h, gpu_sig, up, down)
+        gpu_resample = cp.asnumpy(gpu_resample)
 
         assert array_equal(cpu_resample, gpu_resample)
 
@@ -183,9 +186,9 @@ class TestFiltering:
     @pytest.mark.parametrize("f2", [0.2, 0.4])
     def test_firwin(self, num_samps, f1, f2):
         cpu_window = signal.firwin(num_samps, [f1, f2], pass_zero=False)
-        gpu_window = cp.asnumpy(
-            cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
-        )
+        gpu_window = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
+        gpu_window = cp.asnumpy(gpu_window)
+
         assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
@@ -198,11 +201,11 @@ class TestFiltering:
         cpu_corr = signal.correlate(
             cpu_sig, np.ones(num_taps), mode=mode, method=method
         )
-        gpu_corr = cp.asnumpy(
-            cusignal.correlate(
-                gpu_sig, cp.ones(num_taps), mode=mode, method=method
-            )
+        gpu_corr = cusignal.correlate(
+            gpu_sig, cp.ones(num_taps), mode=mode, method=method
         )
+        gpu_corr = cp.asnumpy(gpu_corr)
+
         assert array_equal(cpu_corr, gpu_corr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
@@ -217,9 +220,11 @@ class TestFiltering:
         gpu_win = cusignal.windows.hann(num_taps)
 
         cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
-        gpu_conv = cp.asnumpy(
-            cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
+        gpu_conv = cusignal.convolve(
+            gpu_sig, gpu_win, mode=mode, method=method
         )
+        gpu_conv = cp.asnumpy(gpu_conv)
+
         assert array_equal(cpu_conv, gpu_conv)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -228,9 +233,9 @@ class TestFiltering:
         gpu_sig = cp.asarray(cpu_sig)
 
         cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
-        gpu_autocorr = cp.asnumpy(
-            cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
-        )
+        gpu_autocorr = cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
+        gpu_autocorr = cp.asnumpy(gpu_autocorr)
+
         assert array_equal(cpu_autocorr, gpu_autocorr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -247,11 +252,12 @@ class TestFiltering:
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
         )
 
-        gpu_convolve2d = cp.asnumpy(
-            cusignal.convolve2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
-            )
+        gpu_convolve2d = cusignal.convolve2d(
+            gpu_sig, gpu_filt, boundary=boundary, mode=mode,
         )
+
+        gpu_convolve2d = cp.asnumpy(gpu_convolve2d)
+
         assert array_equal(cpu_convolve2d, gpu_convolve2d)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -267,9 +273,10 @@ class TestFiltering:
         cpu_correlate2d = signal.correlate2d(
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
         )
-        gpu_correlate2d = cp.asnumpy(
-            cusignal.correlate2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
-            )
+        gpu_correlate2d = cusignal.correlate2d(
+            gpu_sig, gpu_filt, boundary=boundary, mode=mode,
         )
+
+        gpu_correlate2d = cp.asnumpy(gpu_correlate2d)
+
         assert array_equal(cpu_correlate2d, gpu_correlate2d)
