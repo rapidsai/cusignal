@@ -17,6 +17,7 @@ from math import ceil
 from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
+from ..utils.debugtools import print_atts
 
 
 def _pad_h(h, up):
@@ -324,5 +325,7 @@ class _UpFIRDn(object):
             padded_len,
             out,
         )
+
+        print_atts(kernel)
 
         return out

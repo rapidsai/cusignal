@@ -1009,12 +1009,12 @@ def general_hamming(M, alpha, sym=True):
     >>> freq_plot.set_xlabel("Normalized frequency [cycles per sample]")
 
     >>> for alpha in [0.75, 0.7, 0.52]:
-    ...     window = general_hamming(41, alpha)
-    ...     spatial_plot.plot(window, label="{:.2f}".format(alpha))
+    ...     window = cusignal.general_hamming(41, alpha)
+    ...     spatial_plot.plot(cp.asnumpy(window), label="{:.2f}".format(alpha))
     ...     A = fft(window, 2048) / (len(window)/2.0)
     ...     freq = cp.linspace(-0.5, 0.5, len(A))
     ...     response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
-    ...     freq_plot.plot(freq, response, label="{:.2f}".format(alpha))
+    ...     freq_plot.plot(cp.asnumpy(freq), cp.asnumpy(response), label="{:.2f}".format(alpha))
     >>> freq_plot.legend(loc="upper right")
     >>> spatial_plot.legend(loc="upper right")
 
@@ -1637,9 +1637,9 @@ def exponential(M, center=None, tau=1., sym=True):
     This function can also generate non-symmetric windows:
 
     >>> tau2 = -(M-1) / np.log(0.01)
-    >>> window2 = signal.exponential(M, 0, tau2, False)
+    >>> window2 = cusignal.exponential(M, 0, tau2, False)
     >>> plt.figure()
-    >>> plt.plot(window2)
+    >>> plt.plot(cp.asnumpy(window2))
     >>> plt.ylabel("Amplitude")
     >>> plt.xlabel("Sample")
     """
@@ -1775,11 +1775,11 @@ def get_window(window, Nx, fftbins=True):
     >>> cusignal.get_window('triang', 7)
     array([ 0.125,  0.375,  0.625,  0.875,  0.875,  0.625,  0.375])
     >>> cusignal.get_window(('kaiser', 4.0), 9)
-    array([ 0.08848053,  0.29425961,  0.56437221,  0.82160913,  0.97885093,
-            0.97885093,  0.82160913,  0.56437221,  0.29425961])
+    array([0.08848053, 0.32578323, 0.63343178, 0.89640418, 1.,
+           0.89640418, 0.63343178, 0.32578323, 0.08848053])
     >>> cusignal.get_window(4.0, 9)
-    array([ 0.08848053,  0.29425961,  0.56437221,  0.82160913,  0.97885093,
-            0.97885093,  0.82160913,  0.56437221,  0.29425961])
+    array([0.08848053, 0.32578323, 0.63343178, 0.89640418, 1.,
+           0.89640418, 0.63343178, 0.32578323, 0.08848053])
 
     """
     sym = not fftbins

@@ -10,6 +10,7 @@
 - PR #146 - Add compatibility with Scipy 1.5.0; Default to SciPy > 1.5
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
 - PR #69 - Multi-point Kalman Filter
+- PR #158 - Add debug flag for debugging
 
 ## Improvements
 - PR #112 - Remove Numba kernels
@@ -17,8 +18,11 @@
 - PR #126 - Install dependencies via meta package
 - PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
+- PR #160 - Update KF functionality
 
 ## Bug Fixes
+- PR #164 - Fix typos in the rest of the example code.
+- PR #162 - Fix typo in example plotting code
 - PR #116 - Fix stream usage on CuPy raw kernels
 - PR #124 - Remove cp_stream and autosync
 - PR #127 - Fix selected documentation formatting errors
@@ -28,6 +32,7 @@
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 - PR #150 - Fix upfirdn output len for Scipy 1.5
 - PR #153 - Fix issue with incorrect docker image being used in local build script
+- PR #157 - Add docs for Kalman Filter
 
 # cuSignal 0.14 (03 Jun 2020)
 

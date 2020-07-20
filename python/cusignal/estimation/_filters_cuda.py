@@ -98,14 +98,17 @@ __device__ T inverse(
 }
 
 
-template<typename T, int BLOCKS, int DIM_X, int MAX_TPB>
+template<typename T, int BLOCKS, int DIM_X, int DIM_U, int MAX_TPB>
 __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         const int num_points,
         const T * __restrict__ alpha_sq,
         T * __restrict__ x_in,
+        const T * __restrict__ u,
+        const T * __restrict__ B,
         const T * __restrict__ F,
         T * __restrict__ P,
-        const T * __restrict__ Q
+        const T * __restrict__ Q,
+        const bool skip
         ) {
 
     __shared__ T s_XX_A[BLOCKS][DIM_X][DIM_X];
@@ -133,6 +136,21 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
         T localP { P[gtz * DIM_X * DIM_X + x_value] };
 
         T temp {};
+        //T temp2 {};
+
+        /*
+        if ( !skip ) {
+            // Compute self.x = dot(B, u)
+            if ( ltx == 0 ) {
+#pragma unroll DIM_U
+                for ( int j = 0; j < DIM_U; j++ ) {
+                    temp2 += B[gtz * DIM_X * DIM_U + lty * DIM_U + j] *
+                        u[gtz * DIM_U + j];
+                }
+                printf("%d: %f\\n", lty, temp2);
+            }
+        }
+        */
 
         // Compute self.x = dot(F, self.x)
         if ( ltx == 0 ) {
@@ -142,7 +160,8 @@ __global__ void __launch_bounds__(MAX_TPB) _cupy_predict(
                     x_in[gtz * DIM_X + j + ltx];
             }
             // x_in[gtz * DIM_X * 1 + lty * 1 + ltx]
-            x_in[gtz * DIM_X + lty + ltx]   = temp;
+            //x_in[gtz * DIM_X + lty + ltx] = temp + temp2;
+            x_in[gtz * DIM_X + lty + ltx] = temp;
         }
 
         s_XX_P[ltz][lty][ltx] = localP;
@@ -393,10 +412,15 @@ class _cupy_predict_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, alpha_sq, x, F, P, Q,
+        self, alpha_sq, x, u, B, F, P, Q,
     ):
 
-        kernel_args = (x.shape[0], alpha_sq, x, F, P, Q)
+        if B is not None and u is not None:
+            skip = False
+        else:
+            skip = True
+
+        kernel_args = (x.shape[0], alpha_sq, x, u, B, F, P, Q, skip)
 
         self.kernel(self.grid, self.block, kernel_args)
 
@@ -439,13 +463,15 @@ def _get_backend_kernel(dtype, grid, block, k_type):
         )
 
 
-def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, max_tpb):
+def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
 
     # Check in np_type is a supported option
     if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
         raise ValueError(
             "Datatype {} not found for Kalman Filter".format(np_type)
         )
+
+    print("asdf", dim_u)
 
     if np_type == "float32":
         c_type = "float"
@@ -454,7 +480,9 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, max_tpb):
 
     # Instantiate the cupy kernel for this type and compile
     specializations = (
-        "_cupy_predict<{}, {}, {}, {}>".format(c_type, blocks, dim_x, max_tpb),
+        "_cupy_predict<{}, {}, {}, {}, {}>".format(
+            c_type, blocks, dim_x, dim_u, max_tpb
+        ),
         "_cupy_update<{}, {}, {}, {}, {}>".format(
             c_type, blocks, dim_x, dim_z, max_tpb
         ),
@@ -468,6 +496,7 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, max_tpb):
     _cupy_kernel_cache[
         (str(np_type), GPUKernel.PREDICT)
     ] = module.get_function(specializations[0])
+
     _cupy_kernel_cache[(str(np_type), GPUKernel.UPDATE)] = module.get_function(
         specializations[1]
     )
