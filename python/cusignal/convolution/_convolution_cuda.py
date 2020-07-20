@@ -111,25 +111,25 @@ def _populate_kernel_cache(np_type, k_type):
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
 
-    if k_type == 'convolve':
+    if k_type == "convolve":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
             "/convolution/_convolution.fatbin",
             "_cupy_convolve_" + str(np_type),
         )
 
-    elif k_type == 'correlate':
+    elif k_type == "correlate":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
             "/convolution/_convolution.fatbin",
             "_cupy_correlate_" + str(np_type),
         )
 
-    elif k_type == 'convolve2D':
+    elif k_type == "convolve2D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
             "/convolution/_convolution.fatbin",
             "_cupy_convolve2D_" + str(np_type),
         )
 
-    elif k_type == 'correlate2D':
+    elif k_type == "correlate2D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
             "/convolution/_convolution.fatbin",
             "_cupy_correlate2D_" + str(np_type),
@@ -142,9 +142,9 @@ def _get_backend_kernel(
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == 'convolve' or k_type == 'correlate':
+        if k_type == "convolve" or k_type == "correlate":
             return _cupy_convolve_wrapper(grid, block, kernel)
-        elif k_type == 'convolve2D' or k_type == 'correlate2D':
+        elif k_type == "convolve2D" or k_type == "correlate2D":
             return _cupy_convolve_2d_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
@@ -171,7 +171,7 @@ def _convolve_gpu(
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
     if use_convolve:
-        k_type = 'convolve'
+        k_type = "convolve"
 
         _populate_kernel_cache(out.dtype, k_type)
 
@@ -179,7 +179,7 @@ def _convolve_gpu(
             out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        k_type = 'correlate'
+        k_type = "correlate"
 
         _populate_kernel_cache(out.dtype, k_type)
 
@@ -278,7 +278,7 @@ def _convolve2d_gpu(
     )
 
     if use_convolve:
-        k_type = 'convolve2D'
+        k_type = "convolve2D"
 
         _populate_kernel_cache(out.dtype, k_type)
 
@@ -286,7 +286,7 @@ def _convolve2d_gpu(
             out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        k_type = 'correlate2D'
+        k_type = "correlate2D"
 
         _populate_kernel_cache(out.dtype, k_type)
 

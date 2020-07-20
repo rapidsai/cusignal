@@ -57,9 +57,8 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_sosfilt.fatbin",
-            "_cupy_sosfilt_" + str(np_type),
-        )
+        "/filtering/_sosfilt.fatbin", "_cupy_sosfilt_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(dtype, grid, block, smem, k_type):
@@ -81,7 +80,7 @@ def _sosfilt(sos, x, zi):
     threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
-    k_type = 'sosfilt'
+    k_type = "sosfilt"
 
     _populate_kernel_cache(x.dtype, k_type)
 

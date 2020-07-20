@@ -58,9 +58,9 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/spectral_analysis/_spectral.fatbin",
-            "_cupy_lombscargle_" + str(np_type),
-        )
+        "/spectral_analysis/_spectral.fatbin",
+        "_cupy_lombscargle_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(dtype, grid, block, k_type):
@@ -78,7 +78,7 @@ def _lombscargle(x, y, freqs, pgram, y_dot):
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
-    k_type = 'lombscargle'
+    k_type = "lombscargle"
 
     _populate_kernel_cache(pgram.dtype, k_type)
 

@@ -134,17 +134,15 @@ def _populate_kernel_cache(np_type, k_type):
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
 
-    if k_type == 'upfirdn1D':
+    if k_type == "upfirdn1D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-                "/filtering/_upfirdn.fatbin",
-                "_cupy_upfirdn1D_" + str(np_type),
-            )
+            "/filtering/_upfirdn.fatbin", "_cupy_upfirdn1D_" + str(np_type),
+        )
 
-    elif k_type == 'upfirdn2D':
+    elif k_type == "upfirdn2D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-                "/filtering/_upfirdn.fatbin",
-                "_cupy_upfirdn2D_" + str(np_type),
-            )
+            "/filtering/_upfirdn.fatbin", "_cupy_upfirdn2D_" + str(np_type),
+        )
 
 
 def _get_backend_kernel(
@@ -153,9 +151,9 @@ def _get_backend_kernel(
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == 'upfirdn1D':
+        if k_type == "upfirdn1D":
             return _cupy_upfirdn_wrapper(grid, block, kernel)
-        elif k_type == 'upfirdn2D':
+        elif k_type == "upfirdn2D":
             return _cupy_upfirdn2d_wrapper(grid, block, kernel)
     else:
         raise ValueError(
@@ -211,7 +209,7 @@ class _UpFIRDn(object):
             threadsperblock, blockspergrid = _get_tpb_bpg()
 
         if out.ndim == 1:
-            k_type = 'upfirdn1D'
+            k_type = "upfirdn1D"
 
             _populate_kernel_cache(out.dtype, k_type)
 
@@ -219,7 +217,7 @@ class _UpFIRDn(object):
                 out.dtype, blockspergrid, threadsperblock, k_type,
             )
         elif out.ndim == 2:
-            k_type = 'upfirdn2D'
+            k_type = "upfirdn2D"
 
             _populate_kernel_cache(out.dtype, k_type)
 

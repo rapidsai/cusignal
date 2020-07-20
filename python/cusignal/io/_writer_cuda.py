@@ -60,9 +60,8 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/io/_writer.fatbin",
-            "_cupy_pack_" + str(np_type),
-        )
+        "/io/_writer.fatbin", "_cupy_pack_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(
@@ -87,7 +86,7 @@ def _pack(binary):
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
-    k_type = 'pack'
+    k_type = "pack"
 
     _populate_kernel_cache(out.dtype, k_type)
 

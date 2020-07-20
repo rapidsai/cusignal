@@ -60,9 +60,8 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/io/_reader.fatbin",
-            "_cupy_unpack_" + str(np_type),
-        )
+        "/io/_reader.fatbin", "_cupy_unpack_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(
@@ -93,7 +92,7 @@ def _unpack(binary, dtype, endianness):
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
-    k_type = 'unpack'
+    k_type = "unpack"
 
     _populate_kernel_cache(out.dtype, k_type)
 
