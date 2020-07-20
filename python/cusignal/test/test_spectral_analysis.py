@@ -44,9 +44,10 @@ class TestSpectral:
             cpu_x, cpu_y, cpu_f, precenter, normalize
         )
 
-        gpu_lombscargle = cp.asnumpy(
-            cusignal.lombscargle(gpu_x, gpu_y, gpu_f, precenter, normalize,)
+        gpu_lombscargle = cusignal.lombscargle(
+            gpu_x, gpu_y, gpu_f, precenter, normalize,
         )
+        gpu_lombscargle = cp.asnumpy(gpu_lombscargle)
 
         assert array_equal(cpu_lombscargle, gpu_lombscargle)
 
@@ -57,12 +58,13 @@ class TestSpectral:
     def test_periodogram(self, rand_data_gen, num_samps, fs, window, scaling):
         cpu_sig, gpu_sig = rand_data_gen(num_samps)
 
-        cpu_periodogram = signal.periodogram(
+        _, cpu_periodogram = signal.periodogram(
             cpu_sig, fs, window=window, scaling=scaling
         )
-        gpu_periodogram = cp.asnumpy(
-            cusignal.periodogram(gpu_sig, fs, window=window, scaling=scaling)
+        _, gpu_periodogram = cusignal.periodogram(
+            gpu_sig, fs, window=window, scaling=scaling
         )
+        gpu_periodogram = cp.asnumpy(gpu_periodogram)
 
         assert array_equal(cpu_periodogram, gpu_periodogram)
 
@@ -118,8 +120,9 @@ class TestSpectral:
         cpu_x, gpu_x = rand_data_gen(num_samps)
         cpu_y, gpu_y = rand_data_gen(num_samps)
 
-        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+        _, cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        _, gpu_csd = cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(gpu_csd)
 
         assert array_equal(cpu_csd, gpu_csd)
 
@@ -130,8 +133,9 @@ class TestSpectral:
         cpu_x, gpu_x = rand_complex_data_gen(num_samps)
         cpu_y, gpu_y = rand_complex_data_gen(num_samps)
 
-        cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-        gpu_csd = cp.asnumpy(cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg))
+        _, cpu_csd = signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        _, gpu_csd = cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+        gpu_csd = cp.asnumpy(gpu_csd)
 
         assert array_equal(cpu_csd, gpu_csd)
 
