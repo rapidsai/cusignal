@@ -30,9 +30,8 @@ class TestFilterDesign:
     @pytest.mark.parametrize("f2", [0.2, 0.4])
     def test_firwin(self, num_samps, f1, f2):
         cpu_window = signal.firwin(num_samps, [f1, f2], pass_zero=False)
-        gpu_window = cp.asnumpy(
-            cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
-        )
+        gpu_window = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
+        gpu_window = cp.asnumpy(gpu_window)
         assert array_equal(cpu_window, gpu_window)
 
     # def test_kaiser_beta(self):

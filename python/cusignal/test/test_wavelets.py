@@ -27,14 +27,16 @@ class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     def test_morlet(self, num_samps):
         cpu_window = signal.morlet(num_samps)
-        gpu_window = cp.asnumpy(cusignal.morlet(num_samps))
+        gpu_window = cusignal.morlet(num_samps)
+        gpu_window = cp.asnumpy(gpu_window)
         assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("a", [10, 1000])
     def test_ricker(self, num_samps, a):
         cpu_window = signal.ricker(num_samps, a)
-        gpu_window = cp.asnumpy(cusignal.ricker(num_samps, a))
+        gpu_window = cusignal.ricker(num_samps, a)
+        gpu_window = cp.asnumpy(gpu_window)
         assert array_equal(cpu_window, gpu_window)
 
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -43,9 +45,10 @@ class TestWavelets:
         cpu_signal, gpu_signal = rand_data_gen(num_samps)
 
         cpu_cwt = signal.cwt(cpu_signal, signal.ricker, np.arange(1, widths))
-        gpu_cwt = cp.asnumpy(
-            cusignal.cwt(gpu_signal, cusignal.ricker, cp.arange(1, widths))
+        gpu_cwt = cusignal.cwt(
+            gpu_signal, cusignal.ricker, cp.arange(1, widths)
         )
+        gpu_cwt = cp.asnumpy(gpu_cwt)
 
         assert array_equal(cpu_cwt, gpu_cwt)
 
@@ -55,9 +58,10 @@ class TestWavelets:
         cpu_signal, gpu_signal = rand_complex_data_gen(num_samps)
 
         cpu_cwt = signal.cwt(cpu_signal, signal.ricker, np.arange(1, widths))
-        gpu_cwt = cp.asnumpy(
-            cusignal.cwt(gpu_signal, cusignal.ricker, cp.arange(1, widths))
+        gpu_cwt = cusignal.cwt(
+            gpu_signal, cusignal.ricker, cp.arange(1, widths)
         )
+        gpu_cwt = cp.asnumpy(gpu_cwt)
 
         assert array_equal(cpu_cwt, gpu_cwt)
 
