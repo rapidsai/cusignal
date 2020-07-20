@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import pkg_resources
 
 from . import _filters_cuda
 from ..utils.debugtools import print_atts
@@ -200,8 +199,10 @@ class KalmanFilter(object):
     ):
 
         # Check CuPy version
-        ver = pkg_resources.get_distribution("cupy").version
-        if ver != "8.0.0b4" and ver != "8.0.0rc1" and ver != "8.0.0":
+        # Update to only check for v8.X in cuSignal 0.16
+        valid = ["8.0.0b4", "8.0.0b5", "8.0.0rc1", "8.0.0"]
+        ver = cp.__version__
+        if ver not in valid:
             raise NotImplementedError(
                 "Kalman Filter only compatible with CuPy v.8.0.0b4+"
             )
