@@ -38,6 +38,7 @@ class BenchFilterDesign:
         def cpu_version(self, num_samps, f1, f2):
             return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
+        @pytest.mark.slow
         def bench_firwin_cpu(self, benchmark, num_samps, f1, f2):
             benchmark(
                 self.cpu_version, num_samps, f1, f2,
@@ -57,6 +58,7 @@ class BenchFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.kaiser_beta(cpu_sig)
 
+    #     @pytest.mark.slow
     #     def bench_kaiser_beta_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -72,6 +74,7 @@ class BenchFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.kaiser_atten(cpu_sig)
 
+    #     @pytest.mark.slow
     #     def bench_kaiser_atten_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -87,6 +90,7 @@ class BenchFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.cmplx_sort(cpu_sig)
 
+    #     @pytest.mark.slow
     #     def bench_cmplx_sort_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 

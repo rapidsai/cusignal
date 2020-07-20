@@ -34,6 +34,7 @@ class BenchSpectral:
         def cpu_version(self, x, y, f, precenter, normalize):
             return signal.lombscargle(x, y, f, precenter, normalize)
 
+        @pytest.mark.slow
         def bench_lombscargle_cpu(
             self,
             lombscargle_gen,
@@ -86,6 +87,7 @@ class BenchSpectral:
                 cpu_sig, fs, window=window, scaling=scaling
             )
 
+        @pytest.mark.slow
         def bench_periodogram_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, window, scaling
         ):
@@ -119,6 +121,7 @@ class BenchSpectral:
                 cpu_sig, fs, window=window, scaling=scaling
             )
 
+        @pytest.mark.slow
         def bench_periodogram_complex_cpu(
             self,
             rand_complex_data_gen,
@@ -161,6 +164,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.welch(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_welch_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -185,6 +189,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.welch(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_welch_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -209,6 +214,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_csd_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -238,6 +244,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_csd_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -266,6 +273,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_spectrogram_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -292,6 +300,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_spectrogram_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -318,6 +327,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.stft(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_stft_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -344,6 +354,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.stft(cpu_sig, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_stft_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -370,6 +381,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_coherence_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -398,6 +410,7 @@ class BenchSpectral:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
 
+        @pytest.mark.slow
         def bench_coherence_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
         ):
@@ -423,6 +436,7 @@ class BenchSpectral:
     #     def cpu_version(self, cpu_sig):
     #         return signal.vectorstrength(cpu_sig)
 
+    #     @pytest.mark.slow
     #     def bench_vectorstrength_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 

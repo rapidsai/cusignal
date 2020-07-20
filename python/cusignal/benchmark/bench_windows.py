@@ -26,6 +26,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, arr):
             return signal.windows.general_cosine(num_samps, arr, sym=False)
 
+        @pytest.mark.slow
         def bench_general_cosine_cpu(self, benchmark, num_samps):
             HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
 
@@ -47,6 +48,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.boxcar(num_samps)
 
+        @pytest.mark.slow
         def bench_boxcar_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -62,6 +64,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.triang(num_samps)
 
+        @pytest.mark.slow
         def bench_triang_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -77,6 +80,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.parzen(num_samps)
 
+        @pytest.mark.slow
         def bench_parzen_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -92,6 +96,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bohman(num_samps)
 
+        @pytest.mark.slow
         def bench_bohman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -107,6 +112,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackman(num_samps)
 
+        @pytest.mark.slow
         def bench_blackman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -122,6 +128,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.nuttall(num_samps)
 
+        @pytest.mark.slow
         def bench_nuttall_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -137,6 +144,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackmanharris(num_samps)
 
+        @pytest.mark.slow
         def bench_blackmanharris_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -152,6 +160,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.flattop(num_samps)
 
+        @pytest.mark.slow
         def bench_flattop_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -167,6 +176,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bartlett(num_samps)
 
+        @pytest.mark.slow
         def bench_bartlett_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -183,6 +193,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.tukey(num_samps, alpha, sym=True)
 
+        @pytest.mark.slow
         def bench_tukey_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
@@ -200,6 +211,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.barthann(num_samps)
 
+        @pytest.mark.slow
         def bench_barthann_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -216,6 +228,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.general_hamming(num_samps, alpha, sym=True)
 
+        @pytest.mark.slow
         def bench_general_hamming_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
@@ -233,6 +246,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.hamming(num_samps)
 
+        @pytest.mark.slow
         def bench_hamming_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -249,6 +263,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, beta):
             return signal.windows.kaiser(num_samps, beta, sym=True)
 
+        @pytest.mark.slow
         def bench_kaiser_cpu(self, benchmark, num_samps, beta):
             benchmark(self.cpu_version, num_samps, beta)
 
@@ -267,6 +282,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, std):
             return signal.windows.gaussian(num_samps, std)
 
+        @pytest.mark.slow
         def bench_gaussian_cpu(self, benchmark, num_samps, std):
             benchmark(self.cpu_version, num_samps, std)
 
@@ -284,6 +300,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, p, std):
             return signal.windows.general_gaussian(num_samps, p, std)
 
+        @pytest.mark.slow
         def bench_general_gaussian_cpu(self, benchmark, num_samps, p, std):
             benchmark(self.cpu_version, num_samps, p, std)
 
@@ -301,6 +318,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.chebwin(num_samps)
 
+        @pytest.mark.slow
         def bench_chebwin_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -316,6 +334,7 @@ class BenchWindows:
         def cpu_version(self, num_samps):
             return signal.windows.cosine(num_samps)
 
+        @pytest.mark.slow
         def bench_cosine_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -332,6 +351,7 @@ class BenchWindows:
         def cpu_version(self, num_samps, tau):
             return signal.windows.exponential(num_samps, tau=tau)
 
+        @pytest.mark.slow
         def bench_exponential_cpu(self, benchmark, num_samps, tau):
             benchmark(self.cpu_version, num_samps, tau)
 
@@ -350,6 +370,7 @@ class BenchWindows:
         def cpu_version(self, window, num_samps):
             return signal.windows.get_window(window, num_samps)
 
+        @pytest.mark.slow
         def bench_get_window_cpu(self, benchmark, window, num_samps):
             benchmark(self.cpu_version, window, num_samps)
 

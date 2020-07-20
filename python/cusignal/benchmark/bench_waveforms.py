@@ -27,6 +27,7 @@ class BenchWaveforms:
         def cpu_version(self, cpu_sig, duty):
             return signal.square(cpu_sig, duty)
 
+        @pytest.mark.slow
         def bench_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
@@ -46,6 +47,7 @@ class BenchWaveforms:
         def cpu_version(self, cpu_sig, fc):
             return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
 
+        @pytest.mark.slow
         def bench_gausspulse_cpu(
             self, time_data_gen, benchmark, num_samps, fc
         ):
@@ -57,11 +59,11 @@ class BenchWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = benchmark(
+            _, _, output = benchmark(
                 cusignal.gausspulse, gpu_sig, fc, retquad=True, retenv=True
             )
 
-            key = self.cpu_version(cpu_sig, fc)
+            _, _, key = self.cpu_version(cpu_sig, fc)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Chirp")
@@ -74,6 +76,7 @@ class BenchWaveforms:
         def cpu_version(self, cpu_sig, f0, t1, f1, method):
             return signal.chirp(cpu_sig, f0, t1, f1, method)
 
+        @pytest.mark.slow
         def bench_chirp_cpu(
             self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
         ):
@@ -97,6 +100,7 @@ class BenchWaveforms:
         def cpu_version(self, num_samps, idx):
             return signal.unit_impulse(num_samps, idx)
 
+        @pytest.mark.slow
         def bench_unit_impulse_cpu(self, benchmark, num_samps, idx):
             benchmark(self.cpu_version, num_samps, idx)
 

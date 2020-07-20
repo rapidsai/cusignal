@@ -35,6 +35,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig):
             return signal.wiener(cpu_sig)
 
+        @pytest.mark.slow
         def bench_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
@@ -52,6 +53,7 @@ class BenchFilter:
     #     def cpu_version(self, cpu_sig):
     #         return signal.lfiltic(cpu_sig)
 
+    #         @pytest.mark.slow
     #     def bench_lfiltic_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -63,16 +65,17 @@ class BenchFilter:
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
-    @pytest.mark.parametrize("order", [32, 64, 128, 256, 512])
+    @pytest.mark.parametrize("order", [32, 64])
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
-    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("dtype", [np.float64])
     class BenchSOSFilt:
         np.random.seed(1234)
 
         def cpu_version(self, sos, cpu_sig):
             return signal.sosfilt(sos, cpu_sig)
 
+        @pytest.mark.slow
         def bench_sosfilt_cpu(
             self,
             rand_2d_data_gen,
@@ -116,6 +119,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig):
             return signal.hilbert(cpu_sig)
 
+        @pytest.mark.slow
         def bench_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
@@ -134,6 +138,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig):
             return signal.hilbert2(cpu_sig)
 
+        @pytest.mark.slow
         def bench_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
             cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
@@ -151,6 +156,7 @@ class BenchFilter:
     #     def cpu_version(self, cpu_sig):
     #         return signal.detrend(cpu_sig)
 
+    #         @pytest.mark.slow
     #     def bench_detrend_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -166,6 +172,7 @@ class BenchFilter:
     #     def cpu_version(self, cpu_sig):
     #         return signal.freq_shift(cpu_sig)
 
+    #         @pytest.mark.slow
     #     def bench_freq_shift_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -186,6 +193,7 @@ class BenchFilter:
                 cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
             )
 
+        @pytest.mark.slow
         def bench_decimate_cpu(
             self,
             benchmark,
@@ -226,6 +234,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig, resample_num_samps, window):
             return signal.resample(cpu_sig, resample_num_samps, window=window)
 
+        @pytest.mark.slow
         def bench_resample_cpu(
             self,
             linspace_data_gen,
@@ -267,6 +276,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig, up, down, window):
             return signal.resample_poly(cpu_sig, up, down, window=window)
 
+        @pytest.mark.slow
         def bench_resample_poly_cpu(
             self, linspace_data_gen, benchmark, num_samps, up, down, window
         ):
@@ -298,6 +308,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig, up, down, axis):
             return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
 
+        @pytest.mark.slow
         def bench_upfirdn_cpu(
             self, rand_data_gen, benchmark, num_samps, up, down, axis
         ):
@@ -327,6 +338,7 @@ class BenchFilter:
         def cpu_version(self, cpu_sig, up, down, axis):
             return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
 
+        @pytest.mark.slow
         def bench_upfirdn2d_cpu(
             self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
         ):

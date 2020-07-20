@@ -31,6 +31,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.argrelmin(cpu_sig)
 
+#         @pytest.mark.slow
 #         def bench_argrelmin_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -46,6 +47,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.argrelmax(cpu_sig)
 
+#         @pytest.mark.slow
 #         def bench_argrelmax_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -61,6 +63,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.argrelextrema(cpu_sig)
 
+#         @pytest.mark.slow
 #         def bench_argrelextrema_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 

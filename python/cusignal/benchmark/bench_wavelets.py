@@ -32,6 +32,7 @@ class BenchWavelets:
         def cpu_version(self, num_samps):
             return signal.morlet(num_samps)
 
+        @pytest.mark.slow
         def bench_morlet_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -49,6 +50,7 @@ class BenchWavelets:
         def cpu_version(self, num_samps, a):
             return signal.ricker(num_samps, a)
 
+        @pytest.mark.slow
         def bench_ricker_cpu(self, benchmark, num_samps, a):
             benchmark(self.cpu_version, num_samps, a)
 
@@ -66,6 +68,7 @@ class BenchWavelets:
         def cpu_version(self, cpu_sig, wavelet, widths):
             return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
 
+        @pytest.mark.slow
         def bench_cwt_cpu(self, rand_data_gen, benchmark, num_samps, widths):
             cpu_sig, _ = rand_data_gen(num_samps)
             wavelet = signal.ricker
@@ -90,6 +93,7 @@ class BenchWavelets:
         def cpu_version(self, cpu_sig, wavelet, widths):
             return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
 
+        @pytest.mark.slow
         def bench_cwt_complex_cpu(
             self, rand_complex_data_gen, benchmark, num_samps, widths
         ):
@@ -116,6 +120,7 @@ class BenchWavelets:
     #     def cpu_version(self, cpu_sig):
     #         return signal.qmf(cpu_sig)
 
+    #     @pytest.mark.slow
     #     def bench_qmf_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
