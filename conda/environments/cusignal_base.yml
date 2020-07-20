@@ -5,9 +5,9 @@ channels:
   - defaults
   - numba
 dependencies:
-  - scipy
+  - scipy>=1.4.0,<1.5.0
   - numpy<1.19
-  - cudatoolkit=10.2.89
+  - cudatoolkit>=9.2,<=10.2
   - boost
   - matplotlib
   - numba

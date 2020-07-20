@@ -37,7 +37,12 @@ def _pad_h(h, up):
 
 
 def _output_len(len_h, in_len, up, down):
-    return (((in_len - 1) * up + len_h) - 1) // down + 1
+    in_len_copy = in_len + (len_h + (-len_h % up)) // up - 1
+    nt = in_len_copy * up
+    need = nt // down
+    if nt % down > 0:
+        need += 1
+    return need
 
 
 # Custom Cupy raw kernel implementing upsample, filter, downsample operation
@@ -266,7 +271,6 @@ class _UpFIRDn(object):
         # This both transposes, and "flips" each phase for filtering
         self._h_trans_flip = _pad_h(h, self._up)
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
-        self._h_len_orig = len(h)
 
     def apply_filter(
         self, x, axis,
@@ -275,7 +279,7 @@ class _UpFIRDn(object):
         from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
         output_len = _output_len(
-            self._h_len_orig, x.shape[axis], self._up, self._down
+            len(self._h_trans_flip), x.shape[axis], self._up, self._down
         )
         output_shape = cp.asarray(x.shape)
         output_shape[axis] = output_len

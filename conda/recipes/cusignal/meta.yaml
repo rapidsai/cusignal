@@ -23,7 +23,7 @@ requirements:
     - setuptools
   run:
     - python
-    - scipy>=1.5.0
+    - scipy>=1.4.0,<1.5.0
     - numpy>=1.17.3,<1.19
     - boost
     - numba>=0.49.0
