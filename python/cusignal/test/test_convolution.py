@@ -31,11 +31,11 @@ class TestConvolution:
         cpu_corr = signal.correlate(
             cpu_sig, np.ones(num_taps), mode=mode, method=method
         )
-        gpu_corr = cp.asnumpy(
-            cusignal.correlate(
-                gpu_sig, cp.ones(num_taps), mode=mode, method=method
-            )
+        gpu_corr = cusignal.correlate(
+            gpu_sig, cp.ones(num_taps), mode=mode, method=method
         )
+        gpu_corr = cp.asnumpy(gpu_corr)
+
         assert array_equal(cpu_corr, gpu_corr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
@@ -50,9 +50,11 @@ class TestConvolution:
         gpu_win = cusignal.windows.hann(num_taps)
 
         cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
-        gpu_conv = cp.asnumpy(
-            cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
+        gpu_conv = cusignal.convolve(
+            gpu_sig, gpu_win, mode=mode, method=method
         )
+        gpu_conv = cp.asnumpy(gpu_conv)
+
         assert array_equal(cpu_conv, gpu_conv)
 
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -61,9 +63,9 @@ class TestConvolution:
         gpu_sig = cp.asarray(cpu_sig)
 
         cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
-        gpu_autocorr = cp.asnumpy(
-            cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
-        )
+        gpu_autocorr = cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
+        gpu_autocorr = cp.asnumpy(gpu_autocorr)
+
         assert array_equal(cpu_autocorr, gpu_autocorr)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -80,11 +82,11 @@ class TestConvolution:
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
         )
 
-        gpu_convolve2d = cp.asnumpy(
-            cusignal.convolve2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
-            )
+        gpu_convolve2d = cusignal.convolve2d(
+            gpu_sig, gpu_filt, boundary=boundary, mode=mode,
         )
+        gpu_convolve2d = cp.asnumpy(gpu_convolve2d)
+
         assert array_equal(cpu_convolve2d, gpu_convolve2d)
 
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -100,9 +102,9 @@ class TestConvolution:
         cpu_correlate2d = signal.correlate2d(
             cpu_sig, cpu_filt, boundary=boundary, mode=mode
         )
-        gpu_correlate2d = cp.asnumpy(
-            cusignal.correlate2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
-            )
+        gpu_correlate2d = cusignal.correlate2d(
+            gpu_sig, gpu_filt, boundary=boundary, mode=mode,
         )
+        gpu_correlate2d = cp.asnumpy(gpu_correlate2d)
+
         assert array_equal(cpu_correlate2d, gpu_correlate2d)
