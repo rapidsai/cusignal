@@ -15,7 +15,7 @@ import cupy as cp
 import numpy as np
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
 from .convolution_utils import (
     FULL,
     SAME,
@@ -27,6 +27,16 @@ from .convolution_utils import (
     _valfrommode,
     _bvalfromboundary,
 )
+
+
+_SUPPORTED_TYPES = [
+    "int32",
+    "int64",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
 
 
 class _cupy_convolve_wrapper(object):
@@ -91,16 +101,50 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    if k_type == 'convolve':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_convolve_" + str(np_type),
+        )
+
+    elif k_type == 'correlate':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_correlate_" + str(np_type),
+        )
+
+    elif k_type == 'convolve2D':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_convolve2D_" + str(np_type),
+        )
+
+    elif k_type == 'correlate2D':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_correlate2D_" + str(np_type),
+        )
+
+
 def _get_backend_kernel(
     dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
+        if k_type == 'convolve' or k_type == 'correlate':
             return _cupy_convolve_wrapper(grid, block, kernel)
-        elif k_type == GPUKernel.CONVOLVE2D or k_type == GPUKernel.CORRELATE2D:
+        elif k_type == 'convolve2D' or k_type == 'correlate2D':
             return _cupy_convolve_2d_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
@@ -117,7 +161,6 @@ def _get_backend_kernel(
 def _convolve_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs,
 ):
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
@@ -125,23 +168,28 @@ def _convolve_gpu(
     device_id = cp.cuda.Device()
     numSM = device_id.attributes["MultiProcessorCount"]
 
-    threadsperblock = 256
-    blockspergrid = numSM * 20
+    threadsperblock, blockspergrid = _get_tpb_bpg()
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE)
+        k_type = 'convolve'
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CONVOLVE,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE)
+        k_type = 'correlate'
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CORRELATE,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     return out
 
@@ -149,7 +197,6 @@ def _convolve_gpu(
 def _convolve2d_gpu(
     inp, out, ker, mode, boundary, use_convolve, fillvalue,
 ):
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
         raise Exception("Invalid boundary flag")
@@ -231,21 +278,27 @@ def _convolve2d_gpu(
     )
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE2D)
+        k_type = 'convolve2D'
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CONVOLVE2D,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE2D)
+        k_type = 'correlate2D'
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CORRELATE2D,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
 
     kernel(
         d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     return out
 

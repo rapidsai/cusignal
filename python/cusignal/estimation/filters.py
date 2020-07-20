@@ -12,10 +12,9 @@
 # limitations under the License.
 
 import cupy as cp
-import pkg_resources
 
 from . import _filters_cuda
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_numSM
 
 
 class KalmanFilter(object):
@@ -200,7 +199,7 @@ class KalmanFilter(object):
     ):
 
         # Check CuPy version
-        ver = pkg_resources.get_distribution("cupy").version
+        ver = cp.__version__
         if ver != "8.0.0b4" and ver != "8.0.0rc1" and ver != "8.0.0":
             raise NotImplementedError(
                 "Kalman Filter only compatible with CuPy v.8.0.0b4+"
@@ -259,9 +258,8 @@ class KalmanFilter(object):
         self.z = cp.empty((self.points, dim_z, 1,), dtype=dtype)
 
         # Allocate GPU resources
+        numSM = _get_numSM()
         threads_z_axis = 16
-        d = cp.cuda.device.Device()
-        numSM = d.attributes["MultiProcessorCount"]
         threadsperblock = (self.dim_x, self.dim_x, threads_z_axis)
         blockspergrid = (1, 1, numSM * 20)
 
@@ -283,18 +281,18 @@ class KalmanFilter(object):
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            _filters_cuda.GPUKernel.PREDICT,
+            'predict',
         )
 
         self.update_kernel = _filters_cuda._get_backend_kernel(
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            _filters_cuda.GPUKernel.UPDATE,
+            'update',
         )
 
-        print_atts(self.predict_kernel)
-        print_atts(self.update_kernel)
+        _print_atts(self.predict_kernel)
+        _print_atts(self.update_kernel)
 
     def predict(self, u=None, B=None, F=None, Q=None):
         """

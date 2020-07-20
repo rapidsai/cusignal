@@ -16,7 +16,10 @@ import cupy as cp
 from math import ceil
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
+
+
+_SUPPORTED_TYPES = ["float32", "float64", "complex64", "complex128"]
 
 
 def _pad_h(h, up):
@@ -121,16 +124,38 @@ class _cupy_upfirdn2d_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    if k_type == 'upfirdn1D':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+                "/filtering/_upfirdn.fatbin",
+                "_cupy_upfirdn1D_" + str(np_type),
+            )
+
+    elif k_type == 'upfirdn2D':
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+                "/filtering/_upfirdn.fatbin",
+                "_cupy_upfirdn2D_" + str(np_type),
+            )
+
+
 def _get_backend_kernel(
     dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == GPUKernel.UPFIRDN:
+        if k_type == 'upfirdn1D':
             return _cupy_upfirdn_wrapper(grid, block, kernel)
-        elif k_type == GPUKernel.UPFIRDN2D:
+        elif k_type == 'upfirdn2D':
             return _cupy_upfirdn2d_wrapper(grid, block, kernel)
     else:
         raise ValueError(
@@ -160,7 +185,6 @@ class _UpFIRDn(object):
         self, x, axis,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
-        from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
         output_len = _output_len(
             self._h_len_orig, x.shape[axis], self._up, self._down
@@ -184,20 +208,23 @@ class _UpFIRDn(object):
             blockspergrid = (blockspergrid_x, blockspergrid_y)
 
         else:
-            device_id = cp.cuda.Device()
-            numSM = device_id.attributes["MultiProcessorCount"]
-            blockspergrid = numSM * 20
-            threadsperblock = 512
+            threadsperblock, blockspergrid = _get_tpb_bpg()
 
         if out.ndim == 1:
-            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN)
+            k_type = 'upfirdn1D'
+
+            _populate_kernel_cache(out.dtype, k_type)
+
             kernel = _get_backend_kernel(
-                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN,
+                out.dtype, blockspergrid, threadsperblock, k_type,
             )
         elif out.ndim == 2:
-            _populate_kernel_cache(out.dtype, GPUKernel.UPFIRDN2D)
+            k_type = 'upfirdn2D'
+
+            _populate_kernel_cache(out.dtype, k_type)
+
             kernel = _get_backend_kernel(
-                out.dtype, blockspergrid, threadsperblock, GPUKernel.UPFIRDN2D,
+                out.dtype, blockspergrid, threadsperblock, k_type,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")
@@ -214,6 +241,6 @@ class _UpFIRDn(object):
             out,
         )
 
-        print_atts(kernel)
+        _print_atts(kernel)
 
         return out

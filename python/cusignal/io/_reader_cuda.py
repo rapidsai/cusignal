@@ -14,7 +14,21 @@
 import cupy as cp
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
+
+
+_SUPPORTED_TYPES = [
+    "int8",
+    "uint8",
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
 
 
 class _cupy_unpack_wrapper(object):
@@ -35,24 +49,36 @@ class _cupy_unpack_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/io/_reader.fatbin",
+            "_cupy_unpack_" + str(np_type),
+        )
+
+
 def _get_backend_kernel(
     dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == GPUKernel.UNPACK:
-            return _cupy_unpack_wrapper(grid, block, kernel)
-
+        return _cupy_unpack_wrapper(grid, block, kernel)
+    else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
 
 def _unpack(binary, dtype, endianness):
-
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     data_size = cp.dtype(dtype).itemsize // binary.dtype.itemsize
 
@@ -65,19 +91,19 @@ def _unpack(binary, dtype, endianness):
     else:
         little = True
 
-    device_id = cp.cuda.Device()
-    numSM = device_id.attributes["MultiProcessorCount"]
-    blockspergrid = numSM * 20
-    threadsperblock = 512
+    threadsperblock, blockspergrid = _get_tpb_bpg()
 
-    _populate_kernel_cache(out.dtype, GPUKernel.UNPACK)
+    k_type = 'unpack'
+
+    _populate_kernel_cache(out.dtype, k_type)
+
     kernel = _get_backend_kernel(
-        out.dtype, blockspergrid, threadsperblock, GPUKernel.UNPACK,
+        out.dtype, blockspergrid, threadsperblock, k_type,
     )
 
     kernel(out_size, little, binary, out)
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     # Remove binary data
     del binary

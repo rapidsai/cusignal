@@ -12,7 +12,10 @@
 # limitations under the License.
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function
+
+
+_SUPPORTED_TYPES = ["float32", "float64"]
 
 
 class _cupy_sosfilt_wrapper(object):
@@ -43,8 +46,24 @@ class _cupy_sosfilt_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args, shared_mem=self.smem)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/filtering/_sosfilt.fatbin",
+            "_cupy_sosfilt_" + str(np_type),
+        )
+
+
 def _get_backend_kernel(dtype, grid, block, smem, k_type):
-    kernel = _cupy_kernel_cache[(dtype.name, k_type.value)]
+    kernel = _cupy_kernel_cache[(dtype.name, k_type)]
     if kernel:
         return _cupy_sosfilt_wrapper(grid, block, smem, kernel)
     else:
@@ -58,12 +77,13 @@ def _get_backend_kernel(dtype, grid, block, smem, k_type):
 
 
 def _sosfilt(sos, x, zi):
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
     blockspergrid = (1, x.shape[0])
 
-    _populate_kernel_cache(x.dtype, GPUKernel.SOSFILT)
+    k_type = 'sosfilt'
+
+    _populate_kernel_cache(x.dtype, k_type)
 
     out_size = threadsperblock[0]
     z_size = zi.shape[1] * zi.shape[2]
@@ -72,9 +92,9 @@ def _sosfilt(sos, x, zi):
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
 
     kernel = _get_backend_kernel(
-        x.dtype, blockspergrid, threadsperblock, shared_mem, GPUKernel.SOSFILT,
+        x.dtype, blockspergrid, threadsperblock, shared_mem, k_type,
     )
 
     kernel(sos, x, zi)
 
-    print_atts(kernel)
+    _print_atts(kernel)

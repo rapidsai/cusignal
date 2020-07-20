@@ -11,10 +11,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cupy as cp
 import os
 
+from pathlib import Path
 
-def print_atts(func):
+
+def _get_numSM(device=cp.cuda.runtime.getDevice()):
+
+    device_id = cp.cuda.Device(device)
+
+    return device_id.attributes["MultiProcessorCount"]
+
+
+def _get_tpb_bpg():
+
+    numSM = _get_numSM()
+    threadsperblock = 512
+    blockspergrid = numSM * 20
+
+    return threadsperblock, blockspergrid
+
+
+def _get_function(fatbin, func):
+
+    mod_path = Path(__file__).parent
+    relative_path = ".."
+
+    dir = str((mod_path / relative_path).resolve())
+
+    module = cp.RawModule(path=dir + fatbin,)
+    return module.get_function(func)
+
+
+def _print_atts(func):
     if os.environ.get("CUSIGNAL_DEV_DEBUG") == "True":
         print("name:", func.kernel.name)
         print("max_threads_per_block:", func.kernel.max_threads_per_block)
