@@ -7,7 +7,7 @@ channels:
   - c4aarch64
 dependencies:
   - scipy>=1.5.0
-  - numpy
+  - numpy<1.19
   - matplotlib
   - numba>=0.49
   - pytest
