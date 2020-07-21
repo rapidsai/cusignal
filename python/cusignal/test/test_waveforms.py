@@ -48,15 +48,11 @@ class TestWaveforms:
             return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
 
         @pytest.mark.slow
-        def test_gausspulse_cpu(
-            self, time_data_gen, benchmark, num_samps, fc
-        ):
+        def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, fc)
 
-        def test_gausspulse_gpu(
-            self, time_data_gen, benchmark, num_samps, fc
-        ):
+        def test_gausspulse_gpu(self, time_data_gen, benchmark, num_samps, fc):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
             _, _, output = benchmark(
