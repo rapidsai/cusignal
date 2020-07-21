@@ -165,9 +165,6 @@ def _convolve_gpu(
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
 
-    device_id = cp.cuda.Device()
-    numSM = device_id.attributes["MultiProcessorCount"]
-
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
     if use_convolve:
