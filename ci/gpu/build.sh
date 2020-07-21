@@ -71,4 +71,4 @@ nvidia-smi
 logger "Python pytest for cusignal..."
 cd $WORKSPACE/python
 
-pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not slow"

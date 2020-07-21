@@ -13,10 +13,15 @@
 
 import cupy as cp
 import cusignal
+
+# import numpy as np
 import pytest
 
 from cusignal.test.utils import array_equal
 from scipy import signal
+
+cusignal.precompile_kernels()
+
 
 # Missing
 # kaiser_beta
@@ -25,26 +30,73 @@ from scipy import signal
 
 
 class TestFilterDesign:
+    @pytest.mark.benchmark(group="FirWin")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("f1", [0.1, 0.15])
     @pytest.mark.parametrize("f2", [0.2, 0.4])
-    def test_firwin(self, num_samps, f1, f2):
-        cpu_window = signal.firwin(num_samps, [f1, f2], pass_zero=False)
-        gpu_window = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
-        gpu_window = cp.asnumpy(gpu_window)
-        assert array_equal(cpu_window, gpu_window)
+    class TestFirWin:
+        def cpu_version(self, num_samps, f1, f2):
+            return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
-    # def test_kaiser_beta(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+        @pytest.mark.slow
+        def test_firwin_cpu(self, benchmark, num_samps, f1, f2):
+            benchmark(
+                self.cpu_version, num_samps, f1, f2,
+            )
 
-    # def test_kaiser_atten(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+        def test_firwin_gpu(self, benchmark, num_samps, f1, f2):
 
-    # def test_cmplx_sort(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+            output = benchmark(
+                cusignal.firwin, num_samps, [f1, f2], pass_zero=False
+            )
+
+            key = self.cpu_version(num_samps, f1, f2)
+            assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="KaiserBeta")
+    # class TestKaiserBeta:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.kaiser_beta(cpu_sig)
+
+    #     @pytest.mark.slow
+    #     def test_kaiser_beta_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_kaiser_beta_gpu(self, benchmark):
+
+    #         output = benchmark(cusignal.kaiser_beta, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="KaiserAtten")
+    # class TestKaiserAtten:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.kaiser_atten(cpu_sig)
+
+    #     @pytest.mark.slow
+    #     def test_kaiser_atten_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_kaiser_atten_gpu(self, benchmark):
+
+    #         output = benchmark(cusignal.kaiser_atten, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="CmplxSort")
+    # class TestCmplxSort:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.cmplx_sort(cpu_sig)
+
+    #     @pytest.mark.slow
+    #     def test_cmplx_sort_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_cmplx_sort_gpu(self, benchmark):
+
+    #         output = benchmark(cusignal.cmplx_sort, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)

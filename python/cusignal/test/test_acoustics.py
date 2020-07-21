@@ -25,17 +25,17 @@
 # # cceps
 
 
-# class BenchAcoustics:
+# class TestAcoustics:
 #     @pytest.mark.benchmark(group="Rceps")
-#     class BenchRceps:
+#     class TestRceps:
 #         def cpu_version(self, cpu_sig):
 #             return signal.rceps(cpu_sig)
 
 #         @pytest.mark.slow
-#         def bench_rceps_cpu(self, benchmark):
+#         def test_rceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def bench_rceps_gpu(self, benchmark):
+#         def test_rceps_gpu(self, benchmark):
 
 #             output = benchmark(cusignal.detrend, gpu_sig)
 
@@ -43,15 +43,15 @@
 #             assert array_equal(cp.asnumpy(output), key)
 
 #     @pytest.mark.benchmark(group="CcepsUnwrap")
-#     class BenchCcepsUnwrap:
+#     class TestCcepsUnwrap:
 #         def cpu_version(self, cpu_sig):
 #             return signal.freq_shift(cpu_sig)
 
 #         @pytest.mark.slow
-#         def bench_cceps_unwrap_cpu(self, benchmark):
+#         def test_cceps_unwrap_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def bench_cceps_unwrap_gpu(self, benchmark):
+#         def test_cceps_unwrap_gpu(self, benchmark):
 
 #             output = benchmark(cusignal.detrend, gpu_sig)
 
@@ -59,15 +59,15 @@
 #             assert array_equal(cp.asnumpy(output), key)
 
 #     @pytest.mark.benchmark(group="Cceps")
-#     class BenchCceps:
+#     class TestCceps:
 #         def cpu_version(self, cpu_sig):
 #             return signal.freq_shift(cpu_sig)
 
 #         @pytest.mark.slow
-#         def bench_cceps_cpu(self, benchmark):
+#         def test_cceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def bench_cceps_gpu(self, benchmark):
+#         def test_cceps_gpu(self, benchmark):
 
 #             output = benchmark(cusignal.detrend, gpu_sig)
 

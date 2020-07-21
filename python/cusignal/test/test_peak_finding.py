@@ -26,17 +26,50 @@
 
 
 # class TestPeakFinding:
-#     def test_argrelmin(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#     @pytest.mark.benchmark(group="Argrelmin")
+#     class TestArgrelmin:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelmin(cpu_sig)
 
-#     def test_argrelmax(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#         @pytest.mark.slow
+#         def test_argrelmin_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
 
-#     def test_argrelextrema(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#         def test_argrelmin_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.argrelmin, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
+
+#     @pytest.mark.benchmark(group="Argrelmax")
+#     class TestArgrelmax:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelmax(cpu_sig)
+
+#         @pytest.mark.slow
+#         def test_argrelmax_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
+
+#         def test_argrelmax_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.argrelmax, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
+
+#     @pytest.mark.benchmark(group="Argrelextrema")
+#     class TestArgrelextrema:
+#         def cpu_version(self, cpu_sig):
+#             return signal.argrelextrema(cpu_sig)
+
+#         @pytest.mark.slow
+#         def test_argrelextrema_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
+
+#         def test_argrelextrema_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.argrelextrema, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)

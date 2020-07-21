@@ -27,22 +27,66 @@
 
 
 # class TestBsplines:
-#     def test_quass_spline(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#     @pytest.mark.benchmark(group="GaussSpline")
+#     class TestGaussSpline:
+#         def cpu_version(self, cpu_sig):
+#             return signal.gauss_spline(cpu_sig)
 
-#     def test_cubic(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#         @pytest.mark.slow
+#         def test_gauss_spline_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
 
-#     def test_quadratic(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#         def test_gauss_spline_gpu(self, benchmark):
 
-#     def test_cspline1d(self):
-#         cpu_window = 0
-#         gpu_window = 0
-#         assert array_equal(cpu_window, gpu_window)
+#             output = benchmark(cusignal.gauss_spline, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
+
+#     @pytest.mark.benchmark(group="Cubic")
+#     class TestCubic:
+#         def cpu_version(self, cpu_sig):
+#             return signal.cubic(cpu_sig)
+
+#         @pytest.mark.slow
+#         def test_cubic_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
+
+#         def test_cubic_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.cubic, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
+
+#     @pytest.mark.benchmark(group="Quadratic")
+#     class TestQuadratic:
+#         def cpu_version(self, cpu_sig):
+#             return signal.quadratic(cpu_sig)
+
+#         @pytest.mark.slow
+#         def test_quadratic_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
+
+#         def test_quadratic_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.quadratic, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)
+
+#     @pytest.mark.benchmark(group="Cspline1d")
+#     class TestCspline1d:
+#         def cpu_version(self, cpu_sig):
+#             return signal.cspline1d(cpu_sig)
+
+#         @pytest.mark.slow
+#         def test_cspline1d_cpu(self, benchmark):
+#             benchmark(self.cpu_version, cpu_sig)
+
+#         def test_cspline1d_gpu(self, benchmark):
+
+#             output = benchmark(cusignal.cspline1d, gpu_sig)
+
+#             key = self.cpu_version(cpu_sig)
+#             assert array_equal(cp.asnumpy(output), key)

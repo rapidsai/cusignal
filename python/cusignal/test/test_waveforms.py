@@ -20,51 +20,93 @@ from scipy import signal
 
 
 class TestWaveforms:
+    @pytest.mark.benchmark(group="Square")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("duty", [0.25, 0.5])
-    def test_square(self, time_data_gen, num_samps, duty):
-        cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
+    class TestSquare:
+        def cpu_version(self, cpu_sig, duty):
+            return signal.square(cpu_sig, duty)
 
-        cpu_pwm = signal.square(cpu_time, duty)
-        gpu_pwm = cusignal.square(gpu_time, duty)
-        gpu_pwm = cp.asnumpy(gpu_pwm)
+        @pytest.mark.slow
+        def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
+            cpu_sig, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, cpu_sig, duty)
 
-        assert array_equal(cpu_pwm, gpu_pwm)
+        def test_square_gpu(self, time_data_gen, benchmark, num_samps, duty):
 
+            cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
+            output = benchmark(cusignal.square, gpu_sig, duty)
+
+            key = self.cpu_version(cpu_sig, duty)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="GaussPulse")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fc", [0.75, 5])
-    def test_gausspulse(self, time_data_gen, num_samps, fc):
-        cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
+    class TestGaussPulse:
+        def cpu_version(self, cpu_sig, fc):
+            return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
 
-        _, _, cpu_pwm = signal.gausspulse(
-            cpu_time, fc, retquad=True, retenv=True
-        )
-        _, _, gpu_pwm = cusignal.gausspulse(
-            gpu_time, fc, retquad=True, retenv=True
-        )
-        gpu_pwm = cp.asnumpy(gpu_pwm)
+        @pytest.mark.slow
+        def test_gausspulse_cpu(
+            self, time_data_gen, benchmark, num_samps, fc
+        ):
+            cpu_sig, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, cpu_sig, fc)
 
-        assert array_equal(cpu_pwm, gpu_pwm)
+        def test_gausspulse_gpu(
+            self, time_data_gen, benchmark, num_samps, fc
+        ):
 
+            cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
+            _, _, output = benchmark(
+                cusignal.gausspulse, gpu_sig, fc, retquad=True, retenv=True
+            )
+
+            _, _, key = self.cpu_version(cpu_sig, fc)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Chirp")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
     @pytest.mark.parametrize("f1", [10])
     @pytest.mark.parametrize("method", ["linear", "quadratic"])
-    def test_chirp(self, time_data_gen, num_samps, f0, t1, f1, method):
-        cpu_time, gpu_time = time_data_gen(0, 10, num_samps)
+    class TestChirp:
+        def cpu_version(self, cpu_sig, f0, t1, f1, method):
+            return signal.chirp(cpu_sig, f0, t1, f1, method)
 
-        cpu_chirp = signal.chirp(cpu_time, f0, t1, f1, method)
-        gpu_chirp = cusignal.chirp(gpu_time, f0, t1, f1, method)
-        gpu_chirp = cp.asnumpy(gpu_chirp)
+        @pytest.mark.slow
+        def test_chirp_cpu(
+            self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
+        ):
+            cpu_sig, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, cpu_sig, f0, t1, f1, method)
 
-        assert array_equal(cpu_chirp, gpu_chirp)
+        def test_chirp_gpu(
+            self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
+        ):
 
+            cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
+            output = benchmark(cusignal.chirp, gpu_sig, f0, t1, f1, method)
+
+            key = self.cpu_version(cpu_sig, f0, t1, f1, method)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="UnitImpulse")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("idx", ["mid"])
-    def test_unit_impulse(self, num_samps, idx):
-        cpu_uimp = signal.unit_impulse(num_samps, idx)
-        gpu_uimp = cusignal.unit_impulse(num_samps, idx)
-        gpu_uimp = cp.asnumpy(gpu_uimp)
+    class TestUnitImpulse:
+        def cpu_version(self, num_samps, idx):
+            return signal.unit_impulse(num_samps, idx)
 
-        assert array_equal(cpu_uimp, gpu_uimp)
+        @pytest.mark.slow
+        def test_unit_impulse_cpu(self, benchmark, num_samps, idx):
+            benchmark(self.cpu_version, num_samps, idx)
+
+        def test_unit_impulse_gpu(self, benchmark, num_samps, idx):
+
+            output = benchmark(cusignal.unit_impulse, num_samps, idx)
+
+            key = self.cpu_version(num_samps, idx)
+            assert array_equal(cp.asnumpy(output), key)
