@@ -17,9 +17,9 @@ import os
 from pathlib import Path
 
 
-def _get_numSM(device=cp.cuda.runtime.getDevice()):
+def _get_numSM():
 
-    device_id = cp.cuda.Device(device)
+    device_id = cp.cuda.Device()
 
     return device_id.attributes["MultiProcessorCount"]
 
