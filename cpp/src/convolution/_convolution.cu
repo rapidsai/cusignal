@@ -55,7 +55,7 @@ __device__ void _cupy_convolve( const T *__restrict__ inp,
             }
         } else {  // Full
             const int P1 { kerW - 1 };
-            int       start { 0 - P1 + tid };
+            const int start { 0 - P1 + tid };
             for ( int j = 0; j < kerW; j++ ) {
                 if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
                     temp += inp[start + j] * kernel[( kerW - 1 ) - j];
@@ -174,7 +174,7 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
             }
         } else {  // Full
             const int P1 { kerW - 1 };
-            int       start { 0 - P1 + tid };
+            const int start { 0 - P1 + tid };
             for ( int j = 0; j < kerW; j++ ) {
                 if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
                     temp += inp[start + j] * kernel[j];

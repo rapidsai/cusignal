@@ -33,7 +33,7 @@ __device__ void _cupy_upfirdn1D( const T *__restrict__ inp,
     const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
 
     for ( size_t tid = t; tid < outW; tid += stride ) {
-        int x_idx { static_cast<int>( ( tid * down ) / up ) % padded_len };
+        const int x_idx { static_cast<int>( ( tid * down ) / up ) % padded_len };
         int h_idx { static_cast<int>( ( tid * down ) % up * h_per_phase ) };
         int x_conv_idx { x_idx - h_per_phase + 1 };
 
