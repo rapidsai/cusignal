@@ -19,6 +19,7 @@
 - PR #132 - Add IO API guide Jupyter notebook
 - PR #133 - Add IO module to cusignal docs
 - PR #160 - Update KF functionality
+- PR #170 - Combine tests and benchmarks
 
 ## Bug Fixes
 - PR #164 - Fix typos in the rest of the example code.
