@@ -35,6 +35,7 @@
 - PR #155 - Update CI local docker build
 - PR #153 - Fix issue with incorrect docker image being used in local build script
 - PR #157 - Add docs for Kalman Filter
+- PR #165 - Fix Kalman Filter version check
 
 # cuSignal 0.14 (03 Jun 2020)
 
