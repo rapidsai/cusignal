@@ -34,7 +34,7 @@ class TestConvolution:
                 cpu_sig, num_taps, mode=mode, method=method
             )
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_correlate1d_cpu(
             self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
         ):
@@ -68,7 +68,7 @@ class TestConvolution:
         def cpu_version(self, cpu_sig, cpu_win, mode, method):
             return signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_convolve1d_cpu(
             self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
         ):
@@ -98,7 +98,7 @@ class TestConvolution:
         def cpu_version(self, cpu_sig, mode):
             return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_fftconvolve_cpu(
             self, rand_data_gen, benchmark, num_samps, mode
         ):
@@ -128,7 +128,7 @@ class TestConvolution:
                 cpu_sig, cpu_filt, boundary=boundary, mode=mode
             )
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_convolve2d_cpu(
             self,
             rand_2d_data_gen,
@@ -176,7 +176,7 @@ class TestConvolution:
                 cpu_sig, cpu_filt, boundary=boundary, mode=mode
             )
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_correlate2d_cpu(
             self,
             rand_2d_data_gen,

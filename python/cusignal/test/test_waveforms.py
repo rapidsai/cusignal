@@ -27,7 +27,7 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, duty):
             return signal.square(cpu_sig, duty)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
@@ -47,7 +47,7 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, fc):
             return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, fc)
@@ -72,7 +72,7 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, f0, t1, f1, method):
             return signal.chirp(cpu_sig, f0, t1, f1, method)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_chirp_cpu(
             self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
         ):
@@ -96,7 +96,7 @@ class TestWaveforms:
         def cpu_version(self, num_samps, idx):
             return signal.unit_impulse(num_samps, idx)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_unit_impulse_cpu(self, benchmark, num_samps, idx):
             benchmark(self.cpu_version, num_samps, idx)
 

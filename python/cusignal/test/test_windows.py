@@ -26,7 +26,7 @@ class TestWindows:
         def cpu_version(self, num_samps, arr):
             return signal.windows.general_cosine(num_samps, arr, sym=False)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_general_cosine_cpu(self, benchmark, num_samps):
             HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
 
@@ -48,7 +48,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.boxcar(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_boxcar_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -64,7 +64,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.triang(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_triang_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -83,7 +83,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.parzen(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_parzen_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -100,7 +100,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bohman(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_bohman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -116,7 +116,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackman(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_blackman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -132,7 +132,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.nuttall(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_nuttall_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -148,7 +148,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackmanharris(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_blackmanharris_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -164,7 +164,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.flattop(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_flattop_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -180,7 +180,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bartlett(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_bartlett_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -197,7 +197,7 @@ class TestWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.tukey(num_samps, alpha, sym=True)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_tukey_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
@@ -215,7 +215,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.barthann(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_barthann_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -232,7 +232,7 @@ class TestWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.general_hamming(num_samps, alpha, sym=True)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_general_hamming_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
@@ -250,7 +250,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.hamming(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_hamming_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -267,7 +267,7 @@ class TestWindows:
         def cpu_version(self, num_samps, beta):
             return signal.windows.kaiser(num_samps, beta, sym=True)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_kaiser_cpu(self, benchmark, num_samps, beta):
             benchmark(self.cpu_version, num_samps, beta)
 
@@ -286,7 +286,7 @@ class TestWindows:
         def cpu_version(self, num_samps, std):
             return signal.windows.gaussian(num_samps, std)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_gaussian_cpu(self, benchmark, num_samps, std):
             benchmark(self.cpu_version, num_samps, std)
 
@@ -304,7 +304,7 @@ class TestWindows:
         def cpu_version(self, num_samps, p, std):
             return signal.windows.general_gaussian(num_samps, p, std)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_general_gaussian_cpu(self, benchmark, num_samps, p, std):
             benchmark(self.cpu_version, num_samps, p, std)
 
@@ -323,7 +323,7 @@ class TestWindows:
         def cpu_version(self, num_samps, at):
             return signal.windows.chebwin(num_samps, at)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_chebwin_cpu(self, benchmark, num_samps, at):
             benchmark(self.cpu_version, num_samps, at)
 
@@ -339,7 +339,7 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.cosine(num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_cosine_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
@@ -356,7 +356,7 @@ class TestWindows:
         def cpu_version(self, num_samps, tau):
             return signal.windows.exponential(num_samps, tau=tau)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_exponential_cpu(self, benchmark, num_samps, tau):
             benchmark(self.cpu_version, num_samps, tau)
 
@@ -375,7 +375,7 @@ class TestWindows:
         def cpu_version(self, window, num_samps):
             return signal.windows.get_window(window, num_samps)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_get_window_cpu(self, benchmark, window, num_samps):
             benchmark(self.cpu_version, window, num_samps)
 

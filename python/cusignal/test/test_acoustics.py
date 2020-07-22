@@ -31,7 +31,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.rceps(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_rceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -47,7 +47,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.freq_shift(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_cceps_unwrap_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -63,7 +63,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.freq_shift(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_cceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 

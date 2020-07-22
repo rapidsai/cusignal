@@ -32,7 +32,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.gauss_spline(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_gauss_spline_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -48,7 +48,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.cubic(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_cubic_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -64,7 +64,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.quadratic(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_quadratic_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
@@ -80,7 +80,7 @@
 #         def cpu_version(self, cpu_sig):
 #             return signal.cspline1d(cpu_sig)
 
-#         @pytest.mark.slow
+#         @pytest.mark.cpu
 #         def test_cspline1d_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 

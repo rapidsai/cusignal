@@ -38,7 +38,7 @@ class TestFilterDesign:
         def cpu_version(self, num_samps, f1, f2):
             return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
-        @pytest.mark.slow
+        @pytest.mark.cpu
         def test_firwin_cpu(self, benchmark, num_samps, f1, f2):
             benchmark(
                 self.cpu_version, num_samps, f1, f2,
@@ -58,7 +58,7 @@ class TestFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.kaiser_beta(cpu_sig)
 
-    #     @pytest.mark.slow
+    #     @pytest.mark.cpu
     #     def test_kaiser_beta_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -74,7 +74,7 @@ class TestFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.kaiser_atten(cpu_sig)
 
-    #     @pytest.mark.slow
+    #     @pytest.mark.cpu
     #     def test_kaiser_atten_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
@@ -90,7 +90,7 @@ class TestFilterDesign:
     #     def cpu_version(self, cpu_sig):
     #         return signal.cmplx_sort(cpu_sig)
 
-    #     @pytest.mark.slow
+    #     @pytest.mark.cpu
     #     def test_cmplx_sort_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
