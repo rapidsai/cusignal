@@ -15,9 +15,23 @@
 # import cusignal
 # import numpy as np
 # import pytest
+# import pytest_benchmark
 
 # from cusignal.test.utils import array_equal
 # from scipy import signal
+
+# try:
+#     from rapids_pytest_benchmark import setFixtureParamNames
+# except ImportError:
+#     print("\n\nWARNING: rapids_pytest_benchmark is not installed, "
+#           "falling back to pytest_benchmark fixtures.\n")
+
+#     # if rapids_pytest_benchmark is not available, just perfrom time-only
+#     # benchmarking and replace the util functions with nops
+#     gpubenchmark = pytest_benchmark.plugin.benchmark
+
+#     def setFixtureParamNames(*args, **kwargs):
+#         pass
 
 # # Missing
 # # argrelmin
@@ -35,9 +49,9 @@
 #         def test_argrelmin_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_argrelmin_gpu(self, benchmark):
+#         def test_argrelmin_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.argrelmin, gpu_sig)
+#             output = gpubenchmark(cusignal.argrelmin, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -51,9 +65,9 @@
 #         def test_argrelmax_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_argrelmax_gpu(self, benchmark):
+#         def test_argrelmax_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.argrelmax, gpu_sig)
+#             output = gpubenchmark(cusignal.argrelmax, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -67,9 +81,9 @@
 #         def test_argrelextrema_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_argrelextrema_gpu(self, benchmark):
+#         def test_argrelextrema_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.argrelextrema, gpu_sig)
+#             output = gpubenchmark(cusignal.argrelextrema, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)

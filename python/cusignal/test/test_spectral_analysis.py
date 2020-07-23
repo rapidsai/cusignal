@@ -14,11 +14,28 @@
 import cupy as cp
 import cusignal
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
 
 cusignal.precompile_kernels()
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
+
 
 # Missing
 # vectorstrength
@@ -55,7 +72,7 @@ class TestSpectral:
         def test_lombscargle_gpu(
             self,
             lombscargle_gen,
-            benchmark,
+            gpubenchmark,
             num_in_samps,
             num_out_samps,
             precenter,
@@ -64,7 +81,7 @@ class TestSpectral:
             cpu_x, cpu_y, cpu_f, gpu_x, gpu_y, gpu_f = lombscargle_gen(
                 num_in_samps, num_out_samps
             )
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.lombscargle,
                 gpu_x,
                 gpu_y,
@@ -95,11 +112,11 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, window, scaling)
 
         def test_periodogram_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, window, scaling
+            self, rand_data_gen, gpubenchmark, num_samps, fs, window, scaling
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.periodogram,
                 gpu_sig,
                 fs,
@@ -137,7 +154,7 @@ class TestSpectral:
         def test_periodogram_complex_gpu(
             self,
             rand_complex_data_gen,
-            benchmark,
+            gpubenchmark,
             num_samps,
             fs,
             window,
@@ -145,7 +162,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.periodogram,
                 gpu_sig,
                 fs,
@@ -172,11 +189,13 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_welch_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, output = benchmark(cusignal.welch, gpu_sig, fs, nperseg=nperseg)
+            _, output = gpubenchmark(
+                cusignal.welch, gpu_sig, fs, nperseg=nperseg
+            )
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -197,11 +216,13 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_welch_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, output = benchmark(cusignal.welch, gpu_sig, fs, nperseg=nperseg)
+            _, output = gpubenchmark(
+                cusignal.welch, gpu_sig, fs, nperseg=nperseg
+            )
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -223,13 +244,13 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_csd_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_x, gpu_x = rand_data_gen(num_samps)
             cpu_y, gpu_y = rand_data_gen(num_samps)
 
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
             )
 
@@ -253,12 +274,12 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_csd_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_x, gpu_x = rand_complex_data_gen(num_samps)
             cpu_y, gpu_y = rand_complex_data_gen(num_samps)
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
             )
 
@@ -281,11 +302,11 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_spectrogram_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = benchmark(
+            _, _, output = gpubenchmark(
                 cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
             )
 
@@ -308,11 +329,11 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_spectrogram_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = benchmark(
+            _, _, output = gpubenchmark(
                 cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
             )
 
@@ -335,11 +356,11 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_stft_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = benchmark(
+            _, _, output = gpubenchmark(
                 cusignal.stft, gpu_sig, fs, nperseg=nperseg
             )
 
@@ -362,11 +383,11 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_stft_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = benchmark(
+            _, _, output = gpubenchmark(
                 cusignal.stft, gpu_sig, fs, nperseg=nperseg
             )
 
@@ -390,12 +411,12 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_coherence_gpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
             cpu_x, gpu_x = rand_data_gen(num_samps)
             cpu_y, gpu_y = rand_data_gen(num_samps)
 
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
             )
 
@@ -419,12 +440,12 @@ class TestSpectral:
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_coherence_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
         ):
 
             cpu_x, gpu_x = rand_complex_data_gen(num_samps)
             cpu_y, gpu_y = rand_complex_data_gen(num_samps)
-            _, output = benchmark(
+            _, output = gpubenchmark(
                 cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
             )
 
@@ -440,9 +461,9 @@ class TestSpectral:
     #     def test_vectorstrength_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_vectorstrength_gpu(self, benchmark):
+    #     def test_vectorstrength_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.vectorstrength, gpu_sig)
+    #         output = gpubenchmark(cusignal.vectorstrength, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)

@@ -16,11 +16,27 @@ import cusignal
 
 # import numpy as np
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
 
 cusignal.precompile_kernels()
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
 
 
 # Missing
@@ -44,9 +60,9 @@ class TestFilterDesign:
                 self.cpu_version, num_samps, f1, f2,
             )
 
-        def test_firwin_gpu(self, benchmark, num_samps, f1, f2):
+        def test_firwin_gpu(self, gpubenchmark, num_samps, f1, f2):
 
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.firwin, num_samps, [f1, f2], pass_zero=False
             )
 
@@ -62,9 +78,9 @@ class TestFilterDesign:
     #     def test_kaiser_beta_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_kaiser_beta_gpu(self, benchmark):
+    #     def test_kaiser_beta_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.kaiser_beta, gpu_sig)
+    #         output = gpubenchmark(cusignal.kaiser_beta, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
@@ -78,9 +94,9 @@ class TestFilterDesign:
     #     def test_kaiser_atten_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_kaiser_atten_gpu(self, benchmark):
+    #     def test_kaiser_atten_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.kaiser_atten, gpu_sig)
+    #         output = gpubenchmark(cusignal.kaiser_atten, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
@@ -94,9 +110,9 @@ class TestFilterDesign:
     #     def test_cmplx_sort_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_cmplx_sort_gpu(self, benchmark):
+    #     def test_cmplx_sort_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.cmplx_sort, gpu_sig)
+    #         output = gpubenchmark(cusignal.cmplx_sort, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)

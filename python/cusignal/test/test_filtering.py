@@ -15,11 +15,27 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
 
 cusignal.precompile_kernels()
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
 
 
 # Missing
@@ -40,10 +56,10 @@ class TestFilter:
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_wiener_gpu(self, rand_data_gen, benchmark, num_samps):
+        def test_wiener_gpu(self, rand_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = benchmark(cusignal.wiener, gpu_sig)
+            output = gpubenchmark(cusignal.wiener, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -57,9 +73,9 @@ class TestFilter:
     #     def test_lfiltic_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_lfiltic_gpu(self, benchmark):
+    #     def test_lfiltic_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.lfiltic, gpu_sig)
+    #         output = gpubenchmark(cusignal.lfiltic, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
@@ -94,7 +110,7 @@ class TestFilter:
         def test_sosfilt_gpu(
             self,
             rand_2d_data_gen,
-            benchmark,
+            gpubenchmark,
             num_signals,
             num_samps,
             order,
@@ -108,7 +124,7 @@ class TestFilter:
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
-            output = benchmark(cusignal.sosfilt, gpu_sos, gpu_sig,)
+            output = gpubenchmark(cusignal.sosfilt, gpu_sos, gpu_sig,)
 
             key = self.cpu_version(cpu_sos, cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -124,10 +140,10 @@ class TestFilter:
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert_gpu(self, rand_data_gen, benchmark, num_samps):
+        def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = benchmark(cusignal.hilbert, gpu_sig)
+            output = gpubenchmark(cusignal.hilbert, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -143,10 +159,10 @@ class TestFilter:
             cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert2_gpu(self, rand_2d_data_gen, benchmark, num_samps):
+        def test_hilbert2_gpu(self, rand_2d_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            output = benchmark(cusignal.hilbert2, gpu_sig)
+            output = gpubenchmark(cusignal.hilbert2, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -160,9 +176,9 @@ class TestFilter:
     #     def test_detrend_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_detrend_gpu(self, benchmark):
+    #     def test_detrend_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
@@ -176,9 +192,9 @@ class TestFilter:
     #     def test_freq_shift_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_freq_shift_gpu(self, benchmark):
+    #     def test_freq_shift_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
@@ -207,7 +223,7 @@ class TestFilter:
 
         def test_decimate_gpu(
             self,
-            benchmark,
+            gpubenchmark,
             linspace_data_gen,
             num_samps,
             downsample_factor,
@@ -216,7 +232,7 @@ class TestFilter:
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
             )
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.decimate,
                 gpu_sig,
                 downsample_factor,
@@ -251,7 +267,7 @@ class TestFilter:
         def test_resample_gpu(
             self,
             linspace_data_gen,
-            benchmark,
+            gpubenchmark,
             num_samps,
             resample_num_samps,
             window,
@@ -260,7 +276,7 @@ class TestFilter:
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
             )
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.resample, gpu_sig, resample_num_samps, window=window
             )
 
@@ -286,13 +302,13 @@ class TestFilter:
             )
 
         def test_resample_poly_gpu(
-            self, linspace_data_gen, benchmark, num_samps, up, down, window,
+            self, linspace_data_gen, gpubenchmark, num_samps, up, down, window,
         ):
 
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
             )
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.resample_poly, gpu_sig, up, down, window=window,
             )
 
@@ -318,11 +334,11 @@ class TestFilter:
             )
 
         def test_upfirdn_gpu(
-            self, rand_data_gen, benchmark, num_samps, up, down, axis,
+            self, rand_data_gen, gpubenchmark, num_samps, up, down, axis,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
             )
 
@@ -348,11 +364,11 @@ class TestFilter:
             )
 
         def test_upfirdn2d_gpu(
-            self, rand_2d_data_gen, benchmark, num_samps, up, down, axis,
+            self, rand_2d_data_gen, gpubenchmark, num_samps, up, down, axis,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
             )
 

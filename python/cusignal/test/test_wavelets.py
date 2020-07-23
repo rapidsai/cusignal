@@ -15,11 +15,28 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
 
 cusignal.precompile_kernels()
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
+
 
 # Missing
 # qmf
@@ -36,9 +53,9 @@ class TestWavelets:
         def test_morlet_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_morlet_gpu(self, benchmark, num_samps):
+        def test_morlet_gpu(self, gpubenchmark, num_samps):
 
-            output = benchmark(cusignal.morlet, num_samps)
+            output = gpubenchmark(cusignal.morlet, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -54,9 +71,9 @@ class TestWavelets:
         def test_ricker_cpu(self, benchmark, num_samps, a):
             benchmark(self.cpu_version, num_samps, a)
 
-        def test_ricker_gpu(self, benchmark, num_samps, a):
+        def test_ricker_gpu(self, gpubenchmark, num_samps, a):
 
-            output = benchmark(cusignal.ricker, num_samps, a)
+            output = gpubenchmark(cusignal.ricker, num_samps, a)
 
             key = self.cpu_version(num_samps, a)
             assert array_equal(cp.asnumpy(output), key)
@@ -74,11 +91,11 @@ class TestWavelets:
             wavelet = signal.ricker
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        def test_cwt_gpu(self, rand_data_gen, benchmark, num_samps, widths):
+        def test_cwt_gpu(self, rand_data_gen, gpubenchmark, num_samps, widths):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             cu_wavelet = cusignal.ricker
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
             )
 
@@ -102,12 +119,12 @@ class TestWavelets:
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
         def test_cwt_complex_gpu(
-            self, rand_complex_data_gen, benchmark, num_samps, widths
+            self, rand_complex_data_gen, gpubenchmark, num_samps, widths
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
             cu_wavelet = cusignal.ricker
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
             )
 
@@ -124,9 +141,9 @@ class TestWavelets:
     #     def test_qmf_cpu(self, benchmark):
     #         benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_qmf_gpu(self, benchmark):
+    #     def test_qmf_gpu(self, gpubenchmark):
 
-    #         output = benchmark(cusignal.qmf, gpu_sig)
+    #         output = gpubenchmark(cusignal.qmf, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)

@@ -14,9 +14,25 @@
 import cupy as cp
 import cusignal
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
 
 
 class TestWaveforms:
@@ -32,10 +48,12 @@ class TestWaveforms:
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
 
-        def test_square_gpu(self, time_data_gen, benchmark, num_samps, duty):
+        def test_square_gpu(
+            self, time_data_gen, gpubenchmark, num_samps, duty
+        ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = benchmark(cusignal.square, gpu_sig, duty)
+            output = gpubenchmark(cusignal.square, gpu_sig, duty)
 
             key = self.cpu_version(cpu_sig, duty)
             assert array_equal(cp.asnumpy(output), key)
@@ -52,10 +70,12 @@ class TestWaveforms:
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, fc)
 
-        def test_gausspulse_gpu(self, time_data_gen, benchmark, num_samps, fc):
+        def test_gausspulse_gpu(
+            self, time_data_gen, gpubenchmark, num_samps, fc
+        ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = benchmark(
+            _, _, output = gpubenchmark(
                 cusignal.gausspulse, gpu_sig, fc, retquad=True, retenv=True
             )
 
@@ -80,11 +100,11 @@ class TestWaveforms:
             benchmark(self.cpu_version, cpu_sig, f0, t1, f1, method)
 
         def test_chirp_gpu(
-            self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
+            self, time_data_gen, gpubenchmark, num_samps, f0, t1, f1, method
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = benchmark(cusignal.chirp, gpu_sig, f0, t1, f1, method)
+            output = gpubenchmark(cusignal.chirp, gpu_sig, f0, t1, f1, method)
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method)
             assert array_equal(cp.asnumpy(output), key)
@@ -100,9 +120,9 @@ class TestWaveforms:
         def test_unit_impulse_cpu(self, benchmark, num_samps, idx):
             benchmark(self.cpu_version, num_samps, idx)
 
-        def test_unit_impulse_gpu(self, benchmark, num_samps, idx):
+        def test_unit_impulse_gpu(self, gpubenchmark, num_samps, idx):
 
-            output = benchmark(cusignal.unit_impulse, num_samps, idx)
+            output = gpubenchmark(cusignal.unit_impulse, num_samps, idx)
 
             key = self.cpu_version(num_samps, idx)
             assert array_equal(cp.asnumpy(output), key)

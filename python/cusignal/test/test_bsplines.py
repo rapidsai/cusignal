@@ -15,9 +15,23 @@
 # import cusignal
 # import numpy as np
 # import pytest
+# import pytest_benchmark
 
 # from cusignal.test.utils import array_equal
 # from scipy import signal
+
+# try:
+#     from rapids_pytest_benchmark import setFixtureParamNames
+# except ImportError:
+#     print("\n\nWARNING: rapids_pytest_benchmark is not installed, "
+#           "falling back to pytest_benchmark fixtures.\n")
+
+#     # if rapids_pytest_benchmark is not available, just perfrom time-only
+#     # benchmarking and replace the util functions with nops
+#     gpubenchmark = pytest_benchmark.plugin.benchmark
+
+#     def setFixtureParamNames(*args, **kwargs):
+#         pass
 
 # # Missing
 # # gauss_spline
@@ -36,9 +50,9 @@
 #         def test_gauss_spline_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_gauss_spline_gpu(self, benchmark):
+#         def test_gauss_spline_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.gauss_spline, gpu_sig)
+#             output = gpubenchmark(cusignal.gauss_spline, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -52,9 +66,9 @@
 #         def test_cubic_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_cubic_gpu(self, benchmark):
+#         def test_cubic_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.cubic, gpu_sig)
+#             output = gpubenchmark(cusignal.cubic, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -68,9 +82,9 @@
 #         def test_quadratic_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_quadratic_gpu(self, benchmark):
+#         def test_quadratic_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.quadratic, gpu_sig)
+#             output = gpubenchmark(cusignal.quadratic, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -84,9 +98,9 @@
 #         def test_cspline1d_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_cspline1d_gpu(self, benchmark):
+#         def test_cspline1d_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.cspline1d, gpu_sig)
+#             output = gpubenchmark(cusignal.cspline1d, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)

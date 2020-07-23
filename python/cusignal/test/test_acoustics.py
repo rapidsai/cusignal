@@ -15,9 +15,23 @@
 # import cusignal
 # import numpy as np
 # import pytest
+# import pytest_benchmark
 
 # from cusignal.test.utils import array_equal
 # from scipy import signal
+
+# try:
+#     from rapids_pytest_benchmark import setFixtureParamNames
+# except ImportError:
+#     print("\n\nWARNING: rapids_pytest_benchmark is not installed, "
+#           "falling back to pytest_benchmark fixtures.\n")
+
+#     # if rapids_pytest_benchmark is not available, just perfrom time-only
+#     # benchmarking and replace the util functions with nops
+#     gpubenchmark = pytest_benchmark.plugin.benchmark
+
+#     def setFixtureParamNames(*args, **kwargs):
+#         pass
 
 # # Missing
 # # rceps
@@ -35,9 +49,9 @@
 #         def test_rceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_rceps_gpu(self, benchmark):
+#         def test_rceps_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.detrend, gpu_sig)
+#             output = gpubenchmark(cusignal.detrend, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -51,9 +65,9 @@
 #         def test_cceps_unwrap_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_cceps_unwrap_gpu(self, benchmark):
+#         def test_cceps_unwrap_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.detrend, gpu_sig)
+#             output = gpubenchmark(cusignal.detrend, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)
@@ -67,9 +81,9 @@
 #         def test_cceps_cpu(self, benchmark):
 #             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_cceps_gpu(self, benchmark):
+#         def test_cceps_gpu(self, gpubenchmark):
 
-#             output = benchmark(cusignal.detrend, gpu_sig)
+#             output = gpubenchmark(cusignal.detrend, gpu_sig)
 
 #             key = self.cpu_version(cpu_sig)
 #             assert array_equal(cp.asnumpy(output), key)

@@ -15,11 +15,27 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
 
 cusignal.precompile_kernels()
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
 
 
 class TestConvolution:
@@ -44,11 +60,17 @@ class TestConvolution:
             )
 
         def test_correlate1d_gpu(
-            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.correlate,
                 gpu_sig,
                 cp.ones(num_taps),
@@ -78,12 +100,18 @@ class TestConvolution:
             benchmark(self.cpu_version, cpu_sig, cpu_win, mode, method)
 
         def test_convolve1d_gpu(
-            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             gpu_win = cusignal.windows.hann(num_taps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.convolve, gpu_sig, gpu_win, mode=mode, method=method
             )
 
@@ -106,11 +134,11 @@ class TestConvolution:
             benchmark(self.cpu_version, cpu_sig, mode)
 
         def test_fftconvolve_gpu(
-            self, rand_data_gen, benchmark, num_samps, mode
+            self, rand_data_gen, gpubenchmark, num_samps, mode
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.fftconvolve, gpu_sig, gpu_sig[::-1], mode=mode
             )
 
@@ -145,7 +173,7 @@ class TestConvolution:
         def test_convolve2d_gpu(
             self,
             rand_2d_data_gen,
-            benchmark,
+            gpubenchmark,
             num_samps,
             num_taps,
             boundary,
@@ -154,7 +182,7 @@ class TestConvolution:
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.convolve2d,
                 gpu_sig,
                 gpu_filt,
@@ -193,7 +221,7 @@ class TestConvolution:
         def test_correlate2d_gpu(
             self,
             rand_2d_data_gen,
-            benchmark,
+            gpubenchmark,
             num_samps,
             num_taps,
             boundary,
@@ -202,7 +230,7 @@ class TestConvolution:
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.correlate2d,
                 gpu_sig,
                 gpu_filt,

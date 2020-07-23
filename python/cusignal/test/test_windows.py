@@ -14,9 +14,25 @@
 import cupy as cp
 import cusignal
 import pytest
+import pytest_benchmark
 
 from cusignal.test.utils import array_equal
 from scipy import signal
+
+try:
+    from rapids_pytest_benchmark import setFixtureParamNames
+except ImportError:
+    print(
+        "\n\nWARNING: rapids_pytest_benchmark is not installed, "
+        "falling back to pytest_benchmark fixtures.\n"
+    )
+
+    # if rapids_pytest_benchmark is not available, just perfrom time-only
+    # benchmarking and replace the util functions with nops
+    gpubenchmark = pytest_benchmark.plugin.benchmark
+
+    def setFixtureParamNames(*args, **kwargs):
+        pass
 
 
 class TestWindows:
@@ -32,10 +48,10 @@ class TestWindows:
 
             benchmark(self.cpu_version, num_samps, HFT90D)
 
-        def test_general_cosine_gpu(self, benchmark, num_samps):
+        def test_general_cosine_gpu(self, gpubenchmark, num_samps):
             HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
 
-            output = benchmark(
+            output = gpubenchmark(
                 cusignal.windows.general_cosine, num_samps, HFT90D, sym=False
             )
 
@@ -52,8 +68,8 @@ class TestWindows:
         def test_boxcar_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_boxcar_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.boxcar, num_samps)
+        def test_boxcar_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.boxcar, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -68,8 +84,8 @@ class TestWindows:
         def test_triang_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_triang_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.triang, num_samps)
+        def test_triang_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.triang, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -87,8 +103,8 @@ class TestWindows:
         def test_parzen_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_parzen_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.parzen, num_samps)
+        def test_parzen_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.parzen, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -104,8 +120,8 @@ class TestWindows:
         def test_bohman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_bohman_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.bohman, num_samps)
+        def test_bohman_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.bohman, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -120,8 +136,8 @@ class TestWindows:
         def test_blackman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_blackman_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.blackman, num_samps)
+        def test_blackman_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.blackman, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -136,8 +152,8 @@ class TestWindows:
         def test_nuttall_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_nuttall_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.nuttall, num_samps)
+        def test_nuttall_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.nuttall, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -152,8 +168,8 @@ class TestWindows:
         def test_blackmanharris_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_blackmanharris_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.blackmanharris, num_samps)
+        def test_blackmanharris_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.blackmanharris, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -168,8 +184,8 @@ class TestWindows:
         def test_flattop_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_flattop_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.flattop, num_samps)
+        def test_flattop_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.flattop, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -184,8 +200,8 @@ class TestWindows:
         def test_bartlett_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_bartlett_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.bartlett, num_samps)
+        def test_bartlett_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.bartlett, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -201,8 +217,8 @@ class TestWindows:
         def test_tukey_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
-        def test_tukey_gpu(self, benchmark, num_samps, alpha):
-            output = benchmark(
+        def test_tukey_gpu(self, gpubenchmark, num_samps, alpha):
+            output = gpubenchmark(
                 cusignal.windows.tukey, num_samps, alpha, sym=True
             )
 
@@ -219,8 +235,8 @@ class TestWindows:
         def test_barthann_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_barthann_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.barthann, num_samps)
+        def test_barthann_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.barthann, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -236,8 +252,8 @@ class TestWindows:
         def test_general_hamming_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
-        def test_general_hamming_gpu(self, benchmark, num_samps, alpha):
-            output = benchmark(
+        def test_general_hamming_gpu(self, gpubenchmark, num_samps, alpha):
+            output = gpubenchmark(
                 cusignal.windows.general_hamming, num_samps, alpha, sym=True
             )
 
@@ -254,8 +270,8 @@ class TestWindows:
         def test_hamming_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_hamming_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.hamming, num_samps)
+        def test_hamming_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.hamming, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -271,8 +287,8 @@ class TestWindows:
         def test_kaiser_cpu(self, benchmark, num_samps, beta):
             benchmark(self.cpu_version, num_samps, beta)
 
-        def test_kaiser_gpu(self, benchmark, num_samps, beta):
-            output = benchmark(
+        def test_kaiser_gpu(self, gpubenchmark, num_samps, beta):
+            output = gpubenchmark(
                 cusignal.windows.kaiser, num_samps, beta, sym=True
             )
 
@@ -290,8 +306,8 @@ class TestWindows:
         def test_gaussian_cpu(self, benchmark, num_samps, std):
             benchmark(self.cpu_version, num_samps, std)
 
-        def test_gaussian_gpu(self, benchmark, num_samps, std):
-            output = benchmark(cusignal.windows.gaussian, num_samps, std)
+        def test_gaussian_gpu(self, gpubenchmark, num_samps, std):
+            output = gpubenchmark(cusignal.windows.gaussian, num_samps, std)
 
             key = self.cpu_version(num_samps, std)
             assert array_equal(cp.asnumpy(output), key)
@@ -308,8 +324,8 @@ class TestWindows:
         def test_general_gaussian_cpu(self, benchmark, num_samps, p, std):
             benchmark(self.cpu_version, num_samps, p, std)
 
-        def test_general_gaussian_gpu(self, benchmark, num_samps, p, std):
-            output = benchmark(
+        def test_general_gaussian_gpu(self, gpubenchmark, num_samps, p, std):
+            output = gpubenchmark(
                 cusignal.windows.general_gaussian, num_samps, p, std
             )
 
@@ -327,8 +343,8 @@ class TestWindows:
         def test_chebwin_cpu(self, benchmark, num_samps, at):
             benchmark(self.cpu_version, num_samps, at)
 
-        def test_chebwin_gpu(self, benchmark, num_samps, at):
-            output = benchmark(cusignal.windows.chebwin, num_samps, at)
+        def test_chebwin_gpu(self, gpubenchmark, num_samps, at):
+            output = gpubenchmark(cusignal.windows.chebwin, num_samps, at)
 
             key = self.cpu_version(num_samps, at)
             assert array_equal(cp.asnumpy(output), key)
@@ -343,8 +359,8 @@ class TestWindows:
         def test_cosine_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
-        def test_cosine_gpu(self, benchmark, num_samps):
-            output = benchmark(cusignal.windows.cosine, num_samps)
+        def test_cosine_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.cosine, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -360,8 +376,8 @@ class TestWindows:
         def test_exponential_cpu(self, benchmark, num_samps, tau):
             benchmark(self.cpu_version, num_samps, tau)
 
-        def test_exponential_gpu(self, benchmark, num_samps, tau):
-            output = benchmark(
+        def test_exponential_gpu(self, gpubenchmark, num_samps, tau):
+            output = gpubenchmark(
                 cusignal.windows.exponential, num_samps, tau=tau
             )
 
@@ -379,8 +395,10 @@ class TestWindows:
         def test_get_window_cpu(self, benchmark, window, num_samps):
             benchmark(self.cpu_version, window, num_samps)
 
-        def test_get_window_gpu(self, benchmark, window, num_samps):
-            output = benchmark(cusignal.windows.get_window, window, num_samps)
+        def test_get_window_gpu(self, gpubenchmark, window, num_samps):
+            output = gpubenchmark(
+                cusignal.windows.get_window, window, num_samps
+            )
 
             key = self.cpu_version(window, num_samps)
             assert array_equal(cp.asnumpy(output), key)
