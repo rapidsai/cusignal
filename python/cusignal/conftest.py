@@ -21,7 +21,7 @@ import numpy as np
 
 def pytest_configure(config):
     config.addinivalue_line(
-        "markers", "slow: mark CPU test cases"
+        "markers", "cpu: mark CPU test cases"
     )
 
 
