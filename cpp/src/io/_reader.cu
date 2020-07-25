@@ -140,66 +140,74 @@ _cupy_unpack_complex( const size_t N, const bool little, unsigned char *__restri
     }
 }
 
-extern "C" __global__ void
-_cupy_unpack_int8( const size_t N, const bool little, unsigned char *__restrict__ input, char *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_int8( const size_t N,
+                                                                       const bool   little,
+                                                                       unsigned char *__restrict__ input,
+                                                                       char *__restrict__ output ) {
     _cupy_unpack<char>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_uint8( const size_t N,
-                                               const bool   little,
-                                               unsigned char *__restrict__ input,
-                                               unsigned char *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_uint8( const size_t N,
+                                                                        const bool   little,
+                                                                        unsigned char *__restrict__ input,
+                                                                        unsigned char *__restrict__ output ) {
     _cupy_unpack<unsigned char>( N, little, input, output );
 }
 
-extern "C" __global__ void
-_cupy_unpack_int16( const size_t N, const bool little, unsigned char *__restrict__ input, short *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_int16( const size_t N,
+                                                                        const bool   little,
+                                                                        unsigned char *__restrict__ input,
+                                                                        short *__restrict__ output ) {
     _cupy_unpack<short>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_uint16( const size_t N,
-                                                const bool   little,
-                                                unsigned char *__restrict__ input,
-                                                unsigned short *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_uint16( const size_t N,
+                                                                         const bool   little,
+                                                                         unsigned char *__restrict__ input,
+                                                                         unsigned short *__restrict__ output ) {
     _cupy_unpack<unsigned short>( N, little, input, output );
 }
 
-extern "C" __global__ void
-_cupy_unpack_int32( const size_t N, const bool little, unsigned char *__restrict__ input, int *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_int32( const size_t N,
+                                                                        const bool   little,
+                                                                        unsigned char *__restrict__ input,
+                                                                        int *__restrict__ output ) {
     _cupy_unpack<int>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_uint32( const size_t N,
-                                                const bool   little,
-                                                unsigned char *__restrict__ input,
-                                                unsigned int *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_uint32( const size_t N,
+                                                                         const bool   little,
+                                                                         unsigned char *__restrict__ input,
+                                                                         unsigned int *__restrict__ output ) {
     _cupy_unpack<unsigned int>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_float32( const size_t N,
-                                                 const bool   little,
-                                                 unsigned char *__restrict__ input,
-                                                 float *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_float32( const size_t N,
+                                                                          const bool   little,
+                                                                          unsigned char *__restrict__ input,
+                                                                          float *__restrict__ output ) {
     _cupy_unpack<float>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_float64( const size_t N,
-                                                 const bool   little,
-                                                 unsigned char *__restrict__ input,
-                                                 double *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_unpack_float64( const size_t N,
+                                                                          const bool   little,
+                                                                          unsigned char *__restrict__ input,
+                                                                          double *__restrict__ output ) {
     _cupy_unpack<double>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_complex64( const size_t N,
-                                                   const bool   little,
-                                                   unsigned char *__restrict__ input,
-                                                   thrust::complex<float> *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_unpack_complex64( const size_t N,
+                            const bool   little,
+                            unsigned char *__restrict__ input,
+                            thrust::complex<float> *__restrict__ output ) {
     _cupy_unpack_complex<thrust::complex<float>>( N, little, input, output );
 }
 
-extern "C" __global__ void _cupy_unpack_complex128( const size_t N,
-                                                    const bool   little,
-                                                    unsigned char *__restrict__ input,
-                                                    thrust::complex<double> *__restrict__ output ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_unpack_complex128( const size_t N,
+                             const bool   little,
+                             unsigned char *__restrict__ input,
+                             thrust::complex<double> *__restrict__ output ) {
     _cupy_unpack_complex<thrust::complex<double>>( N, little, input, output );
 }

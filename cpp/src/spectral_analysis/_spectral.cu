@@ -72,22 +72,22 @@ __device__ void _cupy_lombscargle( const int x_shape,
     }
 }
 
-extern "C" __global__ void _cupy_lombscargle_float32( const int x_shape,
-                                                      const int freqs_shape,
-                                                      const float *__restrict__ x,
-                                                      const float *__restrict__ y,
-                                                      const float *__restrict__ freqs,
-                                                      float *__restrict__ pgram,
-                                                      const float *__restrict__ y_dot ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_lombscargle_float32( const int x_shape,
+                                                                               const int freqs_shape,
+                                                                               const float *__restrict__ x,
+                                                                               const float *__restrict__ y,
+                                                                               const float *__restrict__ freqs,
+                                                                               float *__restrict__ pgram,
+                                                                               const float *__restrict__ y_dot ) {
     _cupy_lombscargle<float>( x_shape, freqs_shape, x, y, freqs, pgram, y_dot );
 }
 
-extern "C" __global__ void _cupy_lombscargle_float64( const int x_shape,
-                                                      const int freqs_shape,
-                                                      const double *__restrict__ x,
-                                                      const double *__restrict__ y,
-                                                      const double *__restrict__ freqs,
-                                                      double *__restrict__ pgram,
-                                                      const double *__restrict__ y_dot ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_lombscargle_float64( const int x_shape,
+                                                                               const int freqs_shape,
+                                                                               const double *__restrict__ x,
+                                                                               const double *__restrict__ y,
+                                                                               const double *__restrict__ freqs,
+                                                                               double *__restrict__ pgram,
+                                                                               const double *__restrict__ y_dot ) {
     _cupy_lombscargle<double>( x_shape, freqs_shape, x, y, freqs, pgram, y_dot );
 }

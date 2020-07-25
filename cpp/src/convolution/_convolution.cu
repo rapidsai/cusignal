@@ -67,69 +67,71 @@ __device__ void _cupy_convolve( const T *__restrict__ inp,
     }
 }
 
-extern "C" __global__ void _cupy_convolve_int32( const int *__restrict__ inp,
-                                                 const int inpW,
-                                                 const int *__restrict__ kernel,
-                                                 const int  kerW,
-                                                 const int  mode,
-                                                 const bool swapped_inputs,
-                                                 int *__restrict__ out,
-                                                 const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve_int32( const int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  mode,
+                                                                          const bool swapped_inputs,
+                                                                          int *__restrict__ out,
+                                                                          const int outW ) {
     _cupy_convolve<int>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_convolve_int64( const long int *__restrict__ inp,
-                                                 const int inpW,
-                                                 const long int *__restrict__ kernel,
-                                                 const int  kerW,
-                                                 const int  mode,
-                                                 const bool swapped_inputs,
-                                                 long int *__restrict__ out,
-                                                 const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve_int64( const long int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const long int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  mode,
+                                                                          const bool swapped_inputs,
+                                                                          long int *__restrict__ out,
+                                                                          const int outW ) {
     _cupy_convolve<long int>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_convolve_float32( const float *__restrict__ inp,
-                                                   const int inpW,
-                                                   const float *__restrict__ kernel,
-                                                   const int  kerW,
-                                                   const int  mode,
-                                                   const bool swapped_inputs,
-                                                   float *__restrict__ out,
-                                                   const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve_float32( const float *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const float *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  mode,
+                                                                            const bool swapped_inputs,
+                                                                            float *__restrict__ out,
+                                                                            const int outW ) {
     _cupy_convolve<float>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_convolve_float64( const double *__restrict__ inp,
-                                                   const int inpW,
-                                                   const double *__restrict__ kernel,
-                                                   const int  kerW,
-                                                   const int  mode,
-                                                   const bool swapped_inputs,
-                                                   double *__restrict__ out,
-                                                   const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve_float64( const double *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const double *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  mode,
+                                                                            const bool swapped_inputs,
+                                                                            double *__restrict__ out,
+                                                                            const int outW ) {
     _cupy_convolve<double>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_convolve_complex64( thrust::complex<float> *__restrict__ inp,
-                                                     const int inpW,
-                                                     thrust::complex<float> *__restrict__ kernel,
-                                                     const int  kerW,
-                                                     const int  mode,
-                                                     const bool swapped_inputs,
-                                                     thrust::complex<float> *__restrict__ out,
-                                                     const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve_complex64( thrust::complex<float> *__restrict__ inp,
+                              const int inpW,
+                              thrust::complex<float> *__restrict__ kernel,
+                              const int  kerW,
+                              const int  mode,
+                              const bool swapped_inputs,
+                              thrust::complex<float> *__restrict__ out,
+                              const int outW ) {
     _cupy_convolve<thrust::complex<float>>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_convolve_complex128( const thrust::complex<double> *__restrict__ inp,
-                                                      const int inpW,
-                                                      const thrust::complex<double> *__restrict__ kernel,
-                                                      const int  kerW,
-                                                      const int  mode,
-                                                      const bool swapped_inputs,
-                                                      thrust::complex<double> *__restrict__ out,
-                                                      const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve_complex128( const thrust::complex<double> *__restrict__ inp,
+                               const int inpW,
+                               const thrust::complex<double> *__restrict__ kernel,
+                               const int  kerW,
+                               const int  mode,
+                               const bool swapped_inputs,
+                               thrust::complex<double> *__restrict__ out,
+                               const int outW ) {
     _cupy_convolve<thrust::complex<double>>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
@@ -190,69 +192,71 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
     }
 }
 
-extern "C" __global__ void _cupy_correlate_int32( const int *__restrict__ inp,
-                                                  const int inpW,
-                                                  const int *__restrict__ kernel,
-                                                  const int  kerW,
-                                                  const int  mode,
-                                                  const bool swapped_inputs,
-                                                  int *__restrict__ out,
-                                                  const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_correlate_int32( const int *__restrict__ inp,
+                                                                           const int inpW,
+                                                                           const int *__restrict__ kernel,
+                                                                           const int  kerW,
+                                                                           const int  mode,
+                                                                           const bool swapped_inputs,
+                                                                           int *__restrict__ out,
+                                                                           const int outW ) {
     _cupy_correlate<int>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_correlate_int64( const long int *__restrict__ inp,
-                                                  const int inpW,
-                                                  const long int *__restrict__ kernel,
-                                                  const int  kerW,
-                                                  const int  mode,
-                                                  const bool swapped_inputs,
-                                                  long int *__restrict__ out,
-                                                  const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_correlate_int64( const long int *__restrict__ inp,
+                                                                           const int inpW,
+                                                                           const long int *__restrict__ kernel,
+                                                                           const int  kerW,
+                                                                           const int  mode,
+                                                                           const bool swapped_inputs,
+                                                                           long int *__restrict__ out,
+                                                                           const int outW ) {
     _cupy_correlate<long int>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_correlate_float32( const float *__restrict__ inp,
-                                                    const int inpW,
-                                                    const float *__restrict__ kernel,
-                                                    const int  kerW,
-                                                    const int  mode,
-                                                    const bool swapped_inputs,
-                                                    float *__restrict__ out,
-                                                    const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_correlate_float32( const float *__restrict__ inp,
+                                                                             const int inpW,
+                                                                             const float *__restrict__ kernel,
+                                                                             const int  kerW,
+                                                                             const int  mode,
+                                                                             const bool swapped_inputs,
+                                                                             float *__restrict__ out,
+                                                                             const int outW ) {
     _cupy_correlate<float>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_correlate_float64( const double *__restrict__ inp,
-                                                    const int inpW,
-                                                    const double *__restrict__ kernel,
-                                                    const int  kerW,
-                                                    const int  mode,
-                                                    const bool swapped_inputs,
-                                                    double *__restrict__ out,
-                                                    const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_correlate_float64( const double *__restrict__ inp,
+                                                                             const int inpW,
+                                                                             const double *__restrict__ kernel,
+                                                                             const int  kerW,
+                                                                             const int  mode,
+                                                                             const bool swapped_inputs,
+                                                                             double *__restrict__ out,
+                                                                             const int outW ) {
     _cupy_correlate<double>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_correlate_complex64( thrust::complex<float> *__restrict__ inp,
-                                                      const int inpW,
-                                                      thrust::complex<float> *__restrict__ kernel,
-                                                      const int  kerW,
-                                                      const int  mode,
-                                                      const bool swapped_inputs,
-                                                      thrust::complex<float> *__restrict__ out,
-                                                      const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_correlate_complex64( thrust::complex<float> *__restrict__ inp,
+                               const int inpW,
+                               thrust::complex<float> *__restrict__ kernel,
+                               const int  kerW,
+                               const int  mode,
+                               const bool swapped_inputs,
+                               thrust::complex<float> *__restrict__ out,
+                               const int outW ) {
     _cupy_correlate<thrust::complex<float>>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
-extern "C" __global__ void _cupy_correlate_complex128( const thrust::complex<double> *__restrict__ inp,
-                                                       const int inpW,
-                                                       const thrust::complex<double> *__restrict__ kernel,
-                                                       const int  kerW,
-                                                       const int  mode,
-                                                       const bool swapped_inputs,
-                                                       thrust::complex<double> *__restrict__ out,
-                                                       const int outW ) {
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_correlate_complex128( const thrust::complex<double> *__restrict__ inp,
+                                const int inpW,
+                                const thrust::complex<double> *__restrict__ kernel,
+                                const int  kerW,
+                                const int  mode,
+                                const bool swapped_inputs,
+                                thrust::complex<double> *__restrict__ out,
+                                const int outW ) {
     _cupy_correlate<thrust::complex<double>>( inp, inpW, kernel, kerW, mode, swapped_inputs, out, outW );
 }
 
@@ -322,93 +326,95 @@ __device__ void _cupy_convolve2D( const T *__restrict__ inp,
     }
 }
 
-extern "C" __global__ void _cupy_convolve2D_int32( const int *__restrict__ inp,
-                                                   const int inpW,
-                                                   const int inpH,
-                                                   const int *__restrict__ kernel,
-                                                   const int kerW,
-                                                   const int kerH,
-                                                   const int S0,
-                                                   const int S1,
-                                                   int *__restrict__ out,
-                                                   const int outW,
-                                                   const int outH,
-                                                   const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_convolve2D_int32( const int *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const int inpH,
+                                                                            const int *__restrict__ kernel,
+                                                                            const int kerW,
+                                                                            const int kerH,
+                                                                            const int S0,
+                                                                            const int S1,
+                                                                            int *__restrict__ out,
+                                                                            const int outW,
+                                                                            const int outH,
+                                                                            const int pick ) {
     _cupy_convolve2D<int>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_convolve2D_int64( const long int *__restrict__ inp,
-                                                   const int inpW,
-                                                   const int inpH,
-                                                   const long int *__restrict__ kernel,
-                                                   const int kerW,
-                                                   const int kerH,
-                                                   const int S0,
-                                                   const int S1,
-                                                   long int *__restrict__ out,
-                                                   const int outW,
-                                                   const int outH,
-                                                   const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_convolve2D_int64( const long int *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const int inpH,
+                                                                            const long int *__restrict__ kernel,
+                                                                            const int kerW,
+                                                                            const int kerH,
+                                                                            const int S0,
+                                                                            const int S1,
+                                                                            long int *__restrict__ out,
+                                                                            const int outW,
+                                                                            const int outH,
+                                                                            const int pick ) {
     _cupy_convolve2D<long int>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_convolve2D_float32( const float *__restrict__ inp,
-                                                     const int inpW,
-                                                     const int inpH,
-                                                     const float *__restrict__ kernel,
-                                                     const int kerW,
-                                                     const int kerH,
-                                                     const int S0,
-                                                     const int S1,
-                                                     float *__restrict__ out,
-                                                     const int outW,
-                                                     const int outH,
-                                                     const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_convolve2D_float32( const float *__restrict__ inp,
+                                                                              const int inpW,
+                                                                              const int inpH,
+                                                                              const float *__restrict__ kernel,
+                                                                              const int kerW,
+                                                                              const int kerH,
+                                                                              const int S0,
+                                                                              const int S1,
+                                                                              float *__restrict__ out,
+                                                                              const int outW,
+                                                                              const int outH,
+                                                                              const int pick ) {
     _cupy_convolve2D<float>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_convolve2D_float64( const double *__restrict__ inp,
-                                                     const int inpW,
-                                                     const int inpH,
-                                                     const double *__restrict__ kernel,
-                                                     const int kerW,
-                                                     const int kerH,
-                                                     const int S0,
-                                                     const int S1,
-                                                     double *__restrict__ out,
-                                                     const int outW,
-                                                     const int outH,
-                                                     const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_convolve2D_float64( const double *__restrict__ inp,
+                                                                              const int inpW,
+                                                                              const int inpH,
+                                                                              const double *__restrict__ kernel,
+                                                                              const int kerW,
+                                                                              const int kerH,
+                                                                              const int S0,
+                                                                              const int S1,
+                                                                              double *__restrict__ out,
+                                                                              const int outW,
+                                                                              const int outH,
+                                                                              const int pick ) {
     _cupy_convolve2D<double>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_convolve2D_complex64( const thrust::complex<float> *__restrict__ inp,
-                                                       const int inpW,
-                                                       const int inpH,
-                                                       const thrust::complex<float> *__restrict__ kernel,
-                                                       const int kerW,
-                                                       const int kerH,
-                                                       const int S0,
-                                                       const int S1,
-                                                       thrust::complex<float> *__restrict__ out,
-                                                       const int outW,
-                                                       const int outH,
-                                                       const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 )
+    _cupy_convolve2D_complex64( const thrust::complex<float> *__restrict__ inp,
+                                const int inpW,
+                                const int inpH,
+                                const thrust::complex<float> *__restrict__ kernel,
+                                const int kerW,
+                                const int kerH,
+                                const int S0,
+                                const int S1,
+                                thrust::complex<float> *__restrict__ out,
+                                const int outW,
+                                const int outH,
+                                const int pick ) {
     _cupy_convolve2D<thrust::complex<float>>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_convolve2D_complex128( const thrust::complex<double> *__restrict__ inp,
-                                                        const int inpW,
-                                                        const int inpH,
-                                                        const thrust::complex<double> *__restrict__ kernel,
-                                                        const int kerW,
-                                                        const int kerH,
-                                                        const int S0,
-                                                        const int S1,
-                                                        thrust::complex<double> *__restrict__ out,
-                                                        const int outW,
-                                                        const int outH,
-                                                        const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 )
+    _cupy_convolve2D_complex128( const thrust::complex<double> *__restrict__ inp,
+                                 const int inpW,
+                                 const int inpH,
+                                 const thrust::complex<double> *__restrict__ kernel,
+                                 const int kerW,
+                                 const int kerH,
+                                 const int S0,
+                                 const int S1,
+                                 thrust::complex<double> *__restrict__ out,
+                                 const int outW,
+                                 const int outH,
+                                 const int pick ) {
     _cupy_convolve2D<thrust::complex<double>>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
@@ -479,92 +485,94 @@ __device__ void _cupy_correlate2D( const T *__restrict__ inp,
     }
 }
 
-extern "C" __global__ void _cupy_correlate2D_int32( const int *__restrict__ inp,
-                                                    const int inpW,
-                                                    const int inpH,
-                                                    const int *__restrict__ kernel,
-                                                    const int kerW,
-                                                    const int kerH,
-                                                    const int S0,
-                                                    const int S1,
-                                                    int *__restrict__ out,
-                                                    const int outW,
-                                                    const int outH,
-                                                    const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_correlate2D_int32( const int *__restrict__ inp,
+                                                                             const int inpW,
+                                                                             const int inpH,
+                                                                             const int *__restrict__ kernel,
+                                                                             const int kerW,
+                                                                             const int kerH,
+                                                                             const int S0,
+                                                                             const int S1,
+                                                                             int *__restrict__ out,
+                                                                             const int outW,
+                                                                             const int outH,
+                                                                             const int pick ) {
     _cupy_correlate2D<int>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_correlate2D_int64( const long int *__restrict__ inp,
-                                                    const int inpW,
-                                                    const int inpH,
-                                                    const long int *__restrict__ kernel,
-                                                    const int kerW,
-                                                    const int kerH,
-                                                    const int S0,
-                                                    const int S1,
-                                                    long int *__restrict__ out,
-                                                    const int outW,
-                                                    const int outH,
-                                                    const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_correlate2D_int64( const long int *__restrict__ inp,
+                                                                             const int inpW,
+                                                                             const int inpH,
+                                                                             const long int *__restrict__ kernel,
+                                                                             const int kerW,
+                                                                             const int kerH,
+                                                                             const int S0,
+                                                                             const int S1,
+                                                                             long int *__restrict__ out,
+                                                                             const int outW,
+                                                                             const int outH,
+                                                                             const int pick ) {
     _cupy_correlate2D<long int>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_correlate2D_float32( const float *__restrict__ inp,
-                                                      const int inpW,
-                                                      const int inpH,
-                                                      const float *__restrict__ kernel,
-                                                      const int kerW,
-                                                      const int kerH,
-                                                      const int S0,
-                                                      const int S1,
-                                                      float *__restrict__ out,
-                                                      const int outW,
-                                                      const int outH,
-                                                      const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_correlate2D_float32( const float *__restrict__ inp,
+                                                                               const int inpW,
+                                                                               const int inpH,
+                                                                               const float *__restrict__ kernel,
+                                                                               const int kerW,
+                                                                               const int kerH,
+                                                                               const int S0,
+                                                                               const int S1,
+                                                                               float *__restrict__ out,
+                                                                               const int outW,
+                                                                               const int outH,
+                                                                               const int pick ) {
     _cupy_correlate2D<float>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_correlate2D_float64( const double *__restrict__ inp,
-                                                      const int inpW,
-                                                      const int inpH,
-                                                      const double *__restrict__ kernel,
-                                                      const int kerW,
-                                                      const int kerH,
-                                                      const int S0,
-                                                      const int S1,
-                                                      double *__restrict__ out,
-                                                      const int outW,
-                                                      const int outH,
-                                                      const int pick ) {
+extern "C" __global__ void __launch_bounds__(256 ) _cupy_correlate2D_float64( const double *__restrict__ inp,
+                                                                               const int inpW,
+                                                                               const int inpH,
+                                                                               const double *__restrict__ kernel,
+                                                                               const int kerW,
+                                                                               const int kerH,
+                                                                               const int S0,
+                                                                               const int S1,
+                                                                               double *__restrict__ out,
+                                                                               const int outW,
+                                                                               const int outH,
+                                                                               const int pick ) {
     _cupy_correlate2D<double>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_correlate2D_complex64( const thrust::complex<float> *__restrict__ inp,
-                                                        const int inpW,
-                                                        const int inpH,
-                                                        const thrust::complex<float> *__restrict__ kernel,
-                                                        const int kerW,
-                                                        const int kerH,
-                                                        const int S0,
-                                                        const int S1,
-                                                        thrust::complex<float> *__restrict__ out,
-                                                        const int outW,
-                                                        const int outH,
-                                                        const int pick ) {
+extern "C" __global__ void __launch_bounds__(256 )
+    _cupy_correlate2D_complex64( const thrust::complex<float> *__restrict__ inp,
+                                 const int inpW,
+                                 const int inpH,
+                                 const thrust::complex<float> *__restrict__ kernel,
+                                 const int kerW,
+                                 const int kerH,
+                                 const int S0,
+                                 const int S1,
+                                 thrust::complex<float> *__restrict__ out,
+                                 const int outW,
+                                 const int outH,
+                                 const int pick ) {
     _cupy_correlate2D<thrust::complex<float>>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
 
-extern "C" __global__ void _cupy_correlate2D_complex128( const thrust::complex<double> *__restrict__ inp,
-                                                         const int inpW,
-                                                         const int inpH,
-                                                         const thrust::complex<double> *__restrict__ kernel,
-                                                         const int kerW,
-                                                         const int kerH,
-                                                         const int S0,
-                                                         const int S1,
-                                                         thrust::complex<double> *__restrict__ out,
-                                                         const int outW,
-                                                         const int outH,
-                                                         const int pick ) {
+extern "C" __global__ void __launch_bounds__( 256 )
+    _cupy_correlate2D_complex128( const thrust::complex<double> *__restrict__ inp,
+                                  const int inpW,
+                                  const int inpH,
+                                  const thrust::complex<double> *__restrict__ kernel,
+                                  const int kerW,
+                                  const int kerH,
+                                  const int S0,
+                                  const int S1,
+                                  thrust::complex<double> *__restrict__ out,
+                                  const int outW,
+                                  const int outH,
+                                  const int pick ) {
     _cupy_correlate2D<thrust::complex<double>>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
