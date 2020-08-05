@@ -15,12 +15,13 @@
 //                                SOSFILT                                    //
 ///////////////////////////////////////////////////////////////////////////////
 
+constexpr int sos_width = 6;
+
 template<typename T>
 __device__ void _cupy_sosfilt( const int n_signals,
                                const int n_samples,
                                const int n_sections,
                                const int zi_width,
-                               const int sos_width,
                                const T *__restrict__ sos,
                                const T *__restrict__ zi,
                                T *__restrict__ x_in,
@@ -44,6 +45,7 @@ __device__ void _cupy_sosfilt( const int n_signals,
     // Load SOS
     // b is in s_sos[tx * sos_width + [0-2]]
     // a is in s_sos[tx * sos_width + [3-6]]
+#pragma unroll sos_width
     for ( int i = 0; i < sos_width; i++ ) {
         s_sos[tx * sos_width + i] = sos[tx * sos_width + i];
     }
@@ -132,26 +134,24 @@ extern "C" __global__ void __launch_bounds__( 1024 ) _cupy_sosfilt_float32( cons
                                                                            const int n_samples,
                                                                            const int n_sections,
                                                                            const int zi_width,
-                                                                           const int sos_width,
                                                                            const float *__restrict__ sos,
                                                                            const float *__restrict__ zi,
                                                                            float *__restrict__ x_in ) {
 
     extern __shared__ float s_buffer_f[];
 
-    _cupy_sosfilt<float>( n_signals, n_samples, n_sections, zi_width, sos_width, sos, zi, x_in, s_buffer_f );
+    _cupy_sosfilt<float>( n_signals, n_samples, n_sections, zi_width, sos, zi, x_in, s_buffer_f );
 }
 
 extern "C" __global__ void __launch_bounds__( 1024 ) _cupy_sosfilt_float64( const int n_signals,
                                                                            const int n_samples,
                                                                            const int n_sections,
                                                                            const int zi_width,
-                                                                           const int sos_width,
                                                                            const double *__restrict__ sos,
                                                                            const double *__restrict__ zi,
                                                                            double *__restrict__ x_in ) {
 
     extern __shared__ double s_buffer_d[];
 
-    _cupy_sosfilt<double>( n_signals, n_samples, n_sections, zi_width, sos_width, sos, zi, x_in, s_buffer_d );
+    _cupy_sosfilt<double>( n_signals, n_samples, n_sections, zi_width, sos, zi, x_in, s_buffer_d );
 }
