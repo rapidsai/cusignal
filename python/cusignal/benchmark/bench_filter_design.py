@@ -20,8 +20,6 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
-cusignal.precompile_kernels()
-
 
 # Missing
 # kaiser_beta

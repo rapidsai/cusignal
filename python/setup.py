@@ -27,5 +27,6 @@ setup(
     packages=find_packages(include=["cusignal", "cusignal.*"]),
     cmdclass=versioneer.get_cmdclass(),
     install_requires=INSTALL_REQUIRES,
-    zip_safe=False
+    zip_safe=False,
+    package_data={"": ["*.fatbin"]}
 )

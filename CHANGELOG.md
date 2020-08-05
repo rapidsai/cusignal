@@ -9,6 +9,7 @@
 - PR #136 - Split reader and writer in IO packages and update docs
 - PR #146 - Add compatibility with Scipy 1.5.0; Default to SciPy > 1.5
 - PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
+- PR #148 - Load fatbin at runtime
 - PR #69 - Multi-point Kalman Filter
 - PR #158 - Add debug flag for debugging
 
@@ -31,6 +32,7 @@
 - PR #143 - Fix six package missing with Scipy 1.5
 - PR #152 - Fix error in detrend related to missing indexing support with cp.r_
 - PR #150 - Fix upfirdn output len for Scipy 1.5
+- PR #155 - Update CI local docker build
 - PR #153 - Fix issue with incorrect docker image being used in local build script
 - PR #157 - Add docs for Kalman Filter
 - PR #165 - Fix Kalman Filter version check

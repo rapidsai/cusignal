@@ -159,10 +159,10 @@ def lfiltic(b, a, y, x=None):
         y = r_[y, zeros(N - L)]
 
     for m in range(M):
-        zi[m] = cp.sum(b[m + 1:] * x[:M - m], axis=0)
+        zi[m] = cp.sum(b[m + 1 :] * x[: M - m], axis=0)
 
     for m in range(N):
-        zi[m] -= cp.sum(a[m + 1:] * y[:N - m], axis=0)
+        zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
 
     return zi
 
@@ -425,10 +425,10 @@ def hilbert(x, N=None, axis=-1):
     h = zeros(N)
     if N % 2 == 0:
         h[0] = h[N // 2] = 1
-        h[1:N // 2] = 2
+        h[1 : N // 2] = 2
     else:
         h[0] = 1
-        h[1:(N + 1) // 2] = 2
+        h[1 : (N + 1) // 2] = 2
 
     if x.ndim > 1:
         ind = [newaxis] * x.ndim
@@ -484,10 +484,10 @@ def hilbert2(x, N=None):
         N1 = N[p]
         if N1 % 2 == 0:
             h[0] = h[N1 // 2] = 1
-            h[1:N1 // 2] = 2
+            h[1 : N1 // 2] = 2
         else:
             h[0] = 1
-            h[1:(N1 + 1) // 2] = 2
+            h[1 : (N1 + 1) // 2] = 2
         exec("h%d = h" % (p + 1), globals(), locals())
 
     h = h1[:, newaxis] * h2[newaxis, :]
@@ -562,7 +562,7 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         rnk = len(dshape)
         if axis < 0:
             axis = axis + rnk
-        newdims = np.r_[axis, 0:axis, axis + 1:rnk]
+        newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
         newdata = reshape(
             transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )

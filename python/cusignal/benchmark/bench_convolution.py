@@ -19,8 +19,6 @@ import pytest
 from cusignal.test.utils import array_equal
 from scipy import signal
 
-cusignal.precompile_kernels()
-
 
 class BenchConvolution:
     @pytest.mark.benchmark(group="Correlate")
