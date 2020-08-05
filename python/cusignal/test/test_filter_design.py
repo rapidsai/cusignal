@@ -20,8 +20,6 @@ import pytest
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
 
-cusignal.precompile_kernels()
-
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
