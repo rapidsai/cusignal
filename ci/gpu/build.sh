@@ -79,7 +79,7 @@ nvidia-smi
 logger "Python pytest for cusignal..."
 cd $WORKSPACE/python
 
-pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu
+pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
 
 conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
 conda install -y -c pytorch "pytorch>=1.4"
