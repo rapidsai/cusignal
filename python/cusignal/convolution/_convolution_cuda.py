@@ -14,10 +14,8 @@
 import cupy as cp
 import numpy as np
 
-from string import Template
-
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
 from .convolution_utils import (
     FULL,
     SAME,
@@ -31,279 +29,14 @@ from .convolution_utils import (
 )
 
 
-# Custom Cupy raw kernel implementing upsample, filter, downsample operation
-# Matthew Nicely - mnicely@nvidia.com
-_cupy_convolve_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_convolve(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int mode,
-            const bool swapped_inputs,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
-
-        for ( int tid = tx; tid < outW; tid += stride ) {
-
-            ${datatype} temp {};
-
-            if ( mode == 0 ) {  // Valid
-                if ( tid >= 0 && tid < inpW ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        temp += inp[tid + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            } else if ( mode == 1 ) {   // Same
-                const int P1 { kerW / 2 };
-                int start {};
-                if ( !swapped_inputs ) {
-                    start = 0 - P1 + tid;
-                } else {
-                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
-                }
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            } else {    // Full
-                const int P1 { kerW - 1 };
-                int start { 0 - P1 + tid };
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[( kerW - 1 ) - j];
-                    }
-                }
-            }
-
-            out[tid] = temp;
-        }
-    }
-}
-"""
-)
-
-_cupy_convolve_2d_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_convolve_2d(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const int inpH,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int kerH,
-            const int S0,
-            const int S1,
-            ${datatype} * __restrict__ out,
-            const int outW,
-            const int outH,
-            const int pick) {
-
-        const int ty {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int tx {
-            static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y) };
-
-        int i {};
-        if ( pick != 3 ) {
-            i = tx + S0;
-        } else {
-            i = tx + S1;
-        }
-        int j { ty + S0 };
-
-        int2 oPixelPos {tx, ty};
-        if ( (tx < outH) && (ty < outW) ) {
-            ${datatype} temp {};
-
-            // Odd kernel
-            if ( pick == 1) {
-                for (int k = -S0; k < (S0 + 1); k++){
-                    for (int l = -S0; l < (S0 + 1); l++) {
-                        int2 iPixelPos {(i + k), (j + l)};
-                        int2 coefPos {(-k + S0), (-l + S0)};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerW + coefPos.y];
-                    }
-                }
-            // Even kernel
-            } else if (pick == 2) {
-                for (int k = -S0; k < S0; k++){
-                    for (int l = -S0; l < S0; l++) {
-                        int2 iPixelPos {(i + k), (j + l)};
-                        int2 coefPos {(-k + S0 - 1), (-l + S0 - 1)};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerW + coefPos.y];
-                    }
-                }
-
-            // Non-squares kernel
-            } else {
-                for (int k = 0; k < S0; k++){
-                    for (int l = 0; l < S1; l++) {
-                        int2 iPixelPos {(i + k - S1), (j + l - S0)};
-                        int2 coefPos {(-k + S0 - 1), (-l + S1 - 1)};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerH + coefPos.y];
-                    }
-                }
-            }
-            out[oPixelPos.x * outW + oPixelPos.y] = temp;
-        }
-    }
-}
-"""
-)
-
-_cupy_correlate_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_correlate(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int mode,
-            const bool swapped_inputs,
-            ${datatype} * __restrict__ out,
-            const int outW) {
-
-        const int tx {
-            static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-        const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
-
-        for ( int tid = tx; tid < outW; tid += stride ) {
-            ${datatype} temp {};
-
-            if ( mode == 0 ) {  // Valid
-                if ( tid >= 0 && tid < inpW ) {
-                    for ( int j = 0; j < kerW; j++ ) {
-                        temp += inp[tid + j] * kernel[j];
-                    }
-                }
-            } else if ( mode == 1 ) {   // Same
-                const int P1 { kerW / 2 };
-                int start {};
-                if ( !swapped_inputs ) {
-                    start = 0 - P1 + tid;
-                } else {
-                    start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
-                }
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[j];
-                    }
-                }
-            } else {    // Full
-                const int P1 { kerW - 1 };
-                int start { 0 - P1 + tid };
-                for ( int j = 0; j < kerW; j++ ) {
-                    if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                        temp += inp[start + j] * kernel[j];
-                    }
-                }
-            }
-
-            if (swapped_inputs) {
-                out[outW - tid - 1] = temp; // TODO: Move to shared memory
-            } else {
-                out[tid] = temp;
-            }
-        }
-    }
-}
-"""
-)
-
-_cupy_correlate_2d_src = Template(
-    """
-$header
-
-extern "C" {
-    __global__ void _cupy_correlate_2d(
-            const ${datatype} * __restrict__ inp,
-            const int inpW,
-            const int inpH,
-            const ${datatype} * __restrict__ kernel,
-            const int kerW,
-            const int kerH,
-            const int S0,
-            const int S1,
-            ${datatype} * __restrict__ out,
-            const int outW,
-            const int outH,
-            const int pick) {
-
-        const int ty {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int tx {
-            static_cast<int>(blockIdx.y * blockDim.y + threadIdx.y) };
-
-        int i {};
-        if ( pick != 3 ) {
-            i = tx + S0;
-        } else {
-            i = tx + S1;
-        }
-        int j { ty + S0 };
-
-        int2 oPixelPos {tx, ty};
-        if ( (tx < outH) && (ty < outW) ) {
-            ${datatype} temp {};
-
-            // Odd
-            if ( pick == 1) {
-                for (int k = -S0; k < (S0 + 1); k++){
-                    for (int l = -S0; l < (S0 + 1); l++) {
-                        int2 iPixelPos {(i + k), (j + l)};
-                        int2 coefPos {(k + S0), (l + S0)};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerW + coefPos.y];
-                    }
-                }
-
-            // Even
-            } else if (pick == 2) {
-                for (int k = -S0; k < S0; k++){
-                    for (int l = -S0; l < S0; l++) {
-                        int2 iPixelPos {(i + k), (j + l)}; // iPixelPos[1], [0]
-                        int2 coefPos {(k + S0), (l + S0)};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerW + coefPos.y];
-                    }
-                }
-
-            // Non-squares
-            } else {
-                for (int k = 0; k < S0; k++){
-                    for (int l = 0; l < S1; l++) {
-                        int2 iPixelPos {(i + k - S1), (j + l - S0)};
-                        int2 coefPos {k, l};
-                        temp += inp[iPixelPos.x * inpW + iPixelPos.y] *
-                            kernel[coefPos.x * kerH + coefPos.y];
-                    }
-                }
-            }
-            out[oPixelPos.x * outW + oPixelPos.y] = temp;
-        }
-    }
-}
-"""
-)
+_SUPPORTED_TYPES = [
+    "int32",
+    "int64",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
 
 
 class _cupy_convolve_wrapper(object):
@@ -368,16 +101,50 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    if k_type == "convolve":
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_convolve_" + str(np_type),
+        )
+
+    elif k_type == "correlate":
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_correlate_" + str(np_type),
+        )
+
+    elif k_type == "convolve2D":
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_convolve2D_" + str(np_type),
+        )
+
+    elif k_type == "correlate2D":
+        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+            "/convolution/_convolution.fatbin",
+            "_cupy_correlate2D_" + str(np_type),
+        )
+
+
 def _get_backend_kernel(
     dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == GPUKernel.CONVOLVE or k_type == GPUKernel.CORRELATE:
+        if k_type == "convolve" or k_type == "correlate":
             return _cupy_convolve_wrapper(grid, block, kernel)
-        elif k_type == GPUKernel.CONVOLVE2D or k_type == GPUKernel.CORRELATE2D:
+        elif k_type == "convolve2D" or k_type == "correlate2D":
             return _cupy_convolve_2d_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
@@ -394,31 +161,32 @@ def _get_backend_kernel(
 def _convolve_gpu(
     inp, out, ker, mode, use_convolve, swapped_inputs,
 ):
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     d_inp = cp.array(inp)
     d_kernel = cp.array(ker)
 
-    device_id = cp.cuda.Device()
-    numSM = device_id.attributes["MultiProcessorCount"]
-
-    threadsperblock = 256
-    blockspergrid = numSM * 20
+    threadsperblock, blockspergrid = _get_tpb_bpg()
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE)
+        k_type = "convolve"
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CONVOLVE,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE)
+        k_type = "correlate"
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CORRELATE,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     return out
 
@@ -426,7 +194,6 @@ def _convolve_gpu(
 def _convolve2d_gpu(
     inp, out, ker, mode, boundary, use_convolve, fillvalue,
 ):
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
         raise Exception("Invalid boundary flag")
@@ -508,21 +275,27 @@ def _convolve2d_gpu(
     )
 
     if use_convolve:
-        _populate_kernel_cache(out.dtype, GPUKernel.CONVOLVE2D)
+        k_type = "convolve2D"
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CONVOLVE2D,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
     else:
-        _populate_kernel_cache(out.dtype, GPUKernel.CORRELATE2D)
+        k_type = "correlate2D"
+
+        _populate_kernel_cache(out.dtype, k_type)
+
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, GPUKernel.CORRELATE2D,
+            out.dtype, blockspergrid, threadsperblock, k_type,
         )
 
     kernel(
         d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
     )
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     return out
 
