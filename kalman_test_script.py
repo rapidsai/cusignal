@@ -12,6 +12,7 @@ dim_x = 4
 dim_z = 4
 loops = 10
 iterations = 250
+minimum = 1024
 
 cpu_baseline32 = 0.0
 cpu_baseline64 = 0.0
@@ -37,6 +38,8 @@ def main(dt, num_points):
             [0.0, 1.0, 0.0, 1.0],  # y = y0 + v_y*dt
             [0.0, 0.0, 1.0, 0.0],  # dx = v_x
             [1.0, 0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 1.0],
         ],  # dy = v_y
         dtype=dt,
     )
@@ -77,34 +80,36 @@ def main(dt, num_points):
         [10.0, 10.0, 10.0, 10.0], dtype=dt
     )
 
-    np.random.seed(1234)
-
     # CPU
     start = time.time()
     for l in range(loops):
-        # print("CPU at", l)
 
-        if num_points == 4096:
+        if num_points == minimum:
             cpu_points = num_points
         else:
             cpu_points = 1
 
-        f_fpy.x = initial_location
-
-        # State space equation to estimate position and velocity
-        f_fpy.F = F
-
-        # only observable input is the x and y coordinates
-        f_fpy.H = H
-
-        # Covariance Matrix
-        f_fpy.P = initial_estimate_error
-
-        f_fpy.R = measurement_noise
-
-        f_fpy.Q = motion_noise
-
         for _ in range(cpu_points):
+        # print("CPU at", l)
+
+            np.random.seed(1234)
+
+            f_fpy.x = initial_location
+
+            # State space equation to estimate position and velocity
+            f_fpy.F = F
+
+            # only observable input is the x and y coordinates
+            f_fpy.H = H
+
+            # Covariance Matrix
+            f_fpy.P = initial_estimate_error
+
+            f_fpy.R = measurement_noise
+
+            f_fpy.Q = motion_noise
+
+        
             for _ in range(iterations):
 
                 f_fpy.predict()
@@ -116,7 +121,7 @@ def main(dt, num_points):
     global cpu_baseline32
     global cpu_baseline64
 
-    if num_points == 4096:
+    if num_points == minimum:
         if dt == np.float32:
             cpu_baseline32 = (time.time() - start) / loops
             cpu_time = cpu_baseline32
@@ -127,10 +132,10 @@ def main(dt, num_points):
             # print("CPU Baseline:", cpu_baseline64)
     else:
         if dt == np.float32:
-            cpu_time = (cpu_baseline32) * (num_points / 4096)
+            cpu_time = (cpu_baseline32) * (num_points / minimum)
             # print("CPU:", cpu_time)
         else:
-            cpu_time = (cpu_baseline64) * (num_points / 4096)
+            cpu_time = (cpu_baseline64) * (num_points / minimum)
             # print("CPU:", cpu_time)
 
     print("CPU:", cpu_time)
@@ -221,7 +226,7 @@ def main(dt, num_points):
 
 if __name__ == "__main__":
     num_points = [
-        4096,
+        minimum,
         2 ** 14,
         2 ** 15,
         2 ** 16,

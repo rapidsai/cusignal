@@ -440,8 +440,6 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
             "Datatype {} not found for Kalman Filter".format(np_type)
         )
 
-    print("asdf", dim_u)
-
     if np_type == "float32":
         c_type = "float"
     else:
