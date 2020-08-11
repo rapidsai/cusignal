@@ -21,6 +21,7 @@
 - PR #133 - Add IO module to cusignal docs
 - PR #160 - Update KF functionality
 - PR #170 - Combine tests and benchmarks
+- PR #173 - Hardcode SOS width
 
 ## Bug Fixes
 - PR #164 - Fix typos in the rest of the example code.
@@ -37,6 +38,7 @@
 - PR #153 - Fix issue with incorrect docker image being used in local build script
 - PR #157 - Add docs for Kalman Filter
 - PR #165 - Fix Kalman Filter version check
+- PR #174 - Fix bug in KF script
 - PR #175 - Update E2E Notebook for PyTorch 1.4, Fix SegFault
 
 # cuSignal 0.14 (03 Jun 2020)

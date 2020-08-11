@@ -23,13 +23,13 @@ _SUPPORTED_TYPES = ["float32", "float64"]
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
 // Compute linalg.inv(S)
-template<typename T, int DIM_Z>
+template<typename T, int BLOCKS, int DIM_Z>
 __device__ T inverse(
     const int & ltx,
     const int & lty,
     const int & ltz,
-    T(&s_ZZ_A)[16][DIM_Z][DIM_Z],
-    T(&s_ZZ_I)[16][DIM_Z][DIM_Z]) {
+    T(&s_ZZ_A)[BLOCKS][DIM_Z][DIM_Z],
+    T(&s_ZZ_I)[BLOCKS][DIM_Z][DIM_Z]) {
 
     T temp {};
 
@@ -439,8 +439,6 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
         raise ValueError(
             "Datatype {} not found for Kalman Filter".format(np_type)
         )
-
-    print("asdf", dim_u)
 
     if np_type == "float32":
         c_type = "float"
