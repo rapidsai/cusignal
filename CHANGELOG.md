@@ -21,6 +21,7 @@
 - PR #133 - Add IO module to cusignal docs
 - PR #160 - Update KF functionality
 - PR #170 - Combine tests and benchmarks
+- PR #173 - Hardcode SOS width
 
 ## Bug Fixes
 - PR #164 - Fix typos in the rest of the example code.
