@@ -40,6 +40,7 @@
 - PR #165 - Fix Kalman Filter version check
 - PR #174 - Fix bug in KF script
 - PR #175 - Update E2E Notebook for PyTorch 1.4, Fix SegFault
+- PR #176 - Fix CuPy 8.0dev CI build error
 
 # cuSignal 0.14 (03 Jun 2020)
 
