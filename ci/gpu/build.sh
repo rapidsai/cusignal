@@ -50,6 +50,7 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
 # https://docs.rapids.ai/maintainers/depmgmt/ 
 # conda remove -f rapids-build-env rapids-notebook-env
 # conda install "your-pkg=1.0.0"
+conda install -c conda-forge filterpy
 
 logger "Check versions..."
 python --version
