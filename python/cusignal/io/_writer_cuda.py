@@ -13,36 +13,22 @@
 
 import cupy as cp
 
-from string import Template
-
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.debugtools import print_atts
+from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
 
 
-# Custom Cupy raw kernel implementing binary writers
-# Matthew Nicely - mnicely@nvidia.com
-_cupy_pack_src = Template(
-    """
-${header}
-
-extern "C" {
-
-    __global__ void _cupy_pack(
-        const size_t N,
-        ${datatype} * __restrict__ input,
-        unsigned char * __restrict__ output) {
-
-         const int tx {
-            static_cast<int>(blockIdx.x * blockDim.x + threadIdx.x) };
-        const int stride { static_cast<int>(blockDim.x * gridDim.x) };
-
-        for ( int tid = tx; tid < N; tid += stride ) {
-            output[tid] = reinterpret_cast<unsigned char*>(input)[tid];
-        }
-    }
-}
-"""
-)
+_SUPPORTED_TYPES = [
+    "int8",
+    "uint8",
+    "int16",
+    "uint16",
+    "int32",
+    "uint32",
+    "float32",
+    "float64",
+    "complex64",
+    "complex128",
+]
 
 
 class _cupy_pack_wrapper(object):
@@ -63,16 +49,29 @@ class _cupy_pack_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+def _populate_kernel_cache(np_type, k_type):
+
+    if np_type not in _SUPPORTED_TYPES:
+        raise ValueError(
+            "Datatype {} not found for '{}'".format(np_type, k_type)
+        )
+
+    if (str(np_type), k_type) in _cupy_kernel_cache:
+        return
+
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+        "/io/_writer.fatbin", "_cupy_pack_" + str(np_type),
+    )
+
+
 def _get_backend_kernel(
     dtype, grid, block, k_type,
 ):
-    from ..utils.compile_kernels import GPUKernel
 
-    kernel = _cupy_kernel_cache[(str(dtype), k_type.value)]
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
     if kernel:
-        if k_type == GPUKernel.PACK:
-            return _cupy_pack_wrapper(grid, block, kernel)
-
+        return _cupy_pack_wrapper(grid, block, kernel)
+    else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
@@ -80,26 +79,24 @@ def _get_backend_kernel(
 
 def _pack(binary):
 
-    from ..utils.compile_kernels import _populate_kernel_cache, GPUKernel
-
     data_size = binary.dtype.itemsize * binary.shape[0]
     out_size = data_size
 
     out = cp.empty_like(binary, dtype=cp.ubyte, shape=out_size)
 
-    device_id = cp.cuda.Device()
-    numSM = device_id.attributes["MultiProcessorCount"]
-    blockspergrid = numSM * 20
-    threadsperblock = 512
+    threadsperblock, blockspergrid = _get_tpb_bpg()
 
-    _populate_kernel_cache(out.dtype, GPUKernel.PACK)
+    k_type = "pack"
+
+    _populate_kernel_cache(out.dtype, k_type)
+
     kernel = _get_backend_kernel(
-        out.dtype, blockspergrid, threadsperblock, GPUKernel.PACK,
+        out.dtype, blockspergrid, threadsperblock, k_type,
     )
 
     kernel(out_size, binary, out)
 
-    print_atts(kernel)
+    _print_atts(kernel)
 
     # Remove binary data
     del binary

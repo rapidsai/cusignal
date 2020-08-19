@@ -16,93 +16,211 @@ import cusignal
 import numpy as np
 import pytest
 
-from cusignal.test.utils import array_equal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestConvolution:
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+    @pytest.mark.benchmark(group="Correlate")
+    @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_correlate(self, rand_data_gen, num_samps, num_taps, mode, method):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
-        cpu_corr = signal.correlate(
-            cpu_sig, np.ones(num_taps), mode=mode, method=method
-        )
-        gpu_corr = cp.asnumpy(
-            cusignal.correlate(
-                gpu_sig, cp.ones(num_taps), mode=mode, method=method
+    class TestCorrelate:
+        def cpu_version(self, cpu_sig, num_taps, mode, method):
+            return signal.correlate(
+                cpu_sig, num_taps, mode=mode, method=method
             )
-        )
-        assert array_equal(cpu_corr, gpu_corr)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
+        @pytest.mark.cpu
+        def test_correlate1d_cpu(
+            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(
+                self.cpu_version, cpu_sig, np.ones(num_taps), mode, method
+            )
+
+        def test_correlate1d_gpu(
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(
+                cusignal.correlate,
+                gpu_sig,
+                cp.ones(num_taps),
+                mode=mode,
+                method=method,
+            )
+
+            key = self.cpu_version(cpu_sig, np.ones(num_taps), mode, method)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Convolve")
+    @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
+    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_convolve(self, num_samps, num_taps, mode, method):
-        cpu_sig = np.random.rand(num_samps)
-        cpu_win = signal.windows.hann(num_taps)
+    class TestConvolve:
+        def cpu_version(self, cpu_sig, cpu_win, mode, method):
+            return signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
 
-        gpu_sig = cp.asarray(cpu_sig)
-        gpu_win = cusignal.windows.hann(num_taps)
+        @pytest.mark.cpu
+        def test_convolve1d_cpu(
+            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_win = signal.windows.hann(num_taps)
 
-        cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
-        gpu_conv = cp.asnumpy(
-            cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
-        )
-        assert array_equal(cpu_conv, gpu_conv)
+            benchmark(self.cpu_version, cpu_sig, cpu_win, mode, method)
 
+        def test_convolve1d_gpu(
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            gpu_win = cusignal.windows.hann(num_taps)
+            output = gpubenchmark(
+                cusignal.convolve, gpu_sig, gpu_win, mode=mode, method=method
+            )
+
+            cpu_win = signal.windows.hann(num_taps)
+            key = self.cpu_version(cpu_sig, cpu_win, mode, method)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="FFTConvolve")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_fftconvolve(self, num_samps, mode="full"):
-        cpu_sig = np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
+    class TestFFTConvolve:
+        def cpu_version(self, cpu_sig, mode):
+            return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
 
-        cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
-        gpu_autocorr = cp.asnumpy(
-            cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
-        )
-        assert array_equal(cpu_autocorr, gpu_autocorr)
+        @pytest.mark.cpu
+        def test_fftconvolve_cpu(
+            self, rand_data_gen, benchmark, num_samps, mode
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig, mode)
 
+        def test_fftconvolve_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps, mode
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(
+                cusignal.fftconvolve, gpu_sig, gpu_sig[::-1], mode=mode
+            )
+
+            key = self.cpu_version(cpu_sig, mode)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Convolve2d")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
     @pytest.mark.parametrize("num_taps", [5, 100])
-    @pytest.mark.parametrize("boundary", ["symm"])
-    @pytest.mark.parametrize("mode", ["same"])
-    def test_convolve2d(self, num_samps, num_taps, boundary, mode):
-        cpu_sig = np.random.rand(num_samps, num_samps)
-        cpu_filt = np.random.rand(num_taps, num_taps)
-        gpu_sig = cp.asarray(cpu_sig)
-        gpu_filt = cp.asarray(cpu_filt)
-
-        cpu_convolve2d = signal.convolve2d(
-            cpu_sig, cpu_filt, boundary=boundary, mode=mode
-        )
-
-        gpu_convolve2d = cp.asnumpy(
-            cusignal.convolve2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
+    @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
+    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
+    class TestConvolve2d:
+        def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
+            return signal.convolve2d(
+                cpu_sig, cpu_filt, boundary=boundary, mode=mode
             )
-        )
-        assert array_equal(cpu_convolve2d, gpu_convolve2d)
 
+        @pytest.mark.cpu
+        def test_convolve2d_cpu(
+            self,
+            rand_2d_data_gen,
+            benchmark,
+            num_samps,
+            num_taps,
+            boundary,
+            mode,
+        ):
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
+            cpu_filt, _ = rand_2d_data_gen(num_taps)
+            benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
+
+        def test_convolve2d_gpu(
+            self,
+            rand_2d_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            boundary,
+            mode,
+        ):
+
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+            cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
+            output = gpubenchmark(
+                cusignal.convolve2d,
+                gpu_sig,
+                gpu_filt,
+                boundary=boundary,
+                mode=mode,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Correlate2d")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
     @pytest.mark.parametrize("num_taps", [5, 100])
-    @pytest.mark.parametrize("boundary", ["symm"])
-    @pytest.mark.parametrize("mode", ["same"])
-    def test_correlate2d(
-        self, rand_2d_data_gen, num_samps, num_taps, boundary, mode
-    ):
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-        cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
-
-        cpu_correlate2d = signal.correlate2d(
-            cpu_sig, cpu_filt, boundary=boundary, mode=mode
-        )
-        gpu_correlate2d = cp.asnumpy(
-            cusignal.correlate2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
+    @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
+    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
+    class TestCorrelate2d:
+        def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
+            return signal.correlate2d(
+                cpu_sig, cpu_filt, boundary=boundary, mode=mode
             )
-        )
-        assert array_equal(cpu_correlate2d, gpu_correlate2d)
+
+        @pytest.mark.cpu
+        def test_correlate2d_cpu(
+            self,
+            rand_2d_data_gen,
+            benchmark,
+            num_samps,
+            num_taps,
+            boundary,
+            mode,
+        ):
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
+            cpu_filt, _ = rand_2d_data_gen(num_taps)
+            benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
+
+        def test_correlate2d_gpu(
+            self,
+            rand_2d_data_gen,
+            gpubenchmark,
+            num_samps,
+            num_taps,
+            boundary,
+            mode,
+        ):
+
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+            cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
+            output = gpubenchmark(
+                cusignal.correlate2d,
+                gpu_sig,
+                gpu_filt,
+                boundary=boundary,
+                mode=mode,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
+            assert array_equal(cp.asnumpy(output), key)

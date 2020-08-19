@@ -16,8 +16,11 @@ import cusignal
 import numpy as np
 import pytest
 
-from cusignal.test.utils import array_equal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+gpubenchmark = _check_rapids_pytest_benchmark()
+
 
 # Missing
 # lfiltic
@@ -25,251 +28,333 @@ from scipy import signal
 # freq_shift
 
 
-class TestFiltering:
+class TestFilter:
+    @pytest.mark.benchmark(group="Wiener")
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
-    def test_wiener(self, num_samps):
-        cpu_sig = np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+    class TestWiener:
+        def cpu_version(self, cpu_sig):
+            return signal.wiener(cpu_sig)
 
-        cpu_wfilt = signal.wiener(cpu_sig)
-        gpu_wfilt = cp.asnumpy(cusignal.wiener(gpu_sig))
-        assert array_equal(cpu_wfilt, gpu_wfilt)
+        @pytest.mark.cpu
+        def test_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
 
-    # def test_lfiltic(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+        def test_wiener_gpu(self, rand_data_gen, gpubenchmark, num_samps):
 
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(cusignal.wiener, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="Lfiltic")
+    # class TestLfiltic:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.lfiltic(cpu_sig)
+
+    #         @pytest.mark.cpu
+    #     def test_lfiltic_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_lfiltic_gpu(self, gpubenchmark):
+
+    #         output = gpubenchmark(cusignal.lfiltic, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="SOSFilt")
+    @pytest.mark.parametrize("order", [32, 64])
+    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
-    @pytest.mark.parametrize("num_samps", [100])
-    def test_sosfilt(self, num_signals, num_samps):
-        cpu_sig = np.random.rand(num_signals, num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+    @pytest.mark.parametrize("dtype", [np.float64])
+    class TestSOSFilt:
+        np.random.seed(1234)
 
-        cpu_sos = signal.ellip(64, 0.009, 80, 0.05, output="sos")
+        def cpu_version(self, sos, cpu_sig):
+            return signal.sosfilt(sos, cpu_sig)
 
-        cpu_sosfilt = signal.sosfilt(cpu_sos, cpu_sig)
+        @pytest.mark.cpu
+        def test_sosfilt_cpu(
+            self,
+            rand_2d_data_gen,
+            benchmark,
+            num_signals,
+            num_samps,
+            order,
+            dtype,
+        ):
+            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
+            cpu_sos = np.array(cpu_sos, dtype=dtype)
+            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.array(cpu_sig, dtype=dtype)
+            benchmark(self.cpu_version, cpu_sos, cpu_sig)
 
-        gpu_sos = cp.asarray(cpu_sos)
+        def test_sosfilt_gpu(
+            self,
+            rand_2d_data_gen,
+            gpubenchmark,
+            num_signals,
+            num_samps,
+            order,
+            dtype,
+        ):
 
-        gpu_sosfilt = cp.asnumpy(cusignal.sosfilt(gpu_sos, gpu_sig))
+            cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
+            cpu_sos = np.array(cpu_sos, dtype=dtype)
+            gpu_sos = cp.asarray(cpu_sos)
+            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.array(cpu_sig, dtype=dtype)
+            gpu_sig = cp.asarray(cpu_sig)
 
-        assert array_equal(cpu_sosfilt, gpu_sosfilt)
+            output = gpubenchmark(cusignal.sosfilt, gpu_sos, gpu_sig,)
 
+            key = self.cpu_version(cpu_sos, cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Hilbert")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_hilbert(self, num_samps):
-        cpu_sig = np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+    class TestHilbert:
+        def cpu_version(self, cpu_sig):
+            return signal.hilbert(cpu_sig)
 
-        cpu_hilbert = signal.hilbert(cpu_sig)
-        gpu_hilbert = cp.asnumpy(cusignal.hilbert(gpu_sig))
-        assert array_equal(cpu_hilbert, gpu_hilbert)
+        @pytest.mark.cpu
+        def test_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
 
+        def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, num_samps):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(cusignal.hilbert, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Hilbert2")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
-    def test_hilbert2(self, num_samps):
-        cpu_sig = np.random.rand(num_samps, num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+    class TestHilbert2:
+        def cpu_version(self, cpu_sig):
+            return signal.hilbert2(cpu_sig)
 
-        cpu_hilbert2 = signal.hilbert2(cpu_sig)
-        gpu_hilbert2 = cp.asnumpy(cusignal.hilbert2(gpu_sig))
-        assert array_equal(cpu_hilbert2, gpu_hilbert2)
+        @pytest.mark.cpu
+        def test_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
 
-    # def test_detrend(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+        def test_hilbert2_gpu(self, rand_2d_data_gen, gpubenchmark, num_samps):
 
-    # def test_freq_shift(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+            output = gpubenchmark(cusignal.hilbert2, gpu_sig)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="Detrend")
+    # class TestDetrend:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.detrend(cpu_sig)
+
+    #         @pytest.mark.cpu
+    #     def test_detrend_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_detrend_gpu(self, gpubenchmark):
+
+    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="FreqShift")
+    # class TestFreqShift:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.freq_shift(cpu_sig)
+
+    #         @pytest.mark.cpu
+    #     def test_freq_shift_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_freq_shift_gpu(self, gpubenchmark):
+
+    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Decimate")
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
     @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
     @pytest.mark.parametrize("zero_phase", [True, False])
-    def test_decimate(
-        self, linspace_data_gen, num_samps, downsample_factor, zero_phase
-    ):
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
-
-        cpu_decimate = signal.decimate(
-            cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
-        )
-        gpu_decimate = cp.asnumpy(
-            cusignal.decimate(
-                gpu_sig, downsample_factor, zero_phase=zero_phase
+    class TestDecimate:
+        def cpu_version(self, cpu_sig, downsample_factor, zero_phase):
+            return signal.decimate(
+                cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
             )
-        )
 
-        assert array_equal(cpu_decimate, gpu_decimate)
+        @pytest.mark.cpu
+        def test_decimate_cpu(
+            self,
+            benchmark,
+            linspace_data_gen,
+            num_samps,
+            downsample_factor,
+            zero_phase,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            benchmark(self.cpu_version, cpu_sig, downsample_factor, zero_phase)
 
+        def test_decimate_gpu(
+            self,
+            gpubenchmark,
+            linspace_data_gen,
+            num_samps,
+            downsample_factor,
+            zero_phase,
+        ):
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            output = gpubenchmark(
+                cusignal.decimate,
+                gpu_sig,
+                downsample_factor,
+                zero_phase=zero_phase,
+            )
+
+            key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Resample")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
-    def test_resample(
-        self, linspace_data_gen, num_samps, resample_num_samps, window
-    ):
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
+    class TestResample:
+        def cpu_version(self, cpu_sig, resample_num_samps, window):
+            return signal.resample(cpu_sig, resample_num_samps, window=window)
 
-        cpu_resample = signal.resample(
-            cpu_sig, resample_num_samps, window=window
-        )
-        gpu_resample = cp.asnumpy(
-            cusignal.resample(gpu_sig, resample_num_samps, window=window)
-        )
+        @pytest.mark.cpu
+        def test_resample_cpu(
+            self,
+            linspace_data_gen,
+            benchmark,
+            num_samps,
+            resample_num_samps,
+            window,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            benchmark(
+                self.cpu_version, cpu_sig, resample_num_samps, window,
+            )
 
-        assert array_equal(cpu_resample, gpu_resample)
+        def test_resample_gpu(
+            self,
+            linspace_data_gen,
+            gpubenchmark,
+            num_samps,
+            resample_num_samps,
+            window,
+        ):
 
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 24])
-    @pytest.mark.parametrize("up", [2, 3, 7])
-    @pytest.mark.parametrize("down", [1, 2, 9])
-    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
-    def test_resample_poly(
-        self, linspace_data_gen, num_samps, up, down, window
-    ):
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            output = gpubenchmark(
+                cusignal.resample, gpu_sig, resample_num_samps, window=window
+            )
 
-        cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
-        gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(gpu_sig, up, down, window=window)
-        )
+            key = self.cpu_version(cpu_sig, resample_num_samps, window)
+            assert array_equal(cp.asnumpy(output), key)
 
-        assert array_equal(cpu_resample, gpu_resample)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 24])
-    @pytest.mark.parametrize("up", [400, 1234])
-    @pytest.mark.parametrize("down", [1333, 2123])
-    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
-    def test_resample_poly_big(
-        self, linspace_data_gen, num_samps, up, down, window
-    ):
-        cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
-
-        cpu_resample = signal.resample_poly(cpu_sig, up, down, window=window)
-        gpu_resample = cp.asnumpy(
-            cusignal.resample_poly(gpu_sig, up, down, window=window)
-        )
-
-        assert array_equal(cpu_resample, gpu_resample)
-
+    @pytest.mark.benchmark(group="ResamplePoly")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("up", [2, 3, 7])
     @pytest.mark.parametrize("down", [1, 2, 9])
-    def test_upfirdn(self, rand_data_gen, num_samps, up, down):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
+    @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    class TestResamplePoly:
+        def cpu_version(self, cpu_sig, up, down, window):
+            return signal.resample_poly(cpu_sig, up, down, window=window)
 
-        h = [1, 1, 1]
+        @pytest.mark.cpu
+        def test_resample_poly_cpu(
+            self, linspace_data_gen, benchmark, num_samps, up, down, window
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, window,
+            )
 
-        cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
+        def test_resample_poly_gpu(
+            self, linspace_data_gen, gpubenchmark, num_samps, up, down, window,
+        ):
 
-        assert array_equal(cpu_resample, gpu_resample)
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            output = gpubenchmark(
+                cusignal.resample_poly, gpu_sig, up, down, window=window,
+            )
 
+            key = self.cpu_version(cpu_sig, up, down, window)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="UpFirDn")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("up", [2, 3, 7])
+    @pytest.mark.parametrize("down", [1, 2, 9])
+    @pytest.mark.parametrize("axis", [-1, 0])
+    class TestUpFirDn:
+        def cpu_version(self, cpu_sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+
+        @pytest.mark.cpu
+        def test_upfirdn_cpu(
+            self, rand_data_gen, benchmark, num_samps, up, down, axis
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, axis,
+            )
+
+        def test_upfirdn_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps, up, down, axis,
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(
+                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
+            )
+
+            key = self.cpu_version(cpu_sig, up, down, axis)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="UpFirDn2d")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
     @pytest.mark.parametrize("up", [2, 3, 7])
     @pytest.mark.parametrize("down", [1, 2, 9])
-    def test_upfirdn2d(self, rand_2d_data_gen, num_samps, up, down):
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+    @pytest.mark.parametrize("axis", [-1, 0])
+    class TestUpFirDn2d:
+        def cpu_version(self, cpu_sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
 
-        h = [1, 1, 1]
-
-        cpu_resample = signal.upfirdn(h, cpu_sig, up, down)
-        gpu_resample = cp.asnumpy(cusignal.upfirdn(h, gpu_sig, up, down))
-
-        assert array_equal(cpu_resample, gpu_resample)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    @pytest.mark.parametrize("f1", [0.1, 0.15])
-    @pytest.mark.parametrize("f2", [0.2, 0.4])
-    def test_firwin(self, num_samps, f1, f2):
-        cpu_window = signal.firwin(num_samps, [f1, f2], pass_zero=False)
-        gpu_window = cp.asnumpy(
-            cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
-        )
-        assert array_equal(cpu_window, gpu_window)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
-    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_correlate(self, rand_data_gen, num_samps, num_taps, mode, method):
-        cpu_sig, gpu_sig = rand_data_gen(num_samps)
-
-        cpu_corr = signal.correlate(
-            cpu_sig, np.ones(num_taps), mode=mode, method=method
-        )
-        gpu_corr = cp.asnumpy(
-            cusignal.correlate(
-                gpu_sig, cp.ones(num_taps), mode=mode, method=method
+        @pytest.mark.cpu
+        def test_upfirdn2d_cpu(
+            self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
+        ):
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
+            benchmark(
+                self.cpu_version, cpu_sig, up, down, axis,
             )
-        )
-        assert array_equal(cpu_corr, gpu_corr)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 1025, 2 ** 15])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 15])
-    @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    def test_convolve(self, num_samps, num_taps, mode, method):
-        cpu_sig = np.random.rand(num_samps)
-        cpu_win = signal.windows.hann(num_taps)
+        def test_upfirdn2d_gpu(
+            self, rand_2d_data_gen, gpubenchmark, num_samps, up, down, axis,
+        ):
 
-        gpu_sig = cp.asarray(cpu_sig)
-        gpu_win = cusignal.windows.hann(num_taps)
-
-        cpu_conv = signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
-        gpu_conv = cp.asnumpy(
-            cusignal.convolve(gpu_sig, gpu_win, mode=mode, method=method)
-        )
-        assert array_equal(cpu_conv, gpu_conv)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_fftconvolve(self, num_samps, mode="full"):
-        cpu_sig = np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
-
-        cpu_autocorr = signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
-        gpu_autocorr = cp.asnumpy(
-            cusignal.fftconvolve(gpu_sig, gpu_sig[::-1], mode=mode)
-        )
-        assert array_equal(cpu_autocorr, gpu_autocorr)
-
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    @pytest.mark.parametrize("num_taps", [5, 100])
-    @pytest.mark.parametrize("boundary", ["symm"])
-    @pytest.mark.parametrize("mode", ["same"])
-    def test_convolve2d(self, num_samps, num_taps, boundary, mode):
-        cpu_sig = np.random.rand(num_samps, num_samps)
-        cpu_filt = np.random.rand(num_taps, num_taps)
-        gpu_sig = cp.asarray(cpu_sig)
-        gpu_filt = cp.asarray(cpu_filt)
-
-        cpu_convolve2d = signal.convolve2d(
-            cpu_sig, cpu_filt, boundary=boundary, mode=mode
-        )
-
-        gpu_convolve2d = cp.asnumpy(
-            cusignal.convolve2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+            output = gpubenchmark(
+                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
             )
-        )
-        assert array_equal(cpu_convolve2d, gpu_convolve2d)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    @pytest.mark.parametrize("num_taps", [5, 100])
-    @pytest.mark.parametrize("boundary", ["symm"])
-    @pytest.mark.parametrize("mode", ["same"])
-    def test_correlate2d(
-        self, rand_2d_data_gen, num_samps, num_taps, boundary, mode
-    ):
-        cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-        cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
-
-        cpu_correlate2d = signal.correlate2d(
-            cpu_sig, cpu_filt, boundary=boundary, mode=mode
-        )
-        gpu_correlate2d = cp.asnumpy(
-            cusignal.correlate2d(
-                gpu_sig, gpu_filt, boundary=boundary, mode=mode,
-            )
-        )
-        assert array_equal(cpu_correlate2d, gpu_correlate2d)
+            key = self.cpu_version(cpu_sig, up, down, axis)
+            assert array_equal(cp.asnumpy(output), key)

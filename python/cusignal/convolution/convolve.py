@@ -105,7 +105,7 @@ def convolve(
 
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_win, ax_filt) = plt.subplots(3, 1, sharex=True)
-    >>> ax_orig.plot(sig)
+    >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('Original pulse')
     >>> ax_orig.margins(0, 0.1)
     >>> ax_win.plot(cp.asnumpy(win))
@@ -208,13 +208,15 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     --------
     Autocorrelation of white noise is an impulse.
 
-    >>> from scipy import signal
-    >>> sig = np.random.randn(1000)
-    >>> autocorr = signal.fftconvolve(sig, sig[::-1], mode='full')
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> import numpy as np
+    >>> sig = cp.random.randn(1000)
+    >>> autocorr = cusignal.fftconvolve(sig, sig[::-1], mode='full')
 
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_mag) = plt.subplots(2, 1)
-    >>> ax_orig.plot(sig)
+    >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('White noise')
     >>> ax_mag.plot(np.arange(-len(sig)+1,len(sig)), autocorr)
     >>> ax_mag.set_title('Autocorrelation')
@@ -228,18 +230,18 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
     >>> from scipy import misc
     >>> face = misc.face(gray=True)
-    >>> kernel = np.outer(signal.gaussian(70, 8), signal.gaussian(70, 8))
-    >>> blurred = signal.fftconvolve(face, kernel, mode='same')
+    >>> kernel = cp.outer(cusignal.gaussian(70, 8), cusignal.gaussian(70, 8))
+    >>> blurred = cusignal.fftconvolve(face, kernel, mode='same')
 
     >>> fig, (ax_orig, ax_kernel, ax_blurred) = plt.subplots(3, 1,
     ...                                                      figsize=(6, 15))
     >>> ax_orig.imshow(face, cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()
-    >>> ax_kernel.imshow(kernel, cmap='gray')
+    >>> ax_kernel.imshow(cp.asnumpy(kernel), cmap='gray')
     >>> ax_kernel.set_title('Gaussian kernel')
     >>> ax_kernel.set_axis_off()
-    >>> ax_blurred.imshow(blurred, cmap='gray')
+    >>> ax_blurred.imshow(cp.asnumpy(blurred), cmap='gray')
     >>> ax_blurred.set_title('Blurred')
     >>> ax_blurred.set_axis_off()
     >>> fig.show()
@@ -387,7 +389,7 @@ def convolve2d(
                 mode='same')
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_mag, ax_ang) = plt.subplots(3, 1, figsize=(6, 15))
-    >>> ax_orig.imshow(ascent, cmap='gray')
+    >>> ax_orig.imshow(cp.asnumpy(ascent), cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()
     >>> ax_mag.imshow(cp.asnumpy(cp.absolute(grad)), cmap='gray')

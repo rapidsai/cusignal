@@ -107,7 +107,6 @@ from cusignal.utils.arraytools import (
     get_pinned_array,
     get_pinned_mem,
 )
-from cusignal.utils.compile_kernels import precompile_kernels
 from cusignal.io.reader import (
     read_bin,
     unpack_bin,

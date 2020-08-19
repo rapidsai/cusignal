@@ -13,34 +13,23 @@
 
 import cupy as cp
 
-from enum import Enum
-
 from ..utils._caches import _cupy_kernel_cache
 
 
-class GPUKernel(Enum):
-    PREDICT = 0
-    UPDATE = 1
-
-
-class GPUBackend(Enum):
-    CUPY = 0
-
-
-_SUPPORTED_TYPES_KALMAN_FILTER = ["float32", "float64"]
+_SUPPORTED_TYPES = ["float32", "float64"]
 
 
 # Custom Cupy raw kernel
 # Matthew Nicely - mnicely@nvidia.com
 cuda_code = """
 // Compute linalg.inv(S)
-template<typename T, int DIM_Z>
+template<typename T, int BLOCKS, int DIM_Z>
 __device__ T inverse(
     const int & ltx,
     const int & lty,
     const int & ltz,
-    T(&s_ZZ_A)[16][DIM_Z][DIM_Z],
-    T(&s_ZZ_I)[16][DIM_Z][DIM_Z]) {
+    T(&s_ZZ_A)[BLOCKS][DIM_Z][DIM_Z],
+    T(&s_ZZ_I)[BLOCKS][DIM_Z][DIM_Z]) {
 
     T temp {};
 
@@ -443,35 +432,13 @@ class _cupy_update_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
-def _get_backend_kernel(dtype, grid, block, k_type):
-
-    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
-    if kernel:
-        if k_type == GPUKernel.PREDICT:
-            return _cupy_predict_wrapper(grid, block, kernel)
-        elif k_type == GPUKernel.UPDATE:
-            return _cupy_update_wrapper(grid, block, kernel)
-        else:
-            raise NotImplementedError(
-                "No CuPY kernel found for k_type {}, datatype {}".format(
-                    k_type, dtype
-                )
-            )
-    else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
-
-
 def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
 
     # Check in np_type is a supported option
-    if np_type not in _SUPPORTED_TYPES_KALMAN_FILTER:
+    if np_type not in _SUPPORTED_TYPES:
         raise ValueError(
             "Datatype {} not found for Kalman Filter".format(np_type)
         )
-
-    print("asdf", dim_u)
 
     if np_type == "float32":
         c_type = "float"
@@ -494,9 +461,29 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
     )
 
     _cupy_kernel_cache[
-        (str(np_type), GPUKernel.PREDICT)
+        (str(np_type), 'predict')
     ] = module.get_function(specializations[0])
 
-    _cupy_kernel_cache[(str(np_type), GPUKernel.UPDATE)] = module.get_function(
+    _cupy_kernel_cache[(str(np_type), 'update')] = module.get_function(
         specializations[1]
     )
+
+
+def _get_backend_kernel(dtype, grid, block, k_type):
+
+    kernel = _cupy_kernel_cache[(str(dtype), k_type)]
+    if kernel:
+        if k_type == 'predict':
+            return _cupy_predict_wrapper(grid, block, kernel)
+        elif k_type == 'update':
+            return _cupy_update_wrapper(grid, block, kernel)
+        else:
+            raise NotImplementedError(
+                "No CuPY kernel found for k_type {}, datatype {}".format(
+                    k_type, dtype
+                )
+            )
+    else:
+        raise ValueError(
+            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
+        )

@@ -15,167 +15,376 @@ import cupy as cp
 import cusignal
 import pytest
 
-from cusignal.test.utils import array_equal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestWindows:
+    @pytest.mark.benchmark(group="GeneralCosine")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_general_cosine(self, num_samps):
-        HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
-        cpu_window = signal.windows.general_cosine(
-            num_samps, HFT90D, sym=False
-        )
-        gpu_window = cp.asnumpy(
-            cusignal.windows.general_cosine(num_samps, HFT90D, sym=False)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestGeneralCosine:
+        def cpu_version(self, num_samps, arr):
+            return signal.windows.general_cosine(num_samps, arr, sym=False)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_boxcar(self, num_samps):
-        cpu_window = signal.windows.boxcar(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.boxcar(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+        @pytest.mark.cpu
+        def test_general_cosine_cpu(self, benchmark, num_samps):
+            HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
 
+            benchmark(self.cpu_version, num_samps, HFT90D)
+
+        def test_general_cosine_gpu(self, gpubenchmark, num_samps):
+            HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
+
+            output = gpubenchmark(
+                cusignal.windows.general_cosine, num_samps, HFT90D, sym=False
+            )
+
+            key = self.cpu_version(num_samps, HFT90D)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Boxcar")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_triang(self, num_samps):
-        cpu_window = signal.windows.triang(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.triang(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBoxcar:
+        def cpu_version(self, num_samps):
+            return signal.windows.boxcar(num_samps)
+
+        @pytest.mark.cpu
+        def test_boxcar_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_boxcar_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.boxcar, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Triang")
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    class TestTriang:
+        def cpu_version(self, num_samps):
+            return signal.windows.triang(num_samps)
+
+        @pytest.mark.cpu
+        def test_triang_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_triang_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.triang, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
 
     """
     This isn't preferred, but Parzen is technically broken until
     cuPy 8.0. Commenting out until cuSignal 0.16
+    @pytest.mark.benchmark(group="Parzen")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_parzen(self, num_samps):
-        cpu_window = signal.windows.parzen(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.parzen(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestParzen:
+        def cpu_version(self, num_samps):
+            return signal.windows.parzen(num_samps)
+
+        @pytest.mark.cpu
+        def test_parzen_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_parzen_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.parzen, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
     """
 
+    @pytest.mark.benchmark(group="Bohman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_bohman(self, num_samps):
-        cpu_window = signal.windows.bohman(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.bohman(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBohman:
+        def cpu_version(self, num_samps):
+            return signal.windows.bohman(num_samps)
 
+        @pytest.mark.cpu
+        def test_bohman_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_bohman_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.bohman, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Blackman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_blackman(self, num_samps):
-        cpu_window = signal.windows.blackman(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.blackman(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBlackman:
+        def cpu_version(self, num_samps):
+            return signal.windows.blackman(num_samps)
 
+        @pytest.mark.cpu
+        def test_blackman_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_blackman_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.blackman, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Nuttall")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_nuttall(self, num_samps):
-        cpu_window = signal.windows.nuttall(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.nuttall(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestNuttall:
+        def cpu_version(self, num_samps):
+            return signal.windows.nuttall(num_samps)
 
+        @pytest.mark.cpu
+        def test_nuttall_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_nuttall_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.nuttall, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="BlackmanHarris")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_blackmanharris(self, num_samps):
-        cpu_window = signal.windows.blackmanharris(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.blackmanharris(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBlackmanHarris:
+        def cpu_version(self, num_samps):
+            return signal.windows.blackmanharris(num_samps)
 
+        @pytest.mark.cpu
+        def test_blackmanharris_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_blackmanharris_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.blackmanharris, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="FlatTop")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_flattop(self, num_samps):
-        cpu_window = signal.windows.flattop(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.flattop(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestFlatTop:
+        def cpu_version(self, num_samps):
+            return signal.windows.flattop(num_samps)
 
+        @pytest.mark.cpu
+        def test_flattop_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_flattop_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.flattop, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Barlett")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_barlett(self, num_samps):
-        cpu_window = signal.windows.bartlett(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.bartlett(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBarlett:
+        def cpu_version(self, num_samps):
+            return signal.windows.bartlett(num_samps)
 
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_hann(self, num_samps):
-        cpu_window = signal.windows.hann(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.hann(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+        @pytest.mark.cpu
+        def test_bartlett_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
 
+        def test_bartlett_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.bartlett, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Tukey")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("alpha", [0.25, 0.5])
-    def test_tukey(self, num_samps, alpha):
-        cpu_window = signal.windows.tukey(num_samps, alpha, sym=True)
-        gpu_window = cp.asnumpy(
-            cusignal.windows.tukey(num_samps, alpha, sym=True)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestTukey:
+        def cpu_version(self, num_samps, alpha):
+            return signal.windows.tukey(num_samps, alpha, sym=True)
 
+        @pytest.mark.cpu
+        def test_tukey_cpu(self, benchmark, num_samps, alpha):
+            benchmark(self.cpu_version, num_samps, alpha)
+
+        def test_tukey_gpu(self, gpubenchmark, num_samps, alpha):
+            output = gpubenchmark(
+                cusignal.windows.tukey, num_samps, alpha, sym=True
+            )
+
+            key = self.cpu_version(num_samps, alpha)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="BartHann")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_barthann(self, num_samps):
-        cpu_window = signal.windows.barthann(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.barthann(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestBartHann:
+        def cpu_version(self, num_samps):
+            return signal.windows.barthann(num_samps)
 
+        @pytest.mark.cpu
+        def test_barthann_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_barthann_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.barthann, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="GeneralHamming")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("alpha", [0.25, 0.5])
-    def test_general_hamming(self, num_samps, alpha):
-        cpu_window = signal.windows.general_hamming(num_samps, alpha, sym=True)
-        gpu_window = cp.asnumpy(
-            cusignal.windows.general_hamming(num_samps, alpha, sym=True)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestGeneralHamming:
+        def cpu_version(self, num_samps, alpha):
+            return signal.windows.general_hamming(num_samps, alpha, sym=True)
 
+        @pytest.mark.cpu
+        def test_general_hamming_cpu(self, benchmark, num_samps, alpha):
+            benchmark(self.cpu_version, num_samps, alpha)
+
+        def test_general_hamming_gpu(self, gpubenchmark, num_samps, alpha):
+            output = gpubenchmark(
+                cusignal.windows.general_hamming, num_samps, alpha, sym=True
+            )
+
+            key = self.cpu_version(num_samps, alpha)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Hamming")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_hamming(self, num_samps):
-        cpu_window = signal.windows.hamming(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.hamming(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestHamming:
+        def cpu_version(self, num_samps):
+            return signal.windows.hamming(num_samps)
 
+        @pytest.mark.cpu
+        def test_hamming_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_hamming_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.hamming, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Kaiser")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("beta", [0.25, 0.5])
-    def test_kaiser(self, num_samps, beta):
-        cpu_window = signal.windows.kaiser(num_samps, beta, sym=True)
-        gpu_window = cp.asnumpy(
-            cusignal.windows.kaiser(num_samps, beta, sym=True)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestKaiser:
+        def cpu_version(self, num_samps, beta):
+            return signal.windows.kaiser(num_samps, beta, sym=True)
 
+        @pytest.mark.cpu
+        def test_kaiser_cpu(self, benchmark, num_samps, beta):
+            benchmark(self.cpu_version, num_samps, beta)
+
+        def test_kaiser_gpu(self, gpubenchmark, num_samps, beta):
+            output = gpubenchmark(
+                cusignal.windows.kaiser, num_samps, beta, sym=True
+            )
+
+            key = self.cpu_version(num_samps, beta)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Gaussian")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("std", [3, 7])
-    def test_gaussian(self, num_samps, std):
-        cpu_window = signal.windows.gaussian(num_samps, std)
-        gpu_window = cp.asnumpy(cusignal.windows.gaussian(num_samps, std))
-        assert array_equal(cpu_window, gpu_window)
+    class TestGaussian:
+        def cpu_version(self, num_samps, std):
+            return signal.windows.gaussian(num_samps, std)
 
+        @pytest.mark.cpu
+        def test_gaussian_cpu(self, benchmark, num_samps, std):
+            benchmark(self.cpu_version, num_samps, std)
+
+        def test_gaussian_gpu(self, gpubenchmark, num_samps, std):
+            output = gpubenchmark(cusignal.windows.gaussian, num_samps, std)
+
+            key = self.cpu_version(num_samps, std)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="GeneralGaussian")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("p", [0.75, 1.5])
     @pytest.mark.parametrize("std", [3, 7])
-    def test_general_gaussian(self, num_samps, p, std):
-        cpu_window = signal.windows.general_gaussian(num_samps, p, std)
-        gpu_window = cp.asnumpy(
-            cusignal.windows.general_gaussian(num_samps, p, std)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestGeneralGaussian:
+        def cpu_version(self, num_samps, p, std):
+            return signal.windows.general_gaussian(num_samps, p, std)
 
+        @pytest.mark.cpu
+        def test_general_gaussian_cpu(self, benchmark, num_samps, p, std):
+            benchmark(self.cpu_version, num_samps, p, std)
+
+        def test_general_gaussian_gpu(self, gpubenchmark, num_samps, p, std):
+            output = gpubenchmark(
+                cusignal.windows.general_gaussian, num_samps, p, std
+            )
+
+            key = self.cpu_version(num_samps, p, std)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Chebwin")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("at", [50, 100])
-    def test_chebwin(self, num_samps, at):
-        cpu_window = signal.windows.chebwin(num_samps, at)
-        gpu_window = cp.asnumpy(cusignal.windows.chebwin(num_samps, at))
-        assert array_equal(cpu_window, gpu_window)
+    class TestChebwin:
+        def cpu_version(self, num_samps, at):
+            return signal.windows.chebwin(num_samps, at)
 
+        @pytest.mark.cpu
+        def test_chebwin_cpu(self, benchmark, num_samps, at):
+            benchmark(self.cpu_version, num_samps, at)
+
+        def test_chebwin_gpu(self, gpubenchmark, num_samps, at):
+            output = gpubenchmark(cusignal.windows.chebwin, num_samps, at)
+
+            key = self.cpu_version(num_samps, at)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Cosine")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_cosine(self, num_samps):
-        cpu_window = signal.windows.cosine(num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.cosine(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestCosine:
+        def cpu_version(self, num_samps):
+            return signal.windows.cosine(num_samps)
 
+        @pytest.mark.cpu
+        def test_cosine_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_cosine_gpu(self, gpubenchmark, num_samps):
+            output = gpubenchmark(cusignal.windows.cosine, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Exponential")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("tau", [1.5, 3.0])
-    def test_exponential(self, num_samps, tau):
-        cpu_window = signal.windows.exponential(num_samps, tau=tau)
-        gpu_window = cp.asnumpy(
-            cusignal.windows.exponential(num_samps, tau=tau)
-        )
-        assert array_equal(cpu_window, gpu_window)
+    class TestExponential:
+        def cpu_version(self, num_samps, tau):
+            return signal.windows.exponential(num_samps, tau=tau)
 
+        @pytest.mark.cpu
+        def test_exponential_cpu(self, benchmark, num_samps, tau):
+            benchmark(self.cpu_version, num_samps, tau)
+
+        def test_exponential_gpu(self, gpubenchmark, num_samps, tau):
+            output = gpubenchmark(
+                cusignal.windows.exponential, num_samps, tau=tau
+            )
+
+            key = self.cpu_version(num_samps, tau)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="GetWindow")
     @pytest.mark.parametrize("window", ["triang", "boxcar", "nuttall"])
     @pytest.mark.parametrize("num_samps", [2 ** 15])
-    def test_get_window(self, window, num_samps):
-        cpu_window = signal.windows.get_window(window, num_samps)
-        gpu_window = cp.asnumpy(cusignal.windows.get_window(window, num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestGetWindow:
+        def cpu_version(self, window, num_samps):
+            return signal.windows.get_window(window, num_samps)
+
+        @pytest.mark.cpu
+        def test_get_window_cpu(self, benchmark, window, num_samps):
+            benchmark(self.cpu_version, window, num_samps)
+
+        def test_get_window_gpu(self, gpubenchmark, window, num_samps):
+            output = gpubenchmark(
+                cusignal.windows.get_window, window, num_samps
+            )
+
+            key = self.cpu_version(window, num_samps)
+            assert array_equal(cp.asnumpy(output), key)

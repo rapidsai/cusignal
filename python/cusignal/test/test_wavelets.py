@@ -16,52 +16,118 @@ import cusignal
 import numpy as np
 import pytest
 
-from cusignal.test.utils import array_equal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+gpubenchmark = _check_rapids_pytest_benchmark()
+
 
 # Missing
 # qmf
 
 
 class TestWavelets:
+    @pytest.mark.benchmark(group="Morlet")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
-    def test_morlet(self, num_samps):
-        cpu_window = signal.morlet(num_samps)
-        gpu_window = cp.asnumpy(cusignal.morlet(num_samps))
-        assert array_equal(cpu_window, gpu_window)
+    class TestMorlet:
+        def cpu_version(self, num_samps):
+            return signal.morlet(num_samps)
 
+        @pytest.mark.cpu
+        def test_morlet_cpu(self, benchmark, num_samps):
+            benchmark(self.cpu_version, num_samps)
+
+        def test_morlet_gpu(self, gpubenchmark, num_samps):
+
+            output = gpubenchmark(cusignal.morlet, num_samps)
+
+            key = self.cpu_version(num_samps)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Ricker")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("a", [10, 1000])
-    def test_ricker(self, num_samps, a):
-        cpu_window = signal.ricker(num_samps, a)
-        gpu_window = cp.asnumpy(cusignal.ricker(num_samps, a))
-        assert array_equal(cpu_window, gpu_window)
+    class TestRicker:
+        def cpu_version(self, num_samps, a):
+            return signal.ricker(num_samps, a)
 
+        @pytest.mark.cpu
+        def test_ricker_cpu(self, benchmark, num_samps, a):
+            benchmark(self.cpu_version, num_samps, a)
+
+        def test_ricker_gpu(self, gpubenchmark, num_samps, a):
+
+            output = gpubenchmark(cusignal.ricker, num_samps, a)
+
+            key = self.cpu_version(num_samps, a)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="CWT")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
-    def test_cwt(self, rand_data_gen, num_samps, widths):
-        cpu_signal, gpu_signal = rand_data_gen(num_samps)
+    class TestCWT:
+        def cpu_version(self, cpu_sig, wavelet, widths):
+            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
 
-        cpu_cwt = signal.cwt(cpu_signal, signal.ricker, np.arange(1, widths))
-        gpu_cwt = cp.asnumpy(
-            cusignal.cwt(gpu_signal, cusignal.ricker, cp.arange(1, widths))
-        )
+        @pytest.mark.cpu
+        def test_cwt_cpu(self, rand_data_gen, benchmark, num_samps, widths):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            wavelet = signal.ricker
+            benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        assert array_equal(cpu_cwt, gpu_cwt)
+        def test_cwt_gpu(self, rand_data_gen, gpubenchmark, num_samps, widths):
 
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cu_wavelet = cusignal.ricker
+            output = gpubenchmark(
+                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
+            )
+
+            wavelet = signal.ricker
+            key = self.cpu_version(cpu_sig, wavelet, widths)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="CWTComplex")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
-    def test_cwt_complex(self, rand_complex_data_gen, num_samps, widths):
-        cpu_signal, gpu_signal = rand_complex_data_gen(num_samps)
+    class TestCWTComplex:
+        def cpu_version(self, cpu_sig, wavelet, widths):
+            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
 
-        cpu_cwt = signal.cwt(cpu_signal, signal.ricker, np.arange(1, widths))
-        gpu_cwt = cp.asnumpy(
-            cusignal.cwt(gpu_signal, cusignal.ricker, cp.arange(1, widths))
-        )
+        @pytest.mark.cpu
+        def test_cwt_complex_cpu(
+            self, rand_complex_data_gen, benchmark, num_samps, widths
+        ):
+            cpu_sig, _ = rand_complex_data_gen(num_samps)
+            wavelet = signal.ricker
+            benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        assert array_equal(cpu_cwt, gpu_cwt)
+        def test_cwt_complex_gpu(
+            self, rand_complex_data_gen, gpubenchmark, num_samps, widths
+        ):
 
-    # def test_qmf(self):
-    #     cpu_window = 0
-    #     gpu_window = 0
-    #     assert array_equal(cpu_window, gpu_window)
+            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
+            cu_wavelet = cusignal.ricker
+            output = gpubenchmark(
+                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
+            )
+
+            wavelet = signal.ricker
+            key = self.cpu_version(cpu_sig, wavelet, widths)
+            assert array_equal(cp.asnumpy(output), key)
+
+    # @pytest.mark.benchmark(group="Qmf")
+    # class TestQmf:
+    #     def cpu_version(self, cpu_sig):
+    #         return signal.qmf(cpu_sig)
+
+    #     @pytest.mark.cpu
+    #     def test_qmf_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_qmf_gpu(self, gpubenchmark):
+
+    #         output = gpubenchmark(cusignal.qmf, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
