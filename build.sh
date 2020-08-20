@@ -138,6 +138,7 @@ FOLDER="filtering"
 mkdir -p ${FAT}/${FOLDER}/
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_channelizer.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building IO kernels..."
 FOLDER="io"

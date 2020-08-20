@@ -40,6 +40,7 @@ from cupy import linalg
 
 import numpy as np
 
+from ._channelizer import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
@@ -682,6 +683,9 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
     Currently only supports simple channelizer where channel
     spacing is equivalent to the number of channels used
     """
+
+    _channelizer(x, h, n_chans, order)
+
     h = asarray(h)
     x = asarray(x)
 

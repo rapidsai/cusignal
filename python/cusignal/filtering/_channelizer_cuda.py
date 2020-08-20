@@ -31,9 +31,9 @@ class _cupy_channelizer_wrapper(object):
         self.block = block
         self.kernel = kernel
 
-    def __call__(self, n_taps, n_pts):
+    def __call__(self, n_chans, n_taps, n_pts):
 
-        kernel_args = (n_taps, n_pts)
+        kernel_args = (n_chans, n_taps, n_pts)
 
         self.kernel(self.grid, self.block, kernel_args)
 
