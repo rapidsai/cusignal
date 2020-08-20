@@ -49,14 +49,17 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-        "/filtering/_channelizer.fatbin", "_cupy_channelizer_" + str(np_type),
-    )
+            "/filtering/_channelizer.fatbin",
+            "_cupy_" + str(k_type) + "_" + str(np_type),
+        )
+
+    print("_cupy_" + str(k_type) + "_" + str(np_type))
 
 
-def _get_backend_kernel(dtype, grid, block, smem, k_type):
+def _get_backend_kernel(dtype, grid, block, k_type):
     kernel = _cupy_kernel_cache[(dtype.name, k_type)]
     if kernel:
-        return _cupy_channelizer_wrapper(grid, block, smem, kernel)
+        return _cupy_channelizer_wrapper(grid, block, kernel)
     else:
         raise ValueError(
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
@@ -75,17 +78,59 @@ def _channelizer(x, h, n_chans, order="C"):
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
-    k_type = "channelizer"
+    if n_chans <= 8 and n_taps <= 8:
 
-    threadsperblock = (8, 8)
-    blockspergrid = n_pts
+        k_type = "channelizer_8x8"
 
-    _populate_kernel_cache(x.dtype, k_type)
+        threadsperblock = (8, 8)
+        blockspergrid = n_pts
 
-    kernel = _get_backend_kernel(
-        x.dtype, blockspergrid, threadsperblock, k_type,
-    )
+        _populate_kernel_cache(x.dtype, k_type)
 
-    kernel(n_taps, n_pts)
+        kernel = _get_backend_kernel(
+            x.dtype, blockspergrid, threadsperblock, k_type,
+        )
+
+    elif n_chans <= 16 and n_taps <= 16:
+
+        k_type = "channelizer_16x16"
+
+        threadsperblock = (16, 16)
+        blockspergrid = n_pts
+
+        _populate_kernel_cache(x.dtype, k_type)
+
+        kernel = _get_backend_kernel(
+            x.dtype, blockspergrid, threadsperblock, k_type,
+        )
+
+    elif n_chans <= 32 and n_taps <= 32:
+
+        k_type = "channelizer_32x32"
+
+        threadsperblock = (32, 32)
+        blockspergrid = n_pts
+
+        _populate_kernel_cache(x.dtype, k_type)
+
+        kernel = _get_backend_kernel(
+            x.dtype, blockspergrid, threadsperblock, k_type,
+        )
+        kernel(n_chans, n_taps, n_pts)
+
+    else:
+
+        k_type = "channelizer"
+
+        threadsperblock = (8, 8)
+        blockspergrid = n_pts
+
+        _populate_kernel_cache(x.dtype, k_type)
+
+        kernel = _get_backend_kernel(
+            x.dtype, blockspergrid, threadsperblock, k_type,
+        )
+
+    kernel(n_chans, n_taps, n_pts)
 
     _print_atts(kernel)

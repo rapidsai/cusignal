@@ -112,7 +112,7 @@ __device__ void _cupy_channelizer_16x16( const int n_chans, const int n_taps, co
         printf( "Hello from 16x16\n" );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 256 )
     _cupy_channelizer_16x16_float32( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ float s_h[16][16];
@@ -121,7 +121,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_16x16<float>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 256 )
     _cupy_channelizer_16x16_float64( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ double s_h[16][16];
@@ -130,7 +130,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_16x16<double>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 256 )
     _cupy_channelizer_16x16_complex64( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ cuFloatComplex s_h[16][16];
@@ -139,7 +139,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_16x16<cuFloatComplex>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 256 )
     _cupy_channelizer_16x16_complex128( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ cuDoubleComplex s_h[16][16];
@@ -162,7 +162,7 @@ __device__ void _cupy_channelizer_32x32( const int n_chans, const int n_taps, co
         printf( "Hello from 32x32\n" );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_float32( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ float s_h[32][32];
@@ -171,7 +171,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_32x32<float>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_float64( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ double s_h[32][32];
@@ -180,7 +180,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_32x32<double>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_complex64( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ cuFloatComplex s_h[32][32];
@@ -189,7 +189,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_32x32<cuFloatComplex>( n_chans, n_taps, n_pts, s_h, s_reg );
 }
 
-extern "C" __global__ void __launch_bounds__( 64 )
+extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_complex128( const int n_chans, const int n_taps, const int n_pts ) {
 
     __shared__ cuDoubleComplex s_h[32][32];
