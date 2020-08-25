@@ -80,13 +80,13 @@ namespace cg = cooperative_groups;
 
 template<typename T, typename U>
 __device__ void _cupy_channelizer_8x8( const int n_chans,
-                                         const int n_taps,
-                                         const int n_pts,
-                                         const U *__restrict__ x,
-                                         const U *__restrict__ h,
-                                         T *__restrict__ y,
-                                         U s_h[8][8],
-                                         U s_reg[8][8] ) {
+                                       const int n_taps,
+                                       const int n_pts,
+                                       const U *__restrict__ x,
+                                       const U *__restrict__ h,
+                                       T *__restrict__ y,
+                                       U s_h[8][8],
+                                       U s_reg[8][8] ) {
 
     const auto block   = cg::this_thread_block( );
     const auto tile_32 = cg::tiled_partition<32>( block );
@@ -184,11 +184,11 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float32_complex64( const int n_chans,
-                                               const int n_taps,
-                                               const int n_pts,
-                                               const float *__restrict__ x,
-                                               const float *__restrict__ h,
-                                               cuFloatComplex *__restrict__ y ) {
+                                             const int n_taps,
+                                             const int n_pts,
+                                             const float *__restrict__ x,
+                                             const float *__restrict__ h,
+                                             cuFloatComplex *__restrict__ y ) {
 
     __shared__ float s_h[8][8];
     __shared__ float s_reg[8][8];
@@ -198,11 +198,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8__complex64_complex64( const int n_chans,
-                                                  const int n_taps,
-                                                  const int n_pts,
-                                                  const cuFloatComplex *__restrict__ x,
-                                                  const cuFloatComplex *__restrict__ h,
-                                                  cuFloatComplex *__restrict__ y ) {
+                                                const int n_taps,
+                                                const int n_pts,
+                                                const cuFloatComplex *__restrict__ x,
+                                                const cuFloatComplex *__restrict__ h,
+                                                cuFloatComplex *__restrict__ y ) {
 
     __shared__ cuFloatComplex s_h[8][8];
     __shared__ cuFloatComplex s_reg[8][8];
@@ -212,11 +212,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float64_complex128( const int n_chans,
-                                                const int n_taps,
-                                                const int n_pts,
-                                                const double *__restrict__ x,
-                                                const double *__restrict__ h,
-                                                cuDoubleComplex *__restrict__ y ) {
+                                              const int n_taps,
+                                              const int n_pts,
+                                              const double *__restrict__ x,
+                                              const double *__restrict__ h,
+                                              cuDoubleComplex *__restrict__ y ) {
 
     __shared__ double s_h[8][8];
     __shared__ double s_reg[8][8];
@@ -226,11 +226,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_complex128_complex128( const int n_chans,
-                                                   const int n_taps,
-                                                   const int n_pts,
-                                                   const cuDoubleComplex *__restrict__ x,
-                                                   const cuDoubleComplex *__restrict__ h,
-                                                   cuDoubleComplex *__restrict__ y ) {
+                                                 const int n_taps,
+                                                 const int n_pts,
+                                                 const cuDoubleComplex *__restrict__ x,
+                                                 const cuDoubleComplex *__restrict__ h,
+                                                 cuDoubleComplex *__restrict__ y ) {
 
     __shared__ cuDoubleComplex s_h[8][8];
     __shared__ cuDoubleComplex s_reg[8][8];

@@ -47,6 +47,8 @@ from ._sosfilt_cuda import _sosfilt
 
 from cupy import prof
 
+_cupy_fft_cache = {}
+
 
 def wiener(im, mysize=None, noise=None):
     """
@@ -694,17 +696,16 @@ def channelize_poly_gpu(x, h, n_chans):
     spacing is equivalent to the number of channels used
     """
 
-    with prof.time_range("start", 0):
-        dtype = cp.promote_types(x.dtype, h.dtype)
+    dtype = cp.promote_types(x.dtype, h.dtype)
 
-        x = asarray(x, dtype=dtype)
-        h = asarray(h, dtype=dtype)
+    x = asarray(x, dtype=dtype)
+    h = asarray(h, dtype=dtype)
 
-        # number of taps in each h_n filter
-        n_taps = int(len(h) / n_chans)
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
 
-        # number of outputs
-        n_pts = int(len(x) / n_chans)
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
 
     if x.dtype == cp.float32 or x.dtype == cp.complex64:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
@@ -714,8 +715,16 @@ def channelize_poly_gpu(x, h, n_chans):
     with prof.time_range("kernel", 0):
         _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
-    with prof.time_range("fft", 0):
-        y = cp.conj(fftpack.fft(y, overwrite_x=True)).T
+    with prof.time_range("plan", 1):
+        if (x.dtype) in _cupy_fft_cache:
+            plan = _cupy_fft_cache[(x.dtype)]
+        else:
+            plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(
+                y, axes=-1
+            )
+
+    with prof.time_range("fft", 2):
+        y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 
     return y
 
