@@ -11,13 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-
 from ..utils._caches import _cupy_kernel_cache
 from ..utils.helper_tools import _print_atts, _get_function
 
 
-_SUPPORTED_TYPES = ["float32", "float64", "complex64", "complex128"]
+_SUPPORTED_TYPES = [
+    "float32_complex64",
+    "complex64_complex64",
+    "float64_complex128",
+    "complex128_complex128",
+]
 
 
 class _cupy_channelizer_wrapper(object):
@@ -31,9 +34,9 @@ class _cupy_channelizer_wrapper(object):
         self.block = block
         self.kernel = kernel
 
-    def __call__(self, n_chans, n_taps, n_pts):
+    def __call__(self, n_chans, n_taps, n_pts, x, h, y):
 
-        kernel_args = (n_chans, n_taps, n_pts)
+        kernel_args = (n_chans, n_taps, n_pts, x, h, y)
 
         self.kernel(self.grid, self.block, kernel_args)
 
@@ -49,15 +52,14 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_channelizer.fatbin",
-            "_cupy_" + str(k_type) + "_" + str(np_type),
-        )
-
-    print("_cupy_" + str(k_type) + "_" + str(np_type))
+        "/filtering/_channelizer.fatbin",
+        "_cupy_" + str(k_type) + "_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(dtype, grid, block, k_type):
-    kernel = _cupy_kernel_cache[(dtype.name, k_type)]
+
+    kernel = _cupy_kernel_cache[(dtype, k_type)]
     if kernel:
         return _cupy_channelizer_wrapper(grid, block, kernel)
     else:
@@ -65,18 +67,12 @@ def _get_backend_kernel(dtype, grid, block, k_type):
             "Kernel {} not found in _cupy_kernel_cache".format(k_type)
         )
 
-    raise NotImplementedError(
-        "No kernel found for datatype {}".format(dtype.name)
-    )
+    raise NotImplementedError("No kernel found for datatype {}".format(dtype))
 
 
-def _channelizer(x, h, n_chans, order="C"):
+def _channelizer(x, h, y, n_chans, n_taps, n_pts):
 
-    # number of taps in each h_n filter
-    n_taps = int(len(h) / n_chans)
-
-    # number of outputs
-    n_pts = int(len(x) / n_chans)
+    np_type = str(x.dtype) + "_" + str(y.dtype)
 
     if n_chans <= 8 and n_taps <= 8:
 
@@ -85,10 +81,10 @@ def _channelizer(x, h, n_chans, order="C"):
         threadsperblock = (8, 8)
         blockspergrid = n_pts
 
-        _populate_kernel_cache(x.dtype, k_type)
+        _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            x.dtype, blockspergrid, threadsperblock, k_type,
+            np_type, blockspergrid, threadsperblock, k_type,
         )
 
     elif n_chans <= 16 and n_taps <= 16:
@@ -98,10 +94,10 @@ def _channelizer(x, h, n_chans, order="C"):
         threadsperblock = (16, 16)
         blockspergrid = n_pts
 
-        _populate_kernel_cache(x.dtype, k_type)
+        _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            x.dtype, blockspergrid, threadsperblock, k_type,
+            np_type, blockspergrid, threadsperblock, k_type,
         )
 
     elif n_chans <= 32 and n_taps <= 32:
@@ -111,12 +107,11 @@ def _channelizer(x, h, n_chans, order="C"):
         threadsperblock = (32, 32)
         blockspergrid = n_pts
 
-        _populate_kernel_cache(x.dtype, k_type)
+        _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            x.dtype, blockspergrid, threadsperblock, k_type,
+            np_type, blockspergrid, threadsperblock, k_type,
         )
-        kernel(n_chans, n_taps, n_pts)
 
     else:
 
@@ -125,12 +120,12 @@ def _channelizer(x, h, n_chans, order="C"):
         threadsperblock = (8, 8)
         blockspergrid = n_pts
 
-        _populate_kernel_cache(x.dtype, k_type)
+        _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            x.dtype, blockspergrid, threadsperblock, k_type,
+            np_type, blockspergrid, threadsperblock, k_type,
         )
 
-    kernel(n_chans, n_taps, n_pts)
+    kernel(n_chans, n_taps, n_pts, x, h, y)
 
     _print_atts(kernel)

@@ -40,10 +40,12 @@ from cupy import linalg
 
 import numpy as np
 
-from ._channelizer import _channelizer
+from ._channelizer_cuda import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
+
+from cupy import prof
 
 
 def wiener(im, mysize=None, noise=None):
@@ -607,7 +609,7 @@ def freq_shift(x, freq, fs):
     return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
 
 
-def channelize_poly(x, h, n_chans, order='C'):
+def channelize_poly(x, h, n_chans):
     """
     Polyphase channelize signal into n channels
 
@@ -640,24 +642,32 @@ def channelize_poly(x, h, n_chans, order='C'):
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
     # order F if input from MATLAB
-    hh = np.matrix(np.reshape(h, (n_chans, n_taps), order=order))
-    vv = np.zeros(n_chans)
-    yy = np.zeros((n_chans, n_pts), dtype=np.complex128)
-    reg = np.zeros((n_chans, n_taps))
+    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
+    vv = np.empty(n_chans, dtype=dtype)
+
+    if x.dtype == np.float32 or x.dtype == np.complex64:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex64)
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex128)
+
+    reg = np.zeros((n_chans, n_taps), dtype=dtype)
 
     # instead of n_chans here, this could be channel separation
     for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0:n_taps - 1]
-        reg[:, 0] = np.conj(np.flipud(x[nn:nn + n_chans]))
+        reg[:, 1:n_taps] = reg[:, 0 : n_taps - 1]
+        reg[:, 0] = np.conj(np.flipud(x[nn : nn + n_chans]))
         for mm in range(n_chans):
             vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+
         yy[:, i] = np.conj(np.fft.fft(vv))
 
     return yy
 
 
-def channelize_poly_gpu(x, h, n_chans, order='C'):
+def channelize_poly_gpu(x, h, n_chans):
     """
     Polyphase channelize signal into n channels
 
@@ -684,32 +694,30 @@ def channelize_poly_gpu(x, h, n_chans, order='C'):
     spacing is equivalent to the number of channels used
     """
 
-    _channelizer(x, h, n_chans, order)
+    with prof.time_range("start", 0):
+        dtype = cp.promote_types(x.dtype, h.dtype)
 
-    h = asarray(h)
-    x = asarray(x)
+        x = asarray(x, dtype=dtype)
+        h = asarray(h, dtype=dtype)
 
-    # number of taps in each h_n filter
-    n_taps = int(len(h) / n_chans)
+        # number of taps in each h_n filter
+        n_taps = int(len(h) / n_chans)
 
-    # number of outputs
-    n_pts = int(len(x) / n_chans)
+        # number of outputs
+        n_pts = int(len(x) / n_chans)
 
-    # order F if input from MATLAB
-    hh = cp.reshape(h, (n_chans, n_taps), order=order)
-    vv = cp.zeros(n_chans)
-    yy = cp.zeros((n_chans, n_pts), dtype=cp.complex128)
-    reg = cp.zeros((n_chans, n_taps))
+    if x.dtype == cp.float32 or x.dtype == cp.complex64:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
+    elif x.dtype == cp.float64 or x.dtype == cp.complex128:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
 
-    # instead of n_chans here, this could be channel separation
-    for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0:n_taps - 1]
-        reg[:, 0] = cp.conj(cp.flipud(x[nn:nn + n_chans]))
-        for mm in range(n_chans):
-            vv[mm] = cp.dot(reg[mm, :], cp.conj(hh[mm, :]))
-        yy[:, i] = cp.conj(fftpack.fft(vv))
+    with prof.time_range("kernel", 0):
+        _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
-    return yy
+    with prof.time_range("fft", 0):
+        y = cp.conj(fftpack.fft(y, overwrite_x=True)).T
+
+    return y
 
 
 def _prod(iterable):
