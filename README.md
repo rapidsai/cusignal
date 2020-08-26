@@ -166,7 +166,7 @@ See the [Get RAPIDS version picker](https://rapids.ai/start.html) for more OS an
 
 ### Conda - Jetson Nano, TK1, TX2, Xavier, Linux OS
 
-While there are many versions of Anaconda for AArch64 platforms, cuSignal has been tested and supports [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases). Conda4aarch64 is also described in the [Numba aarch64 installation instructions](http://numba.pydata.org/numba-doc/latest/user/installing.html#installing-on-linux-armv8-aarch64-platforms). Further, it's assumed that your Jetson device is running a current edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
+In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda environment from [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) to [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
 
 1. Clone the repository
 
@@ -178,7 +178,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
     git clone https://github.com/rapidsai/cusignal.git $CUSIGNAL_HOME
     ```
 
-2. Install [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) and create the cuSignal conda environment:
+2. Install [miniforge](https://github.com/conda-forge/miniforge) and create the cuSignal conda environment:
 
     ```bash
     cd $CUSIGNAL_HOME
@@ -287,7 +287,7 @@ While there are many versions of Anaconda for AArch64 platforms, cuSignal has be
 
 2. Create cuSignal conda environment
 
-    `conda create --name cusignal`
+    `conda create --name cusignal-dev`
 
 3. Activate conda environment
 
@@ -352,6 +352,7 @@ As with the standard pytest tool, the user can use the `-v` and `-k` flags for v
 Review the [CONTRIBUTING.md](https://github.com/rapidsai/cusignal/blob/main/CONTRIBUTING.md) file for information on how to contribute code and issues to the project.
 
 ## cuSignal Blogs and Talks
+* cuSignal - GPU Accelerating SciPy Signal with Numba and CuPy cuSignal - SciPy 2020 - [Recording](https://youtu.be/yYlX2bbdXDk)
 * Announcement Talk - GTC DC 2019 - [Recording](https://on-demand.gputechconf.com/gtcdc/2019/video/dc91165-cusignal-gpu-acceleration-of-scipy-signal/) | [Slides](https://on-demand.gputechconf.com/gtcdc/2019/pdf/dc91165-cusignal-gpu-acceleration-of-scipy-signal.pdf)
 * [GPU Accelerated Signal Processing with cuSignal](https://medium.com/rapids-ai/gpu-accelerated-signal-processing-with-cusignal-689062a6af8) - Adam Thompson - Medium
 * [cuSignal 0.13 - Entering the Big Leagues and Focused on Screamin' Streaming Performance](https://medium.com/rapids-ai/cusignal-0-13-entering-the-big-leagues-and-focused-on-screamin-streaming-performance-141908b10b3b) - Adam Thompson - Medium

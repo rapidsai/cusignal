@@ -44,18 +44,25 @@ logger "Activate conda env..."
 source activate gdf
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
-    "scipy>=1.4.0,<1.5.0" \
-    "numpy>=1.17.3" \
-    boost \
-    "numba>=0.49.0" \
-    "cupy>=7.2.0" \
-    pytest-benchmark
+    "rapids-build-env=$MINOR_VERSION.*" \
+    "rapids-notebook-env=$MINOR_VERSION."
+
+# https://docs.rapids.ai/maintainers/depmgmt/ 
+# conda remove -f rapids-build-env rapids-notebook-env
+# conda install "your-pkg=1.0.0"
 
 logger "Check versions..."
 python --version
 $CC --version
 $CXX --version
 conda list
+
+################################################################################
+# BUILD - Build cusignal
+################################################################################
+
+logger "Build cusignal..."
+$WORKSPACE/build.sh clean cusignal
 
 ################################################################################
 # TEST - Run GoogleTest and py.tests for cusignal
@@ -72,4 +79,10 @@ nvidia-smi
 logger "Python pytest for cusignal..."
 cd $WORKSPACE/python
 
-pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s
+pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
+
+conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
+conda install -y -c pytorch "pytorch>=1.4"
+
+${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
+python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log

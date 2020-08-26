@@ -33,12 +33,7 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def convolve(
-    in1,
-    in2,
-    mode="full",
-    method="auto",
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    autosync=True,
+    in1, in2, mode="full", method="auto",
 ):
     """
     Convolve two N-dimensional arrays.
@@ -77,17 +72,6 @@ def convolve(
         ``auto``
            Automatically chooses direct or Fourier method based on an estimate
            of which is faster (default).
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -121,7 +105,7 @@ def convolve(
 
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_win, ax_filt) = plt.subplots(3, 1, sharex=True)
-    >>> ax_orig.plot(sig)
+    >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('Original pulse')
     >>> ax_orig.margins(0, 0.1)
     >>> ax_win.plot(cp.asnumpy(win))
@@ -134,6 +118,7 @@ def convolve(
     >>> fig.show()
 
     """
+
     volume = cp.asarray(in1)
     kernel = cp.asarray(in2)
 
@@ -143,7 +128,8 @@ def convolve(
         raise ValueError("in1 and in2 should have the same dimensionality")
 
     if _inputs_swap_needed(mode, volume.shape, kernel.shape):
-        # Convolution is commutative; order doesn't have any effect on output
+        # Convolution is commutative
+        # order doesn't have any effect on output
         volume, kernel = kernel, volume
 
     if method == "auto":
@@ -166,7 +152,7 @@ def convolve(
             volume, kernel = kernel, volume
 
         return _convolution_cuda._convolve(
-            volume, kernel, True, swapped_inputs, mode, cp_stream, autosync
+            volume, kernel, True, swapped_inputs, mode
         )
 
     else:
@@ -222,13 +208,15 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     --------
     Autocorrelation of white noise is an impulse.
 
-    >>> from scipy import signal
-    >>> sig = np.random.randn(1000)
-    >>> autocorr = signal.fftconvolve(sig, sig[::-1], mode='full')
+    >>> import cusignal
+    >>> import cupy as cp
+    >>> import numpy as np
+    >>> sig = cp.random.randn(1000)
+    >>> autocorr = cusignal.fftconvolve(sig, sig[::-1], mode='full')
 
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_mag) = plt.subplots(2, 1)
-    >>> ax_orig.plot(sig)
+    >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('White noise')
     >>> ax_mag.plot(np.arange(-len(sig)+1,len(sig)), autocorr)
     >>> ax_mag.set_title('Autocorrelation')
@@ -242,18 +230,18 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
     >>> from scipy import misc
     >>> face = misc.face(gray=True)
-    >>> kernel = np.outer(signal.gaussian(70, 8), signal.gaussian(70, 8))
-    >>> blurred = signal.fftconvolve(face, kernel, mode='same')
+    >>> kernel = cp.outer(cusignal.gaussian(70, 8), cusignal.gaussian(70, 8))
+    >>> blurred = cusignal.fftconvolve(face, kernel, mode='same')
 
     >>> fig, (ax_orig, ax_kernel, ax_blurred) = plt.subplots(3, 1,
     ...                                                      figsize=(6, 15))
     >>> ax_orig.imshow(face, cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()
-    >>> ax_kernel.imshow(kernel, cmap='gray')
+    >>> ax_kernel.imshow(cp.asnumpy(kernel), cmap='gray')
     >>> ax_kernel.set_title('Gaussian kernel')
     >>> ax_kernel.set_axis_off()
-    >>> ax_blurred.imshow(blurred, cmap='gray')
+    >>> ax_blurred.imshow(cp.asnumpy(blurred), cmap='gray')
     >>> ax_blurred.set_title('Blurred')
     >>> ax_blurred.set_axis_off()
     >>> fig.show()
@@ -342,14 +330,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
 
 def convolve2d(
-    in1,
-    in2,
-    mode="full",
-    boundary="fill",
-    fillvalue=0,
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    autosync=True,
-    use_numba=False,
+    in1, in2, mode="full", boundary="fill", fillvalue=0,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -383,32 +364,20 @@ def convolve2d(
            symmetrical boundary conditions.
     fillvalue : scalar, optional
         Value to fill pad input arrays with. Default is 0.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
-    use_numba : bool, optional
-        Option to use Numba CUDA kernel or raw CuPy kernel. Raw CuPy
-        can yield performance gains over Numba. Default is False.
 
     Returns
     -------
     out : ndarray
         A 2-dimensional array containing a subset of the discrete linear
         convolution of `in1` with `in2`.
+
     Examples
     --------
     Compute the gradient of an image by 2D convolution with a complex Scharr
     operator.  (Horizontal operator is real, vertical is imaginary.)  Use
     symmetric boundary condition to avoid creating edges at the image
     boundaries.
+
     >>> import cusignal
     >>> import cupy as cp
     >>> from scipy import misc
@@ -420,7 +389,7 @@ def convolve2d(
                 mode='same')
     >>> import matplotlib.pyplot as plt
     >>> fig, (ax_orig, ax_mag, ax_ang) = plt.subplots(3, 1, figsize=(6, 15))
-    >>> ax_orig.imshow(ascent, cmap='gray')
+    >>> ax_orig.imshow(cp.asnumpy(ascent), cmap='gray')
     >>> ax_orig.set_title('Original')
     >>> ax_orig.set_axis_off()
     >>> ax_mag.imshow(cp.asnumpy(cp.absolute(grad)), cmap='gray')
@@ -430,7 +399,9 @@ def convolve2d(
     >>> ax_ang.set_title('Gradient orientation')
     >>> ax_ang.set_axis_off()
     >>> fig.show()
+
     """
+
     in1 = cp.asarray(in1)
     in2 = cp.asarray(in2)
 
@@ -440,10 +411,9 @@ def convolve2d(
     if _inputs_swap_needed(mode, in1.shape, in2.shape):
         in1, in2 = in2, in1
 
-    out = _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue, cp_stream, autosync, use_numba,
+    return _convolution_cuda._convolve2d(
+        in1, in2, 1, mode, boundary, fillvalue,
     )
-    return out
 
 
 def choose_conv_method(in1, in2, mode="full", measure=False):

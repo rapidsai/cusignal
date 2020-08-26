@@ -1,3 +1,48 @@
+
+# cuSignal 0.15.0 (26 Aug 2020)
+
+## New Features
+- PR #144 - Added AIR-T conda recipe
+- PR #119 - Added code of conduct
+- PR #122 - GPU accelerated SigMF Reader
+- PR #130 - Reorg tests and benchmarks to match #83 code refactor
+- PR #136 - Split reader and writer in IO packages and update docs
+- PR #146 - Add compatibility with Scipy 1.5.0; Default to SciPy > 1.5
+- PR #149 - Update Jetson conda to miniforge, Fix CoC, and Add SciPy Talk
+- PR #148 - Load fatbin at runtime
+- PR #69 - Multi-point Kalman Filter
+- PR #158 - Add debug flag for debugging
+
+## Improvements
+- PR #112 - Remove Numba kernels
+- PR #121 - Add docs build script
+- PR #126 - Install dependencies via meta package
+- PR #132 - Add IO API guide Jupyter notebook
+- PR #133 - Add IO module to cusignal docs
+- PR #160 - Update KF functionality
+- PR #170 - Combine tests and benchmarks
+- PR #173 - Hardcode SOS width
+- PR #181 - Added estimation notebook
+
+## Bug Fixes
+- PR #164 - Fix typos in the rest of the example code.
+- PR #162 - Fix typo in example plotting code
+- PR #116 - Fix stream usage on CuPy raw kernels
+- PR #124 - Remove cp_stream and autosync
+- PR #127 - Fix selected documentation formatting errors
+- PR #138 - Fix overflow issues in `upfirdn`
+- PR #139 - Fixes packaging of python package
+- PR #143 - Fix six package missing with Scipy 1.5
+- PR #152 - Fix error in detrend related to missing indexing support with cp.r_
+- PR #150 - Fix upfirdn output len for Scipy 1.5
+- PR #155 - Update CI local docker build
+- PR #153 - Fix issue with incorrect docker image being used in local build script
+- PR #157 - Add docs for Kalman Filter
+- PR #165 - Fix Kalman Filter version check
+- PR #174 - Fix bug in KF script
+- PR #175 - Update E2E Notebook for PyTorch 1.4, Fix SegFault
+- PR #179 - Fix CuPy 8.0dev CI build error
+
 # cuSignal 0.14 (03 Jun 2020)
 
 ## New Features
@@ -31,8 +76,10 @@
 - PR #95 - Add `.gitattributes` to remove notebooks from GitHub stats
 - PR #97 - Add pytest-benchmark to conda ymls and update conda env name
 - PR #98 - Update documentation to show pytest-benchmark usage and link to API docs
+- PR #101 - Add notebook testing to CI
 - PR #103 - Update notebooks to match new code structure
 - PR #110 - Update README for 0.14 release
+- PR #113 - Add git commit to conda package
 
 ## Bug Fixes
 - PR #44 - Fix issues in pytests 

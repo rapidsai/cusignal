@@ -16,8 +16,9 @@ from numba import cuda
 import numpy as np
 
 
-def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
-                     wc=True):
+def get_shared_array(
+    data, strides=None, order="C", stream=0, portable=False, wc=True
+):
     """Return populated shared memory between GPU and CPU.
 
     Parameters
@@ -36,10 +37,15 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
     dtype = data.dtype
 
     # Allocate mapped, shared memory in Numba
-    shared_mem_array = cuda.mapped_array(shape, dtype=dtype,
-                                         strides=strides,
-                                         order=order, stream=stream,
-                                         portable=portable, wc=wc)
+    shared_mem_array = cuda.mapped_array(
+        shape,
+        dtype=dtype,
+        strides=strides,
+        order=order,
+        stream=stream,
+        portable=portable,
+        wc=wc,
+    )
 
     # Load data into array space
     shared_mem_array[:] = data
@@ -47,9 +53,16 @@ def get_shared_array(data, strides=None, order='C', stream=0, portable=False,
     return shared_mem_array
 
 
-# Return shared memory array - similar to np.zeros
-def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
-                   portable=False, wc=True):
+# Return shared memory array - similar to np.empty
+def get_shared_mem(
+    shape,
+    dtype=np.float32,
+    strides=None,
+    order="C",
+    stream=0,
+    portable=False,
+    wc=True,
+):
     """Return shared memory between GPU and CPU. Similar to numpy.zeros
 
     Parameters
@@ -66,8 +79,58 @@ def get_shared_mem(shape, dtype=np.float32, strides=None, order='C', stream=0,
     wc : bool
     """
 
-    return cuda.mapped_array(shape, dtype=dtype, strides=strides, order=order,
-                             stream=stream, portable=portable, wc=wc)
+    return cuda.mapped_array(
+        shape,
+        dtype=dtype,
+        strides=strides,
+        order=order,
+        stream=stream,
+        portable=portable,
+        wc=wc,
+    )
+
+
+def get_pinned_array(data):
+    """Return populated pinned memory.
+
+    Parameters
+    ----------
+    data : cupy.ndarray or numpy.ndarray
+        The array to be copied to shared buffer
+    strides: int or None
+    order: char
+    """
+
+    mem = cp.cuda.alloc_pinned_memory(data.nbytes)
+    ret = np.frombuffer(mem, data.dtype, data.size).reshape(data.shape)
+    ret[...] = data
+
+    return ret
+
+
+def get_pinned_mem(shape, dtype):
+    """
+    Create a pinned memory allocation.
+
+    Parameters
+    ----------
+    size : int or tuple of ints
+        Output shape.
+    dtype : data-type
+        Output data type.
+
+    Returns
+    -------
+    out : ndarray
+        Pinned memory numpy array.
+
+    """
+
+    size = shape[0] * cp.dtype(dtype).itemsize
+    mem = cp.cuda.alloc_pinned_memory(size)
+    ret = np.frombuffer(mem, dtype, size)
+
+    return ret
 
 
 def _axis_slice(a, start=None, stop=None, step=None, axis=-1):
@@ -161,17 +224,20 @@ def _odd_ext(x, n, axis=-1):
     if n < 1:
         return x
     if n > x.shape[axis] - 1:
-        raise ValueError(("The extension length n (%d) is too big. " +
-                         "It must not exceed x.shape[axis]-1, which is %d.")
-                         % (n, x.shape[axis] - 1))
+        raise ValueError(
+            (
+                "The extension length n (%d) is too big. "
+                + "It must not exceed x.shape[axis]-1, which is %d."
+            )
+            % (n, x.shape[axis] - 1)
+        )
     left_end = _axis_slice(x, start=0, stop=1, axis=axis)
     left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
     right_end = _axis_slice(x, start=-1, axis=axis)
     right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
-    ext = cp.concatenate((2 * left_end - left_ext,
-                          x,
-                          2 * right_end - right_ext),
-                         axis=axis)
+    ext = cp.concatenate(
+        (2 * left_end - left_ext, x, 2 * right_end - right_ext), axis=axis
+    )
     return ext
 
 
@@ -215,15 +281,16 @@ def _even_ext(x, n, axis=-1):
     if n < 1:
         return x
     if n > x.shape[axis] - 1:
-        raise ValueError(("The extension length n (%d) is too big. " +
-                         "It must not exceed x.shape[axis]-1, which is %d.")
-                         % (n, x.shape[axis] - 1))
+        raise ValueError(
+            (
+                "The extension length n (%d) is too big. "
+                + "It must not exceed x.shape[axis]-1, which is %d."
+            )
+            % (n, x.shape[axis] - 1)
+        )
     left_ext = _axis_slice(x, start=n, stop=0, step=-1, axis=axis)
     right_ext = _axis_slice(x, start=-2, stop=-(n + 2), step=-1, axis=axis)
-    ext = cp.concatenate((left_ext,
-                          x,
-                          right_ext),
-                         axis=axis)
+    ext = cp.concatenate((left_ext, x, right_ext), axis=axis)
     return ext
 
 
@@ -277,10 +344,7 @@ def _const_ext(x, n, axis=-1):
     left_ext = ones * left_end
     right_end = _axis_slice(x, start=-1, axis=axis)
     right_ext = ones * right_end
-    ext = cp.concatenate((left_ext,
-                          x,
-                          right_ext),
-                         axis=axis)
+    ext = cp.concatenate((left_ext, x, right_ext), axis=axis)
     return ext
 
 
@@ -346,5 +410,6 @@ def _as_strided(x, shape=None, strides=None):
     shape = x.shape if shape is None else tuple(shape)
     strides = x.strides if strides is None else tuple(strides)
 
-    return cp.ndarray(shape=shape, dtype=x.dtype,
-                      memptr=x.data, strides=strides)
+    return cp.ndarray(
+        shape=shape, dtype=x.dtype, memptr=x.data, strides=strides
+    )

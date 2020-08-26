@@ -168,12 +168,7 @@ def lfiltic(b, a, y, x=None):
 
 
 def sosfilt(
-    sos,
-    x,
-    axis=-1,
-    zi=None,
-    cp_stream=cp.cuda.stream.Stream(null=True),
-    autosync=True,
+    sos, x, axis=-1, zi=None,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -202,17 +197,6 @@ def sosfilt(
         (i.e. all zeros) is assumed.
         Note that these initial conditions are *not* the same as the initial
         conditions given by `lfiltic` or `lfilter_zi`.
-    cp_stream : CuPy stream, optional
-        Option allows upfirdn to run in a non-default stream. The use
-        of multiple non-default streams allow multiple kernels to
-        run concurrently. Default is cp.cuda.stream.Stream(null=True)
-        or default stream.
-    autosync : bool, optional
-        Option to automatically synchronize cp_stream. This will block
-        the host code until kernel is finished on the GPU. Setting to
-        false will allow asynchronous operation but might required
-        manual synchronize later `cp_stream.synchronize()`.
-        Default is True.
 
     Returns
     -------
@@ -259,8 +243,8 @@ def sosfilt(
     >>> y = cusignal.sosfilt(sos, x)
     """
 
-    x = cp.asarray(x)
-    sos = cp.asarray(sos)
+    x = asarray(x)
+    sos = asarray(sos)
     if x.ndim == 0:
         raise ValueError("x must be at least 1D")
     sos, n_sections = _validate_sos(sos)
@@ -329,7 +313,7 @@ def sosfilt(
             "than the number of sections ({})".format(x.shape[1], sos.shape[0])
         )
 
-    _sosfilt(sos, x, zi, cp_stream, autosync)
+    _sosfilt(sos, x, zi)
     x.shape = x_shape
     x = cp.moveaxis(x, -1, axis)
     if return_zi:
@@ -338,6 +322,7 @@ def sosfilt(
         out = (x, zi)
     else:
         out = x
+
     return out
 
 
@@ -552,7 +537,6 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     >>> x = 3 + 2*cp.linspace(0, 1, npoints) + noise
     >>> (cusignal.detrend(x) - noise).max() < 0.01
     True
-
     """
     if type not in ["linear", "l", "constant", "c"]:
         raise ValueError("Trend type must be 'linear' or 'constant'.")
@@ -578,7 +562,7 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         rnk = len(dshape)
         if axis < 0:
             axis = axis + rnk
-        newdims = cp.r_[axis, 0:axis, axis + 1 : rnk]
+        newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
         newdata = reshape(
             transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )
