@@ -73,6 +73,7 @@ def _get_backend_kernel(dtype, grid, block, k_type):
 def _channelizer(x, h, y, n_chans, n_taps, n_pts):
 
     np_type = str(x.dtype) + "_" + str(y.dtype)
+    # print(n_pts)
 
     if n_chans <= 8 and n_taps <= 8:
 
@@ -92,7 +93,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer_16x16"
 
         threadsperblock = (16, 16)
-        blockspergrid = _get_numSM() * 32
+        blockspergrid = _get_numSM() * 8
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -105,7 +106,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer_32x32"
 
         threadsperblock = (32, 32)
-        blockspergrid = _get_numSM() * 32
+        blockspergrid = _get_numSM() * 2
 
         _populate_kernel_cache(np_type, k_type)
 
