@@ -95,6 +95,8 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
+    const auto stride { blockDim.x * gridDim.x };
+
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
@@ -115,69 +117,70 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
         }
     }
 
-    // Load data
-    if ( blockIdx.x >= n_taps ) {
-        if ( tx < n_chans && ty < n_taps ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConjf( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConj( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx];
-            }
-        }
-    } else {
-        if ( tx < n_chans && ty <= blockIdx.x ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConjf( x[ty * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConj( x[ty * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = x[ty * n_chans + tx];
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+        // Load data
+        if ( bid >= n_taps ) {
+            if ( tx < n_chans && ty < n_taps ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                }
             }
         } else {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+            if ( tx < n_chans && ty <= bid ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                }
             } else {
-                s_reg[tx][ty] = 0.0;
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                } else {
+                    s_reg[tx][ty] = 0.0;
+                }
             }
         }
-    }
 
-    __syncthreads( );
+        __syncthreads( );
 
-    U temp {};
-    U vv {};
+        U temp {};
+        U vv {};
 
-    if ( ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_8, temp.x, cg::plus<float>( ) );
-            vv.y = cg::reduce( tile_8, temp.y, cg::plus<float>( ) );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_8, temp.x, cg::plus<double>( ) );
-            vv.y = cg::reduce( tile_8, temp.y, cg::plus<double>( ) );
-        } else {
-            temp = s_h[ty][tx] * s_reg[ty][tx];
-            vv   = cg::reduce( tile_8, temp, cg::plus<U>( ) );
+        if ( ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_8, temp.x, cg::plus<float>( ) );
+                vv.y = cg::reduce( tile_8, temp.y, cg::plus<float>( ) );
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_8, temp.x, cg::plus<double>( ) );
+                vv.y = cg::reduce( tile_8, temp.y, cg::plus<double>( ) );
+            } else {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv   = cg::reduce( tile_8, temp, cg::plus<U>( ) );
+            }
         }
-    }
 
-    if ( tx == 0 && ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, float> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-        } else if constexpr ( std::is_same_v<U, double> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+        if ( tx == 0 && ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                y[blockIdx.x * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                y[blockIdx.x * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, float> ) {
+                y[blockIdx.x * n_chans + ty] = make_cuFloatComplex( vv, 0 );
+            } else if constexpr ( std::is_same_v<U, double> ) {
+                y[blockIdx.x * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            }
         }
     }
 }
@@ -259,6 +262,8 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
+    const auto stride { blockDim.x * gridDim.x };
+
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
@@ -279,69 +284,70 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
         }
     }
 
-    // Load data
-    if ( blockIdx.x >= n_taps ) {
-        if ( tx < n_chans && ty < n_taps ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConjf( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConj( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx];
-            }
-        }
-    } else {
-        if ( tx < n_chans && ty <= blockIdx.x ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConjf( x[ty * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConj( x[ty * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = x[ty * n_chans + tx];
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+        // Load data
+        if ( bid >= n_taps ) {
+            if ( tx < n_chans && ty < n_taps ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                }
             }
         } else {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+            if ( tx < n_chans && ty <= bid ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                }
             } else {
-                s_reg[tx][ty] = 0.0;
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                } else {
+                    s_reg[tx][ty] = 0.0;
+                }
             }
         }
-    }
 
-    __syncthreads( );
+        __syncthreads( );
 
-    U temp {};
-    U vv {};
+        U temp {};
+        U vv {};
 
-    if ( ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_16, temp.x, cg::plus<float>( ) );
-            vv.y = cg::reduce( tile_16, temp.y, cg::plus<float>( ) );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_16, temp.x, cg::plus<double>( ) );
-            vv.y = cg::reduce( tile_16, temp.y, cg::plus<double>( ) );
-        } else {
-            temp = s_h[ty][tx] * s_reg[ty][tx];
-            vv   = cg::reduce( tile_16, temp, cg::plus<U>( ) );
+        if ( ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_16, temp.x, cg::plus<float>( ) );
+                vv.y = cg::reduce( tile_16, temp.y, cg::plus<float>( ) );
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_16, temp.x, cg::plus<double>( ) );
+                vv.y = cg::reduce( tile_16, temp.y, cg::plus<double>( ) );
+            } else {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv   = cg::reduce( tile_16, temp, cg::plus<U>( ) );
+            }
         }
-    }
 
-    if ( tx == 0 && ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, float> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-        } else if constexpr ( std::is_same_v<U, double> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+        if ( tx == 0 && ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                y[bid * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                y[bid * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, float> ) {
+                y[bid * n_chans + ty] = make_cuFloatComplex( vv, 0 );
+            } else if constexpr ( std::is_same_v<U, double> ) {
+                y[bid * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            }
         }
     }
 }
@@ -422,6 +428,8 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
+    const auto stride { blockDim.x * gridDim.x };
+
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
@@ -442,69 +450,70 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
         }
     }
 
-    // Load data
-    if ( blockIdx.x >= n_taps ) {
-        if ( tx < n_chans && ty < n_taps ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConjf( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    cuConj( x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                    x[( ( blockIdx.x - n_taps + 1 ) + ty ) * n_chans + tx];
-            }
-        }
-    } else {
-        if ( tx < n_chans && ty <= blockIdx.x ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConjf( x[ty * n_chans + tx] );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = cuConj( x[ty * n_chans + tx] );
-            } else {
-                s_reg[( n_chans - 1 ) - tx][blockIdx.x - ty] = x[ty * n_chans + tx];
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+        // Load data
+        if ( bid >= n_taps ) {
+            if ( tx < n_chans && ty < n_taps ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
+                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                }
             }
         } else {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+            if ( tx < n_chans && ty <= bid ) {
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                } else {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                }
             } else {
-                s_reg[tx][ty] = 0.0;
+                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
+                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                } else {
+                    s_reg[tx][ty] = 0.0;
+                }
             }
         }
-    }
 
-    __syncthreads( );
+        __syncthreads( );
 
-    U temp {};
-    U vv {};
+        U temp {};
+        U vv {};
 
-    if ( ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_32, temp.x, cg::plus<float>( ) );
-            vv.y = cg::reduce( tile_32, temp.y, cg::plus<float>( ) );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-            vv.x = cg::reduce( tile_32, temp.x, cg::plus<double>( ) );
-            vv.y = cg::reduce( tile_32, temp.y, cg::plus<double>( ) );
-        } else {
-            temp = s_h[ty][tx] * s_reg[ty][tx];
-            vv   = cg::reduce( tile_32, temp, cg::plus<U>( ) );
+        if ( ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_32, temp.x, cg::plus<float>( ) );
+                vv.y = cg::reduce( tile_32, temp.y, cg::plus<float>( ) );
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
+                vv.x = cg::reduce( tile_32, temp.x, cg::plus<double>( ) );
+                vv.y = cg::reduce( tile_32, temp.y, cg::plus<double>( ) );
+            } else {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv   = cg::reduce( tile_32, temp, cg::plus<U>( ) );
+            }
         }
-    }
 
-    if ( tx == 0 && ty < n_chans ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            y[blockIdx.x * n_chans + ty] = vv;
-        } else if constexpr ( std::is_same_v<U, float> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-        } else if constexpr ( std::is_same_v<U, double> ) {
-            y[blockIdx.x * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+        if ( tx == 0 && ty < n_chans ) {
+            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                y[bid * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
+                y[bid * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, float> ) {
+                y[bid * n_chans + ty] = make_cuFloatComplex( vv, 0 );
+            } else if constexpr ( std::is_same_v<U, double> ) {
+                y[bid * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            }
         }
     }
 }

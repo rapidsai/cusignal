@@ -12,7 +12,7 @@
 # limitations under the License.
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.helper_tools import _print_atts, _get_function
+from ..utils.helper_tools import _print_atts, _get_function, _get_numSM
 
 
 _SUPPORTED_TYPES = [
@@ -79,7 +79,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer_8x8"
 
         threadsperblock = (8, 8)
-        blockspergrid = n_pts
+        blockspergrid = _get_numSM() * 32
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -92,7 +92,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer_16x16"
 
         threadsperblock = (16, 16)
-        blockspergrid = n_pts
+        blockspergrid = _get_numSM() * 32
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -105,7 +105,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer_32x32"
 
         threadsperblock = (32, 32)
-        blockspergrid = n_pts
+        blockspergrid = _get_numSM() * 32
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -118,7 +118,7 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         k_type = "channelizer"
 
         threadsperblock = (8, 8)
-        blockspergrid = n_pts
+        blockspergrid = _get_numSM() * 32
 
         _populate_kernel_cache(np_type, k_type)
 
