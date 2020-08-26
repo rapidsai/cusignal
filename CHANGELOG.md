@@ -8,7 +8,7 @@
 ## Bug Fixes
 
 
-# cuSignal 0.15.0 (Date TBD)
+# cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
 - PR #144 - Added AIR-T conda recipe
