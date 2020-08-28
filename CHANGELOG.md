@@ -4,6 +4,7 @@
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 
 ## Improvements
+- PR #196 - Update README for cuSignal 0.15
 
 ## Bug Fixes
 
