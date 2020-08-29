@@ -4,6 +4,7 @@
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 
 ## Improvements
+- PR #200 - Add if constexpr to binary reader
 
 ## Bug Fixes
 
