@@ -110,7 +110,7 @@ fi
 # Build fatbins
 SRC="cpp/src"
 FAT="python/cusignal"
-FLAGS="-std=c++11"
+FLAGS="-std=c++17"
 
 if hasArg -p; then
     FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
@@ -126,7 +126,8 @@ GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
 --generate-code arch=compute_62,code=sm_62 \
 --generate-code arch=compute_70,code=sm_70 \
 --generate-code arch=compute_72,code=sm_72 \
---generate-code arch=compute_75,code=[sm_75,compute_75]"
+--generate-code arch=compute_75,code=sm_75 \
+--generate-code arch=compute_80,code=[sm_80,compute_80]"
 
 echo "Building Convolution kernels..."
 FOLDER="convolution"
