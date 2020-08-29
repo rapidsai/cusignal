@@ -48,9 +48,6 @@ This code executes on 2x Xeon E5-2600 in 2.36 sec.
 import cupy as cp
 import cusignal
 
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
-
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -70,9 +67,6 @@ This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Sign
 import cupy as cp
 import numpy as np
 import cusignal
-
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
 
 start = 0
 stop = 10
@@ -100,9 +94,6 @@ import cupy as cp
 import numpy as np
 import cusignal
 
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
-
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -121,43 +112,43 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Documentation
 The complete cuSignal API documentation including a complete list of functionality and examples can be found for both the Stable and Nightly (Experimental) releases.
 
-[cuSignal 0.14 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.15 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
+[cuSignal 0.15 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.16 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
 ## Installation
 
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
-For `cusignal version == 0.14`:
+For `cusignal version == 0.15`:
 
 ```
-# For CUDA 10.0
-conda install -c rapidsai -c nvidia -c conda-forge \
-    -c defaults cusignal=0.14 python=3.6 cudatoolkit=10.0
-
-# or, for CUDA 10.1.2
+For CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.14 python=3.6 cudatoolkit=10.1
+    cusignal=0.15 python=3.7 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.14 python=3.6 cudatoolkit=10.2
+    cusignal=0.15 python=3.7 cudatoolkit=10.2
+
+# or, for CUDA 11.0
+conda install -c rapidsai -c nvidia -c numba -c conda-forge \
+    cusignal=0.15 python=3.7 cudatoolkit=11.0
 ```
 
-For the nightly verison of `cusignal`, currently 0.15a:
+For the nightly verison of `cusignal`, currently 0.16a:
 
 ```
-# For CUDA 10.0
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    -c defaults cusignal python=3.6 cudatoolkit=10.0
-
-# or, for CUDA 10.1.2
+# For CUDA 10.1.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.6 cudatoolkit=10.1
+    cusignal python=3.7 cudatoolkit=10.1.2
 
 # or, for CUDA 10.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.6 cudatoolkit=10.2
+    cusignal python=3.7 cudatoolkit=10.2
+
+# or, for CUDA 11.0
+conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
+    cusignal python=3.7 cudatoolkit=11.0
 ```
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
@@ -318,20 +309,20 @@ In the cuSignal top level directory:
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-For `cusignal version == 0.14`:
+For `cusignal version == 0.15`:
 
 ```
-# For CUDA 10.0
-docker pull rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+# For CUDA 11.0
+docker pull rapidsai/rapidsai:cuda11.0-runtime-ubuntu18.04
 docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+    rapidsai/rapidsai:cuda11.0-runtime-ubuntu18.04
 ```
 
 For the nightly version of `cusignal`
 ```
-docker pull rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+docker pull rapidsai/rapidsai-nightly:cuda11.0-runtime-ubuntu18.04
 docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+    rapidsai/rapidsai-nightly:cuda11.0-runtime-ubuntu18.04
 ```
 
 Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions.

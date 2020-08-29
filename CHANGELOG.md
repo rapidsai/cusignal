@@ -5,6 +5,7 @@
 - PR #195 - Add explicit FIR filter functionality
 
 ## Improvements
+- PR #196 - Update README for cuSignal 0.15
 
 ## Bug Fixes
 
