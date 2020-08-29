@@ -1,6 +1,7 @@
 # cuSignal 0.16.0 (Date TBD)
 
 ## New Features
+- PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 - PR #197 - Added Ampere support
 
 ## Improvements
@@ -8,7 +9,7 @@
 ## Bug Fixes
 
 
-# cuSignal 0.15.0 (Date TBD)
+# cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
 - PR #144 - Added AIR-T conda recipe
