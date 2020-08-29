@@ -72,8 +72,8 @@ def _get_backend_kernel(dtype, grid, block, k_type):
 
 def _channelizer(x, h, y, n_chans, n_taps, n_pts):
 
+    #  Blocks per grid sized for 2048 threads per SM
     np_type = str(x.dtype) + "_" + str(y.dtype)
-    # print(n_pts)
 
     if n_chans <= 8 and n_taps <= 8:
 
