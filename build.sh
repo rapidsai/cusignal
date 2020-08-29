@@ -110,7 +110,7 @@ fi
 # Build fatbins
 SRC="cpp/src"
 FAT="python/cusignal"
-FLAGS="-std=c++11"
+FLAGS="-std=c++17"
 
 if hasArg -p; then
     FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"

@@ -86,54 +86,27 @@ _cupy_unpack( const size_t N, const bool little, unsigned char *__restrict__ inp
         } else {
             T data = reinterpret_cast<T *>( input )[tid];
 
-            if ( std::is_same<T, char>::value ) {
+            if constexpr ( std::is_same<T, char>::value || std::is_same<T, unsigned char>::value ) {
                 output[tid] = data;
-            } else if ( std::is_same<T, short>::value ) {
-                T temp      = swap_int16( data );
-                output[tid] = temp;
-            } else if ( std::is_same<T, unsigned short>::value ) {
-                T temp      = swap_uint16( data );
-                output[tid] = temp;
-            } else if ( std::is_same<T, int>::value ) {
-                T temp      = swap_int32( data );
-                output[tid] = temp;
-            } else if ( std::is_same<T, unsigned int>::value ) {
-                T temp      = swap_uint32( data );
-                output[tid] = temp;
-            } else if ( std::is_same<T, float>::value ) {
-                T temp      = swap_float( data );
-                output[tid] = temp;
-            } else if ( std::is_same<T, double>::value ) {
-                T temp      = swap_double( data );
-                output[tid] = temp;
-            }
-        }
-    }
-}
-
-template<typename T>
-__device__ void
-_cupy_unpack_complex( const size_t N, const bool little, unsigned char *__restrict__ input, T *__restrict__ output ) {
-
-    const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
-    const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
-
-    for ( int tid = tx; tid < N; tid += stride ) {
-
-        if ( little ) {
-            output[tid] = reinterpret_cast<T *>( input )[tid];
-        } else {
-            T data = reinterpret_cast<T *>( input )[tid];
-
-            if ( std::is_same<T, thrust::complex<float>>::value ) {
+            } else if constexpr ( std::is_same<T, short>::value ) {
+                output[tid] = swap_int16( data );
+            } else if constexpr ( std::is_same<T, unsigned short>::value ) {
+                output[tid] = swap_uint16( data );
+            } else if constexpr ( std::is_same<T, int>::value ) {
+                output[tid] = swap_int32( data );
+            } else if constexpr ( std::is_same<T, unsigned int>::value ) {
+                output[tid] = swap_uint32( data );
+            } else if constexpr ( std::is_same<T, float>::value ) {
+                output[tid] = swap_float( data );
+            } else if constexpr ( std::is_same<T, double>::value ) {
+                output[tid] = swap_double( data );
+            } else if constexpr ( std::is_same<T, thrust::complex<float>>::value ) {
                 float real = swap_float( data.real( ) );
                 float imag = swap_float( data.imag( ) );
-
                 output[tid] = thrust::complex<float>( real, imag );
-            } else if ( std::is_same<T, thrust::complex<double>>::value ) {
+            } else if constexpr ( std::is_same<T, thrust::complex<double>>::value ) {
                 double real = swap_double( data.real( ) );
                 double imag = swap_double( data.imag( ) );
-
                 output[tid] = thrust::complex<double>( real, imag );
             }
         }
@@ -201,7 +174,7 @@ extern "C" __global__ void __launch_bounds__( 512 )
                             const bool   little,
                             unsigned char *__restrict__ input,
                             thrust::complex<float> *__restrict__ output ) {
-    _cupy_unpack_complex<thrust::complex<float>>( N, little, input, output );
+    _cupy_unpack<thrust::complex<float>>( N, little, input, output );
 }
 
 extern "C" __global__ void __launch_bounds__( 512 )
@@ -209,5 +182,5 @@ extern "C" __global__ void __launch_bounds__( 512 )
                              const bool   little,
                              unsigned char *__restrict__ input,
                              thrust::complex<double> *__restrict__ output ) {
-    _cupy_unpack_complex<thrust::complex<double>>( N, little, input, output );
+    _cupy_unpack<thrust::complex<double>>( N, little, input, output );
 }
