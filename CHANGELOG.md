@@ -1,6 +1,7 @@
 # cuSignal 0.16.0 (Date TBD)
 
 ## New Features
+- PR #197 - Added Ampere support
 
 ## Improvements
 
