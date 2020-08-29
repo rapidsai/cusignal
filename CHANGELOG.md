@@ -2,6 +2,7 @@
 
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
+- PR #195 - Add explicit FIR filter functionality
 
 ## Improvements
 
