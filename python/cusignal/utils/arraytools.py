@@ -133,6 +133,37 @@ def get_pinned_mem(shape, dtype):
     return ret
 
 
+def from_pycuda(pycuda_arr, device=0):
+    """ Read in gpuarray from PyCUDA and output CuPy array
+
+    Parameters
+    ----------
+    pycuda_arr : PyCUDA gpuarray
+    device : int
+        GPU Device ID
+
+    Returns
+    -------
+    cupy_arr : CuPy ndarray
+
+    """
+
+    cupy_arr = cp.ndarray(
+        pycuda_arr.shape,
+        cp.dtype(pycuda_arr.dtype),
+        cp.cuda.MemoryPointer(
+            cp.cuda.UnownedMemory(
+                pycuda_arr.ptr,
+                pycuda_arr.size,
+                pycuda_arr,
+                device
+            ), 0),
+        strides=pycuda_arr.strides
+    )
+
+    return cupy_arr
+
+
 def _axis_slice(a, start=None, stop=None, step=None, axis=-1):
     """Take a slice along axis 'axis' from 'a'.
 
