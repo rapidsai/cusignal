@@ -82,24 +82,22 @@ namespace cg = cooperative_groups;
 
 // T is input type
 // U is output type
-template<typename T, typename U, int M=8, int WARPSIZE=32>
+template<typename T, typename U, int M = 8, int WARPSIZE = 32>
 __device__ void _cupy_channelizer_8x8( const int n_chans,
-                                         const int n_taps,
-                                         const int n_pts,
-                                         const T *__restrict__ x,
-                                         const T *__restrict__ h,
-                                         U *__restrict__ y,
-                                         T s_h[M][M],
-                                         T s_reg[M][M] ) {
+                                       const int n_taps,
+                                       const int n_pts,
+                                       const T *__restrict__ x,
+                                       const T *__restrict__ h,
+                                       U *__restrict__ y,
+                                       T s_h[M][M],
+                                       T s_reg[M][M] ) {
 
     const auto block   = cg::this_thread_block( );
     const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
-    const auto tile = cg::tiled_partition<M>( tile_32 );
+    const auto tile    = cg::tiled_partition<M>( tile_32 );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
-
-    const auto stride { blockDim.x * gridDim.x };
 
     // Initialize shared memory
     // Evaluate type at compile-time
@@ -117,7 +115,7 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
@@ -177,11 +175,11 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float32_complex64( const int n_chans,
-                                               const int n_taps,
-                                               const int n_pts,
-                                               const float *__restrict__ x,
-                                               const float *__restrict__ h,
-                                               thrust::complex<float> *__restrict__ y ) {
+                                             const int n_taps,
+                                             const int n_pts,
+                                             const float *__restrict__ x,
+                                             const float *__restrict__ h,
+                                             thrust::complex<float> *__restrict__ y ) {
 
     __shared__ float s_h[8][8];
     __shared__ float s_reg[8][8];
@@ -191,11 +189,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_complex64_complex64( const int n_chans,
-                                                 const int n_taps,
-                                                 const int n_pts,
-                                                 const thrust::complex<float> *__restrict__ x,
-                                                 const thrust::complex<float> *__restrict__ h,
-                                                 thrust::complex<float> *__restrict__ y ) {
+                                               const int n_taps,
+                                               const int n_pts,
+                                               const thrust::complex<float> *__restrict__ x,
+                                               const thrust::complex<float> *__restrict__ h,
+                                               thrust::complex<float> *__restrict__ y ) {
 
     __shared__ thrust::complex<float> s_h[8][8];
     __shared__ thrust::complex<float> s_reg[8][8];
@@ -206,11 +204,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float64_complex128( const int n_chans,
-                                                const int n_taps,
-                                                const int n_pts,
-                                                const double *__restrict__ x,
-                                                const double *__restrict__ h,
-                                                thrust::complex<double> *__restrict__ y ) {
+                                              const int n_taps,
+                                              const int n_pts,
+                                              const double *__restrict__ x,
+                                              const double *__restrict__ h,
+                                              thrust::complex<double> *__restrict__ y ) {
 
     __shared__ double s_h[8][8];
     __shared__ double s_reg[8][8];
@@ -220,11 +218,11 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_complex128_complex128( const int n_chans,
-                                                   const int n_taps,
-                                                   const int n_pts,
-                                                   const thrust::complex<double> *__restrict__ x,
-                                                   const thrust::complex<double> *__restrict__ h,
-                                                   thrust::complex<double> *__restrict__ y ) {
+                                                 const int n_taps,
+                                                 const int n_pts,
+                                                 const thrust::complex<double> *__restrict__ x,
+                                                 const thrust::complex<double> *__restrict__ h,
+                                                 thrust::complex<double> *__restrict__ y ) {
 
     __shared__ thrust::complex<double> s_h[8][8];
     __shared__ thrust::complex<double> s_reg[8][8];
@@ -239,7 +237,7 @@ extern "C" __global__ void __launch_bounds__( 64 )
 
 // T is input type
 // U is output type
-template<typename T, typename U, int M=16, int WARPSIZE=32>
+template<typename T, typename U, int M = 16, int WARPSIZE = 32>
 __device__ void _cupy_channelizer_16x16( const int n_chans,
                                          const int n_taps,
                                          const int n_pts,
@@ -251,12 +249,10 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
 
     const auto block   = cg::this_thread_block( );
     const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
-    const auto tile = cg::tiled_partition<M>( tile_32 );
+    const auto tile    = cg::tiled_partition<M>( tile_32 );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
-
-    const auto stride { blockDim.x * gridDim.x };
 
     // Initialize shared memory
     // Evaluate type at compile-time
@@ -274,7 +270,7 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
@@ -396,7 +392,7 @@ extern "C" __global__ void __launch_bounds__( 256 )
 
 // T is input type
 // U is output type
-template<typename T, typename U, int M=32, int WARPSIZE=32>
+template<typename T, typename U, int M = 32, int WARPSIZE = 32>
 __device__ void _cupy_channelizer_32x32( const int n_chans,
                                          const int n_taps,
                                          const int n_pts,
@@ -406,13 +402,11 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
                                          T s_h[M][M],
                                          T s_reg[M][M] ) {
 
-    const auto block   = cg::this_thread_block( );
-    const auto tile = cg::tiled_partition<WARPSIZE>( block );
+    const auto block = cg::this_thread_block( );
+    const auto tile  = cg::tiled_partition<WARPSIZE>( block );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
-
-    const auto stride { blockDim.x * gridDim.x };
 
     // Initialize shared memory
     // Evaluate type at compile-time
@@ -430,7 +424,7 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += stride ) {
+    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
