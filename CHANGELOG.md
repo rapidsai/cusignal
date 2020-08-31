@@ -1,5 +1,16 @@
+# cuSignal 0.16.0 (Date TBD)
 
-# cuSignal 0.15.0 (Date TBD)
+## New Features
+- PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
+- PR #195 - Add explicit FIR filter functionality
+
+## Improvements
+- PR #196 - Update README for cuSignal 0.15
+
+## Bug Fixes
+
+
+# cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
 - PR #69 - Multi-point Kalman Filter

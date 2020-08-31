@@ -19,6 +19,7 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
+    firfilter,
     lfiltic,
     sosfilt,
     hilbert,

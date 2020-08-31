@@ -44,6 +44,7 @@ from ._channelizer_cuda import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
+from ..convolution.convolve import fftconvolve
 
 from cupy import prof
 
@@ -102,6 +103,58 @@ def wiener(im, mysize=None, noise=None):
     out = where(lVar < noise, lMean, res)
 
     return out
+
+
+def firfilter(b, x, axis=None, zi=None):
+    """
+    Filter data along one-dimension with an FIR filter.
+
+    Filter a data sequence, `x`, using a digital filter. This works for many
+    fundamental data types (including Object type). Please note, cuSignal
+    doesn't support IIR filters presently, and this implementation is optimized
+    for large filtering operations (and inherently depends on fftconvolve)
+
+    Parameters
+    ----------
+    b : array_like
+        The numerator coefficient vector in a 1-D sequence.
+    x : array_like
+        An N-dimensional input array.
+    axis : int, optional
+        The axis of the input data array along which to apply the
+        linear filter. The filter is applied to each subarray along
+        this axis.  Default is -1.
+    zi : array_like, optional
+        Initial conditions for the filter delays.  It is a vector
+        (or array of vectors for an N-dimensional input) of length
+        ``max(len(a), len(b)) - 1``.  If `zi` is None or is not given then
+        initial rest is assumed.  See `lfiltic` for more information.
+
+    Returns
+    -------
+    y : array
+        The output of the digital filter.
+    zf : array, optional
+        If `zi` is None, this is not returned, otherwise, `zf` holds the
+        final filter delay values.
+
+    Examples
+    -------
+    >>> from scipy import signal
+    >>> import cupy as cp
+    >>> import cusignal
+    >>> [b, a] = signal.butter(3, 0.5)
+    >>> b = cp.asarray(b)
+    >>> x = cp.random.randn(2**8)
+    >>> y = cusignal.firfilter(b, x)
+    """
+
+    if zi is not None:
+        raise NotImplementedError('Initial conditions are not currently \
+            supported')
+
+    y = fftconvolve(b, x, mode='full', axes=axis)
+    return y[:len(x)]
 
 
 def lfiltic(b, a, y, x=None):

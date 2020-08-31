@@ -27,6 +27,7 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
+    firfilter,
     lfiltic,
     sosfilt,
     hilbert,
@@ -106,6 +107,7 @@ from cusignal.utils.arraytools import (
     get_shared_mem,
     get_pinned_array,
     get_pinned_mem,
+    from_pycuda,
 )
 from cusignal.io.reader import (
     read_bin,
