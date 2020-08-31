@@ -14,7 +14,9 @@
 // #include <thrust/complex.h>
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
-#include <cuComplex.h>
+// #include <cuComplex.h>
+
+#include <thrust/complex.h>
 
 namespace cg = cooperative_groups;
 
@@ -78,19 +80,21 @@ namespace cg = cooperative_groups;
 // //                          CHANNELIZER 8x8                                  //
 // ///////////////////////////////////////////////////////////////////////////////
 
-template<typename T, typename U>
+// T is input type
+// U is output type
+template<typename T, typename U, int M=8, int WARPSIZE=32>
 __device__ void _cupy_channelizer_8x8( const int n_chans,
-                                       const int n_taps,
-                                       const int n_pts,
-                                       const U *__restrict__ x,
-                                       const U *__restrict__ h,
-                                       T *__restrict__ y,
-                                       U s_h[8][8],
-                                       U s_reg[8][8] ) {
+                                         const int n_taps,
+                                         const int n_pts,
+                                         const T *__restrict__ x,
+                                         const T *__restrict__ h,
+                                         U *__restrict__ y,
+                                         T s_h[M][M],
+                                         T s_reg[M][M] ) {
 
     const auto block   = cg::this_thread_block( );
-    const auto tile_32 = cg::tiled_partition<32>( block );
-    const auto tile_8  = cg::tiled_partition<8>( tile_32 );
+    const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
+    const auto tile = cg::tiled_partition<M>( tile_32 );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
@@ -100,18 +104,14 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = cuConjf( h[ty * n_chans + tx] );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = cuConj( h[ty * n_chans + tx] );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
         } else {
             s_h[tx][ty] = h[ty * n_chans + tx];
         }
     } else {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = make_cuFloatComplex( 0, 0 );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = make_cuDoubleComplex( 0, 0 );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = T( 0, 0 );
         } else {
             s_h[tx][ty] = 0.0;
         }
@@ -121,30 +121,26 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
                 }
             }
         } else {
             if ( tx < n_chans && ty <= bid ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
                 }
             } else {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[tx][ty] = T( 0, 0 );
                 } else {
                     s_reg[tx][ty] = 0.0;
                 }
@@ -153,33 +149,27 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
         __syncthreads( );
 
-        U temp {};
-        U vv {};
+        T temp {};
+        T vv {};
 
+        // Perform compute
         if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_8, temp.x, cg::plus<float>( ) );
-                vv.y = cg::reduce( tile_8, temp.y, cg::plus<float>( ) );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_8, temp.x, cg::plus<double>( ) );
-                vv.y = cg::reduce( tile_8, temp.y, cg::plus<double>( ) );
+            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
+                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
             } else {
                 temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile_8, temp, cg::plus<U>( ) );
+                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
             }
         }
 
+        // Store output
         if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                y[blockIdx.x * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                y[blockIdx.x * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> ) {
-                y[blockIdx.x * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-            } else if constexpr ( std::is_same_v<U, double> ) {
-                y[blockIdx.x * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
+                y[bid * n_chans + ty] = vv;
+            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
+                y[bid * n_chans + ty] = U( vv, 0 );
             }
         }
     }
@@ -187,77 +177,81 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float32_complex64( const int n_chans,
-                                             const int n_taps,
-                                             const int n_pts,
-                                             const float *__restrict__ x,
-                                             const float *__restrict__ h,
-                                             cuFloatComplex *__restrict__ y ) {
+                                               const int n_taps,
+                                               const int n_pts,
+                                               const float *__restrict__ x,
+                                               const float *__restrict__ h,
+                                               thrust::complex<float> *__restrict__ y ) {
 
     __shared__ float s_h[8][8];
     __shared__ float s_reg[8][8];
 
-    _cupy_channelizer_8x8<cuFloatComplex, float>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_8x8<float, thrust::complex<float>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 64 )
-    _cupy_channelizer_8x8__complex64_complex64( const int n_chans,
-                                                const int n_taps,
-                                                const int n_pts,
-                                                const cuFloatComplex *__restrict__ x,
-                                                const cuFloatComplex *__restrict__ h,
-                                                cuFloatComplex *__restrict__ y ) {
+    _cupy_channelizer_8x8_complex64_complex64( const int n_chans,
+                                                 const int n_taps,
+                                                 const int n_pts,
+                                                 const thrust::complex<float> *__restrict__ x,
+                                                 const thrust::complex<float> *__restrict__ h,
+                                                 thrust::complex<float> *__restrict__ y ) {
 
-    __shared__ cuFloatComplex s_h[8][8];
-    __shared__ cuFloatComplex s_reg[8][8];
+    __shared__ thrust::complex<float> s_h[8][8];
+    __shared__ thrust::complex<float> s_reg[8][8];
 
-    _cupy_channelizer_8x8<cuFloatComplex, cuFloatComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_8x8<thrust::complex<float>, thrust::complex<float>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_float64_complex128( const int n_chans,
-                                              const int n_taps,
-                                              const int n_pts,
-                                              const double *__restrict__ x,
-                                              const double *__restrict__ h,
-                                              cuDoubleComplex *__restrict__ y ) {
+                                                const int n_taps,
+                                                const int n_pts,
+                                                const double *__restrict__ x,
+                                                const double *__restrict__ h,
+                                                thrust::complex<double> *__restrict__ y ) {
 
     __shared__ double s_h[8][8];
     __shared__ double s_reg[8][8];
 
-    _cupy_channelizer_8x8<cuDoubleComplex, double>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_8x8<double, thrust::complex<double>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_channelizer_8x8_complex128_complex128( const int n_chans,
-                                                 const int n_taps,
-                                                 const int n_pts,
-                                                 const cuDoubleComplex *__restrict__ x,
-                                                 const cuDoubleComplex *__restrict__ h,
-                                                 cuDoubleComplex *__restrict__ y ) {
+                                                   const int n_taps,
+                                                   const int n_pts,
+                                                   const thrust::complex<double> *__restrict__ x,
+                                                   const thrust::complex<double> *__restrict__ h,
+                                                   thrust::complex<double> *__restrict__ y ) {
 
-    __shared__ cuDoubleComplex s_h[8][8];
-    __shared__ cuDoubleComplex s_reg[8][8];
+    __shared__ thrust::complex<double> s_h[8][8];
+    __shared__ thrust::complex<double> s_reg[8][8];
 
-    _cupy_channelizer_8x8<cuDoubleComplex, cuDoubleComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_8x8<thrust::complex<double>, thrust::complex<double>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//                        CHANNELIZER 16x16                                  //
-///////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////////
+// //                        CHANNELIZER 16x16                                  //
+// ///////////////////////////////////////////////////////////////////////////////
 
-template<typename T, typename U>
+// T is input type
+// U is output type
+template<typename T, typename U, int M=16, int WARPSIZE=32>
 __device__ void _cupy_channelizer_16x16( const int n_chans,
                                          const int n_taps,
                                          const int n_pts,
-                                         const U *__restrict__ x,
-                                         const U *__restrict__ h,
-                                         T *__restrict__ y,
-                                         U s_h[16][16],
-                                         U s_reg[16][16] ) {
+                                         const T *__restrict__ x,
+                                         const T *__restrict__ h,
+                                         U *__restrict__ y,
+                                         T s_h[M][M],
+                                         T s_reg[M][M] ) {
 
     const auto block   = cg::this_thread_block( );
-    const auto tile_32 = cg::tiled_partition<32>( block );
-    const auto tile_16 = cg::tiled_partition<16>( tile_32 );
+    const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
+    const auto tile = cg::tiled_partition<M>( tile_32 );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
@@ -267,18 +261,14 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = cuConjf( h[ty * n_chans + tx] );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = cuConj( h[ty * n_chans + tx] );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
         } else {
             s_h[tx][ty] = h[ty * n_chans + tx];
         }
     } else {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = make_cuFloatComplex( 0, 0 );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = make_cuDoubleComplex( 0, 0 );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = T( 0, 0 );
         } else {
             s_h[tx][ty] = 0.0;
         }
@@ -288,30 +278,26 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
                 }
             }
         } else {
             if ( tx < n_chans && ty <= bid ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
                 }
             } else {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[tx][ty] = T( 0, 0 );
                 } else {
                     s_reg[tx][ty] = 0.0;
                 }
@@ -320,33 +306,27 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
 
         __syncthreads( );
 
-        U temp {};
-        U vv {};
+        T temp {};
+        T vv {};
 
+        // Perform compute
         if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_16, temp.x, cg::plus<float>( ) );
-                vv.y = cg::reduce( tile_16, temp.y, cg::plus<float>( ) );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_16, temp.x, cg::plus<double>( ) );
-                vv.y = cg::reduce( tile_16, temp.y, cg::plus<double>( ) );
+            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
+                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
             } else {
                 temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile_16, temp, cg::plus<U>( ) );
+                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
             }
         }
 
+        // Store output
         if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
                 y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> ) {
-                y[bid * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-            } else if constexpr ( std::is_same_v<U, double> ) {
-                y[bid * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
+                y[bid * n_chans + ty] = U( vv, 0 );
             }
         }
     }
@@ -358,26 +338,27 @@ extern "C" __global__ void __launch_bounds__( 256 )
                                                const int n_pts,
                                                const float *__restrict__ x,
                                                const float *__restrict__ h,
-                                               cuFloatComplex *__restrict__ y ) {
+                                               thrust::complex<float> *__restrict__ y ) {
 
     __shared__ float s_h[16][16];
     __shared__ float s_reg[16][16];
 
-    _cupy_channelizer_16x16<cuFloatComplex, float>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_16x16<float, thrust::complex<float>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 )
-    _cupy_channelizer_16x16__complex64_complex64( const int n_chans,
-                                                  const int n_taps,
-                                                  const int n_pts,
-                                                  const cuFloatComplex *__restrict__ x,
-                                                  const cuFloatComplex *__restrict__ h,
-                                                  cuFloatComplex *__restrict__ y ) {
+    _cupy_channelizer_16x16_complex64_complex64( const int n_chans,
+                                                 const int n_taps,
+                                                 const int n_pts,
+                                                 const thrust::complex<float> *__restrict__ x,
+                                                 const thrust::complex<float> *__restrict__ h,
+                                                 thrust::complex<float> *__restrict__ y ) {
 
-    __shared__ cuFloatComplex s_h[16][16];
-    __shared__ cuFloatComplex s_reg[16][16];
+    __shared__ thrust::complex<float> s_h[16][16];
+    __shared__ thrust::complex<float> s_reg[16][16];
 
-    _cupy_channelizer_16x16<cuFloatComplex, cuFloatComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_16x16<thrust::complex<float>, thrust::complex<float>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 )
@@ -386,44 +367,47 @@ extern "C" __global__ void __launch_bounds__( 256 )
                                                 const int n_pts,
                                                 const double *__restrict__ x,
                                                 const double *__restrict__ h,
-                                                cuDoubleComplex *__restrict__ y ) {
+                                                thrust::complex<double> *__restrict__ y ) {
 
     __shared__ double s_h[16][16];
     __shared__ double s_reg[16][16];
 
-    _cupy_channelizer_16x16<cuDoubleComplex, double>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_16x16<double, thrust::complex<double>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 )
     _cupy_channelizer_16x16_complex128_complex128( const int n_chans,
                                                    const int n_taps,
                                                    const int n_pts,
-                                                   const cuDoubleComplex *__restrict__ x,
-                                                   const cuDoubleComplex *__restrict__ h,
-                                                   cuDoubleComplex *__restrict__ y ) {
+                                                   const thrust::complex<double> *__restrict__ x,
+                                                   const thrust::complex<double> *__restrict__ h,
+                                                   thrust::complex<double> *__restrict__ y ) {
 
-    __shared__ cuDoubleComplex s_h[16][16];
-    __shared__ cuDoubleComplex s_reg[16][16];
+    __shared__ thrust::complex<double> s_h[16][16];
+    __shared__ thrust::complex<double> s_reg[16][16];
 
-    _cupy_channelizer_16x16<cuDoubleComplex, cuDoubleComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_16x16<thrust::complex<double>, thrust::complex<double>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                        CHANNELIZER 32x32                                  //
 ///////////////////////////////////////////////////////////////////////////////
 
-template<typename T, typename U>
+// T is input type
+// U is output type
+template<typename T, typename U, int M=32, int WARPSIZE=32>
 __device__ void _cupy_channelizer_32x32( const int n_chans,
                                          const int n_taps,
                                          const int n_pts,
-                                         const U *__restrict__ x,
-                                         const U *__restrict__ h,
-                                         T *__restrict__ y,
-                                         U s_h[32][32],
-                                         U s_reg[32][32] ) {
+                                         const T *__restrict__ x,
+                                         const T *__restrict__ h,
+                                         U *__restrict__ y,
+                                         T s_h[M][M],
+                                         T s_reg[M][M] ) {
 
     const auto block   = cg::this_thread_block( );
-    const auto tile_32 = cg::tiled_partition<32>( block );
+    const auto tile = cg::tiled_partition<WARPSIZE>( block );
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
@@ -433,18 +417,14 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( tx < n_chans && ty < n_taps ) {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = cuConjf( h[ty * n_chans + tx] );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = cuConj( h[ty * n_chans + tx] );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
         } else {
             s_h[tx][ty] = h[ty * n_chans + tx];
         }
     } else {
-        if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-            s_h[tx][ty] = make_cuFloatComplex( 0, 0 );
-        } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-            s_h[tx][ty] = make_cuDoubleComplex( 0, 0 );
+        if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+            s_h[tx][ty] = T( 0, 0 );
         } else {
             s_h[tx][ty] = 0.0;
         }
@@ -454,30 +434,26 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
         // Load data
         if ( bid >= n_taps ) {
             if ( tx < n_chans && ty < n_taps ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
                 }
             }
         } else {
             if ( tx < n_chans && ty <= bid ) {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConjf( x[ty * n_chans + tx] );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = cuConj( x[ty * n_chans + tx] );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
                 } else {
                     s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
                 }
             } else {
-                if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                    s_reg[tx][ty] = make_cuFloatComplex( 0, 0 );
-                } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                    s_reg[tx][ty] = make_cuDoubleComplex( 0, 0 );
+                if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                               std::is_same_v<T, thrust::complex<double>> ) {
+                    s_reg[tx][ty] = T( 0, 0 );
                 } else {
                     s_reg[tx][ty] = 0.0;
                 }
@@ -486,33 +462,27 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
 
         __syncthreads( );
 
-        U temp {};
-        U vv {};
+        T temp {};
+        T vv {};
 
+        // Perform compute
         if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
-                temp = cuCmulf( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_32, temp.x, cg::plus<float>( ) );
-                vv.y = cg::reduce( tile_32, temp.y, cg::plus<float>( ) );
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                temp = cuCmul( s_h[ty][tx], s_reg[ty][tx] );
-                vv.x = cg::reduce( tile_32, temp.x, cg::plus<double>( ) );
-                vv.y = cg::reduce( tile_32, temp.y, cg::plus<double>( ) );
+            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+                temp = s_h[ty][tx] * s_reg[ty][tx];
+                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
+                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
             } else {
                 temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile_32, temp, cg::plus<U>( ) );
+                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
             }
         }
 
+        // Store output
         if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, cuFloatComplex> ) {
+            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
                 y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, cuDoubleComplex> ) {
-                y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> ) {
-                y[bid * n_chans + ty] = make_cuFloatComplex( vv, 0 );
-            } else if constexpr ( std::is_same_v<U, double> ) {
-                y[bid * n_chans + ty] = make_cuDoubleComplex( vv, 0 );
+            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
+                y[bid * n_chans + ty] = U( vv, 0 );
             }
         }
     }
@@ -524,26 +494,27 @@ extern "C" __global__ void __launch_bounds__( 1024 )
                                                const int n_pts,
                                                const float *__restrict__ x,
                                                const float *__restrict__ h,
-                                               cuFloatComplex *__restrict__ y ) {
+                                               thrust::complex<float> *__restrict__ y ) {
 
     __shared__ float s_h[32][32];
     __shared__ float s_reg[32][32];
 
-    _cupy_channelizer_32x32<cuFloatComplex, float>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_32x32<float, thrust::complex<float>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_complex64_complex64( const int n_chans,
                                                  const int n_taps,
                                                  const int n_pts,
-                                                 const cuFloatComplex *__restrict__ x,
-                                                 const cuFloatComplex *__restrict__ h,
-                                                 cuFloatComplex *__restrict__ y ) {
+                                                 const thrust::complex<float> *__restrict__ x,
+                                                 const thrust::complex<float> *__restrict__ h,
+                                                 thrust::complex<float> *__restrict__ y ) {
 
-    __shared__ cuFloatComplex s_h[32][32];
-    __shared__ cuFloatComplex s_reg[32][32];
+    __shared__ thrust::complex<float> s_h[32][32];
+    __shared__ thrust::complex<float> s_reg[32][32];
 
-    _cupy_channelizer_32x32<cuFloatComplex, cuFloatComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_32x32<thrust::complex<float>, thrust::complex<float>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 1024 )
@@ -552,24 +523,25 @@ extern "C" __global__ void __launch_bounds__( 1024 )
                                                 const int n_pts,
                                                 const double *__restrict__ x,
                                                 const double *__restrict__ h,
-                                                cuDoubleComplex *__restrict__ y ) {
+                                                thrust::complex<double> *__restrict__ y ) {
 
     __shared__ double s_h[32][32];
     __shared__ double s_reg[32][32];
 
-    _cupy_channelizer_32x32<cuDoubleComplex, double>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_32x32<double, thrust::complex<double>>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
 extern "C" __global__ void __launch_bounds__( 1024 )
     _cupy_channelizer_32x32_complex128_complex128( const int n_chans,
                                                    const int n_taps,
                                                    const int n_pts,
-                                                   const cuDoubleComplex *__restrict__ x,
-                                                   const cuDoubleComplex *__restrict__ h,
-                                                   cuDoubleComplex *__restrict__ y ) {
+                                                   const thrust::complex<double> *__restrict__ x,
+                                                   const thrust::complex<double> *__restrict__ h,
+                                                   thrust::complex<double> *__restrict__ y ) {
 
-    __shared__ cuDoubleComplex s_h[32][32];
-    __shared__ cuDoubleComplex s_reg[32][32];
+    __shared__ thrust::complex<double> s_h[32][32];
+    __shared__ thrust::complex<double> s_reg[32][32];
 
-    _cupy_channelizer_32x32<cuDoubleComplex, cuDoubleComplex>( n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
+    _cupy_channelizer_32x32<thrust::complex<double>, thrust::complex<double>>(
+        n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
