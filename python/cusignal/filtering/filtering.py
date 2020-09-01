@@ -46,8 +46,6 @@ from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
 
-from cupy import prof
-
 _cupy_fft_cache = {}
 
 
