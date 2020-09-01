@@ -11,74 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// #include <thrust/complex.h>
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
-// #include <cuComplex.h>
-
 #include <thrust/complex.h>
 
 namespace cg = cooperative_groups;
 
 ///////////////////////////////////////////////////////////////////////////////
-//                            CHANNELIZER                                    //
+//                          CHANNELIZER 8x8                                  //
 ///////////////////////////////////////////////////////////////////////////////
-
-// template<typename T>
-// __device__ void _cupy_channelizer( const int n_chans,
-//                                    const int n_taps,
-//                                    const int n_pts,
-//                                    const T *__restrict__ x,
-//                                    const T *__restrict__ h,
-//                                    T *__restrict__ y ) {
-
-//     const auto tx { threadIdx.x };
-//     const auto ty { threadIdx.y };
-
-//     if ( tx == 0 && ty == 0 )
-//         printf( "Hello\n" );
-// }
-
-// extern "C" __global__ void __launch_bounds__( 64 ) _cupy_channelizer_float32( const int n_chans,
-//                                                                               const int n_taps,
-//                                                                               const int n_pts,
-//                                                                               const float *__restrict__ x,
-//                                                                               const float *__restrict__ h,
-//                                                                               float *__restrict__ y ) {
-//     _cupy_channelizer<float>( n_chans, n_taps, n_pts, x, h, y );
-// }
-
-// extern "C" __global__ void __launch_bounds__( 64 ) _cupy_channelizer_float64( const int n_chans,
-//                                                                               const int n_taps,
-//                                                                               const int n_pts,
-//                                                                               const double *__restrict__ x,
-//                                                                               const double *__restrict__ h,
-//                                                                               double *__restrict__ y ) {
-//     _cupy_channelizer<double>( n_chans, n_taps, n_pts, x, h, y );
-// }
-
-// extern "C" __global__ void __launch_bounds__( 64 ) _cupy_channelizer_complex64( const int n_chans,
-//                                                                                 const int n_taps,
-//                                                                                 const int n_pts,
-//                                                                                 const cuFloatComplex *__restrict__ x,
-//                                                                                 const cuFloatComplex *__restrict__ h,
-//                                                                                 cuFloatComplex *__restrict__ y ) {
-//     _cupy_channelizer<cuFloatComplex>( n_chans, n_taps, n_pts, x, h, y );
-// }
-
-// extern "C" __global__ void __launch_bounds__( 64 ) _cupy_channelizer_complex128( const int n_chans,
-//                                                                                  const int n_taps,
-//                                                                                  const int n_pts,
-//                                                                                  const cuDoubleComplex *__restrict__
-//                                                                                  x, const cuDoubleComplex
-//                                                                                  *__restrict__ h, cuDoubleComplex
-//                                                                                  *__restrict__ y ) {
-//     _cupy_channelizer<cuDoubleComplex>( n_chans, n_taps, n_pts, x, h, y );
-// }
-
-// ///////////////////////////////////////////////////////////////////////////////
-// //                          CHANNELIZER 8x8                                  //
-// ///////////////////////////////////////////////////////////////////////////////
 
 // T is input type
 // U is output type
@@ -92,20 +33,22 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
                                        T s_h[M][M],
                                        T s_reg[M][M] ) {
 
-    const auto block   = cg::this_thread_block( );
-    const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
-    const auto tile    = cg::tiled_partition<M>( tile_32 );
+    const auto block { cg::this_thread_block( ) };
+    const auto tile_32 { cg::tiled_partition<WARPSIZE>( block ) };
+    const auto tile { cg::tiled_partition<M>( tile_32 ) };
+
+    const auto btx { blockIdx.x * blockDim.x + threadIdx.x };
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
     // Initialize shared memory
     // Evaluate type at compile-time
-    if ( tx < n_chans && ty < n_taps ) {
+    if ( btx < n_chans && ty < n_taps ) {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + btx] );
         } else {
-            s_h[tx][ty] = h[ty * n_chans + tx];
+            s_h[tx][ty] = h[ty * n_chans + btx];
         }
     } else {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
@@ -115,25 +58,25 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
-            if ( tx < n_chans && ty < n_taps ) {
+            if ( btx < n_chans && ty < n_taps ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                    s_reg[tx][( n_taps - 1 ) - ty] =
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                    s_reg[tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )];
                 }
             }
         } else {
-            if ( tx < n_chans && ty <= bid ) {
+            if ( btx < n_chans && ty <= bid ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
+                    s_reg[tx][bid - ty] = thrust::conj( x[ty * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                    s_reg[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
                 }
             } else {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
@@ -147,28 +90,19 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
         __syncthreads( );
 
-        T temp {};
-        T vv {};
+        U temp {};
+        U vv {};
 
         // Perform compute
-        if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
-                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
-            } else {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
-            }
+        if ( ( blockIdx.x * M + ty ) < n_chans ) {
+            temp = s_h[ty][tx] * s_reg[ty][tx];
+            vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename U::value_type>( ) ) );
+            vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename U::value_type>( ) ) );
         }
 
         // Store output
-        if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
-                y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
-                y[bid * n_chans + ty] = U( vv, 0 );
-            }
+        if ( tx == 0 && ( blockIdx.x * M + ty ) < n_chans ) {
+            y[bid * n_chans + ( blockIdx.x * M + ty )] = vv;
         }
     }
 }
@@ -231,9 +165,9 @@ extern "C" __global__ void __launch_bounds__( 64 )
         n_chans, n_taps, n_pts, x, h, y, s_h, s_reg );
 }
 
-// ///////////////////////////////////////////////////////////////////////////////
-// //                        CHANNELIZER 16x16                                  //
-// ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//                        CHANNELIZER 16x16                                  //
+///////////////////////////////////////////////////////////////////////////////
 
 // T is input type
 // U is output type
@@ -247,20 +181,22 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
                                          T s_h[M][M],
                                          T s_reg[M][M] ) {
 
-    const auto block   = cg::this_thread_block( );
-    const auto tile_32 = cg::tiled_partition<WARPSIZE>( block );
-    const auto tile    = cg::tiled_partition<M>( tile_32 );
+    const auto block { cg::this_thread_block( ) };
+    const auto tile_32 { cg::tiled_partition<WARPSIZE>( block ) };
+    const auto tile { cg::tiled_partition<M>( tile_32 ) };
+
+    const auto btx { blockIdx.x * blockDim.x + threadIdx.x };
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
     // Initialize shared memory
     // Evaluate type at compile-time
-    if ( tx < n_chans && ty < n_taps ) {
+    if ( btx < n_chans && ty < n_taps ) {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + btx] );
         } else {
-            s_h[tx][ty] = h[ty * n_chans + tx];
+            s_h[tx][ty] = h[ty * n_chans + btx];
         }
     } else {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
@@ -270,25 +206,25 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
-            if ( tx < n_chans && ty < n_taps ) {
+            if ( btx < n_chans && ty < n_taps ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                    s_reg[tx][( n_taps - 1 ) - ty] =
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                    s_reg[tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )];
                 }
             }
         } else {
-            if ( tx < n_chans && ty <= bid ) {
+            if ( btx < n_chans && ty <= bid ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
+                    s_reg[tx][bid - ty] = thrust::conj( x[ty * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                    s_reg[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
                 }
             } else {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
@@ -302,28 +238,19 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
 
         __syncthreads( );
 
-        T temp {};
-        T vv {};
+        U temp {};
+        U vv {};
 
         // Perform compute
-        if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
-                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
-            } else {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
-            }
+        if ( ( blockIdx.x * M + ty ) < n_chans ) {
+            temp = s_h[ty][tx] * s_reg[ty][tx];
+            vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename U::value_type>( ) ) );
+            vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename U::value_type>( ) ) );
         }
 
         // Store output
-        if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
-                y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
-                y[bid * n_chans + ty] = U( vv, 0 );
-            }
+        if ( tx == 0 && ( blockIdx.x * M + ty ) < n_chans ) {
+            y[bid * n_chans + ( blockIdx.x * M + ty )] = vv;
         }
     }
 }
@@ -402,19 +329,21 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
                                          T s_h[M][M],
                                          T s_reg[M][M] ) {
 
-    const auto block = cg::this_thread_block( );
-    const auto tile  = cg::tiled_partition<WARPSIZE>( block );
+    const auto block { cg::this_thread_block( ) };
+    const auto tile { cg::tiled_partition<WARPSIZE>( block ) };
+
+    const auto btx { blockIdx.x * blockDim.x + threadIdx.x };
 
     const auto tx { threadIdx.x };
     const auto ty { threadIdx.y };
 
     // Initialize shared memory
     // Evaluate type at compile-time
-    if ( tx < n_chans && ty < n_taps ) {
+    if ( btx < n_chans && ty < n_taps ) {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-            s_h[tx][ty] = thrust::conj( h[ty * n_chans + tx] );
+            s_h[tx][ty] = thrust::conj( h[ty * n_chans + btx] );
         } else {
-            s_h[tx][ty] = h[ty * n_chans + tx];
+            s_h[tx][ty] = h[ty * n_chans + btx];
         }
     } else {
         if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
@@ -424,25 +353,25 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
         }
     }
 
-    for ( auto bid = blockIdx.x; bid < n_pts; bid += blockDim.x ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
-            if ( tx < n_chans && ty < n_taps ) {
+            if ( btx < n_chans && ty < n_taps ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] =
-                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx] );
+                    s_reg[tx][( n_taps - 1 ) - ty] =
+                        thrust::conj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + tx];
+                    s_reg[tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )];
                 }
             }
         } else {
-            if ( tx < n_chans && ty <= bid ) {
+            if ( btx < n_chans && ty <= bid ) {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
                                std::is_same_v<T, thrust::complex<double>> ) {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = thrust::conj( x[ty * n_chans + tx] );
+                    s_reg[tx][bid - ty] = thrust::conj( x[ty * n_chans + ( n_chans - 1 - btx )] );
                 } else {
-                    s_reg[( n_chans - 1 ) - tx][bid - ty] = x[ty * n_chans + tx];
+                    s_reg[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
                 }
             } else {
                 if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
@@ -456,28 +385,19 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
 
         __syncthreads( );
 
-        T temp {};
-        T vv {};
+        U temp {};
+        U vv {};
 
         // Perform compute
-        if ( ty < n_chans ) {
-            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename T::value_type>( ) ) );
-                vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename T::value_type>( ) ) );
-            } else {
-                temp = s_h[ty][tx] * s_reg[ty][tx];
-                vv   = cg::reduce( tile, temp, cg::plus<T>( ) );
-            }
+        if ( ( blockIdx.x * M + ty ) < n_chans ) {
+            temp = s_h[ty][tx] * s_reg[ty][tx];
+            vv.real( cg::reduce( tile, temp.real( ), cg::plus<typename U::value_type>( ) ) );
+            vv.imag( cg::reduce( tile, temp.imag( ), cg::plus<typename U::value_type>( ) ) );
         }
 
         // Store output
-        if ( tx == 0 && ty < n_chans ) {
-            if constexpr ( std::is_same_v<U, thrust::complex<float>> || std::is_same_v<U, thrust::complex<double>> ) {
-                y[bid * n_chans + ty] = vv;
-            } else if constexpr ( std::is_same_v<U, float> || std::is_same_v<U, double> ) {
-                y[bid * n_chans + ty] = U( vv, 0 );
-            }
+        if ( tx == 0 && ( blockIdx.x * M + ty ) < n_chans ) {
+            y[bid * n_chans + ( blockIdx.x * M + ty )] = vv;
         }
     }
 }

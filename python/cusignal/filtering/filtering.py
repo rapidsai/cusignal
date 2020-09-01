@@ -150,11 +150,13 @@ def firfilter(b, x, axis=None, zi=None):
     """
 
     if zi is not None:
-        raise NotImplementedError('Initial conditions are not currently \
-            supported')
+        raise NotImplementedError(
+            "Initial conditions are not currently \
+            supported"
+        )
 
-    y = fftconvolve(b, x, mode='full', axes=axis)
-    return y[:len(x)]
+    y = fftconvolve(b, x, mode="full", axes=axis)
+    return y[: len(x)]
 
 
 def lfiltic(b, a, y, x=None):
@@ -677,9 +679,6 @@ def channelize_poly(x, h, n_chans):
         channels of int number of taps
     n_chans : int
         Number of channels for channelizer
-    order : {'C', 'F', 'A'}, optional
-        See numpy reshape for more detail; F for MATLAB
-        data, C for scipy.signal/cusignal
 
     Returns
     ----------
@@ -712,8 +711,8 @@ def channelize_poly(x, h, n_chans):
 
     # instead of n_chans here, this could be channel separation
     for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0 : n_taps - 1]
-        reg[:, 0] = np.conj(np.flipud(x[nn : nn + n_chans]))
+        reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
+        reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
         for mm in range(n_chans):
             vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
 
@@ -735,9 +734,6 @@ def channelize_poly_gpu(x, h, n_chans):
         channels of int number of taps
     n_chans : int
         Number of channels for channelizer
-    order : {'C', 'F', 'A'}, optional
-        See numpy reshape for more detail; F for MATLAB
-        data, C for scipy.signal/cusignal
 
     Returns
     ----------
@@ -765,19 +761,16 @@ def channelize_poly_gpu(x, h, n_chans):
     elif x.dtype == cp.float64 or x.dtype == cp.complex128:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
 
-    with prof.time_range("kernel", 0):
-        _channelizer(x, h, y, n_chans, n_taps, n_pts)
+    _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
-    with prof.time_range("plan", 1):
-        if (x.dtype) in _cupy_fft_cache:
-            plan = _cupy_fft_cache[(x.dtype)]
-        else:
-            plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(
-                y, axes=-1
-            )
+    if (x.dtype) in _cupy_fft_cache:
+        plan = _cupy_fft_cache[(x.dtype)]
+    else:
+        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(
+            y, axes=-1
+        )
 
-    with prof.time_range("fft", 2):
-        y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
+    y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 
     return y
 

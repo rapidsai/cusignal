@@ -75,12 +75,11 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
     #  Blocks per grid sized for 2048 threads per SM
     np_type = str(x.dtype) + "_" + str(y.dtype)
 
-    if n_chans <= 8 and n_taps <= 8:
-
+    if n_taps <= 8:
         k_type = "channelizer_8x8"
 
         threadsperblock = (8, 8)
-        blockspergrid = _get_numSM() * 32
+        blockspergrid = ((n_chans + 7) // 8, _get_numSM() * 32)
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -88,12 +87,11 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
             np_type, blockspergrid, threadsperblock, k_type,
         )
 
-    elif n_chans <= 16 and n_taps <= 16:
-
+    elif n_taps <= 16:
         k_type = "channelizer_16x16"
 
         threadsperblock = (16, 16)
-        blockspergrid = _get_numSM() * 8
+        blockspergrid = ((n_chans + 15) // 16, _get_numSM() * 8)
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -101,12 +99,11 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
             np_type, blockspergrid, threadsperblock, k_type,
         )
 
-    elif n_chans <= 32 and n_taps <= 32:
-
+    elif n_taps <= 32:
         k_type = "channelizer_32x32"
 
         threadsperblock = (32, 32)
-        blockspergrid = _get_numSM() * 2
+        blockspergrid = ((n_chans + 31) // 32, _get_numSM() * 2)
 
         _populate_kernel_cache(np_type, k_type)
 
@@ -115,16 +112,8 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         )
 
     else:
-
-        k_type = "channelizer"
-
-        threadsperblock = (8, 8)
-        blockspergrid = _get_numSM() * 32
-
-        _populate_kernel_cache(np_type, k_type)
-
-        kernel = _get_backend_kernel(
-            np_type, blockspergrid, threadsperblock, k_type,
+        raise NotImplementedError(
+            "Number of taps ({}) must be less than (32).".format(n_taps)
         )
 
     kernel(n_chans, n_taps, n_pts, x, h, y)
