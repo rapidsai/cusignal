@@ -4,6 +4,7 @@
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 
 ## Improvements
+- PR #202 - Performance improvement to Lombscargle
 
 ## Bug Fixes
 
