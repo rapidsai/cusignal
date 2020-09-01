@@ -766,9 +766,7 @@ def channelize_poly_gpu(x, h, n_chans):
     if (x.dtype) in _cupy_fft_cache:
         plan = _cupy_fft_cache[(x.dtype)]
     else:
-        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(
-            y, axes=-1
-        )
+        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(y, axes=-1)
 
     y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 
