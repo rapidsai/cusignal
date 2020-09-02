@@ -13,6 +13,7 @@
 # cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
+- PR #69 - Multi-point Kalman Filter
 - PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
@@ -23,6 +24,7 @@
 - PR #148 - Load fatbin at runtime
 - PR #69 - Multi-point Kalman Filter
 - PR #158 - Add debug flag for debugging
+- PR #161 - Basic implementation of polyphase channelizer
 
 ## Improvements
 - PR #112 - Remove Numba kernels
