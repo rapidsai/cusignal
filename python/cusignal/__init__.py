@@ -27,11 +27,14 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
+    firfilter,
     lfiltic,
     sosfilt,
     hilbert,
     hilbert2,
     detrend,
+    channelize_poly,
+    channelize_poly_gpu,
     freq_shift,
 )
 from cusignal.convolution.correlate import correlate, correlate2d

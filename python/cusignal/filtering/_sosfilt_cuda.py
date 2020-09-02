@@ -32,8 +32,6 @@ class _cupy_sosfilt_wrapper(object):
 
     def __call__(self, sos, x, zi):
 
-        print(sos.shape)
-
         kernel_args = (
             x.shape[0],
             x.shape[1],
