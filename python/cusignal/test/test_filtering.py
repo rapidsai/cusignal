@@ -358,3 +358,45 @@ class TestFilter:
 
             key = self.cpu_version(cpu_sig, up, down, axis)
             assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="Firfilter")
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("filter_len", [8, 32, 128])
+    class TestFirfilter:
+        def cpu_version(self, cpu_sig, cpu_filter):
+            return signal.lfilter(
+                cpu_filter, 1, cpu_sig
+            )
+
+        @pytest.mark.cpu
+        def test_firfilter_cpu(
+            self,
+            benchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            benchmark(self.cpu_version, cpu_sig, cpu_filter)
+
+        def test_firfilter_gpu(
+            self,
+            gpubenchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            gpu_filter = cp.asarray(cpu_filter)
+            output = gpubenchmark(
+                cusignal.firfilter,
+                gpu_filter,
+                gpu_sig,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filter)
+            assert array_equal(cp.asnumpy(output), key)

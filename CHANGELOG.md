@@ -2,8 +2,10 @@
 
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
+- PR #195 - Add explicit FIR filter functionality
 
 ## Improvements
+- PR #196 - Update README for cuSignal 0.15
 - PR #200 - Add if constexpr to binary reader
 
 ## Bug Fixes
@@ -12,6 +14,7 @@
 # cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
+- PR #69 - Multi-point Kalman Filter
 - PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
@@ -22,6 +25,7 @@
 - PR #148 - Load fatbin at runtime
 - PR #69 - Multi-point Kalman Filter
 - PR #158 - Add debug flag for debugging
+- PR #161 - Basic implementation of polyphase channelizer
 
 ## Improvements
 - PR #112 - Remove Numba kernels

@@ -40,9 +40,13 @@ from cupy import linalg
 
 import numpy as np
 
+from ._channelizer_cuda import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
+from ..convolution.convolve import fftconvolve
+
+_cupy_fft_cache = {}
 
 
 def wiener(im, mysize=None, noise=None):
@@ -97,6 +101,60 @@ def wiener(im, mysize=None, noise=None):
     out = where(lVar < noise, lMean, res)
 
     return out
+
+
+def firfilter(b, x, axis=None, zi=None):
+    """
+    Filter data along one-dimension with an FIR filter.
+
+    Filter a data sequence, `x`, using a digital filter. This works for many
+    fundamental data types (including Object type). Please note, cuSignal
+    doesn't support IIR filters presently, and this implementation is optimized
+    for large filtering operations (and inherently depends on fftconvolve)
+
+    Parameters
+    ----------
+    b : array_like
+        The numerator coefficient vector in a 1-D sequence.
+    x : array_like
+        An N-dimensional input array.
+    axis : int, optional
+        The axis of the input data array along which to apply the
+        linear filter. The filter is applied to each subarray along
+        this axis.  Default is -1.
+    zi : array_like, optional
+        Initial conditions for the filter delays.  It is a vector
+        (or array of vectors for an N-dimensional input) of length
+        ``max(len(a), len(b)) - 1``.  If `zi` is None or is not given then
+        initial rest is assumed.  See `lfiltic` for more information.
+
+    Returns
+    -------
+    y : array
+        The output of the digital filter.
+    zf : array, optional
+        If `zi` is None, this is not returned, otherwise, `zf` holds the
+        final filter delay values.
+
+    Examples
+    -------
+    >>> from scipy import signal
+    >>> import cupy as cp
+    >>> import cusignal
+    >>> [b, a] = signal.butter(3, 0.5)
+    >>> b = cp.asarray(b)
+    >>> x = cp.random.randn(2**8)
+    >>> y = cusignal.firfilter(b, x)
+    """
+
+    if zi is not None:
+        raise NotImplementedError(
+            "Initial conditions are not currently \
+            supported"
+        )
+
+    y = fftconvolve(b, x, mode="full", axes=axis)
+    return y[: len(x)]
 
 
 def lfiltic(b, a, y, x=None):
@@ -604,6 +662,113 @@ def freq_shift(x, freq, fs):
     """
     x = asarray(x)
     return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
+
+
+def channelize_poly(x, h, n_chans):
+    """
+    Polyphase channelize signal into n channels
+
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+
+    Returns
+    ----------
+    yy : channelized output matrix
+
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
+
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
+
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
+    # order F if input from MATLAB
+    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
+    vv = np.empty(n_chans, dtype=dtype)
+
+    if x.dtype == np.float32 or x.dtype == np.complex64:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex64)
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex128)
+
+    reg = np.zeros((n_chans, n_taps), dtype=dtype)
+
+    # instead of n_chans here, this could be channel separation
+    for i, nn in enumerate(range(0, len(x), n_chans)):
+        reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
+        reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
+        for mm in range(n_chans):
+            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+
+        yy[:, i] = np.conj(np.fft.fft(vv))
+
+    return yy
+
+
+def channelize_poly_gpu(x, h, n_chans):
+    """
+    Polyphase channelize signal into n channels
+
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+
+    Returns
+    ----------
+    yy : channelized output matrix
+
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
+    x = asarray(x, dtype=dtype)
+    h = asarray(h, dtype=dtype)
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
+
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
+
+    if x.dtype == cp.float32 or x.dtype == cp.complex64:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
+    elif x.dtype == cp.float64 or x.dtype == cp.complex128:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
+
+    _channelizer(x, h, y, n_chans, n_taps, n_pts)
+
+    if (x.dtype) in _cupy_fft_cache:
+        plan = _cupy_fft_cache[(x.dtype)]
+    else:
+        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(y, axes=-1)
+
+    y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
+
+    return y
 
 
 def _prod(iterable):
