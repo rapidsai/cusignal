@@ -6,6 +6,7 @@
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
+- PR #203 - Update build process
 
 ## Bug Fixes
 
