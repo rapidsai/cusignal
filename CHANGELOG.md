@@ -7,6 +7,7 @@
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
+- PR #202 - Performance improvement to Lombscargle
 - PR #203 - Update build process
 
 ## Bug Fixes
