@@ -109,7 +109,8 @@ extern "C" {
         const auto lty = threadIdx.y;
         const auto ltz = threadIdx.z;
 
-        const int btz { static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z) };
+        const int btz { 
+            static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z) };
 
         const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
 
@@ -134,7 +135,8 @@ extern "C" {
                 if ( ltx == 0 ) {
     #pragma unroll ${DIM_U}
                     for ( int j = 0; j < ${DIM_U}; j++ ) {
-                        temp2 += B[gtz * ${DIM_X} * ${DIM_U} + lty * ${DIM_U} + j] *
+                        temp2 += B[gtz * ${DIM_X} * ${DIM_U} +
+                            lty * ${DIM_U} + j] *
                             u[gtz * ${DIM_U} + j];
                     }
                     printf("%d: %f\\n", lty, temp2);
