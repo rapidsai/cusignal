@@ -9,6 +9,7 @@
 - PR #200 - Add if constexpr to binary reader
 - PR #202 - Performance improvement to Lombscargle
 - PR #203 - Update build process
+- PR #207 - Add CUDA 10 compatibility with polyphase channelizer
 
 ## Bug Fixes
 
