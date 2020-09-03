@@ -110,7 +110,15 @@ fi
 # Build fatbins
 SRC="cpp/src"
 FAT="python/cusignal"
-FLAGS="-std=c++17"
+NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
+GCC_V=$(gcc --version | grep gcc | awk '{print $4}' | cut -f1 -d'.')
+
+# Must check GCC for Centos OS
+if [ "${GCC_V}" -lt 7 ] || [ "${NVCC_V}" -lt 11 ]; then
+    FLAGS="-std=c++11"
+else
+    FLAGS="-std=c++17"
+fi
 
 if hasArg -p; then
     FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
@@ -125,9 +133,14 @@ GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
 --generate-code arch=compute_61,code=sm_61 \
 --generate-code arch=compute_62,code=sm_62 \
 --generate-code arch=compute_70,code=sm_70 \
---generate-code arch=compute_72,code=sm_72 \
---generate-code arch=compute_75,code=sm_75 \
---generate-code arch=compute_80,code=[sm_80,compute_80]"
+--generate-code arch=compute_72,code=sm_72"
+
+if [ "$NVCC_V" -lt 11 ]; then
+    GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
+else
+    GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
+    --generate-code arch=compute_80,code=[sm_80,compute_80]"
+fi
 
 echo "Building Convolution kernels..."
 FOLDER="convolution"
