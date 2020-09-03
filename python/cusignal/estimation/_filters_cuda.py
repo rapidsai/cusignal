@@ -109,7 +109,7 @@ extern "C" {
         const auto lty = threadIdx.y;
         const auto ltz = threadIdx.z;
 
-        const int btz { 
+        const int btz {
             static_cast<int>(blockIdx.z * blockDim.z + threadIdx.z) };
 
         const int stride_z { static_cast<int>( blockDim.z * gridDim.z ) };
