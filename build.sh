@@ -119,6 +119,8 @@ fi
 
 echo $(which nvcc)
 echo $(nvcc --version)
+echo $(which g++)
+echo $(g++ --version)
 echo $(conda list cudatoolkit)
 
 if hasArg -p; then
@@ -134,8 +136,14 @@ GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
 --generate-code arch=compute_61,code=sm_61 \
 --generate-code arch=compute_62,code=sm_62 \
 --generate-code arch=compute_70,code=sm_70 \
---generate-code arch=compute_72,code=sm_72 \
---generate-code arch=compute_75,code=[sm_75,compute_75]"
+--generate-code arch=compute_72,code=sm_72"
+
+if [ "$NVCC_V" -lt 11 ]; then
+    GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
+else
+    GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
+    --generate-code arch=compute_80,code=[sm_80,compute_80]"
+fi
 
 echo "Building Convolution kernels..."
 FOLDER="convolution"
