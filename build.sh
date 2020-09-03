@@ -111,10 +111,13 @@ fi
 SRC="cpp/src"
 FAT="python/cusignal"
 NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
-GCC_V=$(gcc --version | grep gcc | awk '{print $4}' | cut -f1 -d'.')
+GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
+
+echo ${GCC_V}
+echo $(gcc --version)
 
 # Must check GCC for Centos OS
-if [ "${GCC_V}" -lt 7 ] || [ "${NVCC_V}" -lt 11 ]; then
+if [ "$GCC_V" -lt 7 ] || [ "$NVCC_V" -lt 11 ]; then
     FLAGS="-std=c++11"
 else
     FLAGS="-std=c++17"
