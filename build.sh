@@ -117,6 +117,10 @@ else
     FLAGS="-std=c++17"
 fi
 
+echo $(which nvcc)
+echo $(nvcc --version)
+echo $(conda list cudatoolkit)
+
 if hasArg -p; then
     FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
 fi
