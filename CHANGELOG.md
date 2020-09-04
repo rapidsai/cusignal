@@ -3,6 +3,7 @@
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 - PR #195 - Add explicit FIR filter functionality
+- PR #210 - Add signal scope example to notebooks
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
