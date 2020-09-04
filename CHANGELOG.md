@@ -11,7 +11,7 @@
 - PR #203 - Update build process
 
 ## Bug Fixes
-- PR #204 - Fix value error when using CuPy with MappedNDArray
+- PR #209 - Fix value error when using CuPy with MappedNDArray
 
 
 # cuSignal 0.15.0 (26 Aug 2020)
