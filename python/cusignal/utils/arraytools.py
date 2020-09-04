@@ -50,7 +50,7 @@ def get_shared_array(
     # Load data into array space
     shared_mem_array[:] = data
 
-    return shared_mem_array
+    return cuda.as_cuda_array(shared_mem_array)
 
 
 # Return shared memory array - similar to np.empty
@@ -79,14 +79,16 @@ def get_shared_mem(
     wc : bool
     """
 
-    return cuda.mapped_array(
-        shape,
-        dtype=dtype,
-        strides=strides,
-        order=order,
-        stream=stream,
-        portable=portable,
-        wc=wc,
+    return cuda.as_cuda_array(
+        cuda.mapped_array(
+            shape,
+            dtype=dtype,
+            strides=strides,
+            order=order,
+            stream=stream,
+            portable=portable,
+            wc=wc,
+        )
     )
 
 
