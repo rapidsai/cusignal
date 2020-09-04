@@ -198,15 +198,6 @@ class KalmanFilter(object):
         self, dim_x, dim_z, dim_u=0, points=1, dtype=cp.float32,
     ):
 
-        # Check CuPy version
-        # Update to only check for v8.X in cuSignal 0.16
-        valid = ["8.0.0b4", "8.0.0b5", "8.0.0rc1", "8.0.0"]
-        ver = cp.__version__
-        if ver not in valid:
-            raise NotImplementedError(
-                "Kalman Filter only compatible with CuPy v.8.0.0b4+"
-            )
-
         self.points = points
 
         if dim_x < 1:
@@ -280,17 +271,11 @@ class KalmanFilter(object):
 
         # Retrieve kernel from cache
         self.predict_kernel = _filters_cuda._get_backend_kernel(
-            self.x.dtype,
-            blockspergrid,
-            threadsperblock,
-            'predict',
+            self.x.dtype, blockspergrid, threadsperblock, "predict",
         )
 
         self.update_kernel = _filters_cuda._get_backend_kernel(
-            self.x.dtype,
-            blockspergrid,
-            threadsperblock,
-            'update',
+            self.x.dtype, blockspergrid, threadsperblock, "update",
         )
 
         _print_atts(self.predict_kernel)
