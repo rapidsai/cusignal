@@ -3,6 +3,7 @@
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 - PR #195 - Add explicit FIR filter functionality
+- PR #208 - Remove CuPy v8 req for Kalman filter
 - PR #210 - Add signal scope example to notebooks
 
 ## Improvements
@@ -10,6 +11,7 @@
 - PR #200 - Add if constexpr to binary reader
 - PR #202 - Performance improvement to Lombscargle
 - PR #203 - Update build process
+- PR #207 - Add CUDA 10 compatibility with polyphase channelizer
 
 ## Bug Fixes
 
