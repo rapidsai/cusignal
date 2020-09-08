@@ -4,12 +4,14 @@
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 - PR #195 - Add explicit FIR filter functionality
 - PR #199 - Added Ampere support
+- PR #208 - Remove CuPy v8 req for Kalman filter
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
 - PR #200 - Add if constexpr to binary reader
 - PR #202 - Performance improvement to Lombscargle
 - PR #203 - Update build process
+- PR #207 - Add CUDA 10 compatibility with polyphase channelizer
 
 ## Bug Fixes
 
