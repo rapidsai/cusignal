@@ -4,6 +4,7 @@
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
 - PR #195 - Add explicit FIR filter functionality
 - PR #208 - Remove CuPy v8 req for Kalman filter
+- PR #210 - Add signal scope example to notebooks
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
