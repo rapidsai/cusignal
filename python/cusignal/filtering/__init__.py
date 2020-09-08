@@ -26,6 +26,5 @@ from cusignal.filtering.filtering import (
     hilbert2,
     detrend,
     channelize_poly,
-    channelize_poly_gpu,
     freq_shift,
 )
