@@ -688,61 +688,6 @@ def channelize_poly(x, h, n_chans):
     spacing is equivalent to the number of channels used
     """
 
-    # number of taps in each h_n filter
-    n_taps = int(len(h) / n_chans)
-
-    # number of outputs
-    n_pts = int(len(x) / n_chans)
-
-    dtype = cp.promote_types(x.dtype, h.dtype)
-
-    # order F if input from MATLAB
-    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
-    vv = np.empty(n_chans, dtype=dtype)
-
-    if x.dtype == np.float32 or x.dtype == np.complex64:
-        yy = np.empty((n_chans, n_pts), dtype=np.complex64)
-    elif x.dtype == np.float64 or x.dtype == np.complex128:
-        yy = np.empty((n_chans, n_pts), dtype=np.complex128)
-
-    reg = np.zeros((n_chans, n_taps), dtype=dtype)
-
-    # instead of n_chans here, this could be channel separation
-    for i, nn in enumerate(range(0, len(x), n_chans)):
-        reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
-        reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
-        for mm in range(n_chans):
-            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
-
-        yy[:, i] = np.conj(np.fft.fft(vv))
-
-    return yy
-
-
-def channelize_poly_gpu(x, h, n_chans):
-    """
-    Polyphase channelize signal into n channels
-
-    Parameters
-    ----------
-    x : array_like
-        The input data to be channelized
-    h : array_like
-        The 1-D input filter; will be split into n
-        channels of int number of taps
-    n_chans : int
-        Number of channels for channelizer
-
-    Returns
-    ----------
-    yy : channelized output matrix
-
-    Notes
-    ----------
-    Currently only supports simple channelizer where channel
-    spacing is equivalent to the number of channels used
-    """
-
     dtype = cp.promote_types(x.dtype, h.dtype)
 
     x = asarray(x, dtype=dtype)

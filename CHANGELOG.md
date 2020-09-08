@@ -13,6 +13,7 @@
 - PR #202 - Performance improvement to Lombscargle
 - PR #203 - Update build process
 - PR #207 - Add CUDA 10 compatibility with polyphase channelizer
+- PR #211 - Add firfilter and channelize_poly to documentation; remove CPU only version of channelizer
 
 ## Bug Fixes
 
