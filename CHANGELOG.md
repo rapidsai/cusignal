@@ -16,6 +16,7 @@
 - PR #211 - Add firfilter and channelize_poly to documentation; remove CPU only version of channelizer
 
 ## Bug Fixes
+- PR #214 - Fix grid-stride loop bug in polyphase channelizer
 
 
 # cuSignal 0.15.0 (26 Aug 2020)
