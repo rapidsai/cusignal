@@ -632,8 +632,7 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
     if ( btx < n_chans && ty < n_taps ) {
         s_mem[tx][ty] = h[ty * n_chans + btx];
     } else {
-        s_mem[tx][ty].x = 0.0f;
-        s_mem[tx][ty].y = 0.0f;
+        s_mem[tx][ty] = make_cuFloatComplex(0.0f, 0.0f);
     }
 
     __syncthreads( );
@@ -652,8 +651,7 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
             if ( btx < n_chans && ty <= bid ) {
                 s_mem[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
             } else {
-                s_mem[tx][ty].x = 0.0f;
-                s_mem[tx][ty].y = 0.0f;
+                s_mem[tx][ty] = make_cuFloatComplex(0.0f, 0.0f);
             }
         }
 
@@ -851,8 +849,7 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
     if ( btx < n_chans && ty < n_taps ) {
         s_mem[tx][ty] = h[ty * n_chans + btx];
     } else {
-        s_mem[tx][ty].x = 0.0;
-        s_mem[tx][ty].y = 0.0;
+        s_mem[tx][ty] = make_cuDoubleComplex(0.0, 0.0);
     }
 
     __syncthreads( );
@@ -871,8 +868,7 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
             if ( btx < n_chans && ty <= bid ) {
                 s_mem[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
             } else {
-                s_mem[tx][ty].x = 0.0;
-                s_mem[tx][ty].y = 0.0;
+                s_mem[tx][ty] = make_cuDoubleComplex(0.0, 0.0);
             }
         }
 
