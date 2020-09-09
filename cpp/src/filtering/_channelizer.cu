@@ -68,7 +68,7 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -221,8 +221,7 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
-
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -374,7 +373,7 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
 
         // Load data
         if ( bid >= n_taps ) {
@@ -533,7 +532,7 @@ __device__ void _cupy_channelizer_float32_complex64( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -641,7 +640,7 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -750,7 +749,7 @@ __device__ void _cupy_channelizer_float64_complex128( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -858,7 +857,7 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
 
     __syncthreads( );
 
-    for ( auto bid = blockIdx.y; bid < n_pts; bid += blockDim.y ) {
+    for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
