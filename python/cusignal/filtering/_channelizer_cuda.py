@@ -111,11 +111,6 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
             np_type, blockspergrid, threadsperblock, k_type,
         )
 
-    else:
-        raise NotImplementedError(
-            "Number of taps ({}) must be less than (32).".format(n_taps)
-        )
-
     kernel(n_chans, n_taps, n_pts, x, h, y)
 
     _print_atts(kernel)

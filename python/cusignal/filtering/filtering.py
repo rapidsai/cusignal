@@ -695,6 +695,10 @@ def channelize_poly(x, h, n_chans):
 
     # number of taps in each h_n filter
     n_taps = int(len(h) / n_chans)
+    if n_taps > 32:
+        raise NotImplementedError('The number of calculated taps ({}) in  \
+            each filter is currently capped at 32. Please reduce filter \
+                length or number of channels'.format(n_taps))
 
     # number of outputs
     n_pts = int(len(x) / n_chans)
