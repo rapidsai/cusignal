@@ -15,6 +15,7 @@
 - PR #207 - Add CUDA 10 compatibility with polyphase channelizer
 - PR #211 - Add firfilter and channelize_poly to documentation; remove CPU only version of channelizer
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
+- PR #215 - Improve doc formating for filtering operations
 
 ## Bug Fixes
 
