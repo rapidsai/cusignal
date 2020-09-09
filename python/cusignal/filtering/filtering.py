@@ -145,6 +145,7 @@ def firfilter(b, x, axis=None, zi=None):
     >>> b = cp.asarray(b)
     >>> x = cp.random.randn(2**8)
     >>> y = cusignal.firfilter(b, x)
+
     """
 
     if zi is not None:
@@ -685,7 +686,9 @@ def channelize_poly(x, h, n_chans):
     Notes
     ----------
     Currently only supports simple channelizer where channel
-    spacing is equivalent to the number of channels used
+    spacing is equivalent to the number of channels used (zero overlap).
+    Number of filter taps (len of filter / n_chans) must be <=32.
+
     """
 
     dtype = cp.promote_types(x.dtype, h.dtype)
