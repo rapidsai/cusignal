@@ -84,7 +84,10 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            np_type, blockspergrid, threadsperblock, k_type,
+            np_type,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
 
     elif n_taps <= 16:
@@ -96,7 +99,10 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            np_type, blockspergrid, threadsperblock, k_type,
+            np_type,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
 
     elif n_taps <= 32:
@@ -108,12 +114,10 @@ def _channelizer(x, h, y, n_chans, n_taps, n_pts):
         _populate_kernel_cache(np_type, k_type)
 
         kernel = _get_backend_kernel(
-            np_type, blockspergrid, threadsperblock, k_type,
-        )
-
-    else:
-        raise NotImplementedError(
-            "Number of taps ({}) must be less than (32).".format(n_taps)
+            np_type,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
 
     kernel(n_chans, n_taps, n_pts, x, h, y)

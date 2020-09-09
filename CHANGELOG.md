@@ -15,8 +15,10 @@
 - PR #207 - Add CUDA 10 compatibility with polyphase channelizer
 - PR #211 - Add firfilter and channelize_poly to documentation; remove CPU only version of channelizer
 - PR #212 - Add KF to documentation build
+- PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 
 ## Bug Fixes
+- PR #214 - Fix grid-stride loop bug in polyphase channelizer
 
 
 # cuSignal 0.15.0 (26 Aug 2020)
