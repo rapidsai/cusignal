@@ -17,6 +17,7 @@
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 
 ## Bug Fixes
+- PR #214 - Fix grid-stride loop bug in polyphase channelizer
 
 
 # cuSignal 0.15.0 (26 Aug 2020)

@@ -226,7 +226,10 @@ def lfiltic(b, a, y, x=None):
 
 
 def sosfilt(
-    sos, x, axis=-1, zi=None,
+    sos,
+    x,
+    axis=-1,
+    zi=None,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -700,6 +703,11 @@ def channelize_poly(x, h, n_chans):
             each filter is currently capped at 32. Please reduce filter \
                 length or number of channels'.format(n_taps))
 
+    if n_taps > 32:
+        raise NotImplementedError(
+            "Number of taps ({}) must be less than (32).".format(n_taps)
+        )
+
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
@@ -710,6 +718,7 @@ def channelize_poly(x, h, n_chans):
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
+    # Remove with CuPy v8
     if (x.dtype) in _cupy_fft_cache:
         plan = _cupy_fft_cache[(x.dtype)]
     else:
