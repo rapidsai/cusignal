@@ -20,6 +20,17 @@ Correlate
     :undoc-members:
 
 
+Estimation
+============
+
+Kalman Filter
+------------
+
+.. automodule:: cusignal.estimation.filters
+    :members:
+    :undoc-members:
+
+
 Filtering
 ============
 
