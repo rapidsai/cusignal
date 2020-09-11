@@ -340,7 +340,7 @@ Benchmarks are disabled by default in `setup.cfg` providing only test correctnes
 
 As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specific benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
 
-To minimize CLI cluster from benchmark results add `--benchmark-columns=LABELS`, like `--benchmark-columns=min,max,mean`.
+To reduce columns in benchmark result's table, add `--benchmark-columns=LABELS`, like `--benchmark-columns=min,max,mean`.
 For more information on `pytest-benchmark` please visit the [Usage Guide](https://pytest-benchmark.readthedocs.io/en/latest/usage.html).
 
 Parameter `--benchmark-gpu-disable` is to disable memory checks from [Rapids GPU benchmark tool](https://github.com/rapidsai/benchmark). 
