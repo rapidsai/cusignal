@@ -334,9 +334,50 @@ Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more 
 ## Benchmarking
 cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal processing implementations. To run cuSignal's benchmark suite, **navigate to the topmost python directory ($CUSIGNAL_HOME/python)** and run:
 
-`pytest --benchmark-only`
+`pytest --benchmark-enable --benchmark-gpu-disable`
 
-As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _minimum_ execution time reported.
+Benchmark are disabled by default in `setup.cfg` providing only test correctness checks.
+
+As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
+
+Parameter `--benchmark-gpu-disable` is to disable memory checks from Rapids GPU benchmark tool. https://github.com/rapidsai/benchmark
+Doing so speeds up benchmarking.
+
+If you wish to skip benchmarks of SciPy functions add `-m "not cpu"`
+
+Lastly, To minimize CLI cluster from benchmark results add `--benchmark-columns=LABELS`
+
+### Example
+`pytest -k _upfirdn2d -m "not cpu" --benchmark-enable --benchmark-gpu-disable --benchmark-columns=mean`
+
+### Output
+```bash
+cusignal/test/test_filtering.py ..................                                                                                                                                                                                                                                   [100%]
+
+
+---------- benchmark 'UpFirDn2d': 18 tests -----------
+Name (time in us, mem in bytes)         Mean          
+------------------------------------------------------
+test_upfirdn2d_gpu[-1-1-3-256]      195.2299 (1.0)    
+test_upfirdn2d_gpu[-1-9-3-256]      196.1766 (1.00)   
+test_upfirdn2d_gpu[-1-1-7-256]      196.2881 (1.01)   
+test_upfirdn2d_gpu[0-2-3-256]       196.9984 (1.01)   
+test_upfirdn2d_gpu[0-9-3-256]       197.5675 (1.01)   
+test_upfirdn2d_gpu[0-1-7-256]       197.9015 (1.01)   
+test_upfirdn2d_gpu[-1-9-7-256]      198.0923 (1.01)   
+test_upfirdn2d_gpu[-1-2-7-256]      198.3325 (1.02)   
+test_upfirdn2d_gpu[0-2-7-256]       198.4676 (1.02)   
+test_upfirdn2d_gpu[0-9-7-256]       198.6437 (1.02)   
+test_upfirdn2d_gpu[0-1-3-256]       198.7477 (1.02)   
+test_upfirdn2d_gpu[-1-2-3-256]      200.1589 (1.03)   
+test_upfirdn2d_gpu[-1-2-2-256]      213.0316 (1.09)   
+test_upfirdn2d_gpu[0-1-2-256]       213.0944 (1.09)   
+test_upfirdn2d_gpu[-1-9-2-256]      214.6168 (1.10)   
+test_upfirdn2d_gpu[0-2-2-256]       214.6975 (1.10)   
+test_upfirdn2d_gpu[-1-1-2-256]      216.4033 (1.11)   
+test_upfirdn2d_gpu[0-9-2-256]       217.1675 (1.11)   
+------------------------------------------------------
+``
 
 ## Contributing Guide
 
