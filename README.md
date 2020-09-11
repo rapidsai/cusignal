@@ -340,12 +340,14 @@ Benchmark are disabled by default in `setup.cfg` providing only test correctness
 
 As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
 
+To minimize CLI cluster from benchmark results add `--benchmark-columns=LABELS`
+
 Parameter `--benchmark-gpu-disable` is to disable memory checks from Rapids GPU benchmark tool. https://github.com/rapidsai/benchmark
 Doing so speeds up benchmarking.
 
 If you wish to skip benchmarks of SciPy functions add `-m "not cpu"`
 
-Lastly, To minimize CLI cluster from benchmark results add `--benchmark-columns=LABELS`
+Lastly, benchmarks will be executed on local files. Therefore to test recent changes made to source, rebuild cuSignal.
 
 ### Example
 `pytest -k _upfirdn2d -m "not cpu" --benchmark-enable --benchmark-gpu-disable --benchmark-columns=mean`
@@ -377,7 +379,7 @@ test_upfirdn2d_gpu[0-2-2-256]       214.6975 (1.10)
 test_upfirdn2d_gpu[-1-1-2-256]      216.4033 (1.11)   
 test_upfirdn2d_gpu[0-9-2-256]       217.1675 (1.11)   
 ------------------------------------------------------
-``
+```
 
 ## Contributing Guide
 
