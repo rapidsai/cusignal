@@ -336,9 +336,9 @@ cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal
 
 `pytest --benchmark-enable --benchmark-gpu-disable`
 
-Benchmark are disabled by default in `setup.cfg` providing only test correctness checks.
+Benchmarks are disabled by default in `setup.cfg` providing only test correctness checks.
 
-As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
+As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specific benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
 
 To minimize CLI cluster from benchmark results add `--benchmark-columns=LABELS`
 
@@ -350,7 +350,7 @@ If you wish to skip benchmarks of SciPy functions add `-m "not cpu"`
 Lastly, benchmarks will be executed on local files. Therefore to test recent changes made to source, rebuild cuSignal.
 
 ### Example
-`pytest -k _upfirdn2d -m "not cpu" --benchmark-enable --benchmark-gpu-disable --benchmark-columns=mean`
+`pytest -k upfirdn2d -m "not cpu" --benchmark-enable --benchmark-gpu-disable --benchmark-columns=mean`
 
 ### Output
 ```bash
