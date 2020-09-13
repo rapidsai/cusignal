@@ -183,13 +183,6 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
 4. Install cuSignal module
 
     ```bash
-    cd $CUSIGNAL_HOME/python
-    python setup.py install
-    ```
-
-    or
-
-    ```bash
     cd $CUSIGNAL_HOME
     ./build.sh  # install cuSignal to $PREFIX if set, otherwise $CONDA_PREFIX
                 # run ./build.sh -h to print the supported command line options.
@@ -245,13 +238,6 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
 4. Install cuSignal module
 
     ```bash
-    cd $CUSIGNAL_HOME/python
-    python setup.py install
-    ```
-
-    or
-
-    ```bash
     cd $CUSIGNAL_HOME
     ./build.sh  # install cuSignal to $PREFIX if set, otherwise $CONDA_PREFIX
                 # run ./build.sh -h to print the supported command line options.
@@ -296,8 +282,7 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
 5. Install cuSignal module
 
     ```
-    cd python
-    python setup.py install
+    ./build.sh
     ```
 
 6. \[Optional\] Run tests
