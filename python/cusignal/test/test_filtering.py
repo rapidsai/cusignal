@@ -48,21 +48,30 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Lfiltic")
-    # class TestLfiltic:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.lfiltic(cpu_sig)
+    @pytest.mark.benchmark(group="Lfiltic")
+    @pytest.mark.parametrize("num_a", [0.03])
+    @pytest.mark.parametrize("num_b", [1 - 0.03])
+    @pytest.mark.parametrize("num_y", [0])
 
-    #         @pytest.mark.cpu
-    #     def test_lfiltic_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    class TestLfiltic:
+        def cpu_version(self, a, b, y):
+            return signal.lfiltic([a], [1, -b], [0])
 
-    #     def test_lfiltic_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
+            
+            benchmark(self.cpu_version, num_a, num_b, num_y)
 
-    #         output = gpubenchmark(cusignal.lfiltic, gpu_sig)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+        def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
+            d_num_a = cp.asarray(num_a)
+            d_num_b = cp.asarray(num_b)
+            d_num_y = cp.asarray(num_y)
+
+            output = gpubenchmark(cusignal.lfiltic, d_num_a, d_num_b, d_num_y)
+
+            key = self.cpu_version(num_a, num_b, num_y)
+            assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
