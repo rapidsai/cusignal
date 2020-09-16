@@ -48,30 +48,36 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Lfiltic")
-    @pytest.mark.parametrize("num_a", [0.03])
-    @pytest.mark.parametrize("num_b", [1 - 0.03])
-    @pytest.mark.parametrize("num_y", [0])
+    # @pytest.mark.benchmark(group="Lfiltic")
+    # @pytest.mark.parametrize("num_a", [1.0, -1.0/3])
+    # @pytest.mark.parametrize("num_b", [1.0/2, 1.0/4])
+    # @pytest.mark.parametrize("num_y", [2.])
 
-    class TestLfiltic:
-        def cpu_version(self, a, b, y):
-            return signal.lfiltic([a], [1, -b], [0])
+    # class TestLfiltic:
+    #     #def cpu_version(self, a, b, y):
+    #     def cpu_version(self, b, a, y):
+    #         #return signal.lfiltic(a, b, y)
+    #         return signal.lfiltic(b, a, y)
 
-        @pytest.mark.cpu
-        def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
-            
-            benchmark(self.cpu_version, num_a, num_b, num_y)
+    #     @pytest.mark.cpu
+    #     #def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
+    #     def test_lfiltic_cpu(self, benchmark, num_b, num_a, num_y):
 
+    #         #benchmark(self.cpu_version, num_a, num_b, num_y)
+    #         benchmark(self.cpu_version, num_b, num_a, num_y)
 
-        def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
-            d_num_a = cp.asarray(num_a)
-            d_num_b = cp.asarray(num_b)
-            d_num_y = cp.asarray(num_y)
+    #     def test_lfiltic_gpu(self, gpubenchmark, num_b, num_a,num_y):
+    #     #def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
+    #         d_num_a = cp.asarray(num_a)
+    #         d_num_b = cp.asarray(num_b)
+    #         d_num_y = cp.asarray(num_y)
 
-            output = gpubenchmark(cusignal.lfiltic, d_num_a, d_num_b, d_num_y)
+    #         output = gpubenchmark(cusignal.lfiltic, d_num_b,d_num_a, d_num_y)
+    #         #output = gpubenchmark(cusignal.lfiltic, d_num_a,num_b, num_y)
 
-            key = self.cpu_version(num_a, num_b, num_y)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(num_b, num_a,  num_y)
+    #         #key = self.cpu_version(num_a, num_b, num_y)
+    #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
@@ -160,36 +166,43 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
+
     # @pytest.mark.benchmark(group="Detrend")
+    # @pytest.mark.parametrize("randgen", np.random.RandomState(9))
+    # @pytest.mark.parametrize("num_npoints", 1000)
+    # @pytest.mark.parametrize("num_noise", randgen.randn(num_npoints))
+    # @pytest.mark.parametrize("num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
+
     # class TestDetrend:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.detrend(cpu_sig)
+    #     def cpu_version(self, x):
+    #         return signal.detrend(x)
 
-    #         @pytest.mark.cpu
-    #     def test_detrend_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     def test_detrend_cpu(self, benchmark, num_x):
+    #         benchmark(self.cpu_version, num_x)
 
-    #     def test_detrend_gpu(self, gpubenchmark):
+    #     def test_detrend_gpu(self, gpubenchmark, num_x):
 
-    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, num_x)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version(num_x)
     #         assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="FreqShift")
+    # @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
     # class TestFreqShift:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.freq_shift(cpu_sig)
+    #     def cpu_version(self, cpu_sig, freq):
+    #         return signal.freq_shift(freq)
 
-    #         @pytest.mark.cpu
-    #     def test_freq_shift_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     def test_freq_shift_cpu(self, benchmark, freq):
+    #         benchmark(self.cpu_version, freq)
 
     #     def test_freq_shift_gpu(self, gpubenchmark):
 
-    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, freq)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version(freq)
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")

@@ -13,8 +13,7 @@
 
 import cupy as cp
 import cusignal
-
-# import numpy as np
+import numpy as np
 import pytest
 
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
@@ -53,50 +52,57 @@ class TestFilterDesign:
             key = self.cpu_version(num_samps, f1, f2)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="KaiserBeta")
-    # class TestKaiserBeta:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_beta(cpu_sig)
+    # Using [2 ** 15 for now, works with any random number that is positive]
+    @pytest.mark.benchmark(group="KaiserBeta")
+    @pytest.mark.parametrize("a", [2 ** 15])
+    class TestKaiserBeta:
+        def cpu_version(self, a):
+            return signal.kaiser_beta(a)
 
-    #     @pytest.mark.cpu
-    #     def test_kaiser_beta_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_kaiser_beta_cpu(self, benchmark, a):
+            benchmark(self.cpu_version, a)
 
-    #     def test_kaiser_beta_gpu(self, gpubenchmark):
+        def test_kaiser_beta_gpu(self, gpubenchmark, a):
 
-    #         output = gpubenchmark(cusignal.kaiser_beta, gpu_sig)
+            output = gpubenchmark(cusignal.kaiser_beta, a)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(a)
+            assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="KaiserAtten")
-    # class TestKaiserAtten:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_atten(cpu_sig)
+    @pytest.mark.benchmark(group="KaiserAtten")
+    @pytest.mark.parametrize("num_taps", [211])
+    @pytest.mark.parametrize("width", [0.0375])
+    class TestKaiserAtten:
+        def cpu_version(self, num_taps, width):
+            return signal.kaiser_atten( num_taps, width)
 
-    #     @pytest.mark.cpu
-    #     def test_kaiser_atten_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_kaiser_atten_cpu(self, benchmark, num_taps, width):
+            benchmark(self.cpu_version, num_taps, width)
 
-    #     def test_kaiser_atten_gpu(self, gpubenchmark):
+        def test_kaiser_atten_gpu(self, gpubenchmark, num_taps, width):
 
-    #         output = gpubenchmark(cusignal.kaiser_atten, gpu_sig)
+            output = gpubenchmark(cusignal.kaiser_atten, num_taps, width)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version( num_taps, width)
+            assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="CmplxSort")
+    # @pytest.mark.parametrize("vals", 4)
     # class TestCmplxSort:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.cmplx_sort(cpu_sig)
+    #     def cpu_version(self, vals):
+    #         return signal.cmplx_sort([vals])
 
     #     @pytest.mark.cpu
-    #     def test_cmplx_sort_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     def test_cmplx_sort_cpu(self, benchmark, vals):
+    #         #cpu_sig, _ = rand_data_gen(num_samps)
+    #         benchmark(self.cpu_version, [vals])
 
-    #     def test_cmplx_sort_gpu(self, gpubenchmark):
+    #     def test_cmplx_sort_gpu(self, gpubenchmark, vals):
+            
+    #         #cpu_sig, gpu_sig = rand_data_gen(num_samps)
+    #         output = gpubenchmark(cusignal.cmplx_sort, [vals])
 
-    #         output = gpubenchmark(cusignal.cmplx_sort, gpu_sig)
-
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version([vals])
     #         assert array_equal(cp.asnumpy(output), key)
