@@ -52,12 +52,16 @@ class TestFilterDesign:
             key = self.cpu_version(num_samps, f1, f2)
             assert array_equal(cp.asnumpy(output), key)
 
-    # Using [2 ** 15 for now, works with any random number that is positive]
     @pytest.mark.benchmark(group="KaiserBeta")
-    @pytest.mark.parametrize("a", [2 ** 15])
+    @pytest.mark.parametrize("a", [1, 22, 51])
     class TestKaiserBeta:
         def cpu_version(self, a):
             return signal.kaiser_beta(a)
+        
+        def gpu_version(self, a):
+            ans = cusignal.kaiser_beta(a)
+            cp.cuda.runtime.deviceSynchronize()
+            return ans
 
         @pytest.mark.cpu
         def test_kaiser_beta_cpu(self, benchmark, a):
@@ -65,11 +69,13 @@ class TestFilterDesign:
 
         def test_kaiser_beta_gpu(self, gpubenchmark, a):
 
-            output = gpubenchmark(cusignal.kaiser_beta, a)
+            output = gpubenchmark(self.gpu_version, a)
 
             key = self.cpu_version(a)
             assert array_equal(cp.asnumpy(output), key)
-
+    
+    # num_taps is int for FIR filter
+    # width is float for width of transition region
     @pytest.mark.benchmark(group="KaiserAtten")
     @pytest.mark.parametrize("num_taps", [211])
     @pytest.mark.parametrize("width", [0.0375])
@@ -87,22 +93,25 @@ class TestFilterDesign:
 
             key = self.cpu_version( num_taps, width)
             assert array_equal(cp.asnumpy(output), key)
-
+    
+    # # vals is array like
     # @pytest.mark.benchmark(group="CmplxSort")
-    # @pytest.mark.parametrize("vals", 4)
+    # @pytest.mark.benchmark("num_samps", [2 ** 15])
+    # #@pytest.mark.parametrize("vals", [1, 4, 1+1.j, 3])
     # class TestCmplxSort:
     #     def cpu_version(self, vals):
-    #         return signal.cmplx_sort([vals])
+    #         return signal.cmplx_sort(vals)
 
     #     @pytest.mark.cpu
-    #     def test_cmplx_sort_cpu(self, benchmark, vals):
-    #         #cpu_sig, _ = rand_data_gen(num_samps)
-    #         benchmark(self.cpu_version, [vals])
+    #     def test_cmplx_sort_cpu(self, rand_data_gen, benchmark, num_samps):
+    #         vals, _ = rand_data_gen(num_samps)
+    #         benchmark(self.cpu_version, vals)
 
-    #     def test_cmplx_sort_gpu(self, gpubenchmark, vals):
+    #     def test_cmplx_sort_gpu(self, rand_data_gen, gpubenchmark, num_samps):
             
-    #         #cpu_sig, gpu_sig = rand_data_gen(num_samps)
-    #         output = gpubenchmark(cusignal.cmplx_sort, [vals])
+    #         #d_vals = cp.asarray(vals)
+    #         vals, d_vals = rand_data_gen(num_samps)
+    #         output = gpubenchmark(cusignal.cmplx_sort, d_vals)
 
-    #         key = self.cpu_version([vals])
+    #         key = self.cpu_version(vals)
     #         assert array_equal(cp.asnumpy(output), key)
