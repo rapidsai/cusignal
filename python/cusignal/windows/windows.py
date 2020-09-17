@@ -13,19 +13,6 @@
 
 import cupy as cp
 from cupyx.scipy import fftpack, special
-from cupy import (
-    array,
-    ones,
-    zeros,
-    cos,
-    arange,
-    sqrt,
-    pi,
-    linspace,
-    abs,
-    sin,
-    exp,
-)
 
 import warnings
 
@@ -125,13 +112,13 @@ def general_cosine(M, a, sym=True):
     >>> plt.show()
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    fac = linspace(-pi, pi, M)
-    w = zeros(M)
+    fac = cp.linspace(-cp.pi, cp.pi, M)
+    w = cp.zeros(M)
     for k in range(len(a)):
-        w += a[k] * cos(k * fac)
+        w += a[k] * cp.cos(k * fac)
 
     return _truncate(w, needs_trunc)
 
@@ -182,10 +169,10 @@ def boxcar(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = ones(M, float)
+    w = cp.ones(M, float)
 
     return _truncate(w, needs_trunc)
 
@@ -241,10 +228,10 @@ def triang(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(1, (M + 1) // 2 + 1)
+    n = cp.arange(1, (M + 1) // 2 + 1)
     if M % 2 == 0:
         w = (2 * n - 1.0) / M
         w = cp.r_[w, w[::-1]]
@@ -306,10 +293,10 @@ def parzen(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(-(M - 1) / 2.0, (M - 1) / 2.0 + 0.5, 1.0)
+    n = cp.arange(-(M - 1) / 2.0, (M - 1) / 2.0 + 0.5, 1.0)
     na = cp.extract(n < -(M - 1) / 4.0, n)
     nb = cp.extract(abs(n) <= (M - 1) / 4.0, n)
     wa = 2 * (1 - abs(na) / (M / 2.0)) ** 3.0
@@ -367,11 +354,11 @@ def bohman(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    fac = abs(linspace(-1, 1, M)[1:-1])
-    w = (1 - fac) * cos(pi * fac) + 1.0 / pi * sin(pi * fac)
+    fac = abs(cp.linspace(-1, 1, M)[1:-1])
+    w = (1 - fac) * cp.cos(cp.pi * fac) + 1.0 / cp.pi * cp.sin(pi * fac)
     w = cp.r_[0, w, 0]
 
     return _truncate(w, needs_trunc)
@@ -723,10 +710,10 @@ def bartlett(M, sym=True):
     """
     # Docstring adapted from NumPy's bartlett function
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(0, M)
+    n = cp.arange(0, M)
     w = cp.where(
         cp.less_equal(n, (M - 1) / 2.0),
         2.0 * n / (M - 1),
@@ -879,24 +866,24 @@ def tukey(M, alpha=0.5, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
 
     if alpha <= 0:
-        return ones(M, "d")
+        return cp.ones(M, "d")
     elif alpha >= 1.0:
         return hann(M, sym=sym)
 
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(0, M)
+    n = cp.arange(0, M)
     width = int(cp.floor(alpha * (M - 1) / 2.0))
     n1 = n[0 : width + 1]
     n2 = n[width + 1 : M - width - 1]
     n3 = n[M - width - 1 :]
 
-    w1 = 0.5 * (1 + cos(pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
-    w2 = ones(n2.shape)
-    w3 = 0.5 * (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * n3 / alpha / (M - 1))))
+    w1 = 0.5 * (1 + cp.cos(cp.pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
+    w2 = cp.ones(n2.shape)
+    w3 = 0.5 * (1 + cp.cos(cp.pi * (-2.0 / alpha + 1 + 2.0 * n3 / alpha / (M - 1))))
 
     w = cp.concatenate((w1, w2, w3))
 
@@ -949,12 +936,12 @@ def barthann(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(0, M)
+    n = cp.arange(0, M)
     fac = abs(n / (M - 1.0) - 0.5)
-    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac)
+    w = 0.62 - 0.48 * fac + 0.38 * cp.cos(2 * cp.pi * fac)
 
     return _truncate(w, needs_trunc)
 
@@ -1128,14 +1115,14 @@ def hamming(M, sym=True):
 
     """
     if M < 1:
-        return array([])
+        return cp.array([])
     if M == 1:
-        return ones(1, "d")
+        return cp.ones(1, "d")
     odd = M % 2
     if not sym and not odd:
         M = M + 1
-    n = arange(0, M)
-    w = 0.54 - 0.46 * cos(2.0 * pi * n / (M - 1))
+    n = cp.arange(0, M)
+    w = 0.54 - 0.46 * cp.cos(2.0 * cp.pi * n / (M - 1))
     if not sym and not odd:
         w = w[:-1]
     return w
@@ -1249,15 +1236,15 @@ def kaiser(M, beta, sym=True):
 
     """
     if M < 1:
-        return array([])
+        return cp.array([])
     if M == 1:
-        return ones(1, "d")
+        return cp.ones(1, "d")
     odd = M % 2
     if not sym and not odd:
         M = M + 1
-    n = arange(0, M)
+    n = cp.arange(0, M)
     alpha = (M - 1) / 2.0
-    w = special.i0(beta * sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
+    w = special.i0(beta * cp.sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
         beta
     )
     if not sym and not odd:
@@ -1319,12 +1306,12 @@ def gaussian(M, std, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(0, M) - (M - 1.0) / 2.0
+    n = cp.arange(0, M) - (M - 1.0) / 2.0
     sig2 = 2 * std * std
-    w = exp(-(n ** 2) / sig2)
+    w = cp.exp(-(n ** 2) / sig2)
 
     return _truncate(w, needs_trunc)
 
@@ -1391,11 +1378,11 @@ def general_gaussian(M, p, sig, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = arange(0, M) - (M - 1.0) / 2.0
-    w = exp(-0.5 * abs(n / sig) ** (2 * p))
+    n = cp.arange(0, M) - (M - 1.0) / 2.0
+    w = cp.exp(-0.5 * abs(n / sig) ** (2 * p))
 
     return _truncate(w, needs_trunc)
 
@@ -1497,21 +1484,21 @@ def chebwin(M, at, sym=True):
             "about 45 dB."
         )
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
     # compute the parameter beta
     order = M - 1.0
     beta = cp.cosh(1.0 / order * cp.arccosh(10 ** (abs(at) / 20.0)))
     k = cp.arange(0, M) * 1.0
-    x = beta * cp.cos(pi * k / M)
+    x = beta * cp.cos(cp.pi * k / M)
     # Find the window's DFT coefficients
     # Use analytic definition of Chebyshev polynomial instead of expansion
     # from scipy.special. Using the expansion in scipy.special leads to errors.
-    p = zeros(x.shape)
+    p = cp.zeros(x.shape)
     p[x > 1] = cp.cosh(order * cp.arccosh(x[x > 1]))
     p[x < -1] = (2 * (M % 2) - 1) * cp.cosh(order * cp.arccosh(-x[x < -1]))
-    p[abs(x) <= 1] = cos(order * cp.arccos(x[abs(x) <= 1]))
+    p[abs(x) <= 1] = cp.cos(order * cp.arccos(x[abs(x) <= 1]))
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
@@ -1521,7 +1508,7 @@ def chebwin(M, at, sym=True):
         w = w[:n]
         w = cp.concatenate((w[n - 1 : 0 : -1], w))
     else:
-        p = p * exp(1.0j * pi / M * cp.arange(0, M))
+        p = p * cp.exp(1.0j * cp.pi / M * cp.arange(0, M))
         w = cp.real(fftpack.fft(p))
         n = M // 2 + 1
         w = cp.concatenate((w[n - 1 : 0 : -1], w[1:n]))
@@ -1582,10 +1569,10 @@ def cosine(M, sym=True):
 
     """
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = sin(pi / M * (arange(0, M) + 0.5))
+    w = cp.sin(cp.pi / M * (cp.arange(0, M) + 0.5))
 
     return _truncate(w, needs_trunc)
 
@@ -1667,14 +1654,14 @@ def exponential(M, center=None, tau=1.0, sym=True):
     if sym and center is not None:
         raise ValueError("If sym==True, center must be None.")
     if _len_guards(M):
-        return ones(M)
+        return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
     if center is None:
         center = (M - 1) / 2
 
-    n = arange(0, M)
-    w = exp(-abs(n - center) / tau)
+    n = cp.arange(0, M)
+    w = cp.exp(-abs(n - center) / tau)
 
     return _truncate(w, needs_trunc)
 
