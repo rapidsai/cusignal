@@ -19,10 +19,9 @@ import numpy as np
 # Fixtures with (scope="session") will execute once
 # and be shared will all tests that need it.
 
+
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "cpu: mark CPU test cases"
-    )
+    config.addinivalue_line("markers", "cpu: mark CPU test cases")
 
 
 # Generate data for using linspace
