@@ -117,17 +117,19 @@ class TestWavelets:
             assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="Qmf")
+    # @pytest.mark.benchmark("f1", [1,1])
+    # @pytest.mark.benchmark("f2", [1,-1])
     # class TestQmf:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.qmf(cpu_sig)
+    #     def cpu_version(self, f1, f2):
+    #         return signal.qmf(f1, f2)
 
     #     @pytest.mark.cpu
-    #     def test_qmf_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     def test_qmf_cpu(self, benchmark, f1, f2):
+    #         benchmark(self.cpu_version, f1, f2)
 
-    #     def test_qmf_gpu(self, gpubenchmark):
+    #     def test_qmf_gpu(self, gpubenchmark, f1, f2):
 
-    #         output = gpubenchmark(cusignal.qmf, gpu_sig)
+    #         output = gpubenchmark(cusignal.qmf, f1, f2)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version(f1, f2)
     #         assert array_equal(cp.asnumpy(output), key)

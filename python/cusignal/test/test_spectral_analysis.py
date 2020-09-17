@@ -436,18 +436,23 @@ class TestSpectral:
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Vectorstrength")
-    # class TestVectorstrength:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.vectorstrength(cpu_sig)
+    # events are an array of time points
+    # float or array for period of signal
+    @pytest.mark.benchmark(group="Vectorstrength")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("period", [1.2])
+    class TestVectorstrength:
+        def cpu_version(self, events_cpu, period):
+            return signal.vectorstrength(events_cpu, period)
 
-    #     @pytest.mark.cpu
-    #     def test_vectorstrength_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_vectorstrength_cpu(self, benchmark, time_data_gen, num_samps, period):
+            events_cpu, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, events_cpu, period)
 
-    #     def test_vectorstrength_gpu(self, gpubenchmark):
+        def test_vectorstrength_gpu(self, gpubenchmark, time_data_gen, num_samps,period):
+            events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
+            output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
 
-    #         output = gpubenchmark(cusignal.vectorstrength, gpu_sig)
-
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(events_cpu, period)
+            assert array_equal(cp.asnumpy(output), key)
