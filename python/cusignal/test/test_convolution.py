@@ -29,10 +29,15 @@ class TestConvolution:
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
     class TestCorrelate:
-        def cpu_version(self, cpu_sig, num_taps, mode, method):
-            return signal.correlate(
-                cpu_sig, num_taps, mode=mode, method=method
-            )
+        def cpu_version(self, sig, num_taps, mode, method):
+            return signal.correlate(sig, num_taps, mode=mode, method=method)
+
+        def gpu_version(self, sig, num_taps, mode, method):
+            with cp.cuda.Stream.null:
+                return cusignal.correlate(
+                    sig, num_taps, mode=mode, method=method
+                )
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_correlate1d_cpu(
@@ -55,11 +60,11 @@ class TestConvolution:
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(
-                cusignal.correlate,
+                self.gpu_version,
                 gpu_sig,
-                cp.ones(num_taps),
-                mode=mode,
-                method=method,
+                np.ones(num_taps),
+                mode,
+                method,
             )
 
             key = self.cpu_version(cpu_sig, np.ones(num_taps), mode, method)
@@ -71,8 +76,13 @@ class TestConvolution:
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
     class TestConvolve:
-        def cpu_version(self, cpu_sig, cpu_win, mode, method):
-            return signal.convolve(cpu_sig, cpu_win, mode=mode, method=method)
+        def cpu_version(self, sig, win, mode, method):
+            return signal.convolve(sig, win, mode=mode, method=method)
+
+        def gpu_version(self, sig, win, mode, method):
+            with cp.cuda.Stream.null:
+                return cusignal.convolve(sig, win, mode=mode, method=method)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_convolve1d_cpu(
@@ -96,7 +106,7 @@ class TestConvolution:
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             gpu_win = cusignal.windows.hann(num_taps)
             output = gpubenchmark(
-                cusignal.convolve, gpu_sig, gpu_win, mode=mode, method=method
+                self.gpu_version, gpu_sig, gpu_win, mode, method
             )
 
             cpu_win = signal.windows.hann(num_taps)
@@ -107,8 +117,13 @@ class TestConvolution:
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     class TestFFTConvolve:
-        def cpu_version(self, cpu_sig, mode):
-            return signal.fftconvolve(cpu_sig, cpu_sig[::-1], mode=mode)
+        def cpu_version(self, sig, mode):
+            return signal.fftconvolve(sig, sig[::-1], mode=mode)
+
+        def gpu_version(self, sig, mode):
+            with cp.cuda.Stream.null:
+                return cusignal.fftconvolve(sig, sig[::-1], mode=mode)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_fftconvolve_cpu(
@@ -122,9 +137,7 @@ class TestConvolution:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(
-                cusignal.fftconvolve, gpu_sig, gpu_sig[::-1], mode=mode
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, mode)
 
             key = self.cpu_version(cpu_sig, mode)
             assert array_equal(cp.asnumpy(output), key)
@@ -135,10 +148,15 @@ class TestConvolution:
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     class TestConvolve2d:
-        def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
-            return signal.convolve2d(
-                cpu_sig, cpu_filt, boundary=boundary, mode=mode
-            )
+        def cpu_version(self, sig, filt, boundary, mode):
+            return signal.convolve2d(sig, filt, boundary=boundary, mode=mode)
+
+        def gpu_version(self, sig, filt, boundary, mode):
+            with cp.cuda.Stream.null:
+                return cusignal.convolve2d(
+                    sig, filt, boundary=boundary, mode=mode
+                )
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_convolve2d_cpu(
@@ -167,11 +185,11 @@ class TestConvolution:
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
             output = gpubenchmark(
-                cusignal.convolve2d,
+                self.gpu_version,
                 gpu_sig,
                 gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                boundary,
+                mode,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
@@ -183,10 +201,15 @@ class TestConvolution:
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     class TestCorrelate2d:
-        def cpu_version(self, cpu_sig, cpu_filt, boundary, mode):
-            return signal.correlate2d(
-                cpu_sig, cpu_filt, boundary=boundary, mode=mode
-            )
+        def cpu_version(self, sig, filt, boundary, mode):
+            return signal.correlate2d(sig, filt, boundary=boundary, mode=mode)
+
+        def gpu_version(self, sig, filt, boundary, mode):
+            with cp.cuda.Stream.null:
+                return cusignal.correlate2d(
+                    sig, filt, boundary=boundary, mode=mode
+                )
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_correlate2d_cpu(
@@ -215,11 +238,11 @@ class TestConvolution:
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
             output = gpubenchmark(
-                cusignal.correlate2d,
+                self.gpu_version,
                 gpu_sig,
                 gpu_filt,
-                boundary=boundary,
-                mode=mode,
+                boundary,
+                mode,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
