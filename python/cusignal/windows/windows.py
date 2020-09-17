@@ -358,7 +358,7 @@ def bohman(M, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     fac = abs(cp.linspace(-1, 1, M)[1:-1])
-    w = (1 - fac) * cp.cos(cp.pi * fac) + 1.0 / cp.pi * cp.sin(pi * fac)
+    w = (1 - fac) * cp.cos(cp.pi * fac) + 1.0 / cp.pi * cp.sin(cp.pi * fac)
     w = cp.r_[0, w, 0]
 
     return _truncate(w, needs_trunc)
