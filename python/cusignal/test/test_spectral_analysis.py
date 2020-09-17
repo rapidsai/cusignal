@@ -480,27 +480,27 @@ class TestSpectral:
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Vectorstrength")
-    class TestVectorstrength:
-        def cpu_version(self, sig):
-            return signal.vectorstrength(sig)
+    # @pytest.mark.benchmark(group="Vectorstrength")
+    # class TestVectorstrength:
+    #     def cpu_version(self, sig):
+    #         return signal.vectorstrength(sig)
 
-        @pytest.mark.cpu
-        def test_vectorstrength_cpu(self, benchmark):
-            benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     def test_vectorstrength_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
 
-        @pytest.mark.cpu
-        def test_vectorstrength_cpu(
-            self, benchmark, time_data_gen, num_samps, period
-        ):
-            events_cpu, _ = time_data_gen(0, 10, num_samps)
-            benchmark(self.cpu_version, events_cpu, period)
+    #     @pytest.mark.cpu
+    #     def test_vectorstrength_cpu(
+    #         self, benchmark, time_data_gen, num_samps, period
+    #     ):
+    #         events_cpu, _ = time_data_gen(0, 10, num_samps)
+    #         benchmark(self.cpu_version, events_cpu, period)
 
-        def test_vectorstrength_gpu(
-            self, gpubenchmark, time_data_gen, num_samps, period
-        ):
-            events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
+    #     def test_vectorstrength_gpu(
+    #         self, gpubenchmark, time_data_gen, num_samps, period
+    #     ):
+    #         events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
+    #         output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
 
-            key = self.cpu_version(events_cpu, period)
-            assert array_equal(cp.asnumpy(output), key)
+    #         key = self.cpu_version(events_cpu, period)
+    #         assert array_equal(cp.asnumpy(output), key)

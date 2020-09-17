@@ -234,12 +234,17 @@ class TestFilter:
     @pytest.mark.parametrize("zero_phase", [True, False])
     class TestDecimate:
         def cpu_version(self, sig, downsample_factor, zero_phase):
-            return signal.decimate(sig, downsample_factor, zero_phase)
+            return signal.decimate(
+                sig, downsample_factor, ftype="fir", zero_phase=zero_phase
+            )
 
         def gpu_version(self, sig, downsample_factor, zero_phase):
             with cp.cuda.Stream.null:
-                return cusignal.decimate(sig, downsample_factor, zero_phase)
+                out = cusignal.decimate(
+                    sig, downsample_factor, zero_phase=zero_phase
+                )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_decimate_cpu(
@@ -268,7 +273,7 @@ class TestFilter:
                 self.gpu_version,
                 gpu_sig,
                 downsample_factor,
-                zero_phase=zero_phase,
+                zero_phase,
             )
 
             key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)
@@ -284,7 +289,9 @@ class TestFilter:
 
         def gpu_version(self, sig, resample_num_samps, window):
             with cp.cuda.Stream.null:
-                return cusignal.resample(sig, resample_num_samps, window=window)
+                return cusignal.resample(
+                    sig, resample_num_samps, window=window
+                )
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -481,7 +488,7 @@ class TestFilter:
 
         def gpu_version(self, sig, filt):
             with cp.cuda.Stream.null:
-                return cusignal.firfilter(filt, 1, sig)
+                return cusignal.firfilter(filt, sig)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -510,8 +517,8 @@ class TestFilter:
             gpu_filter = cp.asarray(cpu_filter)
             output = gpubenchmark(
                 self.gpu_version,
-                gpu_filter,
                 gpu_sig,
+                gpu_filter,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filter)

@@ -140,13 +140,8 @@ class TestWavelets:
     # @pytest.mark.benchmark("f1", [1,1])
     # @pytest.mark.benchmark("f2", [1,-1])
     # class TestQmf:
-<<<<<<< HEAD
-    #     def cpu_version(self, f1, f2):
-    #         return signal.qmf(f1, f2)
-=======
     #     def cpu_version(self, sig):
     #         return signal.qmf(sig)
->>>>>>> 4701cb212955bb2fe09b5ee1f6ba6023130a3e92
 
     #     @pytest.mark.cpu
     #     def test_qmf_cpu(self, benchmark, f1, f2):
