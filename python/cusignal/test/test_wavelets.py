@@ -33,13 +33,18 @@ class TestWavelets:
         def cpu_version(self, num_samps):
             return signal.morlet(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                return cusignal.morlet(num_samps)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_morlet_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_morlet_gpu(self, gpubenchmark, num_samps):
 
-            output = gpubenchmark(cusignal.morlet, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -51,13 +56,18 @@ class TestWavelets:
         def cpu_version(self, num_samps, a):
             return signal.ricker(num_samps, a)
 
+        def gpu_version(self, num_samps, a):
+            with cp.cuda.Stream.null:
+                return cusignal.ricker(num_samps, a)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_ricker_cpu(self, benchmark, num_samps, a):
             benchmark(self.cpu_version, num_samps, a)
 
         def test_ricker_gpu(self, gpubenchmark, num_samps, a):
 
-            output = gpubenchmark(cusignal.ricker, num_samps, a)
+            output = gpubenchmark(self.gpu_version, num_samps, a)
 
             key = self.cpu_version(num_samps, a)
             assert array_equal(cp.asnumpy(output), key)
@@ -68,6 +78,11 @@ class TestWavelets:
     class TestCWT:
         def cpu_version(self, cpu_sig, wavelet, widths):
             return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+
+        def gpu_version(self, gpu_sig, wavelet, widths):
+            with cp.cuda.Stream.null:
+                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_cwt_cpu(self, rand_data_gen, benchmark, num_samps, widths):
@@ -80,7 +95,7 @@ class TestWavelets:
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             cu_wavelet = cusignal.ricker
             output = gpubenchmark(
-                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
+                self.gpu_version, gpu_sig, cu_wavelet, widths
             )
 
             wavelet = signal.ricker
@@ -93,6 +108,11 @@ class TestWavelets:
     class TestCWTComplex:
         def cpu_version(self, cpu_sig, wavelet, widths):
             return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+
+        def gpu_version(self, gpu_sig, wavelet, widths):
+            with cp.cuda.Stream.null:
+                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_cwt_complex_cpu(
@@ -109,7 +129,7 @@ class TestWavelets:
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
             cu_wavelet = cusignal.ricker
             output = gpubenchmark(
-                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
+                self.gpu_version, gpu_sig, cu_wavelet, widths
             )
 
             wavelet = signal.ricker
