@@ -35,6 +35,11 @@ class TestSpectral:
         def cpu_version(self, x, y, f, precenter, normalize):
             return signal.lombscargle(x, y, f, precenter, normalize)
 
+        def gpu_version(self, x, y, f, precenter, normalize):
+            with cp.cuda.Stream.null:
+                return cusignal.lombscargle(x, y, f, precenter, normalize)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_lombscargle_cpu(
             self,
@@ -66,12 +71,7 @@ class TestSpectral:
                 num_in_samps, num_out_samps
             )
             output = gpubenchmark(
-                cusignal.lombscargle,
-                gpu_x,
-                gpu_y,
-                gpu_f,
-                precenter,
-                normalize,
+                self.gpu_version, gpu_x, gpu_y, gpu_f, precenter, normalize
             )
 
             key = self.cpu_version(cpu_x, cpu_y, cpu_f, precenter, normalize)
@@ -88,6 +88,13 @@ class TestSpectral:
                 cpu_sig, fs, window=window, scaling=scaling
             )
 
+        def gpu_version(self, gpu_sig, fs, window, scaling):
+            with cp.cuda.Stream.null:
+                return cusignal.periodogram(
+                    gpu_sig, fs, window=window, scaling=scaling
+                )
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_periodogram_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, window, scaling
@@ -101,11 +108,7 @@ class TestSpectral:
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             _, output = gpubenchmark(
-                cusignal.periodogram,
-                gpu_sig,
-                fs,
-                window=window,
-                scaling=scaling,
+                self.gpu_version, gpu_sig, fs, window, scaling
             )
 
             _, key = self.cpu_version(cpu_sig, fs, window, scaling)
@@ -121,6 +124,13 @@ class TestSpectral:
             return signal.periodogram(
                 cpu_sig, fs, window=window, scaling=scaling
             )
+
+        def gpu_version(self, gpu_sig, fs, window, scaling):
+            with cp.cuda.Stream.null:
+                return cusignal.periodogram(
+                    gpu_sig, fs, window=window, scaling=scaling
+                )
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_periodogram_complex_cpu(
@@ -147,11 +157,11 @@ class TestSpectral:
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
             _, output = gpubenchmark(
-                cusignal.periodogram,
+                self.gpu_version,
                 gpu_sig,
                 fs,
-                window=window,
-                scaling=scaling,
+                window,
+                scaling,
             )
 
             _, key = self.cpu_version(cpu_sig, fs, window, scaling)
@@ -165,6 +175,11 @@ class TestSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.welch(cpu_sig, fs, nperseg=nperseg)
 
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_welch_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
@@ -177,9 +192,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.welch, gpu_sig, fs, nperseg=nperseg
-            )
+            _, output = gpubenchmark(self.gpu_version, cpu_sig, fs, nperseg)
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -191,6 +204,11 @@ class TestSpectral:
     class TestWelchComplex:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.welch(cpu_sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_welch_complex_cpu(
@@ -204,9 +222,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.welch, gpu_sig, fs, nperseg=nperseg
-            )
+            _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -218,6 +234,11 @@ class TestSpectral:
     class TestCSD:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_csd_cpu(
@@ -235,7 +256,7 @@ class TestSpectral:
             cpu_y, gpu_y = rand_data_gen(num_samps)
 
             _, output = gpubenchmark(
-                cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
@@ -248,6 +269,11 @@ class TestSpectral:
     class TestCSDComplex:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_csd_complex_cpu(
@@ -264,7 +290,7 @@ class TestSpectral:
             cpu_x, gpu_x = rand_complex_data_gen(num_samps)
             cpu_y, gpu_y = rand_complex_data_gen(num_samps)
             _, output = gpubenchmark(
-                cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
@@ -278,6 +304,11 @@ class TestSpectral:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
 
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.spectrogram(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_spectrogram_cpu(
             self, rand_data_gen, benchmark, num_samps, fs, nperseg
@@ -290,9 +321,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
-            )
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -304,6 +333,11 @@ class TestSpectral:
     class TestSpectrogramComplex:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.spectrogram(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_spectrogram_complex_cpu(
@@ -317,9 +351,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
-            )
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -331,6 +363,11 @@ class TestSpectral:
     class TestSTFT:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.stft(cpu_sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_stft_cpu(
@@ -344,9 +381,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.stft, gpu_sig, fs, nperseg=nperseg
-            )
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -358,6 +393,11 @@ class TestSpectral:
     class TestSTFTComplex:
         def cpu_version(self, cpu_sig, fs, nperseg):
             return signal.stft(cpu_sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_stft_complex_cpu(
@@ -371,9 +411,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.stft, gpu_sig, fs, nperseg=nperseg
-            )
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
@@ -385,6 +423,11 @@ class TestSpectral:
     class TestCoherence:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_coherence_cpu(
@@ -401,7 +444,7 @@ class TestSpectral:
             cpu_y, gpu_y = rand_data_gen(num_samps)
 
             _, output = gpubenchmark(
-                cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
@@ -414,6 +457,11 @@ class TestSpectral:
     class TestCoherenceComplex:
         def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
             return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+
+        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                return cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_coherence_complex_cpu(
@@ -430,7 +478,7 @@ class TestSpectral:
             cpu_x, gpu_x = rand_complex_data_gen(num_samps)
             cpu_y, gpu_y = rand_complex_data_gen(num_samps)
             _, output = gpubenchmark(
-                cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
