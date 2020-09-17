@@ -84,9 +84,7 @@ class TestSpectral:
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogram:
         def cpu_version(self, sig, fs, window, scaling):
-            return signal.periodogram(
-                sig, fs, window=window, scaling=scaling
-            )
+            return signal.periodogram(sig, fs, window=window, scaling=scaling)
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
@@ -121,9 +119,7 @@ class TestSpectral:
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogramComplex:
         def cpu_version(self, sig, fs, window, scaling):
-            return signal.periodogram(
-                sig, fs, window=window, scaling=scaling
-            )
+            return signal.periodogram(sig, fs, window=window, scaling=scaling)
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
