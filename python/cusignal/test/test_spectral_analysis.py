@@ -83,15 +83,15 @@ class TestSpectral:
     @pytest.mark.parametrize("window", ["flattop", "nuttall"])
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogram:
-        def cpu_version(self, cpu_sig, fs, window, scaling):
+        def cpu_version(self, sig, fs, window, scaling):
             return signal.periodogram(
-                cpu_sig, fs, window=window, scaling=scaling
+                sig, fs, window=window, scaling=scaling
             )
 
-        def gpu_version(self, gpu_sig, fs, window, scaling):
+        def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
                 return cusignal.periodogram(
-                    gpu_sig, fs, window=window, scaling=scaling
+                    sig, fs, window=window, scaling=scaling
                 )
             cp.cuda.Stream.null.synchronize()
 
@@ -120,15 +120,15 @@ class TestSpectral:
     @pytest.mark.parametrize("window", ["flattop", "nuttall"])
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogramComplex:
-        def cpu_version(self, cpu_sig, fs, window, scaling):
+        def cpu_version(self, sig, fs, window, scaling):
             return signal.periodogram(
-                cpu_sig, fs, window=window, scaling=scaling
+                sig, fs, window=window, scaling=scaling
             )
 
-        def gpu_version(self, gpu_sig, fs, window, scaling):
+        def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
                 return cusignal.periodogram(
-                    gpu_sig, fs, window=window, scaling=scaling
+                    sig, fs, window=window, scaling=scaling
                 )
             cp.cuda.Stream.null.synchronize()
 
@@ -172,12 +172,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestWelch:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.welch(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.welch(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.welch(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -202,12 +202,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestWelchComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.welch(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.welch(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.welch(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.welch(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -232,12 +232,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCSD:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.csd(x, y, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+        def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+                return cusignal.csd(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -267,12 +267,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCSDComplex:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.csd(x, y, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+        def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.csd(gpu_x, gpu_y, fs, nperseg=nperseg)
+                return cusignal.csd(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -301,12 +301,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSpectrogram:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.spectrogram(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.spectrogram(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.spectrogram(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -331,12 +331,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSpectrogramComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.spectrogram(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.spectrogram(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.spectrogram(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -361,12 +361,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSTFT:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.stft(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.stft(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.stft(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -391,12 +391,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSTFTComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.stft(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.stft(sig, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_sig, fs, nperseg):
+        def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+                return cusignal.stft(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -421,12 +421,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCoherence:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.coherence(x, y, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+        def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
+                return cusignal.coherence(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -455,12 +455,12 @@ class TestSpectral:
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCoherenceComplex:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.coherence(x, y, fs, nperseg=nperseg)
 
-        def gpu_version(self, gpu_x, gpu_y, fs, nperseg):
+        def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.coherence(gpu_x, gpu_y, fs, nperseg=nperseg)
+                return cusignal.coherence(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -484,6 +484,7 @@ class TestSpectral:
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
+<<<<<<< HEAD
     # events are an array of time points
     # float or array for period of signal
     @pytest.mark.benchmark(group="Vectorstrength")
@@ -492,6 +493,16 @@ class TestSpectral:
     class TestVectorstrength:
         def cpu_version(self, events_cpu, period):
             return signal.vectorstrength(events_cpu, period)
+=======
+    # @pytest.mark.benchmark(group="Vectorstrength")
+    # class TestVectorstrength:
+    #     def cpu_version(self, sig):
+    #         return signal.vectorstrength(sig)
+
+    #     @pytest.mark.cpu
+    #     def test_vectorstrength_cpu(self, benchmark):
+    #         benchmark(self.cpu_version, cpu_sig)
+>>>>>>> 4701cb212955bb2fe09b5ee1f6ba6023130a3e92
 
         @pytest.mark.cpu
         def test_vectorstrength_cpu(self, benchmark, time_data_gen, num_samps, period):

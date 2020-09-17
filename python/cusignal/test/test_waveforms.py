@@ -26,12 +26,12 @@ class TestWaveforms:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("duty", [0.25, 0.5])
     class TestSquare:
-        def cpu_version(self, cpu_sig, duty):
-            return signal.square(cpu_sig, duty)
+        def cpu_version(self, sig, duty):
+            return signal.square(sig, duty)
 
-        def gpu_version(self, gpu_sig, duty):
+        def gpu_version(self, sig, duty):
             with cp.cuda.Stream.null:
-                return cusignal.square(gpu_sig, duty)
+                return cusignal.square(sig, duty)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -53,13 +53,13 @@ class TestWaveforms:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fc", [0.75, 5])
     class TestGaussPulse:
-        def cpu_version(self, cpu_sig, fc):
-            return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
+        def cpu_version(self, sig, fc):
+            return signal.gausspulse(sig, fc, retquad=True, retenv=True)
 
-        def gpu_version(self, gpu_sig, fc):
+        def gpu_version(self, sig, fc):
             with cp.cuda.Stream.null:
                 return cusignal.gausspulse(
-                    gpu_sig, fc, retquad=True, retenv=True
+                    sig, fc, retquad=True, retenv=True
                 )
             cp.cuda.Stream.null.synchronize()
 
@@ -85,12 +85,12 @@ class TestWaveforms:
     @pytest.mark.parametrize("f1", [10])
     @pytest.mark.parametrize("method", ["linear", "quadratic"])
     class TestChirp:
-        def cpu_version(self, cpu_sig, f0, t1, f1, method):
-            return signal.chirp(cpu_sig, f0, t1, f1, method)
+        def cpu_version(self, sig, f0, t1, f1, method):
+            return signal.chirp(sig, f0, t1, f1, method)
 
-        def gpu_version(self, gpu_sig, f0, t1, f1, method):
+        def gpu_version(self, sig, f0, t1, f1, method):
             with cp.cuda.Stream.null:
-                return cusignal.chirp(gpu_sig, f0, t1, f1, method)
+                return cusignal.chirp(sig, f0, t1, f1, method)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu

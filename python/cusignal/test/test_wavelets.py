@@ -76,12 +76,12 @@ class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWT:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+        def cpu_version(self, sig, wavelet, widths):
+            return signal.cwt(sig, wavelet, np.arange(1, widths))
 
-        def gpu_version(self, gpu_sig, wavelet, widths):
+        def gpu_version(self, sig, wavelet, widths):
             with cp.cuda.Stream.null:
-                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+                return cusignal.cwt(sig, wavelet, np.arange(1, widths))
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -106,12 +106,12 @@ class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWTComplex:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+        def cpu_version(self, sig, wavelet, widths):
+            return signal.cwt(sig, wavelet, np.arange(1, widths))
 
-        def gpu_version(self, gpu_sig, wavelet, widths):
+        def gpu_version(self, sig, wavelet, widths):
             with cp.cuda.Stream.null:
-                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+                return cusignal.cwt(sig, wavelet, np.arange(1, widths))
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -140,8 +140,13 @@ class TestWavelets:
     # @pytest.mark.benchmark("f1", [1,1])
     # @pytest.mark.benchmark("f2", [1,-1])
     # class TestQmf:
+<<<<<<< HEAD
     #     def cpu_version(self, f1, f2):
     #         return signal.qmf(f1, f2)
+=======
+    #     def cpu_version(self, sig):
+    #         return signal.qmf(sig)
+>>>>>>> 4701cb212955bb2fe09b5ee1f6ba6023130a3e92
 
     #     @pytest.mark.cpu
     #     def test_qmf_cpu(self, benchmark, f1, f2):
