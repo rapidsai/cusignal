@@ -77,14 +77,17 @@ class TestFilterDesign:
             key = self.cpu_version(a)
             assert array_equal(cp.asnumpy(output), key)
 
-    # num_taps is int for FIR filter
-    # width is float for width of transition region
     @pytest.mark.benchmark(group="KaiserAtten")
-    @pytest.mark.parametrize("num_taps", [211])
-    @pytest.mark.parametrize("width", [0.0375])
+    @pytest.mark.parametrize("num_taps", [211, 1, 5000])
+    @pytest.mark.parametrize("width", [0.0375, 0.2, 100.2])
     class TestKaiserAtten:
         def cpu_version(self, num_taps, width):
             return signal.kaiser_atten(num_taps, width)
+
+        def gpu_version(self, num_taps, width):
+            ans = cusignal.kaiser_atten(num_taps, width)
+            cp.cuda.runtime.deviceSynchronize()
+            return ans
 
         @pytest.mark.cpu
         def test_kaiser_atten_cpu(self, benchmark, num_taps, width):
@@ -92,7 +95,7 @@ class TestFilterDesign:
 
         def test_kaiser_atten_gpu(self, gpubenchmark, num_taps, width):
 
-            output = gpubenchmark(cusignal.kaiser_atten, num_taps, width)
+            output = gpubenchmark(self.gpu_version, num_taps, width)
 
             key = self.cpu_version(num_taps, width)
             assert array_equal(cp.asnumpy(output), key)
