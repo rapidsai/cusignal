@@ -40,7 +40,10 @@ class TestFilterDesign:
         @pytest.mark.cpu
         def test_firwin_cpu(self, benchmark, num_samps, f1, f2):
             benchmark(
-                self.cpu_version, num_samps, f1, f2,
+                self.cpu_version,
+                num_samps,
+                f1,
+                f2,
             )
 
         def test_firwin_gpu(self, gpubenchmark, num_samps, f1, f2):
@@ -57,11 +60,11 @@ class TestFilterDesign:
     class TestKaiserBeta:
         def cpu_version(self, a):
             return signal.kaiser_beta(a)
-        
+
         def gpu_version(self, a):
-            ans = cusignal.kaiser_beta(a)
-            cp.cuda.runtime.deviceSynchronize()
-            return ans
+            return cusignal.kaiser_beta(a)
+
+        cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_kaiser_beta_cpu(self, benchmark, a):
@@ -73,7 +76,7 @@ class TestFilterDesign:
 
             key = self.cpu_version(a)
             assert array_equal(cp.asnumpy(output), key)
-    
+
     # num_taps is int for FIR filter
     # width is float for width of transition region
     @pytest.mark.benchmark(group="KaiserAtten")
@@ -81,7 +84,12 @@ class TestFilterDesign:
     @pytest.mark.parametrize("width", [0.0375])
     class TestKaiserAtten:
         def cpu_version(self, num_taps, width):
-            return signal.kaiser_atten( num_taps, width)
+            return signal.kaiser_atten(num_taps, width)
+
+        def gpu_version(self, num_taps, width):
+            return cusignal.kaiser_atten(num_taps, width)
+
+        cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
         def test_kaiser_atten_cpu(self, benchmark, num_taps, width):
@@ -89,11 +97,11 @@ class TestFilterDesign:
 
         def test_kaiser_atten_gpu(self, gpubenchmark, num_taps, width):
 
-            output = gpubenchmark(cusignal.kaiser_atten, num_taps, width)
+            output = gpubenchmark(self.gpu_version, num_taps, width)
 
-            key = self.cpu_version( num_taps, width)
+            key = self.cpu_version(num_taps, width)
             assert array_equal(cp.asnumpy(output), key)
-    
+
     # # vals is array like
     # @pytest.mark.benchmark(group="CmplxSort")
     # @pytest.mark.benchmark("num_samps", [2 ** 15])
@@ -108,7 +116,7 @@ class TestFilterDesign:
     #         benchmark(self.cpu_version, vals)
 
     #     def test_cmplx_sort_gpu(self, rand_data_gen, gpubenchmark, num_samps):
-            
+
     #         #d_vals = cp.asarray(vals)
     #         vals, d_vals = rand_data_gen(num_samps)
     #         output = gpubenchmark(cusignal.cmplx_sort, d_vals)

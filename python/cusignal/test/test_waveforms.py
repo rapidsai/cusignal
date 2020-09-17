@@ -58,9 +58,7 @@ class TestWaveforms:
 
         def gpu_version(self, sig, fc):
             with cp.cuda.Stream.null:
-                return cusignal.gausspulse(
-                    sig, fc, retquad=True, retenv=True
-                )
+                return cusignal.gausspulse(sig, fc, retquad=True, retenv=True)
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu

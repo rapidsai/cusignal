@@ -84,9 +84,7 @@ class TestSpectral:
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogram:
         def cpu_version(self, sig, fs, window, scaling):
-            return signal.periodogram(
-                sig, fs, window=window, scaling=scaling
-            )
+            return signal.periodogram(sig, fs, window=window, scaling=scaling)
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
@@ -121,9 +119,7 @@ class TestSpectral:
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogramComplex:
         def cpu_version(self, sig, fs, window, scaling):
-            return signal.periodogram(
-                sig, fs, window=window, scaling=scaling
-            )
+            return signal.periodogram(sig, fs, window=window, scaling=scaling)
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
@@ -484,32 +480,25 @@ class TestSpectral:
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
-<<<<<<< HEAD
-    # events are an array of time points
-    # float or array for period of signal
     @pytest.mark.benchmark(group="Vectorstrength")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("period", [1.2])
     class TestVectorstrength:
-        def cpu_version(self, events_cpu, period):
-            return signal.vectorstrength(events_cpu, period)
-=======
-    # @pytest.mark.benchmark(group="Vectorstrength")
-    # class TestVectorstrength:
-    #     def cpu_version(self, sig):
-    #         return signal.vectorstrength(sig)
-
-    #     @pytest.mark.cpu
-    #     def test_vectorstrength_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
->>>>>>> 4701cb212955bb2fe09b5ee1f6ba6023130a3e92
+        def cpu_version(self, sig):
+            return signal.vectorstrength(sig)
 
         @pytest.mark.cpu
-        def test_vectorstrength_cpu(self, benchmark, time_data_gen, num_samps, period):
+        def test_vectorstrength_cpu(self, benchmark):
+            benchmark(self.cpu_version, cpu_sig)
+
+        @pytest.mark.cpu
+        def test_vectorstrength_cpu(
+            self, benchmark, time_data_gen, num_samps, period
+        ):
             events_cpu, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, events_cpu, period)
 
-        def test_vectorstrength_gpu(self, gpubenchmark, time_data_gen, num_samps,period):
+        def test_vectorstrength_gpu(
+            self, gpubenchmark, time_data_gen, num_samps, period
+        ):
             events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
             output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
 
