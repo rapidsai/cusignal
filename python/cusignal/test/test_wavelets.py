@@ -76,12 +76,12 @@ class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWT:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+        def cpu_version(self, sig, wavelet, widths):
+            return signal.cwt(sig, wavelet, np.arange(1, widths))
 
-        def gpu_version(self, gpu_sig, wavelet, widths):
+        def gpu_version(self, sig, wavelet, widths):
             with cp.cuda.Stream.null:
-                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+                return cusignal.cwt(sig, wavelet, np.arange(1, widths))
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -106,12 +106,12 @@ class TestWavelets:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWTComplex:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+        def cpu_version(self, sig, wavelet, widths):
+            return signal.cwt(sig, wavelet, np.arange(1, widths))
 
-        def gpu_version(self, gpu_sig, wavelet, widths):
+        def gpu_version(self, sig, wavelet, widths):
             with cp.cuda.Stream.null:
-                return cusignal.cwt(gpu_sig, wavelet, np.arange(1, widths))
+                return cusignal.cwt(sig, wavelet, np.arange(1, widths))
             cp.cuda.Stream.null.synchronize()
 
         @pytest.mark.cpu
@@ -138,8 +138,8 @@ class TestWavelets:
 
     # @pytest.mark.benchmark(group="Qmf")
     # class TestQmf:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.qmf(cpu_sig)
+    #     def cpu_version(self, sig):
+    #         return signal.qmf(sig)
 
     #     @pytest.mark.cpu
     #     def test_qmf_cpu(self, benchmark):
