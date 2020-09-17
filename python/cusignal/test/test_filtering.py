@@ -37,8 +37,9 @@ class TestFilter:
 
         def gpu_version(self, sig):
             with cp.cuda.Stream.null:
-                return cusignal.wiener(sig)
+                out = cusignal.wiener(sig)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
@@ -97,8 +98,9 @@ class TestFilter:
 
         def gpu_version(self, sos, sig):
             with cp.cuda.Stream.null:
-                return cusignal.sosfilt(sos, sig)
+                out = cusignal.sosfilt(sos, sig)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_sosfilt_cpu(
@@ -150,8 +152,9 @@ class TestFilter:
 
         def gpu_version(self, sig):
             with cp.cuda.Stream.null:
-                return cusignal.hilbert(sig)
+                out = cusignal.hilbert(sig)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
@@ -174,8 +177,9 @@ class TestFilter:
 
         def gpu_version(self, sig):
             with cp.cuda.Stream.null:
-                return cusignal.hilbert2(sig)
+                out = cusignal.hilbert2(sig)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
@@ -289,10 +293,9 @@ class TestFilter:
 
         def gpu_version(self, sig, resample_num_samps, window):
             with cp.cuda.Stream.null:
-                return cusignal.resample(
-                    sig, resample_num_samps, window=window
-                )
+                out = cusignal.resample(sig, resample_num_samps, window=window)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_resample_cpu(
@@ -341,8 +344,9 @@ class TestFilter:
 
         def gpu_version(self, sig, up, down, window):
             with cp.cuda.Stream.null:
-                return cusignal.resample_poly(sig, up, down, window=window)
+                out = cusignal.resample_poly(sig, up, down, window=window)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_resample_poly_cpu(
@@ -392,8 +396,9 @@ class TestFilter:
 
         def gpu_version(self, sig, up, down, axis):
             with cp.cuda.Stream.null:
-                return cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
+                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_upfirdn_cpu(
@@ -441,8 +446,9 @@ class TestFilter:
 
         def gpu_version(self, sig, up, down, axis):
             with cp.cuda.Stream.null:
-                return cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
+                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_upfirdn2d_cpu(
@@ -488,8 +494,9 @@ class TestFilter:
 
         def gpu_version(self, sig, filt):
             with cp.cuda.Stream.null:
-                return cusignal.firfilter(filt, sig)
+                out = cusignal.firfilter(filt, sig)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_firfilter_cpu(

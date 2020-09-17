@@ -37,8 +37,9 @@ class TestSpectral:
 
         def gpu_version(self, x, y, f, precenter, normalize):
             with cp.cuda.Stream.null:
-                return cusignal.lombscargle(x, y, f, precenter, normalize)
+                out = cusignal.lombscargle(x, y, f, precenter, normalize)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_lombscargle_cpu(
@@ -88,10 +89,11 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
-                return cusignal.periodogram(
+                out = cusignal.periodogram(
                     sig, fs, window=window, scaling=scaling
                 )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_periodogram_cpu(
@@ -123,10 +125,11 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
-                return cusignal.periodogram(
+                out = cusignal.periodogram(
                     sig, fs, window=window, scaling=scaling
                 )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_periodogram_complex_cpu(
@@ -173,8 +176,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.welch(sig, fs, nperseg=nperseg)
+                out = cusignal.welch(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_welch_cpu(
@@ -203,8 +207,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.welch(sig, fs, nperseg=nperseg)
+                out = cusignal.welch(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_welch_complex_cpu(
@@ -233,8 +238,9 @@ class TestSpectral:
 
         def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.csd(x, y, fs, nperseg=nperseg)
+                out = cusignal.csd(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_csd_cpu(
@@ -268,8 +274,9 @@ class TestSpectral:
 
         def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.csd(x, y, fs, nperseg=nperseg)
+                out = cusignal.csd(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_csd_complex_cpu(
@@ -302,8 +309,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.spectrogram(sig, fs, nperseg=nperseg)
+                out = cusignal.spectrogram(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_spectrogram_cpu(
@@ -332,8 +340,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.spectrogram(sig, fs, nperseg=nperseg)
+                out = cusignal.spectrogram(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_spectrogram_complex_cpu(
@@ -362,8 +371,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.stft(sig, fs, nperseg=nperseg)
+                out = cusignal.stft(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_stft_cpu(
@@ -392,8 +402,9 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.stft(sig, fs, nperseg=nperseg)
+                out = cusignal.stft(sig, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_stft_complex_cpu(
@@ -422,8 +433,9 @@ class TestSpectral:
 
         def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.coherence(x, y, fs, nperseg=nperseg)
+                out = cusignal.coherence(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_coherence_cpu(
@@ -456,8 +468,9 @@ class TestSpectral:
 
         def gpu_version(self, x, y, fs, nperseg):
             with cp.cuda.Stream.null:
-                return cusignal.coherence(x, y, fs, nperseg=nperseg)
+                out = cusignal.coherence(x, y, fs, nperseg=nperseg)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_coherence_complex_cpu(

@@ -40,8 +40,9 @@ class TestFilterDesign:
 
         def gpu_version(self, num_samps, f1, f2):
             with cp.cuda.Stream.null:
-                return cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
+                out = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_firwin_cpu(self, benchmark, num_samps, f1, f2):

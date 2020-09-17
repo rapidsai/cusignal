@@ -31,8 +31,9 @@ class TestWaveforms:
 
         def gpu_version(self, sig, duty):
             with cp.cuda.Stream.null:
-                return cusignal.square(sig, duty)
+                out = cusignal.square(sig, duty)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
@@ -58,8 +59,9 @@ class TestWaveforms:
 
         def gpu_version(self, sig, fc):
             with cp.cuda.Stream.null:
-                return cusignal.gausspulse(sig, fc, retquad=True, retenv=True)
+                out = cusignal.gausspulse(sig, fc, retquad=True, retenv=True)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc):
@@ -88,8 +90,9 @@ class TestWaveforms:
 
         def gpu_version(self, sig, f0, t1, f1, method):
             with cp.cuda.Stream.null:
-                return cusignal.chirp(sig, f0, t1, f1, method)
+                out = cusignal.chirp(sig, f0, t1, f1, method)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_chirp_cpu(
@@ -119,8 +122,9 @@ class TestWaveforms:
 
         def gpu_version(self, num_samps, idx):
             with cp.cuda.Stream.null:
-                return cusignal.unit_impulse(num_samps, idx)
+                out = cusignal.unit_impulse(num_samps, idx)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_unit_impulse_cpu(self, benchmark, num_samps, idx):

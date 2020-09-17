@@ -34,10 +34,11 @@ class TestConvolution:
 
         def gpu_version(self, sig, num_taps, mode, method):
             with cp.cuda.Stream.null:
-                return cusignal.correlate(
+                out = cusignal.correlate(
                     sig, num_taps, mode=mode, method=method
                 )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_correlate1d_cpu(
@@ -81,8 +82,9 @@ class TestConvolution:
 
         def gpu_version(self, sig, win, mode, method):
             with cp.cuda.Stream.null:
-                return cusignal.convolve(sig, win, mode=mode, method=method)
+                out = cusignal.convolve(sig, win, mode=mode, method=method)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_convolve1d_cpu(
@@ -122,8 +124,9 @@ class TestConvolution:
 
         def gpu_version(self, sig, mode):
             with cp.cuda.Stream.null:
-                return cusignal.fftconvolve(sig, sig[::-1], mode=mode)
+                out = cusignal.fftconvolve(sig, sig[::-1], mode=mode)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_fftconvolve_cpu(
@@ -153,10 +156,11 @@ class TestConvolution:
 
         def gpu_version(self, sig, filt, boundary, mode):
             with cp.cuda.Stream.null:
-                return cusignal.convolve2d(
+                out = cusignal.convolve2d(
                     sig, filt, boundary=boundary, mode=mode
                 )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_convolve2d_cpu(
@@ -206,10 +210,11 @@ class TestConvolution:
 
         def gpu_version(self, sig, filt, boundary, mode):
             with cp.cuda.Stream.null:
-                return cusignal.correlate2d(
+                out = cusignal.correlate2d(
                     sig, filt, boundary=boundary, mode=mode
                 )
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_correlate2d_cpu(
