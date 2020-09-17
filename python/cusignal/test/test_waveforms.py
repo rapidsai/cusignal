@@ -29,6 +29,11 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, duty):
             return signal.square(cpu_sig, duty)
 
+        def gpu_version(self, gpu_sig, duty):
+            with cp.cuda.Stream.null:
+                return cusignal.square(gpu_sig, duty)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
@@ -39,7 +44,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(cusignal.square, gpu_sig, duty)
+            output = gpubenchmark(self.gpu_version, gpu_sig, duty)
 
             key = self.cpu_version(cpu_sig, duty)
             assert array_equal(cp.asnumpy(output), key)
@@ -51,6 +56,13 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, fc):
             return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
 
+        def gpu_version(self, gpu_sig, fc):
+            with cp.cuda.Stream.null:
+                return cusignal.gausspulse(
+                    gpu_sig, fc, retquad=True, retenv=True
+                )
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
@@ -61,9 +73,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.gausspulse, gpu_sig, fc, retquad=True, retenv=True
-            )
+            _, _, output = gpubenchmark(self.cpu_version, gpu_sig, fc)
 
             _, _, key = self.cpu_version(cpu_sig, fc)
             assert array_equal(cp.asnumpy(output), key)
@@ -78,6 +88,11 @@ class TestWaveforms:
         def cpu_version(self, cpu_sig, f0, t1, f1, method):
             return signal.chirp(cpu_sig, f0, t1, f1, method)
 
+        def gpu_version(self, gpu_sig, f0, t1, f1, method):
+            with cp.cuda.Stream.null:
+                return cusignal.chirp(gpu_sig, f0, t1, f1, method)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_chirp_cpu(
             self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
@@ -90,7 +105,9 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(cusignal.chirp, gpu_sig, f0, t1, f1, method)
+            output = gpubenchmark(
+                self.gpu_version, cpu_sig, f0, t1, f1, method
+            )
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method)
             assert array_equal(cp.asnumpy(output), key)
@@ -102,13 +119,18 @@ class TestWaveforms:
         def cpu_version(self, num_samps, idx):
             return signal.unit_impulse(num_samps, idx)
 
+        def gpu_version(self, num_samps, idx):
+            with cp.cuda.Stream.null:
+                return cusignal.unit_impulse(num_samps, idx)
+            cp.cuda.Stream.null.synchronize()
+
         @pytest.mark.cpu
         def test_unit_impulse_cpu(self, benchmark, num_samps, idx):
             benchmark(self.cpu_version, num_samps, idx)
 
         def test_unit_impulse_gpu(self, gpubenchmark, num_samps, idx):
 
-            output = gpubenchmark(cusignal.unit_impulse, num_samps, idx)
+            output = gpubenchmark(self.gpu_version, num_samps, idx)
 
             key = self.cpu_version(num_samps, idx)
             assert array_equal(cp.asnumpy(output), key)
