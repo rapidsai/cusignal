@@ -1168,6 +1168,17 @@ def hamming(M, sym=True):
     return w
 
 
+_kaiser_kernel = cp.ElementwiseKernel(
+    'N n, float64 alpha, float64 beta',
+    'W w',
+    '''
+    double temp = ( n - alpha ) / alpha;
+    w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) / cyl_bessel_i0( beta );
+    ''',
+    '_kaiser_kernel'
+)
+
+
 def kaiser(M, beta, sym=True):
     r"""
     Return a Kaiser window.
@@ -1282,11 +1293,14 @@ def kaiser(M, beta, sym=True):
     odd = M % 2
     if not sym and not odd:
         M = M + 1
+    w = cp.empty(M, dtype=cp.float64)
     n = cp.arange(0, M)
     alpha = (M - 1) / 2.0
-    w = special.i0(beta * cp.sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
-        beta
-    )
+    # w = special.i0(beta * cp.sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
+    #     beta
+    # )
+    _kaiser_kernel(n, alpha, beta, w)
+
     if not sym and not odd:
         w = w[:-1]
     return w
