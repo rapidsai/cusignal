@@ -17,6 +17,7 @@
 - PR #212 - Add KF to documentation build
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 - PR #215 - Improve doc formating for filtering operations
+- PR #222 - Improved performance for various window functions
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
