@@ -346,6 +346,17 @@ def parzen(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_bohman_kernel = cp.ElementwiseKernel(
+    "int32 M, float64 delta, float64 start, float64 pi",
+    "T w",
+    """
+    double fac = abs(start + delta * i);
+    w = (1 - fac) * cos(pi * fac) + 1.0 / pi * sin(pi * fac);
+    """,
+    "_bohman_kernel",
+)
+
+
 def bohman(M, sym=True):
     r"""Return a Bohman window.
 
@@ -395,8 +406,11 @@ def bohman(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    fac = abs(cp.linspace(-1, 1, M)[1:-1])
-    w = (1 - fac) * cp.cos(cp.pi * fac) + 1.0 / cp.pi * cp.sin(cp.pi * fac)
+    w = cp.empty(M-2, dtype=cp.float)
+    delta = (1 - -1) / (M - 1)
+
+    _bohman_kernel(M, delta, (-1 + delta), cp.pi, w)
+
     w = cp.r_[0, w, 0]
 
     return _truncate(w, needs_trunc)
