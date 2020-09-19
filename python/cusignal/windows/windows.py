@@ -1387,6 +1387,7 @@ def general_gaussian(M, p, sig, sym=True):
 
     return _truncate(w, needs_trunc)
 
+
 _chebwin_kernel = cp.ElementwiseKernel(
     'T k, int32 M, T order, T beta, T pi',
     'T p',
@@ -1507,7 +1508,7 @@ def chebwin(M, at, sym=True):
     # compute the parameter beta
     order = M - 1.0
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
-    k = cp.arange(0, M, dtype=np.float64)
+    k = cp.arange(0, M, dtype=cp.float64)
     p = cp.empty(k.shape)
     _chebwin_kernel(k, M, order, beta, cp.pi, p)
 
