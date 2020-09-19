@@ -1324,9 +1324,9 @@ _gaussian_kernel = cp.ElementwiseKernel(
     'N n, int32 M, float64 std',
     'W w',
     '''
-    double temp = n - (M - 1.0) / 2.0;
+    double new_n = n - (M - 1.0) / 2.0;
     double sig2 = 2 * std * std;
-    w = exp( - ( temp * temp ) / sig2 );
+    w = exp( - ( new_n * new_n ) / sig2 );
 
     ''',
     '_gaussian_kernel'
@@ -1398,6 +1398,17 @@ def gaussian(M, std, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_general_gaussian_kernel = cp.ElementwiseKernel(
+    'N n, int32 M, float64 p, float64 sig',
+    'W w',
+    '''
+    double new_n = n - (M - 1.0) / 2.0;
+    w = exp( -0.5 * pow( abs( new_n / sig ), 2 * p ) );
+    ''',
+    '_general_gaussian_kernel'
+)
+
+
 def general_gaussian(M, p, sig, sym=True):
     r"""Return a window with a generalized Gaussian shape.
 
@@ -1463,8 +1474,10 @@ def general_gaussian(M, p, sig, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(0, M) - (M - 1.0) / 2.0
-    w = cp.exp(-0.5 * abs(n / sig) ** (2 * p))
+    w = cp.empty(M, dtype=cp.float64);
+    n = cp.arange(0, M)
+
+    _general_gaussian_kernel(n, M, p, sig, w)
 
     return _truncate(w, needs_trunc)
 
