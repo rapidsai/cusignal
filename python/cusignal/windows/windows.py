@@ -13,7 +13,7 @@
 
 import cupy as cp
 import numpy as np
-from cupyx.scipy import fftpack, special
+from cupyx.scipy import fftpack
 
 import warnings
 
@@ -50,7 +50,7 @@ _general_cosine_kernel = cp.ElementwiseKernel(
     for (int k = 0; k < N; k++) {
         temp += a[k] * cos(k * fac);
     }
-    w = temp;                                                                                                   
+    w = temp;
     """,
     "_general_cosine_kernel",
 )
@@ -887,13 +887,14 @@ _tukey_kernel = cp.ElementwiseKernel(
     "int32 M, int32 width, float64 alpha, float64 pi",
     "W w",
     """
-    if (i < (width + 1)) {                                                                                                         
-        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha / (M - 1))));                                                                                      
-    } else if ( i > (width + 1) && i < (M-width-1) ) {                                                                                                 
-        w = 1.0;                                                                 
-    } else {                                                                                                             
-        w = 0.5 * (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * i / alpha / (M - 1))));                                                                                        
-    }                                                                                                                  
+    if (i < (width + 1)) {
+        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha / (M - 1))));
+    } else if ( i > (width + 1) && i < (M-width-1) ) {
+        w = 1.0;
+    } else {
+        w = 0.5 *
+            (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * i / alpha / (M - 1))));
+    }
     """,
     "_tukey_kernel",
 )
@@ -981,7 +982,7 @@ _barthann_kernel = cp.ElementwiseKernel(
     "W w",
     """
     double fac = abs(i / (M - 1.0) - 0.5);
-    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);                                                                                                    
+    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
     """,
     "_barthann_kernel",
 )
@@ -1539,14 +1540,14 @@ _chebwin_kernel = cp.ElementwiseKernel(
     "int32 M, T order, T beta, T pi",
     "T p",
     """
-    double x = beta * cos(pi * i / M);                                                                                                                  
-    if (x > 1) {                                                                                                         
-        p = cosh(order * acosh(x));                                                                                      
-    } else if (x < -1) {                                                                                                 
-        p = (2 * (M % 2) - 1) * cosh(order * acosh(-x));                                                                 
-    } else {                                                                                                             
-        p = cos(order * acos(x));                                                                                        
-    }                                                                                                                    
+    double x = beta * cos(pi * i / M);
+    if (x > 1) {
+        p = cosh(order * acosh(x));
+    } else if (x < -1) {
+        p = (2 * (M % 2) - 1) * cosh(order * acosh(-x));
+    } else {
+        p = cos(order * acos(x));
+    }
     """,
     "_chebwin_kernel",
 )
