@@ -1308,17 +1308,29 @@ def kaiser(M, beta, sym=True):
     odd = M % 2
     if not sym and not odd:
         M = M + 1
+
     w = cp.empty(M, dtype=cp.float64)
     n = cp.arange(0, M)
     alpha = (M - 1) / 2.0
-    # w = special.i0(beta * cp.sqrt(1 - ((n - alpha) / alpha) ** 2.0)) / special.i0(
-    #     beta
-    # )
+
     _kaiser_kernel(n, alpha, beta, w)
 
     if not sym and not odd:
         w = w[:-1]
     return w
+
+
+_gaussian_kernel = cp.ElementwiseKernel(
+    'N n, int32 M, float64 std',
+    'W w',
+    '''
+    double temp = n - (M - 1.0) / 2.0;
+    double sig2 = 2 * std * std;
+    w = exp( - ( temp * temp ) / sig2 );
+
+    ''',
+    '_gaussian_kernel'
+)
 
 
 def gaussian(M, std, sym=True):
@@ -1378,9 +1390,10 @@ def gaussian(M, std, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(0, M) - (M - 1.0) / 2.0
-    sig2 = 2 * std * std
-    w = cp.exp(-(n ** 2) / sig2)
+    w = cp.empty(M, dtype=cp.float64)
+    n = cp.arange(0, M, dtype=cp.int64)
+
+    _gaussian_kernel(n, M, std, w)
 
     return _truncate(w, needs_trunc)
 
