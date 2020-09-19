@@ -190,7 +190,7 @@ def boxcar(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.ones(M, float)
+    w = cp.ones(M, cp.float64)
 
     return _truncate(w, needs_trunc)
 
@@ -824,6 +824,22 @@ def hann(M, sym=True):
     return general_hamming(M, 0.5, sym)
 
 
+_tukey_kernel = cp.ElementwiseKernel(
+    'int64 n, int32 M, int32 width, float64 alpha, float64 pi',
+    'T w',
+    '''
+    if (n < (width + 1)) {                                                                                                         
+        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * n / alpha / (M - 1))));                                                                                      
+    } else if ( n > (width + 1) && n < (M-width-1) ) {                                                                                                 
+        w = 1.0;                                                                 
+    } else {                                                                                                             
+        w = 0.5 * (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * n / alpha / (M - 1))));                                                                                        
+    }                                                                                                                  
+    ''',
+    '_tukey_kernel'
+)
+
+
 def tukey(M, alpha=0.5, sym=True):
     r"""Return a Tukey window, also known as a tapered cosine window.
 
@@ -893,17 +909,11 @@ def tukey(M, alpha=0.5, sym=True):
 
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(0, M)
-    width = int(cp.floor(alpha * (M - 1) / 2.0))
-    n1 = n[0 : width + 1]
-    n2 = n[width + 1 : M - width - 1]
-    n3 = n[M - width - 1 :]
+    w = cp.empty(M, dtype=cp.float64)
+    n = cp.arange(0, M, dtype=cp.int64)
+    width = int(np.floor(alpha * (M - 1) / 2.0))
 
-    w1 = 0.5 * (1 + cp.cos(cp.pi * (-1 + 2.0 * n1 / alpha / (M - 1))))
-    w2 = cp.ones(n2.shape)
-    w3 = 0.5 * (1 + cp.cos(cp.pi * (-2.0 / alpha + 1 + 2.0 * n3 / alpha / (M - 1))))
-
-    w = cp.concatenate((w1, w2, w3))
+    _tukey_kernel(n, M, width, alpha, cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
