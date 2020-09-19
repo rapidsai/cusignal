@@ -269,7 +269,8 @@ def triang(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty((M + 1) // 2 + 1, dtype=cp.float64)
+    w = cp.empty((M + 1) // 2, dtype=cp.float64)
+    
     if M % 2 == 0:
         _triang_kernel_true(M, w)
         w = cp.r_[w, w[::-1]]
