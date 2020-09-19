@@ -1698,6 +1698,17 @@ def cosine(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_exponential_kernel = cp.ElementwiseKernel(
+    'N n, float64 center, float64 tau',
+    'W w',
+    '''
+    w = exp(-abs(n - center) / tau);
+    ''',
+    '_exponential_kernel'
+)
+
+
+
 def exponential(M, center=None, tau=1.0, sym=True):
     r"""Return an exponential (or Poisson) window.
 
@@ -1781,8 +1792,10 @@ def exponential(M, center=None, tau=1.0, sym=True):
     if center is None:
         center = (M - 1) / 2
 
+    w = cp.empty(M, dtype=cp.float64)
     n = cp.arange(0, M)
-    w = cp.exp(-abs(n - center) / tau)
+
+    _exponential_kernel(n, center, tau, w)
 
     return _truncate(w, needs_trunc)
 
