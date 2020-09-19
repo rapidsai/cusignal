@@ -1475,7 +1475,7 @@ def general_gaussian(M, p, sig, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     w = cp.empty(M, dtype=cp.float64);
-    n = cp.arange(0, M)
+    n = cp.arange(0, M, dtype=cp.int64)
 
     _general_gaussian_kernel(n, M, p, sig, w)
 
@@ -1604,8 +1604,8 @@ def chebwin(M, at, sym=True):
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
     k = cp.arange(0, M, dtype=cp.float64)
     p = cp.empty(k.shape)
-    _chebwin_kernel(k, M, order, beta, cp.pi, p)
 
+    _chebwin_kernel(k, M, order, beta, cp.pi, p)
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
@@ -1622,6 +1622,17 @@ def chebwin(M, at, sym=True):
     w = w / cp.max(w)
 
     return _truncate(w, needs_trunc)
+
+
+_cosine_kernel = cp.ElementwiseKernel(
+    'N n, int32 M, float64 pi',
+    'W w',
+    '''
+    double new_n = n + 0.5;
+    w = sin( pi / M * new_n );
+    ''',
+    '_cosine_kernel'
+)
 
 
 def cosine(M, sym=True):
@@ -1679,7 +1690,10 @@ def cosine(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.sin(cp.pi / M * (cp.arange(0, M) + 0.5))
+    w = cp.empty(M, dtype=cp.float64)
+    n = cp.arange(0, M, dtype=cp.int64)
+
+    _cosine_kernel(n, M, cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
