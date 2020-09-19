@@ -41,6 +41,21 @@ def _truncate(w, needed):
         return w
 
 
+_general_cosine_kernel = cp.ElementwiseKernel(
+    'T fac, raw T a, int32 N',
+    'T w',
+    '''
+    T temp = 0.0;
+    for (int k = 0; k < N; k++) {
+        temp += a[k] * cos(k * fac);
+    }
+    w = temp;
+                                                                                                                 
+    ''',
+    '_general_cosine_kernel'
+)
+
+
 def general_cosine(M, a, sym=True):
     r"""
     Generic weighted sum of cosine terms window
@@ -116,10 +131,12 @@ def general_cosine(M, a, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
+    a = cp.asarray(a, dtype=cp.float64)
+
     fac = cp.linspace(-cp.pi, cp.pi, M)
-    w = cp.zeros(M)
-    for k in range(len(a)):
-        w += a[k] * cp.cos(k * fac)
+    w = cp.empty(M)
+
+    _general_cosine_kernel(fac, a, len(a), w)
 
     return _truncate(w, needs_trunc)
 
