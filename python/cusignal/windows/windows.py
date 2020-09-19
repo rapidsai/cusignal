@@ -194,6 +194,27 @@ def boxcar(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_triang_kernel_true = cp.ElementwiseKernel(
+    "int32 M",
+    "T w",
+    """
+    int n = i + 1;
+    w = ( 2 * n - 1.0 ) / M;
+    """,
+    "_triang_kernel",
+)
+
+_triang_kernel_false = cp.ElementwiseKernel(
+    "int32 M",
+    "T w",
+    """
+    int n = i + 1;
+    w = 2 * n / ( M + 1.0 );
+    """,
+    "_triang_kernel",
+)
+
+
 def triang(M, sym=True):
     r"""Return a triangular window.
 
@@ -248,12 +269,12 @@ def triang(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(1, (M + 1) // 2 + 1)
+    w = cp.empty((M + 1) // 2 + 1, dtype=cp.float64)
     if M % 2 == 0:
-        w = (2 * n - 1.0) / M
+        _triang_kernel_true(M, w)
         w = cp.r_[w, w[::-1]]
     else:
-        w = 2 * n / (M + 1.0)
+        _triang_kernel_false(M, w)
         w = cp.r_[w, w[-2::-1]]
 
     return _truncate(w, needs_trunc)
