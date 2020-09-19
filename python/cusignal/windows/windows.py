@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from cupyx.scipy import fftpack, special
 
 import warnings
@@ -1386,6 +1387,22 @@ def general_gaussian(M, p, sig, sym=True):
 
     return _truncate(w, needs_trunc)
 
+_chebwin_kernel = cp.ElementwiseKernel(
+    'T k, int32 M, T order, T beta, T pi',
+    'T p',
+    '''
+    double x = beta * cos(pi * k / M);                                                                                                                  
+    if (x > 1) {                                                                                                         
+        p = cosh(order * acosh(x));                                                                                      
+    } else if (x < -1) {                                                                                                 
+        p = (2 * (M % 2) - 1) * cosh(order * acosh(-x));                                                                 
+    } else {                                                                                                             
+        p = cos(order * acos(x));                                                                                        
+    }                                                                                                                    
+    ''',
+    '_chebwin_kernel'
+)
+
 
 # `chebwin` contributed by Kumar Appaiah.
 def chebwin(M, at, sym=True):
@@ -1489,16 +1506,11 @@ def chebwin(M, at, sym=True):
 
     # compute the parameter beta
     order = M - 1.0
-    beta = cp.cosh(1.0 / order * cp.arccosh(10 ** (abs(at) / 20.0)))
-    k = cp.arange(0, M) * 1.0
-    x = beta * cp.cos(cp.pi * k / M)
-    # Find the window's DFT coefficients
-    # Use analytic definition of Chebyshev polynomial instead of expansion
-    # from scipy.special. Using the expansion in scipy.special leads to errors.
-    p = cp.zeros(x.shape)
-    p[x > 1] = cp.cosh(order * cp.arccosh(x[x > 1]))
-    p[x < -1] = (2 * (M % 2) - 1) * cp.cosh(order * cp.arccosh(-x[x < -1]))
-    p[abs(x) <= 1] = cp.cos(order * cp.arccos(x[abs(x) <= 1]))
+    beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
+    k = cp.arange(0, M, dtype=np.float64)
+    p = cp.empty(k.shape)
+    _chebwin_kernel(k, M, order, beta, cp.pi, p)
+
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
