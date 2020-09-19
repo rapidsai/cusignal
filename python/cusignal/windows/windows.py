@@ -1078,6 +1078,16 @@ def general_hamming(M, alpha, sym=True):
     return general_cosine(M, [alpha, 1.0 - alpha], sym)
 
 
+_hamming_kernel = cp.ElementwiseKernel(
+    'N n, int32 M, float64 pi',
+    'W w',
+    '''
+    w = 0.54 - 0.46 * cos(2.0 * pi * n / (M - 1));
+    ''',
+    '_hamming_kernel'
+)
+
+
 def hamming(M, sym=True):
     r"""
     Return a Hamming window.
@@ -1161,8 +1171,12 @@ def hamming(M, sym=True):
     odd = M % 2
     if not sym and not odd:
         M = M + 1
+
+    w = cp.empty(M, dtype=cp.float64)
     n = cp.arange(0, M)
-    w = 0.54 - 0.46 * cp.cos(2.0 * cp.pi * n / (M - 1))
+
+    _hamming_kernel(n, M, cp.pi, w)
+
     if not sym and not odd:
         w = w[:-1]
     return w
@@ -1173,7 +1187,8 @@ _kaiser_kernel = cp.ElementwiseKernel(
     'W w',
     '''
     double temp = ( n - alpha ) / alpha;
-    w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) / cyl_bessel_i0( beta );
+    w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) /
+        cyl_bessel_i0( beta );
     ''',
     '_kaiser_kernel'
 )
