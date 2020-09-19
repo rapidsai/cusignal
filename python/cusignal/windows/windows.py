@@ -673,6 +673,21 @@ def flattop(M, sym=True):
     return general_cosine(M, a, sym)
 
 
+_bartlett_kernel = cp.ElementwiseKernel(
+    "int32 M",
+    "T w",
+    """
+    double temp = ( M - 1 ) / 2.0;
+    if ( i <= temp ) {
+        w = 2.0 * i / (M - 1);
+    } else {
+        w = 2.0 - 2.0 * i / (M - 1);
+    }
+    """,
+    "_bartlett_kernel",
+)
+
+
 def bartlett(M, sym=True):
     r"""
     Return a Bartlett window.
@@ -765,12 +780,9 @@ def bartlett(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(0, M)
-    w = cp.where(
-        cp.less_equal(n, (M - 1) / 2.0),
-        2.0 * n / (M - 1),
-        2.0 - 2.0 * n / (M - 1),
-    )
+    w = cp.empty(M, dtype=cp.float64)
+
+    _bartlett_kernel(M, w)
 
     return _truncate(w, needs_trunc)
 
