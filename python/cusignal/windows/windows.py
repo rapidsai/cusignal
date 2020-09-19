@@ -825,8 +825,8 @@ def hann(M, sym=True):
 
 
 _tukey_kernel = cp.ElementwiseKernel(
-    'int64 n, int32 M, int32 width, float64 alpha, float64 pi',
-    'T w',
+    'N n, int32 M, int32 width, float64 alpha, float64 pi',
+    'W w',
     '''
     if (n < (width + 1)) {                                                                                                         
         w = 0.5 * (1 + cos(pi * (-1 + 2.0 * n / alpha / (M - 1))));                                                                                      
@@ -918,6 +918,17 @@ def tukey(M, alpha=0.5, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_barthann_kernel = cp.ElementwiseKernel(
+    'N n, int32 M, float64 pi',
+    'W w',
+    '''
+    double fac = abs(n / (M - 1.0) - 0.5);
+    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);                                                                                                    
+    ''',
+    '_barthann_kernel'
+)
+
+
 def barthann(M, sym=True):
     r"""Return a modified Bartlett-Hann window.
 
@@ -967,9 +978,10 @@ def barthann(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(0, M)
-    fac = abs(n / (M - 1.0) - 0.5)
-    w = 0.62 - 0.48 * fac + 0.38 * cp.cos(2 * cp.pi * fac)
+    w = cp.empty(M, dtype=cp.float64)
+    n = cp.arange(0, M, dtype=cp.int64)
+
+    _barthann_kernel(n, M, cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
