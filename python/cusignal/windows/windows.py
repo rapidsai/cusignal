@@ -42,12 +42,12 @@ def _truncate(w, needed):
 
 
 _general_cosine_kernel = cp.ElementwiseKernel(
-    "float64 delta, float64 start, raw T a, int32 N",
+    "T delta, T start, raw T a, int64 n",
     "T w",
     """
     double fac = start + delta * i;
     T temp = 0.0;
-    for (int k = 0; k < N; k++) {
+    for (int k = 0; k < n; k++) {
         temp += a[k] * cos(k * fac);
     }
     w = temp;
@@ -195,7 +195,7 @@ def boxcar(M, sym=True):
 
 
 _triang_kernel_true = cp.ElementwiseKernel(
-    "int32 M",
+    "int64 M",
     "T w",
     """
     int n;
@@ -211,7 +211,7 @@ _triang_kernel_true = cp.ElementwiseKernel(
 )
 
 _triang_kernel_false = cp.ElementwiseKernel(
-    "int32 M",
+    "int64 M",
     "T w",
     """
     int n;
@@ -358,7 +358,7 @@ def parzen(M, sym=True):
 
 
 _bohman_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 delta, float64 start, float64 pi",
+    "int64 M, T delta, T start, T pi",
     "T w",
     """
     double fac = abs(start + delta * ( i - 1 ));
@@ -687,7 +687,7 @@ def flattop(M, sym=True):
 
 
 _bartlett_kernel = cp.ElementwiseKernel(
-    "int32 M",
+    "int64 M",
     "T w",
     """
     double temp = ( M - 1 ) / 2.0;
@@ -884,8 +884,8 @@ def hann(M, sym=True):
 
 
 _tukey_kernel = cp.ElementwiseKernel(
-    "int32 M, int32 width, float64 alpha, float64 pi",
-    "W w",
+    "int64 M, int64 width, T alpha, T pi",
+    "T w",
     """
     if (i < (width + 1)) {
         w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha / (M - 1))));
@@ -978,8 +978,8 @@ def tukey(M, alpha=0.5, sym=True):
 
 
 _barthann_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 pi",
-    "W w",
+    "int64 M, T pi",
+    "T w",
     """
     double fac = abs(i / (M - 1.0) - 0.5);
     w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
@@ -1137,8 +1137,8 @@ def general_hamming(M, alpha, sym=True):
 
 
 _hamming_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 pi",
-    "W w",
+    "int64 M, T pi",
+    "T w",
     """
     w = 0.54 - 0.46 * cos(2.0 * pi * i / (M - 1));
     """,
@@ -1240,8 +1240,8 @@ def hamming(M, sym=True):
 
 
 _kaiser_kernel = cp.ElementwiseKernel(
-    "float64 alpha, float64 beta",
-    "W w",
+    "T alpha, T beta",
+    "T w",
     """
     double temp = ( i - alpha ) / alpha;
     w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) /
@@ -1377,8 +1377,8 @@ def kaiser(M, beta, sym=True):
 
 
 _gaussian_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 std",
-    "W w",
+    "int64 M, T std",
+    "T w",
     """
     double n = i - (M - 1.0) / 2.0;
     double sig2 = 2 * std * std;
@@ -1454,8 +1454,8 @@ def gaussian(M, std, sym=True):
 
 
 _general_gaussian_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 p, float64 sig",
-    "W w",
+    "int64 M, T p, T sig",
+    "T w",
     """
     double n = i - (M - 1.0) / 2.0;
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
@@ -1537,7 +1537,7 @@ def general_gaussian(M, p, sig, sym=True):
 
 
 _chebwin_kernel = cp.ElementwiseKernel(
-    "int32 M, T order, T beta, T pi",
+    "int64 M, T order, T beta, T pi",
     "T p",
     """
     double x = beta * cos(pi * i / M);
@@ -1678,7 +1678,7 @@ def chebwin(M, at, sym=True):
 
 
 _cosine_kernel = cp.ElementwiseKernel(
-    "int32 M, float64 pi",
+    "int64 M, T pi",
     "T w",
     """
     double n = i + 0.5;
@@ -1751,7 +1751,7 @@ def cosine(M, sym=True):
 
 
 _exponential_kernel = cp.ElementwiseKernel(
-    "float64 center, float64 tau",
+    "T center, T tau",
     "T w",
     """
     w = exp(-abs(i - center) / tau);
