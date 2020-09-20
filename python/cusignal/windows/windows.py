@@ -45,7 +45,7 @@ _general_cosine_kernel = cp.ElementwiseKernel(
     "T delta, T start, raw T a, int64 n",
     "T w",
     """
-    double fac = start + delta * i;
+    T fac = start + delta * i;
     T temp = 0.0;
     for (int k = 0; k < n; k++) {
         temp += a[k] * cos(k * fac);
@@ -981,7 +981,7 @@ _barthann_kernel = cp.ElementwiseKernel(
     "int64 M, T pi",
     "T w",
     """
-    double fac = abs(i / (M - 1.0) - 0.5);
+    T fac = abs(i / (M - 1.0) - 0.5);
     w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
     """,
     "_barthann_kernel",
@@ -1243,7 +1243,7 @@ _kaiser_kernel = cp.ElementwiseKernel(
     "T alpha, T beta",
     "T w",
     """
-    double temp = ( i - alpha ) / alpha;
+    T temp = ( i - alpha ) / alpha;
     w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) /
         cyl_bessel_i0( beta );
     """,
@@ -1380,8 +1380,8 @@ _gaussian_kernel = cp.ElementwiseKernel(
     "int64 M, T std",
     "T w",
     """
-    double n = i - (M - 1.0) / 2.0;
-    double sig2 = 2 * std * std;
+    T n = i - (M - 1.0) / 2.0;
+    T sig2 = 2 * std * std;
     w = exp( - ( n * n ) / sig2 );
 
     """,
@@ -1457,7 +1457,7 @@ _general_gaussian_kernel = cp.ElementwiseKernel(
     "int64 M, T p, T sig",
     "T w",
     """
-    double n = i - (M - 1.0) / 2.0;
+    T n = i - (M - 1.0) / 2.0;
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
     """,
     "_general_gaussian_kernel",
@@ -1540,7 +1540,7 @@ _chebwin_kernel = cp.ElementwiseKernel(
     "int64 M, T order, T beta, T pi",
     "T p",
     """
-    double x = beta * cos(pi * i / M);
+    T x = beta * cos(pi * i / M);
     if (x > 1) {
         p = cosh(order * acosh(x));
     } else if (x < -1) {
@@ -1681,7 +1681,7 @@ _cosine_kernel = cp.ElementwiseKernel(
     "int64 M, T pi",
     "T w",
     """
-    double n = i + 0.5;
+    T n = i + 0.5;
     w = sin( pi / M * n );
     """,
     "_cosine_kernel",
