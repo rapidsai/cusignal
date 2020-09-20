@@ -13,6 +13,7 @@
 
 import cupy as cp
 import numpy as np
+import math
 from cupyx.scipy import fftpack
 
 import warnings
@@ -291,6 +292,29 @@ def triang(M, sym=True):
     return _truncate(w, needs_trunc)
 
 
+_parzen_kernel = cp.ElementwiseKernel(
+    "int64 M, T den, T start, T s1, int64 sizeS1, T s2, int64 sizeS2",
+    "T w",
+    """
+    T n;
+    if ( i < sizeS1 ) {
+        n = i + start;
+        T temp = (1 - abs(n) * den);
+        w = 2 * (temp * temp * temp);
+    } else if ( i >= sizeS1 && i < ( sizeS1 + sizeS2 ) ) {
+        n = (i - sizeS1 - s2);
+        T temp = abs(n) * den;
+        w = 1 - 6 * temp * temp + 6 * temp * temp * temp;
+    } else {
+        n = -(i - sizeS2 + s1 + sizeS1);
+        T temp = 1 - abs(n) * den;
+        w = 2 * temp * temp * temp;
+    }
+    """,
+    "_parzen_kernel",
+)
+
+
 def parzen(M, sym=True):
     r"""Return a Parzen window.
 
@@ -345,14 +369,24 @@ def parzen(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    n = cp.arange(-(M - 1) / 2.0, (M - 1) / 2.0 + 0.5, 1.0)
-    na = cp.extract(n < -(M - 1) / 4.0, n)
-    nb = cp.extract(abs(n) <= (M - 1) / 4.0, n)
-    wa = 2 * (1 - abs(na) / (M / 2.0)) ** 3.0
-    wb = (
-        1 - 6 * (abs(nb) / (M / 2.0)) ** 2.0 + 6 * (abs(nb) / (M / 2.0)) ** 3.0
-    )
-    w = cp.r_[wa, wb, wa[::-1]]
+    start = -(M - 1) / 2.0
+    if (M % 2):
+        s1 = math.floor(-(M - 1) / 4.0)
+        s2 = math.floor((M - 1) / 4.0)
+        sizeS1 = s1 - start + 1
+    else:
+        s1 = math.floor(-(M - 1) / 4.0) + 0.5
+        s2 = math.floor((M - 1) / 4.0) + 0.5
+        sizeS1 = s1 - start
+
+    sizeS2 = s2 - start + 1 - sizeS1
+    totalSize = int(sizeS1 * 2 + sizeS2)
+
+    den = 1/(M*0.5)
+
+    w = cp.empty(totalSize, dtype=cp.float64)
+
+    _parzen_kernel(M, den, start, s1, sizeS1, s2, sizeS2, w)
 
     return _truncate(w, needs_trunc)
 
