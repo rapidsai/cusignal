@@ -76,9 +76,6 @@ class TestWindows:
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
 
-    """
-    This isn't preferred, but Parzen is technically broken until
-    cuPy 8.0. Commenting out until cuSignal 0.16
     @pytest.mark.benchmark(group="Parzen")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class TestParzen:
@@ -94,7 +91,6 @@ class TestWindows:
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
-    """
 
     @pytest.mark.benchmark(group="Bohman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
