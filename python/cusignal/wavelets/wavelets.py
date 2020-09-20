@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from ..convolution.convolve import convolve
 
 
@@ -92,6 +93,20 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     return output
 
 
+_ricker_kernel = cp.ElementwiseKernel(
+    "int64 points, T A, T wsq",
+    "T total",
+    """
+    T vec = i - (points - 1.0) / 2;
+    T xsq = vec * vec;
+    T mod = ( 1 - xsq / wsq );
+    T gauss = exp( -xsq / ( 2 * wsq ) );
+    total = A * mod * gauss;
+    """,
+    "_ricker_kernel",
+)
+
+
 def ricker(points, a):
     """
     Return a Ricker wavelet, also known as the "Mexican hat wavelet".
@@ -130,13 +145,13 @@ def ricker(points, a):
     >>> plt.show()
 
     """
-    A = 2 / (cp.sqrt(3 * a) * (cp.pi**0.25))
+    total = cp.empty(points, dtype=cp.float64)
+
+    A = 2 / (np.sqrt(3 * a) * (np.pi**0.25))
     wsq = a**2
-    vec = cp.arange(0, points) - (points - 1.0) / 2
-    xsq = vec**2
-    mod = (1 - xsq / wsq)
-    gauss = cp.exp(-xsq / (2 * wsq))
-    total = A * mod * gauss
+
+    _ricker_kernel(points, A, wsq, total)
+
     return total
 
 
