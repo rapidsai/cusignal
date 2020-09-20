@@ -370,7 +370,7 @@ def parzen(M, sym=True):
     M, needs_trunc = _extend(M, sym)
 
     start = -(M - 1) / 2.0
-    if (M % 2):
+    if M % 2:
         s1 = math.floor(-(M - 1) / 4.0)
         s2 = math.floor((M - 1) / 4.0)
         sizeS1 = s1 - start + 1
@@ -382,7 +382,7 @@ def parzen(M, sym=True):
     sizeS2 = s2 - start + 1 - sizeS1
     totalSize = int(sizeS1 * 2 + sizeS2)
 
-    den = 1/(M*0.5)
+    den = 1 / (M * 0.5)
 
     w = cp.empty(totalSize, dtype=cp.float64)
 
