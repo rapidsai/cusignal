@@ -1718,7 +1718,7 @@ def chebwin(M, at, sym=True):
         p = cp.empty(M, dtype=cp.float64)
 
         _chebwin_kernel_odd(M, order, beta, cp.pi, p)
-        
+
         w = cp.real(fftpack.fft(p))
         n = (M + 1) // 2
         w = w[:n]
