@@ -11,84 +11,119 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import cupy as cp
-# import cusignal
-# import numpy as np
-# import pytest
+import cupy as cp
+import cusignal
+import numpy as np
+import pytest
 
-# from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
-# from scipy import signal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
+from scipy import signal
 
-# gpubenchmark = _check_rapids_pytest_benchmark()
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 # # Missing
-# # gauss_spline
-# # cubic
-# # quadratic
 # # cspline1d
 
 
-# class TestBsplines:
-#     @pytest.mark.benchmark(group="GaussSpline")
-#     class TestGaussSpline:
-#         def cpu_version(self, cpu_sig):
-#             return signal.gauss_spline(cpu_sig)
+class TestBsplines:
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
+    @pytest.mark.parametrize("n", [1])
+    @pytest.mark.benchmark(group="GaussSpline")
+    class TestGaussSpline:
+        def cpu_version(self, x, n):
+            return signal.gauss_spline(x, n)
 
-#         @pytest.mark.cpu
-#         def test_gauss_spline_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+        def gpu_version(self, x, n):
+            with cp.cuda.Stream.null:
+                out = cusignal.gauss_spline(x, n)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#         def test_gauss_spline_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_gauss_spline_cpu(self, benchmark, x, n):
+            benchmark(self.cpu_version, x, n)
 
-#             output = gpubenchmark(cusignal.gauss_spline, gpu_sig)
+        def test_gauss_spline_gpu(self, gpubenchmark, x, n):
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+            output = gpubenchmark(self.gpu_version, x, n)
 
-#     @pytest.mark.benchmark(group="Cubic")
-#     class TestCubic:
-#         def cpu_version(self, cpu_sig):
-#             return signal.cubic(cpu_sig)
+            key = self.cpu_version(x, n)
+            assert array_equal(cp.asnumpy(output), key)
 
-#         @pytest.mark.cpu
-#         def test_cubic_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+    @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
+    @pytest.mark.benchmark(group="Cubic")
+    class TestCubic:
+        def cpu_version(self, x):
+            return signal.cubic(x)
 
-#         def test_cubic_gpu(self, gpubenchmark):
+        def gpu_version(self, x):
+            with cp.cuda.Stream.null:
+                out = cusignal.cubic(x)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#             output = gpubenchmark(cusignal.cubic, gpu_sig)
+        @pytest.mark.cpu
+        def test_cubic_cpu(self, benchmark, x):
+            benchmark(self.cpu_version, x)
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+        def test_cubic_gpu(self, gpubenchmark, x):
 
-#     @pytest.mark.benchmark(group="Quadratic")
-#     class TestQuadratic:
-#         def cpu_version(self, cpu_sig):
-#             return signal.quadratic(cpu_sig)
+            output = gpubenchmark(self.gpu_version, x)
 
-#         @pytest.mark.cpu
-#         def test_quadratic_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+            key = self.cpu_version(x)
+            assert array_equal(cp.asnumpy(output), key)
 
-#         def test_quadratic_gpu(self, gpubenchmark):
+    @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
+    @pytest.mark.benchmark(group="Quadratic")
+    class TestQuadratic:
+        def cpu_version(self, x):
+            return signal.quadratic(x)
 
-#             output = gpubenchmark(cusignal.quadratic, gpu_sig)
+        def gpu_version(self, x):
+            with cp.cuda.Stream.null:
+                out = cusignal.quadratic(x)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+        @pytest.mark.cpu
+        def test_quadratic_cpu(self, benchmark, x):
+            benchmark(self.cpu_version, x)
 
-#     @pytest.mark.benchmark(group="Cspline1d")
-#     class TestCspline1d:
-#         def cpu_version(self, cpu_sig):
-#             return signal.cspline1d(cpu_sig)
+        def test_quadratic_gpu(self, gpubenchmark, x):
 
-#         @pytest.mark.cpu
-#         def test_cspline1d_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+            output = gpubenchmark(self.gpu_version, x)
 
-#         def test_cspline1d_gpu(self, gpubenchmark):
+            key = self.cpu_version(x)
+            assert array_equal(cp.asnumpy(output), key)
 
-#             output = gpubenchmark(cusignal.cspline1d, gpu_sig)
+    # @pytest.mark.benchmark(group="Cspline1d")
+    # @pytest.mark.parametrize("num_samps", [2 ** 14, 2**18])
+    # class TestCspline1d:
+    #     def cpu_version(self, sig):
+    #         return signal.cspline1d(sig)
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+    #     def gpu_version(self, sig):
+    #         with cp.cuda.Stream.null:
+    #             out = cusignal.cspline1d(sig)
+    #         cp.cuda.Stream.null.synchronize()
+    #         return out
+
+    #     @pytest.mark.cpu
+    #     def test_cspline1d_cpu(self, benchmark, linspace_data_gen, num_samps):
+    #         cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+
+    #         benchmark(self.cpu_version, cpu_sig)
+
+    #     def test_cspline1d_gpu(
+    #         self, gpubenchmark, linspace_data_gen, num_samps
+    #     ):
+
+    #         cpu_sig, gpu_sig = linspace_data_gen(
+    #             0, 10, num_samps, endpoint=False
+    #         )
+
+    #         output = gpubenchmark(self.gpu_version, gpu_sig)
+
+    #         key = self.cpu_version(cpu_sig)
+    #         assert array_equal(cp.asnumpy(output), key)
