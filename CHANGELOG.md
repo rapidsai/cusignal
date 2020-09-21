@@ -22,7 +22,7 @@
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
 - PR #218 - Remove fatbins from source code on GH
-
+- PR #221 - Synchronization issue with cusignal testing 
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
