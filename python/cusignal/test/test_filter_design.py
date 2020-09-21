@@ -38,16 +38,28 @@ class TestFilterDesign:
         def cpu_version(self, num_samps, f1, f2):
             return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
+        def gpu_version(self, num_samps, f1, f2):
+            with cp.cuda.Stream.null:
+                out = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_firwin_cpu(self, benchmark, num_samps, f1, f2):
             benchmark(
-                self.cpu_version, num_samps, f1, f2,
+                self.cpu_version,
+                num_samps,
+                f1,
+                f2,
             )
 
         def test_firwin_gpu(self, gpubenchmark, num_samps, f1, f2):
 
             output = gpubenchmark(
-                cusignal.firwin, num_samps, [f1, f2], pass_zero=False
+                self.gpu_version,
+                num_samps,
+                f1,
+                f2,
             )
 
             key = self.cpu_version(num_samps, f1, f2)
@@ -55,8 +67,13 @@ class TestFilterDesign:
 
     # @pytest.mark.benchmark(group="KaiserBeta")
     # class TestKaiserBeta:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_beta(cpu_sig)
+    #     def cpu_version(self, sig):
+    #         return signal.kaiser_beta(sig)
+
+    #     def gpu_version(self, sig):
+    #         with cp.cuda.Stream.null:
+    #             return cusignal.kaiser_beta(sig)
+    #         cp.cuda.Stream.null.synchronize()
 
     #     @pytest.mark.cpu
     #     def test_kaiser_beta_cpu(self, benchmark):
@@ -64,15 +81,20 @@ class TestFilterDesign:
 
     #     def test_kaiser_beta_gpu(self, gpubenchmark):
 
-    #         output = gpubenchmark(cusignal.kaiser_beta, gpu_sig)
+    #         output = gpubenchmark(self.gpu_version, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="KaiserAtten")
     # class TestKaiserAtten:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_atten(cpu_sig)
+    #     def cpu_version(self, sig):
+    #         return signal.kaiser_atten(sig)
+
+    #     def gpu_version(self, sig):
+    #         with cp.cuda.Stream.null:
+    #             return cusignal.kaiser_atten(sig)
+    #         cp.cuda.Stream.null.synchronize()
 
     #     @pytest.mark.cpu
     #     def test_kaiser_atten_cpu(self, benchmark):
@@ -80,15 +102,20 @@ class TestFilterDesign:
 
     #     def test_kaiser_atten_gpu(self, gpubenchmark):
 
-    #         output = gpubenchmark(cusignal.kaiser_atten, gpu_sig)
+    #         output = gpubenchmark(self.gpu_version, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="CmplxSort")
     # class TestCmplxSort:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.cmplx_sort(cpu_sig)
+    #     def cpu_version(self, sig):
+    #         return signal.cmplx_sort(sig)
+
+    #     def gpu_version(self, sig):
+    #         with cp.cuda.Stream.null:
+    #             return cusignal.cmplx_sort(sig)
+    #         cp.cuda.Stream.null.synchronize()
 
     #     @pytest.mark.cpu
     #     def test_cmplx_sort_cpu(self, benchmark):
@@ -96,7 +123,7 @@ class TestFilterDesign:
 
     #     def test_cmplx_sort_gpu(self, gpubenchmark):
 
-    #         output = gpubenchmark(cusignal.cmplx_sort, gpu_sig)
+    #         output = gpubenchmark(self.gpu_version, gpu_sig)
 
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
