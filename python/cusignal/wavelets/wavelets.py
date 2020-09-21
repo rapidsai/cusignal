@@ -167,12 +167,12 @@ def ricker(points, a):
     >>> plt.show()
 
     """
-    total = cp.empty(points, dtype=cp.float64)
+    total = cp.empty(int(points), dtype=cp.float64)
 
     A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
     wsq = a ** 2
 
-    _ricker_kernel(points, A, wsq, total)
+    _ricker_kernel(points, float(A), float(wsq), total)
 
     return total
 
@@ -228,7 +228,7 @@ def cwt(data, wavelet, widths):
     >>> plt.show()
 
     """
-    output = cp.zeros([len(widths), len(data)])
+    output = cp.empty([len(widths), len(data)])
     for ind, width in enumerate(widths):
         wavelet_data = wavelet(min(10 * width, len(data)), width)
         output[ind, :] = convolve(data, wavelet_data, mode="same")
