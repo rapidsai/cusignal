@@ -513,7 +513,8 @@ class TestSpectral:
     #         self, gpubenchmark, time_data_gen, num_samps, period
     #     ):
     #         events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
-    #         output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
+    #         output = gpubenchmark(
+    #           cusignal.vectorstrength, events_gpu, period)
 
     #         key = self.cpu_version(events_cpu, period)
     #         assert array_equal(cp.asnumpy(output), key)

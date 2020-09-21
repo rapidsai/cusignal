@@ -198,7 +198,8 @@ class TestFilter:
     # @pytest.mark.parametrize("randgen", np.random.RandomState(9))
     # @pytest.mark.parametrize("num_npoints", 1000)
     # @pytest.mark.parametrize("num_noise", randgen.randn(num_npoints))
-    # @pytest.mark.parametrize("num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
+    # @pytest.mark.parametrize(
+    #   "num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
 
     # class TestDetrend:
     #     def cpu_version(self, x):
