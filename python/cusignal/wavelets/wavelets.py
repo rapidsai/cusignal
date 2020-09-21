@@ -31,6 +31,26 @@ def qmf(hk):
     return hk[::-1] * cp.array(asgn)
 
 
+_morlet_kernel = cp.ElementwiseKernel(
+    "float64 delta, float64 start, float64 w, float64 pi, bool complete",
+    "T output",
+    """
+    double x = start + delta * i;
+
+    T temp = T(0, w * x);
+
+    temp = exp(temp);
+
+    if (complete) {
+        temp -= exp( -0.5 * (w * w) );
+    }
+
+    output = temp * exp( -0.5 * (x * x)) * pow(pi, -0.25)
+    """,
+    "_morlet_kernel",
+)
+
+
 def morlet(M, w=5.0, s=1.0, complete=True):
     """
     Complex Morlet wavelet.
@@ -82,13 +102,15 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     with it.
 
     """
-    x = cp.linspace(-s * 2 * cp.pi, s * 2 * cp.pi, M)
-    output = cp.exp(1j * w * x)
+    # x = cp.linspace(-s * 2 * cp.pi, s * 2 * cp.pi, M)
+    # output = cp.exp(1j * w * x)
 
-    if complete:
-        output -= cp.exp(-0.5 * (w**2))
+    output = cp.empty(M, dtype=cp.complex128)
+    end = s * 2 * np.pi
+    start = -s * 2 * np.pi
+    delta = (end - start) / (M - 1)
 
-    output *= cp.exp(-0.5 * (x**2)) * cp.pi**(-0.25)
+    _morlet_kernel(delta, start, w, np.pi, complete, output)
 
     return output
 
@@ -147,8 +169,8 @@ def ricker(points, a):
     """
     total = cp.empty(points, dtype=cp.float64)
 
-    A = 2 / (np.sqrt(3 * a) * (np.pi**0.25))
-    wsq = a**2
+    A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
+    wsq = a ** 2
 
     _ricker_kernel(points, A, wsq, total)
 
@@ -209,6 +231,5 @@ def cwt(data, wavelet, widths):
     output = cp.zeros([len(widths), len(data)])
     for ind, width in enumerate(widths):
         wavelet_data = wavelet(min(10 * width, len(data)), width)
-        output[ind, :] = convolve(data, wavelet_data,
-                                  mode='same')
+        output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output
