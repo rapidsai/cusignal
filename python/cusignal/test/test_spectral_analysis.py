@@ -494,26 +494,30 @@ class TestSpectral:
             assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="Vectorstrength")
+    # @pytest.mark.parametrize("events", [1, 2, 3, 4])
+    # @pytest.mark.parametrize("period", [2.3, 3.2, 0.2, 0.3])
     # class TestVectorstrength:
-    #     def cpu_version(self, sig):
-    #         return signal.vectorstrength(sig)
+    #     def cpu_version(self, events, period):
+    #         return signal.vectorstrength(events, period)
+
+    #     def gpu_version(self, events, period):
+    #         with cp.cuda.Stream.null:
+    #             out = cusignal.coherence(events, period)
+    #         cp.cuda.Stream.null.synchronize()
+    #         return out
 
     #     @pytest.mark.cpu
-    #     def test_vectorstrength_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     def test_vectorstrength_cpu(self, benchmark, events, period):
+    #         # events_cpu, _ = time_data_gen(0, 10, num_samps)
+    #         # period_cpu, _ = time_data_gen(0, 10, num_samps)
+    #         benchmark(self.cpu_version, events, period)
 
-    #     @pytest.mark.cpu
-    #     def test_vectorstrength_cpu(
-    #         self, benchmark, time_data_gen, num_samps, period
-    #     ):
-    #         events_cpu, _ = time_data_gen(0, 10, num_samps)
-    #         benchmark(self.cpu_version, events_cpu, period)
+    #     def test_vectorstrength_gpu(self, gpubenchmark, events, period):
+    #         events_gpu = cp.asarray(events)
+    #         #period_gpu = cp.asarray(period)
+    #         # events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
+    #         # period_cpu, period_gpu = time_data_gen(0, 10, num_samps)
+    #         output = gpubenchmark(self.gpu_version, events_gpu, period)
 
-    #     def test_vectorstrength_gpu(
-    #         self, gpubenchmark, time_data_gen, num_samps, period
-    #     ):
-    #         events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
-    #         output = gpubenchmark(cusignal.vectorstrength, events_gpu, period)
-
-    #         key = self.cpu_version(events_cpu, period)
+    #         key = self.cpu_version(events, period)
     #         assert array_equal(cp.asnumpy(output), key)

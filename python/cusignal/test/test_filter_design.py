@@ -86,7 +86,7 @@ class TestFilterDesign:
     #         key = self.cpu_version(cpu_sig)
     #         assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.parametrize("numtaps", [5, 211, 100])
+    @pytest.mark.parametrize("numtaps", [5, 21, 100])
     @pytest.mark.parametrize("width", [0.01, 0.0375, 2.4])
     @pytest.mark.benchmark(group="KaiserAtten")
     class TestKaiserAtten:
