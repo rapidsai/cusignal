@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 import sys
 
 from cupyx.scipy import fftpack
@@ -33,7 +34,10 @@ _modedict = {"valid": 0, "same": 1, "full": 2}
 
 
 def convolve(
-    in1, in2, mode="full", method="auto",
+    in1,
+    in2,
+    mode="full",
+    method="auto",
 ):
     """
     Convolve two N-dimensional arrays.
@@ -142,7 +146,6 @@ def convolve(
             out = cp.around(out)
         return out.astype(result_type)
     elif method == "direct":
-
         if volume.ndim > 1:
             raise ValueError("Direct method is only implemented for 1D")
 
@@ -247,8 +250,8 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     >>> fig.show()
 
     """
-    in1 = cp.asarray(in1)
-    in2 = cp.asarray(in2)
+    in1 = cp.ascontiguousarray(in1)
+    in2 = cp.ascontiguousarray(in2)
     noaxes = axes is None
 
     if in1.ndim == in2.ndim == 0:  # scalar inputs
@@ -266,14 +269,14 @@ def fftconvolve(in1, in2, mode="full", axes=None):
         raise ValueError("when provided, axes cannot be empty")
 
     if noaxes:
-        other_axes = cp.array([], dtype=cp.intc)
+        other_axes = np.array([], dtype=cp.intc)
     else:
-        other_axes = cp.setdiff1d(cp.arange(in1.ndim), axes)
+        other_axes = np.setdiff1d(np.arange(in1.ndim), axes)
 
-    s1 = cp.array(in1.shape)
-    s2 = cp.array(in2.shape)
+    s1 = np.array(in1.shape)
+    s2 = np.array(in2.shape)
 
-    if not cp.all(
+    if not np.all(
         (s1[other_axes] == s2[other_axes])
         | (s1[other_axes] == 1)
         | (s2[other_axes] == 1)
@@ -283,10 +286,10 @@ def fftconvolve(in1, in2, mode="full", axes=None):
             " {0} and {1}".format(in1.shape, in2.shape)
         )
 
-    complex_result = cp.issubdtype(
-        in1.dtype, cp.complexfloating
-    ) or cp.issubdtype(in2.dtype, cp.complexfloating)
-    shape = cp.maximum(s1, s2)
+    complex_result = np.issubdtype(
+        in1.dtype, np.complexfloating
+    ) or np.issubdtype(in2.dtype, cp.complexfloating)
+    shape = np.maximum(s1, s2)
     shape[axes] = s1[axes] + s2[axes] - 1
 
     # Check that input sizes are compatible with 'valid' mode
@@ -299,19 +302,18 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fslice = tuple([slice(sz) for sz in shape])
 
     if not complex_result:
-        sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-        sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
+        plan = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="R2C")
+        with plan:
+            sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
+            sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
         ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
     else:
-        # If we're here, it's either because we need a complex result, or we
-        # failed to acquire _rfft_lock (meaning rfftn isn't threadsafe and
-        # is already in use by another thread).  In either case, use the
-        # (threadsafe but slower) SciPy complex-FFT routines instead.
-        sp1 = fftpack.fftn(in1, fshape, axes=axes)
-        sp2 = fftpack.fftn(in2, fshape, axes=axes)
-        ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-        if not complex_result:
-            ret = ret.real
+        # Need to move to cupyx.scipy.fft with CuPy v8
+        plan = fftpack.get_fft_plan(in1, fshape, axes=axes)
+        with plan:
+            sp1 = fftpack.fftn(in1, fshape, axes=axes)
+            sp2 = fftpack.fftn(in2, fshape, axes=axes)
+            ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
 
     if mode == "full":
         return ret
@@ -324,13 +326,17 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     else:
         raise ValueError(
             "acceptable mode flags are \
-                         'valid',"
+                        'valid',"
             " 'same', or 'full'"
         )
 
 
 def convolve2d(
-    in1, in2, mode="full", boundary="fill", fillvalue=0,
+    in1,
+    in2,
+    mode="full",
+    boundary="fill",
+    fillvalue=0,
 ):
     """
     Convolve two 2-dimensional arrays.
@@ -412,7 +418,12 @@ def convolve2d(
         in1, in2 = in2, in1
 
     return _convolution_cuda._convolve2d(
-        in1, in2, 1, mode, boundary, fillvalue,
+        in1,
+        in2,
+        1,
+        mode,
+        boundary,
+        fillvalue,
     )
 
 
