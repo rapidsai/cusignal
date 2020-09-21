@@ -28,6 +28,14 @@ class TestWindows:
         def cpu_version(self, num_samps, arr):
             return signal.windows.general_cosine(num_samps, arr, sym=False)
 
+        def gpu_version(self, num_samps, arr):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.general_cosine(
+                    num_samps, arr, sym=False
+                )
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_general_cosine_cpu(self, benchmark, num_samps):
             HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
@@ -37,9 +45,7 @@ class TestWindows:
         def test_general_cosine_gpu(self, gpubenchmark, num_samps):
             HFT90D = [1, 1.942604, 1.340318, 0.440811, 0.043097]
 
-            output = gpubenchmark(
-                cusignal.windows.general_cosine, num_samps, HFT90D, sym=False
-            )
+            output = gpubenchmark(self.cpu_version, num_samps, HFT90D)
 
             key = self.cpu_version(num_samps, HFT90D)
             assert array_equal(cp.asnumpy(output), key)
@@ -50,12 +56,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.boxcar(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.boxcar(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_boxcar_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_boxcar_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.boxcar, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -66,12 +78,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.triang(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.triang(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_triang_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_triang_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.triang, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -102,12 +120,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bohman(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.bohman(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_bohman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_bohman_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.bohman, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -118,12 +142,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackman(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.blackman(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_blackman_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_blackman_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.blackman, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -134,12 +164,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.nuttall(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.nuttall(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_nuttall_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_nuttall_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.nuttall, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -150,12 +186,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.blackmanharris(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.blackmanharris(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_blackmanharris_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_blackmanharris_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.blackmanharris, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -166,12 +208,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.flattop(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.flattop(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_flattop_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_flattop_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.flattop, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -182,12 +230,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.bartlett(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.bartlett(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_bartlett_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_bartlett_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.bartlett, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -199,14 +253,18 @@ class TestWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.tukey(num_samps, alpha, sym=True)
 
+        def gpu_version(self, num_samps, alpha):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.tukey(num_samps, alpha, sym=True)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_tukey_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
         def test_tukey_gpu(self, gpubenchmark, num_samps, alpha):
-            output = gpubenchmark(
-                cusignal.windows.tukey, num_samps, alpha, sym=True
-            )
+            output = gpubenchmark(self.gpu_version, num_samps, alpha)
 
             key = self.cpu_version(num_samps, alpha)
             assert array_equal(cp.asnumpy(output), key)
@@ -217,12 +275,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.barthann(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.barthann(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_barthann_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_barthann_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.barthann, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -234,14 +298,20 @@ class TestWindows:
         def cpu_version(self, num_samps, alpha):
             return signal.windows.general_hamming(num_samps, alpha, sym=True)
 
+        def gpu_version(self, num_samps, alpha):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.general_hamming(
+                    num_samps, alpha, sym=True
+                )
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_general_hamming_cpu(self, benchmark, num_samps, alpha):
             benchmark(self.cpu_version, num_samps, alpha)
 
         def test_general_hamming_gpu(self, gpubenchmark, num_samps, alpha):
-            output = gpubenchmark(
-                cusignal.windows.general_hamming, num_samps, alpha, sym=True
-            )
+            output = gpubenchmark(self.gpu_version, num_samps, alpha)
 
             key = self.cpu_version(num_samps, alpha)
             assert array_equal(cp.asnumpy(output), key)
@@ -252,12 +322,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.hamming(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.hamming(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_hamming_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_hamming_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.hamming, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -269,14 +345,18 @@ class TestWindows:
         def cpu_version(self, num_samps, beta):
             return signal.windows.kaiser(num_samps, beta, sym=True)
 
+        def gpu_version(self, num_samps, beta):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.kaiser(num_samps, beta, sym=True)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_kaiser_cpu(self, benchmark, num_samps, beta):
             benchmark(self.cpu_version, num_samps, beta)
 
         def test_kaiser_gpu(self, gpubenchmark, num_samps, beta):
-            output = gpubenchmark(
-                cusignal.windows.kaiser, num_samps, beta, sym=True
-            )
+            output = gpubenchmark(self.gpu_version, num_samps, beta)
 
             key = self.cpu_version(num_samps, beta)
             assert array_equal(cp.asnumpy(output), key)
@@ -288,12 +368,18 @@ class TestWindows:
         def cpu_version(self, num_samps, std):
             return signal.windows.gaussian(num_samps, std)
 
+        def gpu_version(self, num_samps, std):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.gaussian(num_samps, std)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_gaussian_cpu(self, benchmark, num_samps, std):
             benchmark(self.cpu_version, num_samps, std)
 
         def test_gaussian_gpu(self, gpubenchmark, num_samps, std):
-            output = gpubenchmark(cusignal.windows.gaussian, num_samps, std)
+            output = gpubenchmark(self.gpu_version, num_samps, std)
 
             key = self.cpu_version(num_samps, std)
             assert array_equal(cp.asnumpy(output), key)
@@ -306,14 +392,18 @@ class TestWindows:
         def cpu_version(self, num_samps, p, std):
             return signal.windows.general_gaussian(num_samps, p, std)
 
+        def gpu_version(self, num_samps, p, std):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.general_gaussian(num_samps, p, std)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_general_gaussian_cpu(self, benchmark, num_samps, p, std):
             benchmark(self.cpu_version, num_samps, p, std)
 
         def test_general_gaussian_gpu(self, gpubenchmark, num_samps, p, std):
-            output = gpubenchmark(
-                cusignal.windows.general_gaussian, num_samps, p, std
-            )
+            output = gpubenchmark(self.gpu_version, num_samps, p, std)
 
             key = self.cpu_version(num_samps, p, std)
             assert array_equal(cp.asnumpy(output), key)
@@ -325,12 +415,18 @@ class TestWindows:
         def cpu_version(self, num_samps, at):
             return signal.windows.chebwin(num_samps, at)
 
+        def gpu_version(self, num_samps, at):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.chebwin(num_samps, at)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_chebwin_cpu(self, benchmark, num_samps, at):
             benchmark(self.cpu_version, num_samps, at)
 
         def test_chebwin_gpu(self, gpubenchmark, num_samps, at):
-            output = gpubenchmark(cusignal.windows.chebwin, num_samps, at)
+            output = gpubenchmark(self.gpu_version, num_samps, at)
 
             key = self.cpu_version(num_samps, at)
             assert array_equal(cp.asnumpy(output), key)
@@ -341,12 +437,18 @@ class TestWindows:
         def cpu_version(self, num_samps):
             return signal.windows.cosine(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.cosine(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_cosine_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_cosine_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.cosine, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -358,14 +460,18 @@ class TestWindows:
         def cpu_version(self, num_samps, tau):
             return signal.windows.exponential(num_samps, tau=tau)
 
+        def gpu_version(self, num_samps, tau):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.exponential(num_samps, tau=tau)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_exponential_cpu(self, benchmark, num_samps, tau):
             benchmark(self.cpu_version, num_samps, tau)
 
         def test_exponential_gpu(self, gpubenchmark, num_samps, tau):
-            output = gpubenchmark(
-                cusignal.windows.exponential, num_samps, tau=tau
-            )
+            output = gpubenchmark(self.gpu_version, num_samps, tau)
 
             key = self.cpu_version(num_samps, tau)
             assert array_equal(cp.asnumpy(output), key)
@@ -377,14 +483,18 @@ class TestWindows:
         def cpu_version(self, window, num_samps):
             return signal.windows.get_window(window, num_samps)
 
+        def gpu_version(self, window, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.get_window(window, num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_get_window_cpu(self, benchmark, window, num_samps):
             benchmark(self.cpu_version, window, num_samps)
 
         def test_get_window_gpu(self, gpubenchmark, window, num_samps):
-            output = gpubenchmark(
-                cusignal.windows.get_window, window, num_samps
-            )
+            output = gpubenchmark(self.gpu_version, window, num_samps)
 
             key = self.cpu_version(window, num_samps)
             assert array_equal(cp.asnumpy(output), key)

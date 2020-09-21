@@ -26,8 +26,14 @@ class TestWaveforms:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("duty", [0.25, 0.5])
     class TestSquare:
-        def cpu_version(self, cpu_sig, duty):
-            return signal.square(cpu_sig, duty)
+        def cpu_version(self, sig, duty):
+            return signal.square(sig, duty)
+
+        def gpu_version(self, sig, duty):
+            with cp.cuda.Stream.null:
+                out = cusignal.square(sig, duty)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
@@ -39,7 +45,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(cusignal.square, gpu_sig, duty)
+            output = gpubenchmark(self.gpu_version, gpu_sig, duty)
 
             key = self.cpu_version(cpu_sig, duty)
             assert array_equal(cp.asnumpy(output), key)
@@ -48,8 +54,14 @@ class TestWaveforms:
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fc", [0.75, 5])
     class TestGaussPulse:
-        def cpu_version(self, cpu_sig, fc):
-            return signal.gausspulse(cpu_sig, fc, retquad=True, retenv=True)
+        def cpu_version(self, sig, fc):
+            return signal.gausspulse(sig, fc, retquad=True, retenv=True)
+
+        def gpu_version(self, sig, fc):
+            with cp.cuda.Stream.null:
+                out = cusignal.gausspulse(sig, fc, retquad=True, retenv=True)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc):
@@ -61,9 +73,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.gausspulse, gpu_sig, fc, retquad=True, retenv=True
-            )
+            _, _, output = gpubenchmark(self.cpu_version, gpu_sig, fc)
 
             _, _, key = self.cpu_version(cpu_sig, fc)
             assert array_equal(cp.asnumpy(output), key)
@@ -75,8 +85,14 @@ class TestWaveforms:
     @pytest.mark.parametrize("f1", [10])
     @pytest.mark.parametrize("method", ["linear", "quadratic"])
     class TestChirp:
-        def cpu_version(self, cpu_sig, f0, t1, f1, method):
-            return signal.chirp(cpu_sig, f0, t1, f1, method)
+        def cpu_version(self, sig, f0, t1, f1, method):
+            return signal.chirp(sig, f0, t1, f1, method)
+
+        def gpu_version(self, sig, f0, t1, f1, method):
+            with cp.cuda.Stream.null:
+                out = cusignal.chirp(sig, f0, t1, f1, method)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_chirp_cpu(
@@ -90,7 +106,9 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(cusignal.chirp, gpu_sig, f0, t1, f1, method)
+            output = gpubenchmark(
+                self.gpu_version, cpu_sig, f0, t1, f1, method
+            )
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method)
             assert array_equal(cp.asnumpy(output), key)
@@ -102,13 +120,19 @@ class TestWaveforms:
         def cpu_version(self, num_samps, idx):
             return signal.unit_impulse(num_samps, idx)
 
+        def gpu_version(self, num_samps, idx):
+            with cp.cuda.Stream.null:
+                out = cusignal.unit_impulse(num_samps, idx)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_unit_impulse_cpu(self, benchmark, num_samps, idx):
             benchmark(self.cpu_version, num_samps, idx)
 
         def test_unit_impulse_gpu(self, gpubenchmark, num_samps, idx):
 
-            output = gpubenchmark(cusignal.unit_impulse, num_samps, idx)
+            output = gpubenchmark(self.gpu_version, num_samps, idx)
 
             key = self.cpu_version(num_samps, idx)
             assert array_equal(cp.asnumpy(output), key)
