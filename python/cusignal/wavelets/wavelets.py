@@ -15,6 +15,16 @@ import cupy as cp
 import numpy as np
 from ..convolution.convolve import convolve
 
+_qmf_kernel = cp.ElementwiseKernel(
+    "T N",
+    "T output",
+    """
+    int sign = ( i % 2 ) ? -1 : 1;
+    output = (N - (i + 1)) * sign;
+    """,
+    "_qmf_kernel",
+)
+
 
 def qmf(hk):
     """
@@ -26,9 +36,12 @@ def qmf(hk):
         Coefficients of high-pass filter.
 
     """
-    N = len(hk) - 1
-    asgn = [{0: 1, 1: -1}[k % 2] for k in range(N + 1)]
-    return hk[::-1] * cp.array(asgn)
+    N = len(hk)
+    output = cp.empty(N, dtype=cp.int64)
+
+    _qmf_kernel(N, output)
+
+    return output
 
 
 _morlet_kernel = cp.ElementwiseKernel(
@@ -102,9 +115,6 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     with it.
 
     """
-    # x = cp.linspace(-s * 2 * cp.pi, s * 2 * cp.pi, M)
-    # output = cp.exp(1j * w * x)
-
     output = cp.empty(M, dtype=cp.complex128)
     end = s * 2 * np.pi
     start = -s * 2 * np.pi
