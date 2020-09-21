@@ -32,8 +32,14 @@ class TestFilter:
     @pytest.mark.benchmark(group="Wiener")
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
     class TestWiener:
-        def cpu_version(self, cpu_sig):
-            return signal.wiener(cpu_sig)
+        def cpu_version(self, sig):
+            return signal.wiener(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.wiener(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
@@ -43,25 +49,40 @@ class TestFilter:
         def test_wiener_gpu(self, rand_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(cusignal.wiener, gpu_sig)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="Lfiltic")
+    # @pytest.mark.parametrize("num_a", [1.0, -1.0/3])
+    # @pytest.mark.parametrize("num_b", [1.0/2, 1.0/4])
+    # @pytest.mark.parametrize("num_y", [2.])
+
     # class TestLfiltic:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.lfiltic(cpu_sig)
+    #     #def cpu_version(self, a, b, y):
+    #     def cpu_version(self, b, a, y):
+    #         #return signal.lfiltic(a, b, y)
+    #         return signal.lfiltic(b, a, y)
 
-    #         @pytest.mark.cpu
-    #     def test_lfiltic_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     #def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
+    #     def test_lfiltic_cpu(self, benchmark, num_b, num_a, num_y):
 
-    #     def test_lfiltic_gpu(self, gpubenchmark):
+    #         #benchmark(self.cpu_version, num_a, num_b, num_y)
+    #         benchmark(self.cpu_version, num_b, num_a, num_y)
 
-    #         output = gpubenchmark(cusignal.lfiltic, gpu_sig)
+    #     def test_lfiltic_gpu(self, gpubenchmark, num_b, num_a,num_y):
+    #     #def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
+    #         d_num_a = cp.asarray(num_a)
+    #         d_num_b = cp.asarray(num_b)
+    #         d_num_y = cp.asarray(num_y)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         output = gpubenchmark(cusignal.lfiltic, d_num_b,d_num_a, d_num_y)
+    #         #output = gpubenchmark(cusignal.lfiltic, d_num_a,num_b, num_y)
+
+    #         key = self.cpu_version(num_b, num_a,  num_y)
+    #         #key = self.cpu_version(num_a, num_b, num_y)
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
@@ -72,8 +93,14 @@ class TestFilter:
     class TestSOSFilt:
         np.random.seed(1234)
 
-        def cpu_version(self, sos, cpu_sig):
-            return signal.sosfilt(sos, cpu_sig)
+        def cpu_version(self, sos, sig):
+            return signal.sosfilt(sos, sig)
+
+        def gpu_version(self, sos, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.sosfilt(sos, sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_sosfilt_cpu(
@@ -108,7 +135,11 @@ class TestFilter:
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
-            output = gpubenchmark(cusignal.sosfilt, gpu_sos, gpu_sig,)
+            output = gpubenchmark(
+                self.gpu_version,
+                gpu_sos,
+                gpu_sig,
+            )
 
             key = self.cpu_version(cpu_sos, cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -116,8 +147,14 @@ class TestFilter:
     @pytest.mark.benchmark(group="Hilbert")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class TestHilbert:
-        def cpu_version(self, cpu_sig):
-            return signal.hilbert(cpu_sig)
+        def cpu_version(self, sig):
+            return signal.hilbert(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.hilbert(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
@@ -127,7 +164,7 @@ class TestFilter:
         def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(cusignal.hilbert, gpu_sig)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
@@ -135,8 +172,14 @@ class TestFilter:
     @pytest.mark.benchmark(group="Hilbert2")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
     class TestHilbert2:
-        def cpu_version(self, cpu_sig):
-            return signal.hilbert2(cpu_sig)
+        def cpu_version(self, sig):
+            return signal.hilbert2(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.hilbert2(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
@@ -146,41 +189,48 @@ class TestFilter:
         def test_hilbert2_gpu(self, rand_2d_data_gen, gpubenchmark, num_samps):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            output = gpubenchmark(cusignal.hilbert2, gpu_sig)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="Detrend")
+    # @pytest.mark.parametrize("randgen", np.random.RandomState(9))
+    # @pytest.mark.parametrize("num_npoints", 1000)
+    # @pytest.mark.parametrize("num_noise", randgen.randn(num_npoints))
+    # @pytest.mark.parametrize(
+    #   "num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
+
     # class TestDetrend:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.detrend(cpu_sig)
+    #     def cpu_version(self, x):
+    #         return signal.detrend(x)
 
-    #         @pytest.mark.cpu
-    #     def test_detrend_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     def test_detrend_cpu(self, benchmark, num_x):
+    #         benchmark(self.cpu_version, num_x)
 
-    #     def test_detrend_gpu(self, gpubenchmark):
+    #     def test_detrend_gpu(self, gpubenchmark, num_x):
 
-    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, num_x)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version(num_x)
     #         assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="FreqShift")
+    # @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
     # class TestFreqShift:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.freq_shift(cpu_sig)
+    #     def cpu_version(self, cpu_sig, freq):
+    #         return signal.freq_shift(freq)
 
-    #         @pytest.mark.cpu
-    #     def test_freq_shift_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    #     @pytest.mark.cpu
+    #     def test_freq_shift_cpu(self, benchmark, freq):
+    #         benchmark(self.cpu_version, freq)
 
     #     def test_freq_shift_gpu(self, gpubenchmark):
 
-    #         output = gpubenchmark(cusignal.detrend, gpu_sig)
+    #         output = gpubenchmark(cusignal.detrend, freq)
 
-    #         key = self.cpu_version(cpu_sig)
+    #         key = self.cpu_version(freq)
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")
@@ -188,10 +238,18 @@ class TestFilter:
     @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
     @pytest.mark.parametrize("zero_phase", [True, False])
     class TestDecimate:
-        def cpu_version(self, cpu_sig, downsample_factor, zero_phase):
+        def cpu_version(self, sig, downsample_factor, zero_phase):
             return signal.decimate(
-                cpu_sig, downsample_factor, ftype="fir", zero_phase=zero_phase
+                sig, downsample_factor, ftype="fir", zero_phase=zero_phase
             )
+
+        def gpu_version(self, sig, downsample_factor, zero_phase):
+            with cp.cuda.Stream.null:
+                out = cusignal.decimate(
+                    sig, downsample_factor, zero_phase=zero_phase
+                )
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_decimate_cpu(
@@ -217,10 +275,10 @@ class TestFilter:
                 0, 10, num_samps, endpoint=False
             )
             output = gpubenchmark(
-                cusignal.decimate,
+                self.gpu_version,
                 gpu_sig,
                 downsample_factor,
-                zero_phase=zero_phase,
+                zero_phase,
             )
 
             key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)
@@ -231,8 +289,14 @@ class TestFilter:
     @pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
     class TestResample:
-        def cpu_version(self, cpu_sig, resample_num_samps, window):
-            return signal.resample(cpu_sig, resample_num_samps, window=window)
+        def cpu_version(self, sig, resample_num_samps, window):
+            return signal.resample(sig, resample_num_samps, window=window)
+
+        def gpu_version(self, sig, resample_num_samps, window):
+            with cp.cuda.Stream.null:
+                out = cusignal.resample(sig, resample_num_samps, window=window)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_resample_cpu(
@@ -245,7 +309,10 @@ class TestFilter:
         ):
             cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
             benchmark(
-                self.cpu_version, cpu_sig, resample_num_samps, window,
+                self.cpu_version,
+                cpu_sig,
+                resample_num_samps,
+                window,
             )
 
         def test_resample_gpu(
@@ -261,7 +328,7 @@ class TestFilter:
                 0, 10, num_samps, endpoint=False
             )
             output = gpubenchmark(
-                cusignal.resample, gpu_sig, resample_num_samps, window=window
+                self.gpu_version, gpu_sig, resample_num_samps, window
             )
 
             key = self.cpu_version(cpu_sig, resample_num_samps, window)
@@ -273,8 +340,14 @@ class TestFilter:
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
     class TestResamplePoly:
-        def cpu_version(self, cpu_sig, up, down, window):
-            return signal.resample_poly(cpu_sig, up, down, window=window)
+        def cpu_version(self, sig, up, down, window):
+            return signal.resample_poly(sig, up, down, window=window)
+
+        def gpu_version(self, sig, up, down, window):
+            with cp.cuda.Stream.null:
+                out = cusignal.resample_poly(sig, up, down, window=window)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_resample_poly_cpu(
@@ -282,18 +355,32 @@ class TestFilter:
         ):
             cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
             benchmark(
-                self.cpu_version, cpu_sig, up, down, window,
+                self.cpu_version,
+                cpu_sig,
+                up,
+                down,
+                window,
             )
 
         def test_resample_poly_gpu(
-            self, linspace_data_gen, gpubenchmark, num_samps, up, down, window,
+            self,
+            linspace_data_gen,
+            gpubenchmark,
+            num_samps,
+            up,
+            down,
+            window,
         ):
 
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
             )
             output = gpubenchmark(
-                cusignal.resample_poly, gpu_sig, up, down, window=window,
+                self.gpu_version,
+                gpu_sig,
+                up,
+                down,
+                window,
             )
 
             key = self.cpu_version(cpu_sig, up, down, window)
@@ -305,8 +392,14 @@ class TestFilter:
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("axis", [-1, 0])
     class TestUpFirDn:
-        def cpu_version(self, cpu_sig, up, down, axis):
-            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+        def cpu_version(self, sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], sig, up, down, axis)
+
+        def gpu_version(self, sig, up, down, axis):
+            with cp.cuda.Stream.null:
+                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_upfirdn_cpu(
@@ -314,16 +407,30 @@ class TestFilter:
         ):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(
-                self.cpu_version, cpu_sig, up, down, axis,
+                self.cpu_version,
+                cpu_sig,
+                up,
+                down,
+                axis,
             )
 
         def test_upfirdn_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, up, down, axis,
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            num_samps,
+            up,
+            down,
+            axis,
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(
-                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
+                self.gpu_version,
+                gpu_sig,
+                up,
+                down,
+                axis,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -335,8 +442,14 @@ class TestFilter:
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("axis", [-1, 0])
     class TestUpFirDn2d:
-        def cpu_version(self, cpu_sig, up, down, axis):
-            return signal.upfirdn([1, 1, 1], cpu_sig, up, down, axis)
+        def cpu_version(self, sig, up, down, axis):
+            return signal.upfirdn([1, 1, 1], sig, up, down, axis)
+
+        def gpu_version(self, sig, up, down, axis):
+            with cp.cuda.Stream.null:
+                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_upfirdn2d_cpu(
@@ -344,16 +457,30 @@ class TestFilter:
         ):
             cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(
-                self.cpu_version, cpu_sig, up, down, axis,
+                self.cpu_version,
+                cpu_sig,
+                up,
+                down,
+                axis,
             )
 
         def test_upfirdn2d_gpu(
-            self, rand_2d_data_gen, gpubenchmark, num_samps, up, down, axis,
+            self,
+            rand_2d_data_gen,
+            gpubenchmark,
+            num_samps,
+            up,
+            down,
+            axis,
         ):
 
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(
-                cusignal.upfirdn, [1, 1, 1], gpu_sig, up, down, axis,
+                self.gpu_version,
+                gpu_sig,
+                up,
+                down,
+                axis,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
@@ -363,10 +490,14 @@ class TestFilter:
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFirfilter:
-        def cpu_version(self, cpu_sig, cpu_filter):
-            return signal.lfilter(
-                cpu_filter, 1, cpu_sig
-            )
+        def cpu_version(self, sig, filt):
+            return signal.lfilter(filt, 1, sig)
+
+        def gpu_version(self, sig, filt):
+            with cp.cuda.Stream.null:
+                out = cusignal.firfilter(filt, sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_firfilter_cpu(
@@ -393,9 +524,9 @@ class TestFilter:
             cpu_filter, _ = signal.butter(filter_len, 0.5)
             gpu_filter = cp.asarray(cpu_filter)
             output = gpubenchmark(
-                cusignal.firfilter,
-                gpu_filter,
+                self.gpu_version,
                 gpu_sig,
+                gpu_filter,
             )
 
             key = self.cpu_version(cpu_sig, cpu_filter)
