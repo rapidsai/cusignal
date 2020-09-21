@@ -132,9 +132,9 @@ def general_cosine(M, a, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
+    w = cp.empty(M, dtype=cp.float64)
     a = cp.asarray(a, dtype=cp.float64)
     delta = (cp.pi - -cp.pi) / (M - 1)
-    w = cp.empty(M)
 
     _general_cosine_kernel(delta, -cp.pi, a, len(a), w)
 
@@ -190,7 +190,7 @@ def boxcar(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.ones(M, cp.float64)
+    w = cp.ones(M, dtype=cp.float64)
 
     return _truncate(w, needs_trunc)
 
@@ -382,7 +382,7 @@ def parzen(M, sym=True):
     sizeS2 = s2 - start + 1 - sizeS1
     totalSize = int(sizeS1 * 2 + sizeS2)
 
-    den = 1 / (M * 0.5)
+    den = 1 / (M / 2.0)
 
     w = cp.empty(totalSize, dtype=cp.float64)
 
@@ -455,7 +455,7 @@ def bohman(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float)
+    w = cp.empty(M, dtype=cp.float64)
     delta = (1 - -1) / (M - 1)
 
     _bohman_kernel(M, delta, (-1 + delta), cp.pi, w)
@@ -1570,7 +1570,7 @@ def general_gaussian(M, p, sig, sym=True):
     return _truncate(w, needs_trunc)
 
 
-_chebwin_kernel = cp.ElementwiseKernel(
+_chebwin_kernel_odd = cp.ElementwiseKernel(
     "int64 M, T order, T beta, T pi",
     "T p",
     """
@@ -1583,7 +1583,28 @@ _chebwin_kernel = cp.ElementwiseKernel(
         p = cos(order * acos(x));
     }
     """,
-    "_chebwin_kernel",
+    "_chebwin_kernel_odd",
+)
+
+_chebwin_kernel_even = cp.ElementwiseKernel(
+    "int64 M, float64 order, float64 beta, float64 pi",
+    "T p",
+    """
+    double x = beta * cos(pi * i / M);
+    double real;
+    if (x > 1) {
+        real = cosh(order * acosh(x));
+    } else if (x < -1) {
+        real = (2 * (M % 2) - 1) * cosh(order * acosh(-x));
+    } else {
+        real = cos(order * acos(x));
+    }
+
+    T temp = T(0, pi / M * i);
+
+    p = real * exp(temp);
+    """,
+    "_chebwin_kernel_even",
 )
 
 
@@ -1690,19 +1711,23 @@ def chebwin(M, at, sym=True):
     # compute the parameter beta
     order = M - 1.0
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
-    p = cp.empty(M, dtype=cp.float64)
-
-    _chebwin_kernel(M, order, beta, cp.pi, p)
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
     if M % 2:
+        p = cp.empty(M, dtype=cp.float64)
+
+        _chebwin_kernel_odd(M, order, beta, cp.pi, p)
+        
         w = cp.real(fftpack.fft(p))
         n = (M + 1) // 2
         w = w[:n]
         w = cp.concatenate((w[n - 1 : 0 : -1], w))
     else:
-        p = p * cp.exp(1.0j * cp.pi / M * cp.arange(0, M))
+        p = cp.empty(M, dtype=cp.complex128)
+
+        _chebwin_kernel_even(M, order, beta, cp.pi, p)
+
         w = cp.real(fftpack.fft(p))
         n = M // 2 + 1
         w = cp.concatenate((w[n - 1 : 0 : -1], w[1:n]))
