@@ -9,7 +9,7 @@ package:
   version: {{ version }}
 
 source:
-  git_url: ../../..
+  path: ../../..
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
