@@ -24,9 +24,6 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 # Missing
-# kaiser_beta
-# kaiser_atten
-# cmplx_sort
 
 
 class TestFilterDesign:
@@ -65,28 +62,32 @@ class TestFilterDesign:
             key = self.cpu_version(num_samps, f1, f2)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="KaiserBeta")
-    # class TestKaiserBeta:
-    #     def cpu_version(self, sig):
-    #         return signal.kaiser_beta(sig)
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.parametrize("a", [5, 25, 100])
+    @pytest.mark.benchmark(group="KaiserBeta")
+    class TestKaiserBeta:
+        def cpu_version(self, a):
+            return signal.kaiser_beta(a)
 
-    #     def gpu_version(self, sig):
-    #         with cp.cuda.Stream.null:
-    #             return cusignal.kaiser_beta(sig)
-    #         cp.cuda.Stream.null.synchronize()
+        def gpu_version(self, a):
+            with cp.cuda.Stream.null:
+                out = cusignal.kaiser_beta(a)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_kaiser_beta_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_kaiser_beta_cpu(self, benchmark, a):
+            benchmark(self.cpu_version, a)
 
-    #     def test_kaiser_beta_gpu(self, gpubenchmark):
+        def test_kaiser_beta_gpu(self, gpubenchmark, a):
 
-    #         output = gpubenchmark(self.gpu_version, gpu_sig)
+            output = gpubenchmark(self.gpu_version, a)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(a)
+            assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.parametrize("numtaps", [5, 21, 100])
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.parametrize("numtaps", [5, 25, 100])
     @pytest.mark.parametrize("width", [0.01, 0.0375, 2.4])
     @pytest.mark.benchmark(group="KaiserAtten")
     class TestKaiserAtten:
@@ -95,8 +96,9 @@ class TestFilterDesign:
 
         def gpu_version(self, numtaps, width):
             with cp.cuda.Stream.null:
-                return cusignal.kaiser_atten(numtaps, width)
+                out = cusignal.kaiser_atten(numtaps, width)
             cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_kaiser_atten_cpu(self, benchmark, numtaps, width):
@@ -109,23 +111,26 @@ class TestFilterDesign:
             key = self.cpu_version(numtaps, width)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="CmplxSort")
-    # class TestCmplxSort:
-    #     def cpu_version(self, sig):
-    #         return signal.cmplx_sort(sig)
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.benchmark(group="CmplxSort")
+    @pytest.mark.parametrize("p", [1 + 2j, 2 - 1j, 3 - 2j, 3 - 3j, 3 + 5j])
+    class TestCmplxSort:
+        def cpu_version(self, p):
+            return signal.cmplx_sort(p)
 
-    #     def gpu_version(self, sig):
-    #         with cp.cuda.Stream.null:
-    #             return cusignal.cmplx_sort(sig)
-    #         cp.cuda.Stream.null.synchronize()
+        def gpu_version(self, p):
+            with cp.cuda.Stream.null:
+                out = cusignal.cmplx_sort(p)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_cmplx_sort_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_cmplx_sort_cpu(self, benchmark, p):
+            benchmark(self.cpu_version, p)
 
-    #     def test_cmplx_sort_gpu(self, gpubenchmark):
+        def test_cmplx_sort_gpu(self, gpubenchmark, p):
 
-    #         output = gpubenchmark(self.gpu_version, gpu_sig)
+            output = gpubenchmark(self.gpu_version, p)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(p)
+            assert array_equal(cp.asnumpy(output), key)
