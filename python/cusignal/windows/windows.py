@@ -396,7 +396,7 @@ _bohman_kernel = cp.ElementwiseKernel(
     "T w",
     """
     double fac = abs(start + delta * ( i - 1 ));
-    if ( i != 0 && i != ( ind.size() - 1 ) ) {
+    if ( i != 0 && i != ( _ind.size() - 1 ) ) {
         w = (1 - fac) * cos(pi * fac) + 1.0 / pi * sin(pi * fac);
     } else {
         w = 0;
