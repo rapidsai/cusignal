@@ -26,7 +26,6 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestBsplines:
-    # Not passing anything to cupy, faster in numba
     @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
     @pytest.mark.parametrize("n", [1])
     @pytest.mark.benchmark(group="GaussSpline")
@@ -34,9 +33,9 @@ class TestBsplines:
         def cpu_version(self, x, n):
             return signal.gauss_spline(x, n)
 
-        def gpu_version(self, x, n):
+        def gpu_version(self, d_x, n):
             with cp.cuda.Stream.null:
-                out = cusignal.gauss_spline(x, n)
+                out = cusignal.gauss_spline(d_x, n)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -46,7 +45,8 @@ class TestBsplines:
 
         def test_gauss_spline_gpu(self, gpubenchmark, x, n):
 
-            output = gpubenchmark(self.gpu_version, x, n)
+            d_x = cp.asarray(x)
+            output = gpubenchmark(self.gpu_version, d_x, n)
 
             key = self.cpu_version(x, n)
             assert array_equal(cp.asnumpy(output), key)
@@ -57,9 +57,9 @@ class TestBsplines:
         def cpu_version(self, x):
             return signal.cubic(x)
 
-        def gpu_version(self, x):
+        def gpu_version(self, d_x):
             with cp.cuda.Stream.null:
-                out = cusignal.cubic(x)
+                out = cusignal.cubic(d_x)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -69,7 +69,8 @@ class TestBsplines:
 
         def test_cubic_gpu(self, gpubenchmark, x):
 
-            output = gpubenchmark(self.gpu_version, x)
+            d_x = cp.asarray(x)
+            output = gpubenchmark(self.gpu_version, d_x)
 
             key = self.cpu_version(x)
             assert array_equal(cp.asnumpy(output), key)
@@ -80,9 +81,9 @@ class TestBsplines:
         def cpu_version(self, x):
             return signal.quadratic(x)
 
-        def gpu_version(self, x):
+        def gpu_version(self, d_x):
             with cp.cuda.Stream.null:
-                out = cusignal.quadratic(x)
+                out = cusignal.quadratic(d_x)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -92,38 +93,39 @@ class TestBsplines:
 
         def test_quadratic_gpu(self, gpubenchmark, x):
 
-            output = gpubenchmark(self.gpu_version, x)
+            d_x = cp.asarray(x)
+            output = gpubenchmark(self.gpu_version, d_x)
 
             key = self.cpu_version(x)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Cspline1d")
-    # @pytest.mark.parametrize("num_samps", [2 ** 14, 2**18])
-    # class TestCspline1d:
-    #     def cpu_version(self, sig):
-    #         return signal.cspline1d(sig)
+    @pytest.mark.benchmark(group="Cspline1d")
+    @pytest.mark.parametrize("num_samps", [10, 50, 100])
+    class TestCspline1d:
+        def cpu_version(self, sig):
+            return signal.cspline1d(sig)
 
-    #     def gpu_version(self, sig):
-    #         with cp.cuda.Stream.null:
-    #             out = cusignal.cspline1d(sig)
-    #         cp.cuda.Stream.null.synchronize()
-    #         return out
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.cspline1d(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_cspline1d_cpu(self, benchmark, linspace_data_gen, num_samps):
-    #         cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+        @pytest.mark.cpu
+        def test_cspline1d_cpu(self, benchmark, linspace_data_gen, num_samps):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
 
-    #         benchmark(self.cpu_version, cpu_sig)
+            benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_cspline1d_gpu(
-    #         self, gpubenchmark, linspace_data_gen, num_samps
-    #     ):
+        def test_cspline1d_gpu(
+            self, gpubenchmark, linspace_data_gen, num_samps
+        ):
 
-    #         cpu_sig, gpu_sig = linspace_data_gen(
-    #             0, 10, num_samps, endpoint=False
-    #         )
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
 
-    #         output = gpubenchmark(self.gpu_version, gpu_sig)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
