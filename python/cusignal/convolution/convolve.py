@@ -303,13 +303,24 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
+    print(in1.shape, in2.shape, fshape)
+
     if not complex_result:
-        if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
-            rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
+        if in1.shape == in2.shape:
+            if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
+                rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
+            else:
+                rplan = _cupy_fft_cache[
+                    (str(fshape), str(axes), "R2C")
+                ] = fftpack.get_fft_plan(
+                    in1, fshape, axes=axes, value_type="R2C"
+                )
+            with plan:
+                sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
+                sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
         else:
-            rplan = _cupy_fft_cache[
-                (str(fshape), str(axes), "R2C")
-            ] = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="R2C")
+            sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
+            sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
 
         if (str(fshape), str(axes), "C2R") in _cupy_fft_cache:
             irplan = _cupy_fft_cache[(str(fshape), str(axes), "C2R")]
@@ -318,9 +329,6 @@ def fftconvolve(in1, in2, mode="full", axes=None):
                 (str(fshape), str(axes), "C2R")
             ] = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="C2R")
 
-        with rplan:
-            sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-            sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
         with irplan:
             ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
     else:
