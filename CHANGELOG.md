@@ -18,6 +18,7 @@
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 - PR #215 - Improve doc formating for filtering operations
 - PR #219 - Add missing pytests
+- PR #236 - Improve Bsplines functions performance
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
