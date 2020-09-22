@@ -120,16 +120,16 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     start = -s * 2 * np.pi
     delta = (end - start) / (M - 1)
 
-    _morlet_kernel(delta, start, w, np.pi, complete, output)
+    _morlet_kernel(delta, start, w, np.pi, complete, output, size=M)
 
     return output
 
 
 _ricker_kernel = cp.ElementwiseKernel(
-    "int64 points, T A, T wsq",
+    "T A, T wsq",
     "T total",
     """
-    T vec = i - (points - 1.0) / 2;
+    T vec = i - (_ind.size() - 1.0) / 2;
     T xsq = vec * vec;
     T mod = ( 1 - xsq / wsq );
     T gauss = exp( -xsq / ( 2 * wsq ) );
@@ -182,7 +182,7 @@ def ricker(points, a):
     A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
     wsq = a ** 2
 
-    _ricker_kernel(points, float(A), float(wsq), total)
+    _ricker_kernel(float(A), float(wsq), total, size=points)
 
     return total
 
