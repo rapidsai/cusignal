@@ -309,9 +309,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
         else:
             rplan = _cupy_fft_cache[
                 (str(fshape), str(axes), "R2C")
-            ] = fftpack.get_fft_plan(
-                in1, fshape, axes=axes, value_type="R2C"
-            )
+            ] = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="R2C")
         try:
             with rplan:
                 sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
