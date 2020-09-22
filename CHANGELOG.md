@@ -19,6 +19,7 @@
 - PR #215 - Improve doc formating for filtering operations
 - PR #219 - Add missing pytests
 - PR #222 - Improved performance for various window functions
+- PR #235 - Improve Wavelets functions performance
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
