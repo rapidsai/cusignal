@@ -12,10 +12,20 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from cupy import (asarray, pi, zeros_like, arctan2, tan, zeros, arange)
 from cupy import (abs, sqrt, exp, greater, less, cos, add, sin)
 
+_gauss_spline_kernel = cp.ElementwiseKernel(
+    "float64 signsq, float64 x, float64 pi",
+    "T output",
+    """
 
+    double test = 1 / sqrt(2 * pi * signsq);
+    output = test;
+    """,
+    "_gauss_spline_kernel",
+)
 def gauss_spline(x, n):
     """Gaussian approximation to B-spline basis function of order n.
 
@@ -34,7 +44,12 @@ def gauss_spline(x, n):
    """
     x = asarray(x)
     signsq = (n + 1) / 12.0
-    return 1 / sqrt(2 * pi * signsq) * exp(-x ** 2 / 2 / signsq)
+    output = cp.empty(3, dtype=cp.float64)    
+    #return 1 / sqrt(2 * pi * signsq) * exp(-x ** 2 / 2 / signsq)
+    _gauss_spline_kernel(signsq, x, np.pi, output)
+    output = output * exp(-x ** 2 / 2 / signsq)
+
+    return output
 
 
 def cubic(x):

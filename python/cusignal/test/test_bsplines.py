@@ -11,39 +11,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import cupy as cp
-# import cusignal
-# import numpy as np
-# import pytest
+import cupy as cp
+import cusignal
+import numpy as np
+import pytest
 
-# from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
-# from scipy import signal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
+from scipy import signal
 
-# gpubenchmark = _check_rapids_pytest_benchmark()
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 # # Missing
-# # gauss_spline
-# # cubic
-# # quadratic
 # # cspline1d
 
 
-# class TestBsplines:
-#     @pytest.mark.benchmark(group="GaussSpline")
-#     class TestGaussSpline:
-#         def cpu_version(self, cpu_sig):
-#             return signal.gauss_spline(cpu_sig)
+class TestBsplines:
+    @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
+    @pytest.mark.parametrize("n", [1])
+    @pytest.mark.benchmark(group="GaussSpline")
+    class TestGaussSpline:
+        def cpu_version(self, x, n):
+            return signal.gauss_spline(x, n)
 
-#         @pytest.mark.cpu
-#         def test_gauss_spline_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+        def gpu_version(self, x, n):
+            with cp.cuda.Stream.null:
+                out = cusignal.gauss_spline(x, n)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#         def test_gauss_spline_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_gauss_spline_cpu(self, benchmark, x, n):
+            benchmark(self.cpu_version, x, n)
 
-#             output = gpubenchmark(cusignal.gauss_spline, gpu_sig)
+        def test_gauss_spline_gpu(self, gpubenchmark, x, n):
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+            d_x = cp.asarray(x)
+            output = gpubenchmark(self.gpu_version, d_x, n)
+
+            key = self.cpu_version(x, n)
+            assert array_equal(cp.asnumpy(output), key)
 
 #     @pytest.mark.benchmark(group="Cubic")
 #     class TestCubic:
