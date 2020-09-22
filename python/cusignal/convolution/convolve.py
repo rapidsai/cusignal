@@ -303,34 +303,24 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
-    print(in1.shape, in2.shape, fshape)
-
     if not complex_result:
-        if in1.shape == in2.shape:
-            if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
-                rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
-            else:
-                rplan = _cupy_fft_cache[
-                    (str(fshape), str(axes), "R2C")
-                ] = fftpack.get_fft_plan(
-                    in1, fshape, axes=axes, value_type="R2C"
-                )
-            with plan:
+        if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
+            rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
+        else:
+            rplan = _cupy_fft_cache[
+                (str(fshape), str(axes), "R2C")
+            ] = fftpack.get_fft_plan(
+                in1, fshape, axes=axes, value_type="R2C"
+            )
+        try:
+            with rplan:
                 sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
                 sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-        else:
+        except Exception:
             sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
             sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
 
-        if (str(fshape), str(axes), "C2R") in _cupy_fft_cache:
-            irplan = _cupy_fft_cache[(str(fshape), str(axes), "C2R")]
-        else:
-            irplan = _cupy_fft_cache[
-                (str(fshape), str(axes), "C2R")
-            ] = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="C2R")
-
-        with irplan:
-            ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
+        ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
     else:
         # Need to move to cupyx.scipy.fft with CuPy v8
         if (str(fshape), str(axes)) in _cupy_fft_cache:
@@ -339,8 +329,12 @@ def fftconvolve(in1, in2, mode="full", axes=None):
             plan = _cupy_fft_cache[
                 (str(fshape), str(axes))
             ] = fftpack.get_fft_plan(in1, fshape, axes=axes)
-
-        with plan:
+        try:
+            with plan:
+                sp1 = fftpack.fftn(in1, fshape, axes=axes)
+                sp2 = fftpack.fftn(in2, fshape, axes=axes)
+                ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
+        except Exception:
             sp1 = fftpack.fftn(in1, fshape, axes=axes)
             sp2 = fftpack.fftn(in2, fshape, axes=axes)
             ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
