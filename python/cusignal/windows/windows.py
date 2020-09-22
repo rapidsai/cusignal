@@ -293,7 +293,7 @@ def triang(M, sym=True):
 
 
 _parzen_kernel = cp.ElementwiseKernel(
-    "int64 M, T den, T start, T s1, int64 sizeS1, T s2, int64 sizeS2",
+    "T den, T start, T s1, int64 sizeS1, T s2, int64 sizeS2",
     "T w",
     """
     T n;
@@ -386,17 +386,17 @@ def parzen(M, sym=True):
 
     w = cp.empty(totalSize, dtype=cp.float64)
 
-    _parzen_kernel(M, den, start, s1, sizeS1, s2, sizeS2, w)
+    _parzen_kernel(den, start, s1, sizeS1, s2, sizeS2, w)
 
     return _truncate(w, needs_trunc)
 
 
 _bohman_kernel = cp.ElementwiseKernel(
-    "int64 M, T delta, T start, T pi",
+    "T delta, T start, T pi",
     "T w",
     """
     double fac = abs(start + delta * ( i - 1 ));
-    if ( i != 0 && i != ( M - 1 ) ) {
+    if ( i != 0 && i != ( ind.size() - 1 ) ) {
         w = (1 - fac) * cos(pi * fac) + 1.0 / pi * sin(pi * fac);
     } else {
         w = 0;
@@ -458,7 +458,7 @@ def bohman(M, sym=True):
     w = cp.empty(M, dtype=cp.float64)
     delta = (1 - -1) / (M - 1)
 
-    _bohman_kernel(M, delta, (-1 + delta), cp.pi, w)
+    _bohman_kernel(delta, (-1 + delta), cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
@@ -721,14 +721,14 @@ def flattop(M, sym=True):
 
 
 _bartlett_kernel = cp.ElementwiseKernel(
-    "int64 M",
+    "T N",
     "T w",
     """
-    double temp = ( M - 1 ) / 2.0;
+    double temp = (_ind.size() - 1) * 0.5;
     if ( i <= temp ) {
-        w = 2.0 * i / (M - 1);
+        w = 2.0 * i * N;
     } else {
-        w = 2.0 - 2.0 * i / (M - 1);
+        w = 2.0 - 2.0 * i * N;
     }
     """,
     "_bartlett_kernel",
@@ -829,7 +829,8 @@ def bartlett(M, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _bartlett_kernel(M, w)
+    N = 1 / (M - 1)
+    _bartlett_kernel(N, w)
 
     return _truncate(w, needs_trunc)
 
@@ -918,16 +919,16 @@ def hann(M, sym=True):
 
 
 _tukey_kernel = cp.ElementwiseKernel(
-    "int64 M, int64 width, T alpha, T pi",
+    "T N, int64 width, T alpha, T pi",
     "T w",
     """
     if (i < (width + 1)) {
-        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha / (M - 1))));
-    } else if ( i > (width + 1) && i < (M-width-1) ) {
+        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha * N)));
+    } else if ( i > (width + 1) && i < (_ind.size() - width - 1) ) {
         w = 1.0;
     } else {
         w = 0.5 *
-            (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * i / alpha / (M - 1))));
+            (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * i / alpha * N)));
     }
     """,
     "_tukey_kernel",
@@ -1006,16 +1007,17 @@ def tukey(M, alpha=0.5, sym=True):
     w = cp.empty(M, dtype=cp.float64)
     width = int(np.floor(alpha * (M - 1) / 2.0))
 
-    _tukey_kernel(M, width, alpha, cp.pi, w)
+    N = 1 / (M - 1)
+    _tukey_kernel(N, width, alpha, cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
 
 _barthann_kernel = cp.ElementwiseKernel(
-    "int64 M, T pi",
+    "T N, T pi",
     "T w",
     """
-    T fac = abs(i / (M - 1.0) - 0.5);
+    T fac = abs(i * N - 0.5);
     w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
     """,
     "_barthann_kernel",
@@ -1073,7 +1075,8 @@ def barthann(M, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _barthann_kernel(M, cp.pi, w)
+    N = 1 / (M - 1)
+    _barthann_kernel(N, cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
@@ -1171,10 +1174,10 @@ def general_hamming(M, alpha, sym=True):
 
 
 _hamming_kernel = cp.ElementwiseKernel(
-    "int64 M, T pi",
+    "T N, T pi",
     "T w",
     """
-    w = 0.54 - 0.46 * cos(2.0 * pi * i / (M - 1));
+    w = 0.54 - 0.46 * cos(2.0 * pi * i * N);
     """,
     "_hamming_kernel",
 )
@@ -1266,7 +1269,8 @@ def hamming(M, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _hamming_kernel(M, cp.pi, w)
+    N = 1 / (M - 1)
+    _hamming_kernel(N, cp.pi, w)
 
     if not sym and not odd:
         w = w[:-1]
@@ -1411,10 +1415,10 @@ def kaiser(M, beta, sym=True):
 
 
 _gaussian_kernel = cp.ElementwiseKernel(
-    "int64 M, T std",
+    "T std",
     "T w",
     """
-    T n = i - (M - 1.0) / 2.0;
+    T n = i - (_ind.size() - 1.0) * 0.5;
     T sig2 = 2 * std * std;
     w = exp( - ( n * n ) / sig2 );
 
@@ -1482,16 +1486,16 @@ def gaussian(M, std, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _gaussian_kernel(M, std, w)
+    _gaussian_kernel(std, w)
 
     return _truncate(w, needs_trunc)
 
 
 _general_gaussian_kernel = cp.ElementwiseKernel(
-    "int64 M, T p, T sig",
+    "T p, T sig",
     "T w",
     """
-    T n = i - (M - 1.0) / 2.0;
+    T n = i - (_ind.size() - 1.0) * 0.5;
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
     """,
     "_general_gaussian_kernel",
@@ -1565,20 +1569,20 @@ def general_gaussian(M, p, sig, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _general_gaussian_kernel(M, p, sig, w)
+    _general_gaussian_kernel(p, sig, w)
 
     return _truncate(w, needs_trunc)
 
 
 _chebwin_kernel_odd = cp.ElementwiseKernel(
-    "int64 M, T order, T beta, T pi",
+    "T N, T order, T beta, T pi",
     "T p",
     """
-    T x = beta * cos(pi * i / M);
+    T x = beta * cos(pi * i * N);
     if (x > 1) {
         p = cosh(order * acosh(x));
     } else if (x < -1) {
-        p = (2 * (M % 2) - 1) * cosh(order * acosh(-x));
+        p = (2 * (_ind.size() % 2) - 1) * cosh(order * acosh(-x));
     } else {
         p = cos(order * acos(x));
     }
@@ -1587,20 +1591,20 @@ _chebwin_kernel_odd = cp.ElementwiseKernel(
 )
 
 _chebwin_kernel_even = cp.ElementwiseKernel(
-    "int64 M, float64 order, float64 beta, float64 pi",
+    "float64 N, float64 order, float64 beta",
     "T p",
     """
-    double x = beta * cos(pi * i / M);
+    double x = beta * cos(i * N);
     double real;
     if (x > 1) {
         real = cosh(order * acosh(x));
     } else if (x < -1) {
-        real = (2 * (M % 2) - 1) * cosh(order * acosh(-x));
+        real = (2 * (_ind.size() % 2) - 1) * cosh(order * acosh(-x));
     } else {
         real = cos(order * acos(x));
     }
 
-    T temp = T(0, pi / M * i);
+    T temp = T(0, N * i);
 
     p = real * exp(temp);
     """,
@@ -1711,13 +1715,14 @@ def chebwin(M, at, sym=True):
     # compute the parameter beta
     order = M - 1.0
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
+    N = (1 / M) * np.pi
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
     if M % 2:
         p = cp.empty(M, dtype=cp.float64)
 
-        _chebwin_kernel_odd(M, order, beta, cp.pi, p)
+        _chebwin_kernel_odd(N, order, beta, p)
 
         w = cp.real(fftpack.fft(p))
         n = (M + 1) // 2
@@ -1726,7 +1731,7 @@ def chebwin(M, at, sym=True):
     else:
         p = cp.empty(M, dtype=cp.complex128)
 
-        _chebwin_kernel_even(M, order, beta, cp.pi, p)
+        _chebwin_kernel_even(N, order, beta, p)
 
         w = cp.real(fftpack.fft(p))
         n = M // 2 + 1
@@ -1737,11 +1742,11 @@ def chebwin(M, at, sym=True):
 
 
 _cosine_kernel = cp.ElementwiseKernel(
-    "int64 M, T pi",
+    "T pi",
     "T w",
     """
     T n = i + 0.5;
-    w = sin( pi / M * n );
+    w = sin( pi / _ind.size() * n );
     """,
     "_cosine_kernel",
 )
@@ -1804,7 +1809,7 @@ def cosine(M, sym=True):
 
     w = cp.empty(M, dtype=cp.float64)
 
-    _cosine_kernel(M, cp.pi, w)
+    _cosine_kernel(cp.pi, w)
 
     return _truncate(w, needs_trunc)
 
