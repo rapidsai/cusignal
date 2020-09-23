@@ -22,6 +22,8 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 # # Missing
+# # cubic
+# # quadratic
 # # cspline1d
 
 
@@ -50,6 +52,7 @@ class TestBsplines:
 
             key = self.cpu_version(x, n)
             assert array_equal(cp.asnumpy(output), key)
+
 
 #     @pytest.mark.benchmark(group="Cubic")
 #     class TestCubic:

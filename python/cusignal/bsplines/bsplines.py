@@ -13,19 +13,17 @@
 
 import cupy as cp
 import numpy as np
-from cupy import (asarray, pi, zeros_like, arctan2, tan, zeros, arange)
-from cupy import (abs, sqrt, exp, greater, less, cos, add, sin)
 
 _gauss_spline_kernel = cp.ElementwiseKernel(
-    "float64 signsq, float64 x, float64 pi",
-    "T output",
+    "float64 n, float64 pi",
+    "float64 signsq, float64 output",
     """
-
-    double test = 1 / sqrt(2 * pi * signsq);
-    output = test;
+    signsq = (n + 1) / 12.0;
+    output = 1 / sqrt(2 * pi * signsq);
     """,
     "_gauss_spline_kernel",
 )
+
 def gauss_spline(x, n):
     """Gaussian approximation to B-spline basis function of order n.
 
@@ -42,12 +40,14 @@ def gauss_spline(x, n):
        Methods in Computer Vision. SSVM 2007. Lecture Notes in Computer
        Science, vol 4485. Springer, Berlin, Heidelberg
    """
-    x = asarray(x)
-    signsq = (n + 1) / 12.0
-    output = cp.empty(3, dtype=cp.float64)    
-    #return 1 / sqrt(2 * pi * signsq) * exp(-x ** 2 / 2 / signsq)
-    _gauss_spline_kernel(signsq, x, np.pi, output)
-    output = output * exp(-x ** 2 / 2 / signsq)
+    length = cp.size(x)
+    x = cp.asarray(x)
+
+    signsq = cp.empty(length, dtype=cp.float64)    
+    output = cp.empty(length, dtype=cp.float64)
+
+    _gauss_spline_kernel(n, np.pi, signsq, output)
+    output = output * cp.exp(-x ** 2 / 2 / signsq)
 
     return output
 
@@ -57,13 +57,13 @@ def cubic(x):
 
     This is a special case of `bspline`, and equivalent to ``bspline(x, 3)``.
     """
-    ax = abs(asarray(x))
-    res = zeros_like(ax)
-    cond1 = less(ax, 1)
+    ax = abs(cp.asarray(x))
+    res = cp.zeros_like(ax)
+    cond1 = cp.less(ax, 1)
     if cond1.any():
         ax1 = ax[cond1]
         res[cond1] = 2.0 / 3 - 1.0 / 2 * ax1 ** 2 * (2 - ax1)
-    cond2 = ~cond1 & less(ax, 2)
+    cond2 = ~cond1 & cp.less(ax, 2)
     if cond2.any():
         ax2 = ax[cond2]
         res[cond2] = 1.0 / 6 * (2 - ax2) ** 3
@@ -75,80 +75,79 @@ def quadratic(x):
 
     This is a special case of `bspline`, and equivalent to ``bspline(x, 2)``.
     """
-    ax = abs(asarray(x))
-    res = zeros_like(ax)
-    cond1 = less(ax, 0.5)
+    ax = abs(cp.asarray(x))
+    res = cp.zeros_like(ax)
+    cond1 = cp.less(ax, 0.5)
     if cond1.any():
         ax1 = ax[cond1]
         res[cond1] = 0.75 - ax1 ** 2
-    cond2 = ~cond1 & less(ax, 1.5)
+    cond2 = ~cond1 & cp.less(ax, 1.5)
     if cond2.any():
         ax2 = ax[cond2]
         res[cond2] = (ax2 - 1.5) ** 2 / 2.0
     return res
 
-
 def _coeff_smooth(lam):
-    xi = 1 - 96 * lam + 24 * lam * sqrt(3 + 144 * lam)
-    omeg = arctan2(sqrt(144 * lam - 1), sqrt(xi))
-    rho = (24 * lam - 1 - sqrt(xi)) / (24 * lam)
-    rho = rho * sqrt((48 * lam + 24 * lam * sqrt(3 + 144 * lam)) / xi)
+    xi = 1 - 96 * lam + 24 * lam * cp.sqrt(3 + 144 * lam)
+    omeg = cp.arctan2(cp.sqrt(144 * lam - 1), cp.sqrt(xi))
+    rho = (24 * lam - 1 - cp.sqrt(xi)) / (24 * lam)
+    rho = rho * cp.sqrt((48 * lam + 24 * lam * cp.sqrt(3 + 144 * lam)) / xi)
     return rho, omeg
 
 
 def _hc(k, cs, rho, omega):
-    return (cs / sin(omega) * (rho ** k) * sin(omega * (k + 1)) *
-            greater(k, -1))
+    return (cs / cp.sin(omega) * (rho ** k) * cp.sin(omega * (k + 1)) *
+            cp.greater(k, -1))
 
 
 def _hs(k, cs, rho, omega):
     c0 = (cs * cs * (1 + rho * rho) / (1 - rho * rho) /
-          (1 - 2 * rho * rho * cos(2 * omega) + rho ** 4))
-    gamma = (1 - rho * rho) / (1 + rho * rho) / tan(omega)
+          (1 - 2 * rho * rho * cp.cos(2 * omega) + rho ** 4))
+    gamma = (1 - rho * rho) / (1 + rho * rho) / cp.tan(omega)
     ak = abs(k)
-    return c0 * rho ** ak * (cos(omega * ak) + gamma * sin(omega * ak))
+    return c0 * rho ** ak * (cp.cos(omega * ak) + gamma * cp.sin(omega * ak))
 
 
 def _cubic_smooth_coeff(signal, lamb):
     rho, omega = _coeff_smooth(lamb)
-    cs = 1 - 2 * rho * cos(omega) + rho * rho
+    cs = 1 - 2 * rho * cp.cos(omega) + rho * rho
     K = len(signal)
-    yp = zeros((K,), signal.dtype.char)
-    k = arange(K)
+    yp = cp.zeros((K,), signal.dtype.char)
+    k = cp.arange(K)
     yp[0] = (_hc(0, cs, rho, omega) * signal[0] +
-             add(_hc(k + 1, cs, rho, omega) * signal))
+             cp.add(_hc(k + 1, cs, rho, omega) * signal))
 
     yp[1] = (_hc(0, cs, rho, omega) * signal[0] +
              _hc(1, cs, rho, omega) * signal[1] +
-             add(_hc(k + 2, cs, rho, omega) * signal))
+             cp.add(_hc(k + 2, cs, rho, omega) * signal))
 
     for n in range(2, K):
-        yp[n] = (cs * signal[n] + 2 * rho * cos(omega) * yp[n - 1] -
+        yp[n] = (cs * signal[n] + 2 * rho * cp.cos(omega) * yp[n - 1] -
                  rho * rho * yp[n - 2])
 
-    y = zeros((K,), signal.dtype.char)
+    y = cp.zeros((K,), signal.dtype.char)
 
-    y[K - 1] = add((_hs(k, cs, rho, omega) +
+    y[K - 1] = cp.add((_hs(k, cs, rho, omega) +
                     _hs(k + 1, cs, rho, omega)) * signal[::-1])
-    y[K - 2] = add((_hs(k - 1, cs, rho, omega) +
+    y[K - 2] = cp.add((_hs(k - 1, cs, rho, omega) +
                     _hs(k + 2, cs, rho, omega)) * signal[::-1])
 
     for n in range(K - 3, -1, -1):
-        y[n] = (cs * yp[n] + 2 * rho * cos(omega) * y[n + 1] -
+        y[n] = (cs * yp[n] + 2 * rho * cp.cos(omega) * y[n + 1] -
                 rho * rho * y[n + 2])
 
     return y
 
 
 def _cubic_coeff(signal):
-    zi = -2 + sqrt(3)
+    zi = -2 + cp.sqrt(3)
     K = len(signal)
-    yplus = zeros((K,), signal.dtype.char)
-    powers = zi ** arange(K)
+    yplus = cp.zeros((K,), signal.dtype.char)
+    powers = zi ** cp.arange(K)
     yplus[0] = signal[0] + zi * cp.sum(powers * signal)
     for k in range(1, K):
         yplus[k] = signal[k] + zi * yplus[k - 1]
-    output = zeros((K,), signal.dtype)
+    output = cp.zeros((K,), signal.dtype)
     output[K - 1] = zi / (zi - 1) * yplus[K - 1]
     for k in range(K - 2, -1, -1):
         output[k] = zi * (output[k + 1] - yplus[k])
@@ -156,14 +155,14 @@ def _cubic_coeff(signal):
 
 
 def _quadratic_coeff(signal):
-    zi = -3 + 2 * sqrt(2.0)
+    zi = -3 + 2 * cp.sqrt(2.0)
     K = len(signal)
-    yplus = zeros((K,), signal.dtype.char)
-    powers = zi ** arange(K)
+    yplus = cp.zeros((K,), signal.dtype.char)
+    powers = zi ** cp.arange(K)
     yplus[0] = signal[0] + zi * cp.sum(powers * signal)
     for k in range(1, K):
         yplus[k] = signal[k] + zi * yplus[k - 1]
-    output = zeros((K,), signal.dtype.char)
+    output = cp.zeros((K,), signal.dtype.char)
     output[K - 1] = zi / (zi - 1) * yplus[K - 1]
     for k in range(K - 2, -1, -1):
         output[k] = zi * (output[k + 1] - yplus[k])
@@ -192,7 +191,7 @@ def cspline1d(signal, lamb=0.0):
         Cubic spline coefficients.
 
     """
-    signal = asarray(signal)
+    signal = cp.asarray(signal)
     if lamb != 0.0:
         return _cubic_smooth_coeff(signal, lamb)
     else:
