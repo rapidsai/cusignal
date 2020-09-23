@@ -15,11 +15,10 @@ import cupy as cp
 import numpy as np
 
 _gauss_spline_kernel = cp.ElementwiseKernel(
-    "float64 n, float64 pi, float64 x",
-    "float64 output",
+    "T x, float64 pi, float64 signsq, float64 r_siqnsq",
+    "T output",
     """
-    double signsq = (n + 1) / 12.0;
-    output = 1 / sqrt(2 * pi * signsq) *  exp((-(x * x / 2) / signsq));
+    output = 1 / sqrt(2 * pi * signsq) * exp( -(x * x) * r_siqnsq);
     """,
     "_gauss_spline_kernel",
 )
@@ -41,13 +40,11 @@ def gauss_spline(x, n):
        Methods in Computer Vision. SSVM 2007. Lecture Notes in Computer
        Science, vol 4485. Springer, Berlin, Heidelberg
     """
-    length = cp.size(x)
     x = cp.asarray(x)
-    output = cp.empty(length, dtype=cp.float64)
 
-    _gauss_spline_kernel(n, np.pi, x, output)
-
-    return output
+    signsq = (n + 1) / 12.0
+    r_signsq = 0.5 / signsq
+    return _gauss_spline_kernel(x, np.pi, signsq, r_signsq)
 
 
 def cubic(x):
