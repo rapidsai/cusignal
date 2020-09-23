@@ -18,11 +18,12 @@ ARGS=$*
 # script, and that this script resides in the repo dir!
 REPODIR=$(cd $(dirname $0); pwd)
 
-VALIDARGS="clean cusignal -v -g -n -p --allgpuarch -h"
+VALIDARGS="clean cusignal -c -v -g -n -p --allgpuarch -h"
 HELP="$0 [clean] [cusignal] [-v] [-g] [-n] [--allgpuarch] [-h]
    clean        - remove all existing build artifacts and configuration (start
                   over)
    cusignal     - build the cusignal Python package
+   -c           - ci build
    -v           - verbose build mode
    -g           - build for debug
    -n           - no install step
@@ -173,6 +174,10 @@ if buildAll || hasArg cusignal; then
 
     cd ${REPODIR}/python
     if [[ ${INSTALL_TARGET} != "" ]]; then
-        python setup.py install
+        if hasArg -c; then
+            python setup.py install --single-version-externally-managed --record record.txt
+        else
+            python setup.py install
+        fi
     fi
 fi
