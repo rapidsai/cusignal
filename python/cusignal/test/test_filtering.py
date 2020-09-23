@@ -24,7 +24,6 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 # Missing
 # lfiltic
-# detrend
 # freq_shift
 
 
@@ -55,34 +54,32 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="Lfiltic")
-    # @pytest.mark.parametrize("num_a", [1.0, -1.0/3])
+    # @pytest.mark.parametrize("num_a", [1.0, 1.0/3])
     # @pytest.mark.parametrize("num_b", [1.0/2, 1.0/4])
-    # @pytest.mark.parametrize("num_y", [2.])
+    # @pytest.mark.parametrize("num_y", [-1.])
 
     # class TestLfiltic:
-    #     #def cpu_version(self, a, b, y):
     #     def cpu_version(self, b, a, y):
-    #         #return signal.lfiltic(a, b, y)
     #         return signal.lfiltic(b, a, y)
 
+    #     def gpu_version(self, b, a, y):
+    #         with cp.cuda.Stream.null:
+    #             out = cusignal.lfiltic(b, a, y)
+    #         cp.cuda.Stream.null.synchronize()
+    #         return out
+
     #     @pytest.mark.cpu
-    #     #def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
     #     def test_lfiltic_cpu(self, benchmark, num_b, num_a, num_y):
 
-    #         #benchmark(self.cpu_version, num_a, num_b, num_y)
     #         benchmark(self.cpu_version, num_b, num_a, num_y)
 
     #     def test_lfiltic_gpu(self, gpubenchmark, num_b, num_a,num_y):
-    #     #def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
+
     #         d_num_a = cp.asarray(num_a)
     #         d_num_b = cp.asarray(num_b)
-    #         d_num_y = cp.asarray(num_y)
-
-    #         output = gpubenchmark(cusignal.lfiltic, d_num_b,d_num_a, d_num_y)
-    #         #output = gpubenchmark(cusignal.lfiltic, d_num_a,num_b, num_y)
+    #         output = gpubenchmark(self.gpu_version, d_num_b, d_num_a, num_y)
 
     #         key = self.cpu_version(num_b, num_a,  num_y)
-    #         #key = self.cpu_version(num_a, num_b, num_y)
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="SOSFilt")
@@ -194,43 +191,59 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Detrend")
-    # @pytest.mark.parametrize("randgen", np.random.RandomState(9))
-    # @pytest.mark.parametrize("num_npoints", 1000)
-    # @pytest.mark.parametrize("num_noise", randgen.randn(num_npoints))
-    # @pytest.mark.parametrize(
-    #   "num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
+    @pytest.mark.benchmark(group="Detrend")
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    class TestDetrend:
+        def cpu_version(self, sig):
+            return signal.detrend(sig)
 
-    # class TestDetrend:
-    #     def cpu_version(self, x):
-    #         return signal.detrend(x)
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.detrend(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_detrend_cpu(self, benchmark, num_x):
-    #         benchmark(self.cpu_version, num_x)
+        @pytest.mark.cpu
+        def test_detrend_cpu(self, linspace_data_gen, benchmark, num_samps):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, cpu_sig)
 
-    #     def test_detrend_gpu(self, gpubenchmark, num_x):
+        def test_detrend_gpu(self, linspace_data_gen, gpubenchmark, num_samps):
 
-    #         output = gpubenchmark(cusignal.detrend, num_x)
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps)
+            output = gpubenchmark(cusignal.detrend, gpu_sig)
 
-    #         key = self.cpu_version(num_x)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
 
     # @pytest.mark.benchmark(group="FreqShift")
+    # @pytest.mark.parametrize("num_samps", [2 ** 8])
     # @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
+    # @pytest.mark.parametrize("fs", [0.1])
     # class TestFreqShift:
-    #     def cpu_version(self, cpu_sig, freq):
-    #         return signal.freq_shift(freq)
+    #     def cpu_version(self, freq, fs, num_samps):
+    #         return np.fftshift(freq, fs, num_samps)
+
+    #     def gpu_version(self, freq, fs, num_samps):
+    #         with cp.cuda.Stream.null:
+    #             out = cusignal.freq_shift(freq, fs, num_samps)
+    #         cp.cuda.Stream.null.synchronize()
+    #         return out
 
     #     @pytest.mark.cpu
-    #     def test_freq_shift_cpu(self, benchmark, freq):
-    #         benchmark(self.cpu_version, freq)
+    #     def test_freq_shift_cpu(
+    #         self, rand_complex_data_gen, benchmark, freq, fs, num_samps
+    #     ):
+    #         cpu_sig, _ = rand_complex_data_gen(num_samps)
+    #         benchmark(self.cpu_version, cpu_sig, freq, fs)
 
-    #     def test_freq_shift_gpu(self, gpubenchmark):
+    #     def test_freq_shift_gpu(
+    #         self, rand_complex_data_gen, gpubenchmark, freq, fs, num_samps
+    #     ):
+    #         cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
+    #         output = gpubenchmark(self.gpu_version, gpu_sig, freq, fs)
 
-    #         output = gpubenchmark(cusignal.detrend, freq)
-
-    #         key = self.cpu_version(freq)
+    #         key = self.cpu_version(cpu_sig, freq, fs)
     #         assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")
