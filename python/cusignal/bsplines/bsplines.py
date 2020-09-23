@@ -15,14 +15,15 @@ import cupy as cp
 import numpy as np
 
 _gauss_spline_kernel = cp.ElementwiseKernel(
-    "float64 n, float64 pi",
-    "float64 signsq, float64 output",
+    "float64 n, float64 pi, float64 x",
+    "float64 output",
     """
-    signsq = (n + 1) / 12.0;
-    output = 1 / sqrt(2 * pi * signsq);
+    double signsq = (n + 1) / 12.0;
+    output = 1 / sqrt(2 * pi * signsq) *  exp((-(x * x / 2) / signsq));
     """,
     "_gauss_spline_kernel",
 )
+
 
 def gauss_spline(x, n):
     """Gaussian approximation to B-spline basis function of order n.
@@ -39,15 +40,12 @@ def gauss_spline(x, n):
        In: Sgallari F., Murli A., Paragios N. (eds) Scale Space and Variational
        Methods in Computer Vision. SSVM 2007. Lecture Notes in Computer
        Science, vol 4485. Springer, Berlin, Heidelberg
-   """
+    """
     length = cp.size(x)
     x = cp.asarray(x)
-
-    signsq = cp.empty(length, dtype=cp.float64)    
     output = cp.empty(length, dtype=cp.float64)
 
-    _gauss_spline_kernel(n, np.pi, signsq, output)
-    output = output * cp.exp(-x ** 2 / 2 / signsq)
+    _gauss_spline_kernel(n, np.pi, x, output)
 
     return output
 
@@ -87,6 +85,7 @@ def quadratic(x):
         res[cond2] = (ax2 - 1.5) ** 2 / 2.0
     return res
 
+
 def _coeff_smooth(lam):
     xi = 1 - 96 * lam + 24 * lam * cp.sqrt(3 + 144 * lam)
     omeg = cp.arctan2(cp.sqrt(144 * lam - 1), cp.sqrt(xi))
@@ -96,13 +95,23 @@ def _coeff_smooth(lam):
 
 
 def _hc(k, cs, rho, omega):
-    return (cs / cp.sin(omega) * (rho ** k) * cp.sin(omega * (k + 1)) *
-            cp.greater(k, -1))
+    return (
+        cs
+        / cp.sin(omega)
+        * (rho ** k)
+        * cp.sin(omega * (k + 1))
+        * cp.greater(k, -1)
+    )
 
 
 def _hs(k, cs, rho, omega):
-    c0 = (cs * cs * (1 + rho * rho) / (1 - rho * rho) /
-          (1 - 2 * rho * rho * cp.cos(2 * omega) + rho ** 4))
+    c0 = (
+        cs
+        * cs
+        * (1 + rho * rho)
+        / (1 - rho * rho)
+        / (1 - 2 * rho * rho * cp.cos(2 * omega) + rho ** 4)
+    )
     gamma = (1 - rho * rho) / (1 + rho * rho) / cp.tan(omega)
     ak = abs(k)
     return c0 * rho ** ak * (cp.cos(omega * ak) + gamma * cp.sin(omega * ak))
@@ -114,27 +123,39 @@ def _cubic_smooth_coeff(signal, lamb):
     K = len(signal)
     yp = cp.zeros((K,), signal.dtype.char)
     k = cp.arange(K)
-    yp[0] = (_hc(0, cs, rho, omega) * signal[0] +
-             cp.add(_hc(k + 1, cs, rho, omega) * signal))
+    yp[0] = _hc(0, cs, rho, omega) * signal[0] + cp.add(
+        _hc(k + 1, cs, rho, omega) * signal
+    )
 
-    yp[1] = (_hc(0, cs, rho, omega) * signal[0] +
-             _hc(1, cs, rho, omega) * signal[1] +
-             cp.add(_hc(k + 2, cs, rho, omega) * signal))
+    yp[1] = (
+        _hc(0, cs, rho, omega) * signal[0]
+        + _hc(1, cs, rho, omega) * signal[1]
+        + cp.add(_hc(k + 2, cs, rho, omega) * signal)
+    )
 
     for n in range(2, K):
-        yp[n] = (cs * signal[n] + 2 * rho * cp.cos(omega) * yp[n - 1] -
-                 rho * rho * yp[n - 2])
+        yp[n] = (
+            cs * signal[n]
+            + 2 * rho * cp.cos(omega) * yp[n - 1]
+            - rho * rho * yp[n - 2]
+        )
 
     y = cp.zeros((K,), signal.dtype.char)
 
-    y[K - 1] = cp.add((_hs(k, cs, rho, omega) +
-                    _hs(k + 1, cs, rho, omega)) * signal[::-1])
-    y[K - 2] = cp.add((_hs(k - 1, cs, rho, omega) +
-                    _hs(k + 2, cs, rho, omega)) * signal[::-1])
+    y[K - 1] = cp.add(
+        (_hs(k, cs, rho, omega) + _hs(k + 1, cs, rho, omega)) * signal[::-1]
+    )
+    y[K - 2] = cp.add(
+        (_hs(k - 1, cs, rho, omega) + _hs(k + 2, cs, rho, omega))
+        * signal[::-1]
+    )
 
     for n in range(K - 3, -1, -1):
-        y[n] = (cs * yp[n] + 2 * rho * cp.cos(omega) * y[n + 1] -
-                rho * rho * y[n + 2])
+        y[n] = (
+            cs * yp[n]
+            + 2 * rho * cp.cos(omega) * y[n + 1]
+            - rho * rho * y[n + 2]
+        )
 
     return y
 
