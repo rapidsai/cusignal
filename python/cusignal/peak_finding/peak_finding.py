@@ -16,6 +16,23 @@
 import cupy as cp
 
 
+_boolrelextrema_kernel = cp.ElementwiseKernel(
+    "T data, int32 order, bool clip",
+    "T results",
+    """
+
+    bool results { true };
+
+    for ( int o = 1; o < (order + 1), o++ ) {
+
+    }
+    int sign = ( i % 2 ) ? -1 : 1;
+    output = (N - (i + 1)) * sign;
+    """,
+    "_boolrelextrema_kernel",
+)
+
+
 def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     """
     Calculate the relative extrema of `data`.
@@ -55,6 +72,7 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     results = cp.ones(data.shape, dtype=bool)
 
     main = cp.take(data, locs, axis=axis)
+    print("main\n", main)
     for shift in cp.arange(1, order + 1):
         if mode == 'clip':
             p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
@@ -63,9 +81,13 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
             p_locs = locs + shift
             m_locs = locs - shift
         plus = cp.take(data, p_locs, axis=axis)
+        print("plus\n", plus)
         minus = cp.take(data, m_locs, axis=axis)
+        print("minus\n", minus)
         results &= comparator(main, plus)
+        print("results\n", results)
         results &= comparator(main, minus)
+        print("results\n", results)
         if ~results.any():
             return results
 
