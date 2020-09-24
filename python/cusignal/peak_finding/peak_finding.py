@@ -25,8 +25,12 @@ _boolrelextrema_kernel = cp.ElementwiseKernel(
     T local_data = data[i];
 
     for ( int o = 1; o < (order + 1); o++ ) {
-        T plus = data[i+o];
-        T minus = data[i-o];
+        int idx = i + o;
+        if (idx < 0) idx = 0;
+        if (idx >= _ind.size()) idx = _ind.size() -1;
+        printf("%d: %d: %d\\n", i, idx, i+o);
+        T plus = data[idx];
+        T minus = data[idx];
         temp &= plus < local_data;
         temp &= minus < local_data;
     }
@@ -73,6 +77,7 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     datalen = data.shape[axis]
     locs = cp.arange(0, datalen)
     results = cp.ones(data.shape, dtype=bool)
+    print("locs", locs)
 
     main = cp.take(data, locs, axis=axis)
     print("main\n", main)
@@ -83,6 +88,8 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
         else:
             p_locs = locs + shift
             m_locs = locs - shift
+        print("p_locs\n", p_locs)
+        print("m_locs\n", m_locs)
         plus = cp.take(data, p_locs, axis=axis)
         print("plus\n", plus)
         minus = cp.take(data, m_locs, axis=axis)
