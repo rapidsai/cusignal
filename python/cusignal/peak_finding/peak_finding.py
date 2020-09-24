@@ -17,17 +17,20 @@ import cupy as cp
 
 
 _boolrelextrema_kernel = cp.ElementwiseKernel(
-    "T data, int32 order, bool clip",
-    "T results",
+    "raw T data, int32 order, bool clip",
+    "bool results2",
     """
 
-    bool results { true };
+    bool temp = 1;
+    T local_data = data[i];
 
-    for ( int o = 1; o < (order + 1), o++ ) {
-
+    for ( int o = 1; o < (order + 1); o++ ) {
+        T plus = data[i+o];
+        T minus = data[i-o];
+        temp &= plus < local_data;
+        temp &= minus < local_data;
     }
-    int sign = ( i % 2 ) ? -1 : 1;
-    output = (N - (i + 1)) * sign;
+    results2 = temp;
     """,
     "_boolrelextrema_kernel",
 )
@@ -90,6 +93,10 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
         print("results\n", results)
         if ~results.any():
             return results
+
+    results2 = cp.ones(data.shape, dtype=bool)
+    _boolrelextrema_kernel(data, order, True, results2)
+    print("results2", results2)
 
     return results
 
