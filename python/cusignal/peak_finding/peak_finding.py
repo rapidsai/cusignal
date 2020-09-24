@@ -215,4 +215,4 @@ def argrelextrema(data, comparator, axis=0, order=1):
     data = cp.asarray(data)
     results = _boolrelextrema(data, comparator,
                               axis, order)
-    return cp.nonzero(results)
+    return cp.asarray(cp.nonzero(results))
