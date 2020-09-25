@@ -47,8 +47,8 @@ def _boolrelextrema(data, comparator, axis=0, order=1):
     argrelmax, argrelmin
     """
     data = cp.asarray(data)
-    if((int(order) != order) or (order < 1)):
-        raise ValueError('Order must be an int >= 1')
+    if (int(order) != order) or (order < 1):
+        raise ValueError("Order must be an int >= 1")
 
     datalen = data.shape[axis]
     locs = cp.arange(0, datalen)
@@ -60,7 +60,7 @@ def _boolrelextrema(data, comparator, axis=0, order=1):
         minus = data.take(locs - shift, axis=axis)
         results &= comparator(main, plus)
         results &= comparator(main, minus)
-        if(~results.any()):
+        if ~results.any():
             return results
     return results
 

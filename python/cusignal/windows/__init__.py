@@ -33,5 +33,5 @@ from cusignal.windows.windows import (
     chebwin,
     cosine,
     exponential,
-    get_window
+    get_window,
 )

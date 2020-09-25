@@ -85,9 +85,9 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     output = cp.exp(1j * w * x)
 
     if complete:
-        output -= cp.exp(-0.5 * (w**2))
+        output -= cp.exp(-0.5 * (w ** 2))
 
-    output *= cp.exp(-0.5 * (x**2)) * cp.pi**(-0.25)
+    output *= cp.exp(-0.5 * (x ** 2)) * cp.pi ** (-0.25)
 
     return output
 
@@ -130,11 +130,11 @@ def ricker(points, a):
     >>> plt.show()
 
     """
-    A = 2 / (cp.sqrt(3 * a) * (cp.pi**0.25))
-    wsq = a**2
+    A = 2 / (cp.sqrt(3 * a) * (cp.pi ** 0.25))
+    wsq = a ** 2
     vec = cp.arange(0, points) - (points - 1.0) / 2
-    xsq = vec**2
-    mod = (1 - xsq / wsq)
+    xsq = vec ** 2
+    mod = 1 - xsq / wsq
     gauss = cp.exp(-xsq / (2 * wsq))
     total = A * mod * gauss
     return total
@@ -194,6 +194,5 @@ def cwt(data, wavelet, widths):
     output = cp.zeros([len(widths), len(data)])
     for ind, width in enumerate(widths):
         wavelet_data = wavelet(min(10 * width, len(data)), width)
-        output[ind, :] = convolve(data, wavelet_data,
-                                  mode='same')
+        output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output

@@ -12,8 +12,8 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (asarray, pi, zeros_like, arctan2, tan, zeros, arange)
-from cupy import (abs, sqrt, exp, greater, less, cos, add, sin)
+from cupy import asarray, pi, zeros_like, arctan2, tan, zeros, arange
+from cupy import abs, sqrt, exp, greater, less, cos, add, sin
 
 
 def gauss_spline(x, n):
@@ -31,10 +31,10 @@ def gauss_spline(x, n):
        In: Sgallari F., Murli A., Paragios N. (eds) Scale Space and Variational
        Methods in Computer Vision. SSVM 2007. Lecture Notes in Computer
        Science, vol 4485. Springer, Berlin, Heidelberg
-   """
+    """
     x = asarray(x)
     signsq = (n + 1) / 12.0
-    return 1 / sqrt(2 * pi * signsq) * exp(-x ** 2 / 2 / signsq)
+    return 1 / sqrt(2 * pi * signsq) * exp(-(x ** 2) / 2 / signsq)
 
 
 def cubic(x):
@@ -82,13 +82,17 @@ def _coeff_smooth(lam):
 
 
 def _hc(k, cs, rho, omega):
-    return (cs / sin(omega) * (rho ** k) * sin(omega * (k + 1)) *
-            greater(k, -1))
+    return cs / sin(omega) * (rho ** k) * sin(omega * (k + 1)) * greater(k, -1)
 
 
 def _hs(k, cs, rho, omega):
-    c0 = (cs * cs * (1 + rho * rho) / (1 - rho * rho) /
-          (1 - 2 * rho * rho * cos(2 * omega) + rho ** 4))
+    c0 = (
+        cs
+        * cs
+        * (1 + rho * rho)
+        / (1 - rho * rho)
+        / (1 - 2 * rho * rho * cos(2 * omega) + rho ** 4)
+    )
     gamma = (1 - rho * rho) / (1 + rho * rho) / tan(omega)
     ak = abs(k)
     return c0 * rho ** ak * (cos(omega * ak) + gamma * sin(omega * ak))
@@ -100,27 +104,37 @@ def _cubic_smooth_coeff(signal, lamb):
     K = len(signal)
     yp = zeros((K,), signal.dtype.char)
     k = arange(K)
-    yp[0] = (_hc(0, cs, rho, omega) * signal[0] +
-             add(_hc(k + 1, cs, rho, omega) * signal))
+    yp[0] = _hc(0, cs, rho, omega) * signal[0] + add(
+        _hc(k + 1, cs, rho, omega) * signal
+    )
 
-    yp[1] = (_hc(0, cs, rho, omega) * signal[0] +
-             _hc(1, cs, rho, omega) * signal[1] +
-             add(_hc(k + 2, cs, rho, omega) * signal))
+    yp[1] = (
+        _hc(0, cs, rho, omega) * signal[0]
+        + _hc(1, cs, rho, omega) * signal[1]
+        + add(_hc(k + 2, cs, rho, omega) * signal)
+    )
 
     for n in range(2, K):
-        yp[n] = (cs * signal[n] + 2 * rho * cos(omega) * yp[n - 1] -
-                 rho * rho * yp[n - 2])
+        yp[n] = (
+            cs * signal[n]
+            + 2 * rho * cos(omega) * yp[n - 1]
+            - rho * rho * yp[n - 2]
+        )
 
     y = zeros((K,), signal.dtype.char)
 
-    y[K - 1] = add((_hs(k, cs, rho, omega) +
-                    _hs(k + 1, cs, rho, omega)) * signal[::-1])
-    y[K - 2] = add((_hs(k - 1, cs, rho, omega) +
-                    _hs(k + 2, cs, rho, omega)) * signal[::-1])
+    y[K - 1] = add(
+        (_hs(k, cs, rho, omega) + _hs(k + 1, cs, rho, omega)) * signal[::-1]
+    )
+    y[K - 2] = add(
+        (_hs(k - 1, cs, rho, omega) + _hs(k + 2, cs, rho, omega))
+        * signal[::-1]
+    )
 
     for n in range(K - 3, -1, -1):
-        y[n] = (cs * yp[n] + 2 * rho * cos(omega) * y[n + 1] -
-                rho * rho * y[n + 2])
+        y[n] = (
+            cs * yp[n] + 2 * rho * cos(omega) * y[n + 1] - rho * rho * y[n + 2]
+        )
 
     return y
 

@@ -24,7 +24,24 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 # Missing
 # lfiltic
-# freq_shift
+
+
+def freq_shift_cpu(x, freq, fs):
+    """
+    Frequency shift signal by freq at fs sample rate
+    Parameters
+    ----------
+    x : array_like, complex valued
+        The data to be shifted.
+    freq : float
+        Shift by this many (Hz)
+    fs : float
+        Sampling rate of the signal
+    domain : string
+        freq or time
+    """
+    x = np.asarray(x)
+    return x * np.exp(-1j * 2 * np.pi * freq / fs * np.arange(x.size))
 
 
 class TestFilter:
@@ -216,35 +233,35 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="FreqShift")
-    # @pytest.mark.parametrize("num_samps", [2 ** 8])
-    # @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
-    # @pytest.mark.parametrize("fs", [0.1])
-    # class TestFreqShift:
-    #     def cpu_version(self, freq, fs, num_samps):
-    #         return np.fftshift(freq, fs, num_samps)
+    @pytest.mark.benchmark(group="FreqShift")
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
+    @pytest.mark.parametrize("fs", [0.3])
+    class TestFreqShift:
+        def cpu_version(self, freq, fs, num_samps):
+            return freq_shift_cpu(freq, fs, num_samps)
 
-    #     def gpu_version(self, freq, fs, num_samps):
-    #         with cp.cuda.Stream.null:
-    #             out = cusignal.freq_shift(freq, fs, num_samps)
-    #         cp.cuda.Stream.null.synchronize()
-    #         return out
+        def gpu_version(self, freq, fs, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.freq_shift(freq, fs, num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_freq_shift_cpu(
-    #         self, rand_complex_data_gen, benchmark, freq, fs, num_samps
-    #     ):
-    #         cpu_sig, _ = rand_complex_data_gen(num_samps)
-    #         benchmark(self.cpu_version, cpu_sig, freq, fs)
+        @pytest.mark.cpu
+        def test_freq_shift_cpu(
+            self, rand_complex_data_gen, benchmark, freq, fs, num_samps
+        ):
+            cpu_sig, _ = rand_complex_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig, freq, fs)
 
-    #     def test_freq_shift_gpu(
-    #         self, rand_complex_data_gen, gpubenchmark, freq, fs, num_samps
-    #     ):
-    #         cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-    #         output = gpubenchmark(self.gpu_version, gpu_sig, freq, fs)
+        def test_freq_shift_gpu(
+            self, rand_complex_data_gen, gpubenchmark, freq, fs, num_samps
+        ):
+            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig, freq, fs)
 
-    #         key = self.cpu_version(cpu_sig, freq, fs)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig, freq, fs)
+            assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
