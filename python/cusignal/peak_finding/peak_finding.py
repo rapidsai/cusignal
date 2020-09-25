@@ -16,7 +16,7 @@
 import cupy as cp
 
 
-def _boolrelextrema(data, comparator, axis=0, order=1):
+def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     """
     Calculate the relative extrema of `data`.
 
@@ -47,25 +47,32 @@ def _boolrelextrema(data, comparator, axis=0, order=1):
     argrelmax, argrelmin
     """
     data = cp.asarray(data)
-    if((int(order) != order) or (order < 1)):
-        raise ValueError('Order must be an int >= 1')
+    if (int(order) != order) or (order < 1):
+        raise ValueError("Order must be an int >= 1")
 
     datalen = data.shape[axis]
     locs = cp.arange(0, datalen)
-
     results = cp.ones(data.shape, dtype=bool)
-    main = data.take(locs, axis=axis)
+
+    main = cp.take(data, locs, axis=axis)
     for shift in cp.arange(1, order + 1):
-        plus = data.take(locs + shift, axis=axis)
-        minus = data.take(locs - shift, axis=axis)
+        if mode == 'clip':
+            p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
+            m_locs = cp.clip(locs - shift, a_min=0)
+        else:
+            p_locs = locs + shift
+            m_locs = locs - shift
+        plus = cp.take(data, p_locs, axis=axis)
+        minus = cp.take(data, m_locs, axis=axis)
         results &= comparator(main, plus)
         results &= comparator(main, minus)
-        if(~results.any()):
+        if ~results.any():
             return results
+
     return results
 
 
-def argrelmin(data, axis=0, order=1):
+def argrelmin(data, axis=0, order=1, mode="clip"):
     """
     Calculate the relative minima of `data`.
 
@@ -115,10 +122,10 @@ def argrelmin(data, axis=0, order=1):
 
     """
     data = cp.asarray(data)
-    return argrelextrema(data, cp.less, axis, order)
+    return argrelextrema(data, cp.less, axis, order, mode)
 
 
-def argrelmax(data, axis=0, order=1):
+def argrelmax(data, axis=0, order=1, mode="clip"):
     """
     Calculate the relative maxima of `data`.
 
@@ -166,10 +173,10 @@ def argrelmax(data, axis=0, order=1):
     (array([0, 0, 2]), array([1 ,3, 0]))
     """
     data = cp.asarray(data)
-    return argrelextrema(data, cp.greater, axis, order)
+    return argrelextrema(data, cp.greater, axis, order, mode)
 
 
-def argrelextrema(data, comparator, axis=0, order=1):
+def argrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     """
     Calculate the relative extrema of `data`.
 
@@ -213,6 +220,11 @@ def argrelextrema(data, comparator, axis=0, order=1):
 
     """
     data = cp.asarray(data)
-    results = _boolrelextrema(data, comparator,
-                              axis, order)
-    return cp.nonzero(results)
+    results = _boolrelextrema(data, comparator, axis, order, mode)
+
+    if mode == "raise":
+        raise NotImplementedError(
+            "CuPy `take` doesn't support `mode='raise'`."
+        )
+
+    return cp.asarray(cp.nonzero(results))

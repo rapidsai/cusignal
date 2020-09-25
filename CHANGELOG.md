@@ -26,6 +26,7 @@
 - PR #218 - Remove fatbins from source code on GH
 - PR #221 - Synchronization issue with cusignal testing 
 - PR #237 - Update conda build files so fatbins are generated
+- PR #239 - Fix mode issue in peak finding module
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
