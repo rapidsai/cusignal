@@ -90,3 +90,23 @@ def cceps(x, n=None, axis=-1):
     cceps = fft.ifft(logh, n=n, axis=axis).real
 
     return cceps
+
+def inverse_complex_cepstrum(ceps, ndelay):
+    """Compute the inverse complex cepstrum of a real sequence.
+    ceps : ndarray
+        Real sequence to compute inverse complex cepstrum of.
+    ndelay: int
+        The amount of samples of circular delay added to `x`.
+    """
+    return
+
+def minimum_phase(x , n=None):
+   """Compute the minimum phase reconstruction of a real sequence.
+    x : ndarray
+        Real sequence to compute the minimum phase reconstruction of.
+    n : {None, int}, optional
+        Length of the Fourier transform.
+    Compute the minimum phase reconstruction of a real sequence using the
+    real cepstrum. 
+    """
+    return
