@@ -14,5 +14,8 @@
 from cusignal.acoustics.cepstrum import (
     rceps,
     cceps,
-    cceps_unwrap
+    cceps_unwrap,
+    inverse_complex_cepstrum,
+    _wrap,
+    minimum_phase,
 )
