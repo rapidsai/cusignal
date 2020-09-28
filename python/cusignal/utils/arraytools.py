@@ -134,7 +134,7 @@ def get_pinned_mem(shape, dtype):
 
 
 def from_pycuda(pycuda_arr, device=0):
-    """ Read in gpuarray from PyCUDA and output CuPy array
+    """Read in gpuarray from PyCUDA and output CuPy array
 
     Parameters
     ----------
@@ -153,12 +153,11 @@ def from_pycuda(pycuda_arr, device=0):
         cp.dtype(pycuda_arr.dtype),
         cp.cuda.MemoryPointer(
             cp.cuda.UnownedMemory(
-                pycuda_arr.ptr,
-                pycuda_arr.size,
-                pycuda_arr,
-                device
-            ), 0),
-        strides=pycuda_arr.strides
+                pycuda_arr.ptr, pycuda_arr.size, pycuda_arr, device
+            ),
+            0,
+        ),
+        strides=pycuda_arr.strides,
     )
 
     return cupy_arr

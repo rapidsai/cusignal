@@ -84,7 +84,11 @@ def _design_resample_poly(up, down, window):
 
 
 def decimate(
-    x, q, n=None, axis=-1, zero_phase=True,
+    x,
+    q,
+    n=None,
+    axis=-1,
+    zero_phase=True,
 ):
     """
     Downsample the signal after applying an anti-aliasing filter.
@@ -277,7 +281,11 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
 
 
 def resample_poly(
-    x, up, down, axis=0, window=("kaiser", 5.0),
+    x,
+    up,
+    down,
+    axis=0,
+    window=("kaiser", 5.0),
 ):
     """
     Resample `x` along the given axis using polyphase filtering.
@@ -416,7 +424,11 @@ def resample_poly(
 
 
 def upfirdn(
-    h, x, up=1, down=1, axis=-1,
+    h,
+    x,
+    up=1,
+    down=1,
+    axis=-1,
 ):
     """
     Upsample, FIR filter, and downsample.

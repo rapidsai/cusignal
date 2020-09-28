@@ -51,7 +51,12 @@ class _cupy_convolve_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, d_kernel, mode, swapped_inputs, out,
+        self,
+        d_inp,
+        d_kernel,
+        mode,
+        swapped_inputs,
+        out,
     ):
 
         kernel_args = (
@@ -80,7 +85,17 @@ class _cupy_convolve_2d_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, d_inp, paddedW, paddedH, d_kernel, S0, S1, out, outW, outH, pick,
+        self,
+        d_inp,
+        paddedW,
+        paddedH,
+        d_kernel,
+        S0,
+        S1,
+        out,
+        outW,
+        outH,
+        pick,
     ):
 
         kernel_args = (
@@ -137,7 +152,10 @@ def _populate_kernel_cache(np_type, k_type):
 
 
 def _get_backend_kernel(
-    dtype, grid, block, k_type,
+    dtype,
+    grid,
+    block,
+    k_type,
 ):
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
@@ -159,7 +177,12 @@ def _get_backend_kernel(
 
 
 def _convolve_gpu(
-    inp, out, ker, mode, use_convolve, swapped_inputs,
+    inp,
+    out,
+    ker,
+    mode,
+    use_convolve,
+    swapped_inputs,
 ):
 
     d_inp = cp.array(inp)
@@ -173,7 +196,10 @@ def _convolve_gpu(
         _populate_kernel_cache(out.dtype, k_type)
 
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, k_type,
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
     else:
         k_type = "correlate"
@@ -181,7 +207,10 @@ def _convolve_gpu(
         _populate_kernel_cache(out.dtype, k_type)
 
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, k_type,
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
 
     kernel(d_inp, d_kernel, mode, swapped_inputs, out)
@@ -192,7 +221,13 @@ def _convolve_gpu(
 
 
 def _convolve2d_gpu(
-    inp, out, ker, mode, boundary, use_convolve, fillvalue,
+    inp,
+    out,
+    ker,
+    mode,
+    boundary,
+    use_convolve,
+    fillvalue,
 ):
 
     if (boundary != PAD) and (boundary != REFLECT) and (boundary != CIRCULAR):
@@ -280,7 +315,10 @@ def _convolve2d_gpu(
         _populate_kernel_cache(out.dtype, k_type)
 
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, k_type,
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
     else:
         k_type = "correlate2D"
@@ -288,7 +326,10 @@ def _convolve2d_gpu(
         _populate_kernel_cache(out.dtype, k_type)
 
         kernel = _get_backend_kernel(
-            out.dtype, blockspergrid, threadsperblock, k_type,
+            out.dtype,
+            blockspergrid,
+            threadsperblock,
+            k_type,
         )
 
     kernel(
@@ -301,7 +342,11 @@ def _convolve2d_gpu(
 
 
 def _convolve(
-    in1, in2, use_convolve, swapped_inputs, mode,
+    in1,
+    in2,
+    use_convolve,
+    swapped_inputs,
+    mode,
 ):
 
     val = _valfrommode(mode)
@@ -340,7 +385,14 @@ def _convolve(
     # Create empty array out on GPU
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
-    out = _convolve_gpu(in1, out, in2, val, use_convolve, swapped_inputs,)
+    out = _convolve_gpu(
+        in1,
+        out,
+        in2,
+        val,
+        use_convolve,
+        swapped_inputs,
+    )
 
     return out
 
@@ -395,6 +447,14 @@ def _convolve2d(in1, in2, use_convolve, mode, boundary, fillvalue):
     # Create empty array out on GPU
     out = cp.empty(out_dimens.tolist(), in1.dtype)
 
-    out = _convolve2d_gpu(in1, out, in2, val, bval, use_convolve, fill,)
+    out = _convolve2d_gpu(
+        in1,
+        out,
+        in2,
+        val,
+        bval,
+        use_convolve,
+        fill,
+    )
 
     return out

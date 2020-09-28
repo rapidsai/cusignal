@@ -15,5 +15,5 @@ from cusignal.filter_design.fir_filter_design import (
     kaiser_beta,
     kaiser_atten,
     firwin,
-    cmplx_sort
-) 
+    cmplx_sort,
+)

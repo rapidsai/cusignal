@@ -136,17 +136,22 @@ def _populate_kernel_cache(np_type, k_type):
 
     if k_type == "upfirdn1D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_upfirdn.fatbin", "_cupy_upfirdn1D_" + str(np_type),
+            "/filtering/_upfirdn.fatbin",
+            "_cupy_upfirdn1D_" + str(np_type),
         )
 
     elif k_type == "upfirdn2D":
         _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_upfirdn.fatbin", "_cupy_upfirdn2D_" + str(np_type),
+            "/filtering/_upfirdn.fatbin",
+            "_cupy_upfirdn2D_" + str(np_type),
         )
 
 
 def _get_backend_kernel(
-    dtype, grid, block, k_type,
+    dtype,
+    grid,
+    block,
+    k_type,
 ):
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
@@ -180,7 +185,9 @@ class _UpFIRDn(object):
         self._h_len_orig = len(h)
 
     def apply_filter(
-        self, x, axis,
+        self,
+        x,
+        axis,
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
 
@@ -214,7 +221,10 @@ class _UpFIRDn(object):
             _populate_kernel_cache(out.dtype, k_type)
 
             kernel = _get_backend_kernel(
-                out.dtype, blockspergrid, threadsperblock, k_type,
+                out.dtype,
+                blockspergrid,
+                threadsperblock,
+                k_type,
             )
         elif out.ndim == 2:
             k_type = "upfirdn2D"
@@ -222,7 +232,10 @@ class _UpFIRDn(object):
             _populate_kernel_cache(out.dtype, k_type)
 
             kernel = _get_backend_kernel(
-                out.dtype, blockspergrid, threadsperblock, k_type,
+                out.dtype,
+                blockspergrid,
+                threadsperblock,
+                k_type,
             )
         else:
             raise NotImplementedError("upfirdn() requires ndim <= 2")

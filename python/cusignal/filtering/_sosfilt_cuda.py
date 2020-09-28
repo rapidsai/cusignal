@@ -56,7 +56,8 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-        "/filtering/_sosfilt.fatbin", "_cupy_sosfilt_" + str(np_type),
+        "/filtering/_sosfilt.fatbin",
+        "_cupy_sosfilt_" + str(np_type),
     )
 
 
@@ -90,7 +91,11 @@ def _sosfilt(sos, x, zi):
     shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
 
     kernel = _get_backend_kernel(
-        x.dtype, blockspergrid, threadsperblock, shared_mem, k_type,
+        x.dtype,
+        blockspergrid,
+        threadsperblock,
+        shared_mem,
+        k_type,
     )
 
     kernel(sos, x, zi)
