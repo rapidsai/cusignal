@@ -51,16 +51,14 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     if (int(order) != order) or (order < 1):
         raise ValueError("Order must be an int >= 1")
 
-    datalen = data.shape[axis]
-    locs = cp.arange(0, datalen)
-    results = cp.ones(data.shape, dtype=bool)
-
-    if data.ndim == 1:
+    if data.ndim < 3:
+        results = cp.empty(data.shape, dtype=bool)
         _peak_finding(data, comparator, axis, order, mode, results)
     else:
-
+        datalen = data.shape[axis]
+        locs = cp.arange(0, datalen)
+        results = cp.ones(data.shape, dtype=bool)
         main = cp.take(data, locs, axis=axis)
-        # print("main\n", main)
         for shift in cp.arange(1, order + 1):
             if mode == "clip":
                 p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
@@ -68,21 +66,14 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
             else:
                 p_locs = locs + shift
                 m_locs = locs - shift
-            # print("p_locs\n", p_locs)
-            # print("m_locs\n", m_locs)
             plus = cp.take(data, p_locs, axis=axis)
-            # print("plus\n", plus)
             minus = cp.take(data, m_locs, axis=axis)
-            # print("minus\n", minus)
             results &= comparator(main, plus)
-            # print("results\n", results)
             results &= comparator(main, minus)
-            # print("results\n", results)
 
             if ~results.any():
                 return results
 
-    # print(results)
     return results
 
 
