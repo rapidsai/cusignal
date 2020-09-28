@@ -82,7 +82,7 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     main = cp.take(data, locs, axis=axis)
     print("main\n", main)
     for shift in cp.arange(1, order + 1):
-        if mode == 'clip':
+        if mode == "clip":
             p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
             m_locs = cp.clip(locs - shift, a_min=0)
         else:
