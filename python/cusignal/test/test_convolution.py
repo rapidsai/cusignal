@@ -53,9 +53,7 @@ class TestConvolution:
         ):
             cpu_sig, _ = rand_data_gen(num_samps, dim)
             cpu_filt, _ = rand_data_gen(num_taps, dim)
-            benchmark(
-                self.cpu_version, cpu_sig, cpu_filt, mode, method
-            )
+            benchmark(self.cpu_version, cpu_sig, cpu_filt, mode, method)
 
         def test_correlate1d_gpu(
             self,
@@ -78,9 +76,7 @@ class TestConvolution:
                 method,
             )
 
-            key = self.cpu_version(
-                cpu_sig, cpu_filt, mode, method
-            )
+            key = self.cpu_version(cpu_sig, cpu_filt, mode, method)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Convolve")
