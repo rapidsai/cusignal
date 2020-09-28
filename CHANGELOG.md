@@ -20,6 +20,7 @@
 - PR #219 - Add missing pytests
 - PR #222 - Improved performance for various window functions
 - PR #235 - Improve Wavelets functions performance
+- PR #243 - Optimize Peak Finding functions
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
