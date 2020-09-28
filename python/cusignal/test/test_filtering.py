@@ -128,7 +128,7 @@ class TestFilter:
         ):
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
-            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.random.random(num_signals, num_samps)
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             benchmark(self.cpu_version, cpu_sos, cpu_sig)
 
@@ -145,7 +145,7 @@ class TestFilter:
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
             gpu_sos = cp.asarray(cpu_sos)
-            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.random.random(num_signals, num_samps)
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
