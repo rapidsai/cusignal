@@ -94,25 +94,27 @@ class TestWindows:
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
 
-    """
-    This isn't preferred, but Parzen is technically broken until
-    cuPy 8.0. Commenting out until cuSignal 0.16
     @pytest.mark.benchmark(group="Parzen")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     class TestParzen:
         def cpu_version(self, num_samps):
             return signal.windows.parzen(num_samps)
 
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.parzen(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_parzen_cpu(self, benchmark, num_samps):
             benchmark(self.cpu_version, num_samps)
 
         def test_parzen_gpu(self, gpubenchmark, num_samps):
-            output = gpubenchmark(cusignal.windows.parzen, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
-    """
 
     @pytest.mark.benchmark(group="Bohman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])

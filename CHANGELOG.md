@@ -18,11 +18,15 @@
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 - PR #215 - Improve doc formating for filtering operations
 - PR #219 - Add missing pytests
+- PR #222 - Improved performance for various window functions
+- PR #235 - Improve Wavelets functions performance
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
 - PR #218 - Remove fatbins from source code on GH
 - PR #221 - Synchronization issue with cusignal testing 
+- PR #237 - Update conda build files so fatbins are generated
+- PR #239 - Fix mode issue in peak finding module
 
 # cuSignal 0.15.0 (26 Aug 2020)
 

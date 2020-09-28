@@ -11,19 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cupy import (
-    arange,
-    array,
-    asarray,
-    atleast_1d,
-    intc,
-    integer,
-    isscalar,
-    issubdtype,
-    take,
-    unique,
-    where,
-)
+import numpy as np
 from bisect import bisect_left
 
 
@@ -317,45 +305,44 @@ def _init_nd_shape_and_axes(x, shape, axes):
         The shape of the result. It is a 1D integer array.
 
     """
-    x = asarray(x)
     noshape = shape is None
     noaxes = axes is None
 
     if noaxes:
-        axes = arange(x.ndim, dtype=intc)
+        axes = np.arange(x.ndim, dtype=np.intc)
     else:
-        axes = atleast_1d(axes)
+        axes = np.atleast_1d(axes)
 
     if axes.size == 0:
-        axes = axes.astype(intc)
+        axes = axes.astype(np.intc)
 
     if not axes.ndim == 1:
         raise ValueError("when given, axes values must be a scalar or vector")
-    if not issubdtype(axes.dtype, integer):
+    if not np.issubdtype(axes.dtype, np.integer):
         raise ValueError("when given, axes values must be integers")
 
-    axes = where(axes < 0, axes + x.ndim, axes)
+    axes = np.where(axes < 0, axes + x.ndim, axes)
 
     if axes.size != 0 and (axes.max() >= x.ndim or axes.min() < 0):
         raise ValueError("axes exceeds dimensionality of input")
-    if axes.size != 0 and unique(axes).shape != axes.shape:
+    if axes.size != 0 and np.unique(axes).shape != axes.shape:
         raise ValueError("all axes must be unique")
 
     if not noshape:
-        shape = atleast_1d(shape)
-    elif isscalar(x):
-        shape = array([], dtype=intc)
+        shape = np.atleast_1d(shape)
+    elif np.isscalar(x):
+        shape = np.array([], dtype=np.intc)
     elif noaxes:
-        shape = array(x.shape, dtype=intc)
+        shape = np.array(x.shape, dtype=np.intc)
     else:
-        shape = take(x.shape, axes)
+        shape = np.take(x.shape, axes)
 
     if shape.size == 0:
-        shape = shape.astype(intc)
+        shape = shape.astype(np.intc)
 
     if shape.ndim != 1:
         raise ValueError("when given, shape values must be a scalar or vector")
-    if not issubdtype(shape.dtype, integer):
+    if not np.issubdtype(shape.dtype, np.integer):
         raise ValueError("when given, shape values must be integers")
     if axes.shape != shape.shape:
         raise ValueError(
@@ -363,7 +350,7 @@ def _init_nd_shape_and_axes(x, shape, axes):
             " have to be of the same length"
         )
 
-    shape = where(shape == -1, array(x.shape)[axes], shape)
+    shape = np.where(shape == -1, np.array(x.shape)[axes], shape)
 
     if shape.size != 0 and (shape < 1).any():
         raise ValueError(
@@ -403,7 +390,6 @@ def _init_nd_shape_and_axes_sorted(x, shape, axes):
         The shape of the result. It is a 1D integer array.
 
     """
-    x = asarray(x)
     noaxes = axes is None
     shape, axes = _init_nd_shape_and_axes(x, shape, axes)
 

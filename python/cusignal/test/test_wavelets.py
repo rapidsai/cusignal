@@ -22,11 +22,32 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-# qmf
-
-
 class TestWavelets:
+    @pytest.mark.benchmark(group="Qmf")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    class TestQmf:
+        def cpu_version(self, sig):
+            return signal.qmf(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.qmf(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_qmf_cpu(self, range_data_gen, benchmark, num_samps):
+            cpu_sig, _ = range_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
+
+        def test_qmf_gpu(self, range_data_gen, gpubenchmark, num_samps):
+
+            cpu_sig, gpu_sig = range_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Morlet")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     class TestMorlet:
@@ -139,21 +160,3 @@ class TestWavelets:
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)
             assert array_equal(cp.asnumpy(output), key)
-
-    # @pytest.mark.benchmark(group="Qmf")
-    # @pytest.mark.benchmark("f1", [1,1])
-    # @pytest.mark.benchmark("f2", [1,-1])
-    # class TestQmf:
-    #     def cpu_version(self, sig):
-    #         return signal.qmf(sig)
-
-    #     @pytest.mark.cpu
-    #     def test_qmf_cpu(self, benchmark, f1, f2):
-    #         benchmark(self.cpu_version, f1, f2)
-
-    #     def test_qmf_gpu(self, gpubenchmark, f1, f2):
-
-    #         output = gpubenchmark(cusignal.qmf, f1, f2)
-
-    #         key = self.cpu_version(f1, f2)
-    #         assert array_equal(cp.asnumpy(output), key)
