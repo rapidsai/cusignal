@@ -12,42 +12,124 @@
 // limitations under the License.
 
 template<typename T>
-__device__ void
-_cupy_boolrelextrema( const int n, const int order, const T *__restrict__ inp, T *__restrict__ results ) {
+__device__ __forceinline__ bool less( T a, T b ) {
+    return ( a < b );
+}
+
+template<typename T>
+__device__ __forceinline__ bool greater( T a, T b ) {
+    return ( a > b );
+}
+
+template<typename T>
+__device__ __forceinline__ bool less_equal( T a, T b ) {
+    return ( a <= b );
+}
+
+template<typename T>
+__device__ __forceinline__ bool greater_equal( T a, T b ) {
+    return ( a >= b );
+}
+
+template<typename T>
+__device__ __forceinline__ bool equal( T a, T b ) {
+    return ( a == b );
+}
+
+template<typename T>
+__device__ __forceinline__ bool not_equal( T a, T b ) {
+    return ( a != b );
+}
+
+using op_func_i                      = bool ( * )( int, int );
+__device__ op_func_i const func_i[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+
+using op_func_l                      = bool ( * )( long int, long int );
+__device__ op_func_l const func_l[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+
+using op_func_f                      = bool ( * )( float, float );
+__device__ op_func_f const func_f[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+
+using op_func_d                      = bool ( * )( double, double );
+__device__ op_func_d const func_d[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+
+template<typename T, class U>
+__device__ void _cupy_boolrelextrema( const int  n,
+                                      const int  order,
+                                      const bool clip,
+                                      const T *__restrict__ inp,
+                                      bool *__restrict__ results,
+                                      U func ) {
 
     const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
 
+    int plus {};
+    int minus {};
+
     for ( int tid = tx; tid < n; tid += stride ) {
 
-        T temp {};
+        T    data { inp[tid] };
+        bool temp { true };
 
+        for ( int o = 1; o < ( order + 1 ); o++ ) {
+            plus  = tid + o;
+            minus = tid - o;
+
+            if ( clip ) {
+                if ( plus >= n ) {
+                    plus = n - 1;
+                }
+                if ( minus < 0 ) {
+                    minus = 0;
+                }
+            } else {
+                if ( plus >= n ) {
+                    plus -= n;
+                }
+                if ( minus < 0 ) {
+                    minus += n;
+                }
+            }
+            temp &= func( data, inp[plus] );
+            temp &= func( data, inp[minus] );
+        }
         results[tid] = temp;
     }
 }
 
-extern "C" __global__ void __launch_bounds__( 512 )
-    _cupy_boolrelextrema_int32( const int n, const int order, const int *__restrict__ inp, int *__restrict__ results ) {
-    _cupy_boolrelextrema<int>( n, order, inp, results );
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_int32( const int  n,
+                                                                                const int  order,
+                                                                                const bool clip,
+                                                                                const int  comp,
+                                                                                const int *__restrict__ inp,
+                                                                                bool *__restrict__ results ) {
+    _cupy_boolrelextrema<int, op_func_i>( n, order, clip, inp, results, func_i[comp] );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_int64( const int n,
-                                                                                const int order,
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_int64( const int  n,
+                                                                                const int  order,
+                                                                                const bool clip,
+                                                                                const int  comp,
                                                                                 const long int *__restrict__ inp,
-                                                                                long int *__restrict__ results ) {
-    _cupy_boolrelextrema<long int>( n, order, inp, results );
+                                                                                bool *__restrict__ results ) {
+    _cupy_boolrelextrema<long int, op_func_l>( n, order, clip, inp, results, func_l[comp] );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_float32( const int n,
-                                                                                  const int order,
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_float32( const int  n,
+                                                                                  const int  order,
+                                                                                  const bool clip,
+                                                                                  const int  comp,
                                                                                   const float *__restrict__ inp,
-                                                                                  float *__restrict__ results ) {
-    _cupy_boolrelextrema<float>( n, order, inp, results );
+                                                                                  bool *__restrict__ results ) {
+    _cupy_boolrelextrema<float, op_func_f>( n, order, clip, inp, results, func_f[comp] );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_float64( const int n,
-                                                                                  const int order,
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_float64( const int  n,
+                                                                                  const int  order,
+                                                                                  const bool clip,
+                                                                                  const int  comp,
                                                                                   const double *__restrict__ inp,
-                                                                                  double *__restrict__ results ) {
-    _cupy_boolrelextrema<double>( n, order, inp, results );
+                                                                                  bool *__restrict__ results ) {
+    _cupy_boolrelextrema<double, op_func_d>( n, order, clip, inp, results, func_d[comp] );
 }

@@ -15,29 +15,7 @@
 
 import cupy as cp
 
-
-_boolrelextrema_kernel = cp.ElementwiseKernel(
-    "raw T data, int32 order, bool clip",
-    "bool results2",
-    """
-
-    bool temp = 1;
-    T local_data = data[i];
-
-    for ( int o = 1; o < (order + 1); o++ ) {
-        int idx = i + o;
-        if (idx < 0) idx = 0;
-        if (idx >= _ind.size()) idx = _ind.size() -1;
-        printf("%d: %d: %d\\n", i, idx, i+o);
-        T plus = data[idx];
-        T minus = data[idx];
-        temp &= plus < local_data;
-        temp &= minus < local_data;
-    }
-    results2 = temp;
-    """,
-    "_boolrelextrema_kernel",
-)
+from ._peak_finding_cuda import _peak_finding
 
 
 def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
@@ -70,41 +48,41 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     --------
     argrelmax, argrelmin
     """
-    data = cp.asarray(data)
     if (int(order) != order) or (order < 1):
         raise ValueError("Order must be an int >= 1")
 
     datalen = data.shape[axis]
     locs = cp.arange(0, datalen)
     results = cp.ones(data.shape, dtype=bool)
-    print("locs", locs)
 
-    main = cp.take(data, locs, axis=axis)
-    print("main\n", main)
-    for shift in cp.arange(1, order + 1):
-        if mode == "clip":
-            p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
-            m_locs = cp.clip(locs - shift, a_min=0)
-        else:
-            p_locs = locs + shift
-            m_locs = locs - shift
-        print("p_locs\n", p_locs)
-        print("m_locs\n", m_locs)
-        plus = cp.take(data, p_locs, axis=axis)
-        print("plus\n", plus)
-        minus = cp.take(data, m_locs, axis=axis)
-        print("minus\n", minus)
-        results &= comparator(main, plus)
-        print("results\n", results)
-        results &= comparator(main, minus)
-        print("results\n", results)
-        if ~results.any():
-            return results
+    if data.ndim == 1:
+        _peak_finding(data, comparator, axis, order, mode, results)
+    else:
 
-    results2 = cp.ones(data.shape, dtype=bool)
-    _boolrelextrema_kernel(data, order, True, results2)
-    print("results2", results2)
+        main = cp.take(data, locs, axis=axis)
+        # print("main\n", main)
+        for shift in cp.arange(1, order + 1):
+            if mode == "clip":
+                p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
+                m_locs = cp.clip(locs - shift, a_min=0)
+            else:
+                p_locs = locs + shift
+                m_locs = locs - shift
+            # print("p_locs\n", p_locs)
+            # print("m_locs\n", m_locs)
+            plus = cp.take(data, p_locs, axis=axis)
+            # print("plus\n", plus)
+            minus = cp.take(data, m_locs, axis=axis)
+            # print("minus\n", minus)
+            results &= comparator(main, plus)
+            # print("results\n", results)
+            results &= comparator(main, minus)
+            # print("results\n", results)
 
+            if ~results.any():
+                return results
+
+    # print(results)
     return results
 
 
@@ -263,4 +241,4 @@ def argrelextrema(data, comparator, axis=0, order=1, mode="clip"):
             "CuPy `take` doesn't support `mode='raise'`."
         )
 
-    return cp.asarray(cp.nonzero(results))
+    return cp.nonzero(results)
