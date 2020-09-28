@@ -174,8 +174,8 @@ __device__ void _cupy_boolrelextrema_2D( const int  in_x,
         int tid { tx * in_x + ty };
 
         T    data { inp[tid] };
-		bool temp { true };
-		
+        bool temp { true };
+
         for ( int o = 1; o < ( order + 1 ); o++ ) {
 
             int plus {};
@@ -183,11 +183,11 @@ __device__ void _cupy_boolrelextrema_2D( const int  in_x,
 
             if ( axis == 0 ) {
                 plus  = tx + o;
-				minus = tx - o;
+                minus = tx - o;
 
                 clip_plus( clip, in_y, plus );
-				clip_minus( clip, in_y, minus );
-				
+                clip_minus( clip, in_y, minus );
+
                 plus  = plus * in_x + ty;
                 minus = minus * in_x + ty;
             } else {
@@ -199,7 +199,7 @@ __device__ void _cupy_boolrelextrema_2D( const int  in_x,
 
                 plus  = tx * in_x + plus;
                 minus = tx * in_x + minus;
-			}
+            }
 
             temp &= func( data, inp[plus] );
             temp &= func( data, inp[minus] );
