@@ -21,7 +21,7 @@
 - PR #222 - Improved performance for various window functions
 - PR #235 - Improve Wavelets functions performance
 - PR #242 - Add PyTorch disclaimer to notebook
-- PR #243 - Optimize Peak Finding functions
+- PR #243 - Improve Peak Finding function performance
 - PR #242 - Add PyTorch disclaimer to notebook
 
 ## Bug Fixes
