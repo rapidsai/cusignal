@@ -124,6 +124,7 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
         for (( i=0; i<${NUMGPU}; i++ ))
         do
             GET_CC ${i}
+            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
             GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
         done
     else
@@ -131,12 +132,16 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
         for i in ${arr[@]}
         do
             GET_CC ${i}
+            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
             GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
         done
     fi
     
 else
     echo "Building for *ALL* supported GPU architectures..."
+    echo -e "\t including: CUDA 10.X - {60,61,62,70,72,75}"
+    echo -e "\t including: CUDA 11.X - {60,61,62,70,72,75,80}"
+    NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
 
     GPU_ARCH="--generate-code arch=compute_60,code=sm_60 \
     --generate-code arch=compute_61,code=sm_61 \
@@ -156,7 +161,6 @@ fi
 # Build fatbins
 SRC="cpp/src"
 FAT="python/cusignal"
-NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
 GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
 
 # Must check GCC for Centos OS
