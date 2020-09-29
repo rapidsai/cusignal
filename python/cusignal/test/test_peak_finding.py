@@ -23,11 +23,10 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 class TestPeakFinding:
     @pytest.mark.benchmark(group="Argrelmin")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    @pytest.mark.parametrize("axis", [-1])
-    @pytest.mark.parametrize("order", [1, 2, 25])
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])
-    @pytest.mark.parametrize("dim", [1])
     class TestArgrelmin:
         def cpu_version(self, sig, axis, order, mode):
             return signal.argrelmin(sig, axis, order, mode)
@@ -40,32 +39,24 @@ class TestPeakFinding:
 
         @pytest.mark.cpu
         def test_argrelmin_cpu(
-            self, rand_data_gen, benchmark, num_samps, dim, axis, order, mode
+            self, rand_2d_data_gen, benchmark, num_samps, axis, order, mode
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
         def test_argrelmin_gpu(
-            self,
-            rand_data_gen,
-            gpubenchmark,
-            num_samps,
-            dim,
-            axis,
-            order,
-            mode,
+            self, rand_2d_data_gen, gpubenchmark, num_samps, axis, order, mode
         ):
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            key = self.cpu_version(cpu_sig, axis, order, mode)
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
-            assert array_equal(cp.asnumpy(output[0]), key[0])
+            key = self.cpu_version(cpu_sig, axis, order, mode)
+            assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="TestArgrelmax")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    @pytest.mark.parametrize("axis", [-1])
-    @pytest.mark.parametrize("order", [1, 2, 25])
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])
-    @pytest.mark.parametrize("dim", [1])
     class TestArgrelmax:
         def cpu_version(self, sig, axis, order, mode):
             return signal.argrelmax(sig, axis, order, mode)
@@ -78,74 +69,57 @@ class TestPeakFinding:
 
         @pytest.mark.cpu
         def test_argrelmax_cpu(
-            self, rand_data_gen, benchmark, num_samps, dim, axis, order, mode
+            self, rand_2d_data_gen, benchmark, num_samps, axis, order, mode
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
         def test_argrelmax_gpu(
-            self,
-            rand_data_gen,
-            gpubenchmark,
-            num_samps,
-            dim,
-            axis,
-            order,
-            mode,
+            self, rand_2d_data_gen, gpubenchmark, num_samps, axis, order, mode
         ):
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
             key = self.cpu_version(cpu_sig, axis, order, mode)
-            assert array_equal(cp.asnumpy(output[0]), key[0])
+            assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Argrelextrema")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
-    @pytest.mark.parametrize("axis", [-1])
-    @pytest.mark.parametrize("order", [1, 2, 25])
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("axis", [0, 1])
+    @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])
-    @pytest.mark.parametrize("dim", [1])
     class TestArgrelextrema:
         def cpu_version(self, sig, axis, order, mode):
-            return signal.argrelextrema(
-                sig, np.greater_equal, axis, order, mode
-            )
+            return signal.argrelextrema(sig, np.less, axis, order, mode)
 
         def gpu_version(self, sig, axis, order, mode):
             with cp.cuda.Stream.null:
-                out = cusignal.argrelextrema(
-                    sig, cp.greater_equal, axis, order, mode
-                )
+                out = cusignal.argrelextrema(sig, cp.less, axis, order, mode)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
         def test_argrelextrema_cpu(
             self,
-            rand_data_gen,
+            rand_2d_data_gen,
             benchmark,
             num_samps,
-            dim,
             axis,
             order,
             mode,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            cpu_sig, _ = rand_2d_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
         def test_argrelextrema_gpu(
             self,
-            rand_data_gen,
+            rand_2d_data_gen,
             gpubenchmark,
             num_samps,
-            dim,
             axis,
             order,
             mode,
         ):
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
             key = self.cpu_version(cpu_sig, axis, order, mode)
-            print()
-            print(cp.asnumpy(output[0]))
-            print(key[0])
-            assert array_equal(cp.asnumpy(output[0]), key[0])
+            assert array_equal(cp.asnumpy(output), key)
