@@ -50,8 +50,14 @@ __device__ __forceinline__ bool not_equal( const T &a, const T &b ) {
 template<typename T>
 using op_func = bool ( * )( const T &, const T & );
 
-template<typename T>
-__device__ op_func<T> const func[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+__device__ op_func<int> const func_i[6]      = { less, greater, less_equal, greater_equal, equal, not_equal };
+__device__ op_func<long int> const func_l[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
+__device__ op_func<float> const func_f[6]    = { less, greater, less_equal, greater_equal, equal, not_equal };
+__device__ op_func<double> const func_d[6]   = { less, greater, less_equal, greater_equal, equal, not_equal };
+
+///////////////////////////////////////////////////////////////////////////////
+//                              HELPER FUNCTIONS                             //
+///////////////////////////////////////////////////////////////////////////////
 
 __device__ __forceinline__ void clip_plus( const bool &clip, const int &n, int &plus ) {
     if ( clip ) {
@@ -81,13 +87,13 @@ __device__ __forceinline__ void clip_minus( const bool &clip, const int &n, int 
 //                          BOOLRELEXTREMA 1D                                //
 ///////////////////////////////////////////////////////////////////////////////
 
-template<typename T>
+template<typename T, class U>
 __device__ void _cupy_boolrelextrema_1D( const int  n,
                                          const int  order,
                                          const bool clip,
-                                         const int  comp,
                                          const T *__restrict__ inp,
-                                         bool *__restrict__ results ) {
+                                         bool *__restrict__ results,
+                                         U func ) {
 
     const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
@@ -104,8 +110,8 @@ __device__ void _cupy_boolrelextrema_1D( const int  n,
             clip_plus( clip, n, plus );
             clip_minus( clip, n, minus );
 
-            temp &= func<T>[comp]( data, inp[plus] );
-            temp &= func<T>[comp]( data, inp[minus] );
+            temp &= func( data, inp[plus] );
+            temp &= func( data, inp[minus] );
         }
         results[tid] = temp;
     }
@@ -117,7 +123,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_int3
                                                                                    const int  comp,
                                                                                    const int *__restrict__ inp,
                                                                                    bool *__restrict__ results ) {
-    _cupy_boolrelextrema_1D<int>( n, order, clip, comp, inp, results );
+    _cupy_boolrelextrema_1D<int, op_func<int>>( n, order, clip, inp, results, func_i[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_int64( const int  n,
@@ -126,7 +132,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_int6
                                                                                    const int  comp,
                                                                                    const long int *__restrict__ inp,
                                                                                    bool *__restrict__ results ) {
-    _cupy_boolrelextrema_1D<long int>( n, order, clip, comp, inp, results );
+    _cupy_boolrelextrema_1D<long int, op_func<long int>>( n, order, clip, inp, results, func_l[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_float32( const int  n,
@@ -135,7 +141,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_floa
                                                                                      const int  comp,
                                                                                      const float *__restrict__ inp,
                                                                                      bool *__restrict__ results ) {
-    _cupy_boolrelextrema_1D<float>( n, order, clip, comp, inp, results );
+    _cupy_boolrelextrema_1D<float, op_func<float>>( n, order, clip, inp, results, func_f[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_float64( const int  n,
@@ -144,22 +150,22 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_1D_floa
                                                                                      const int  comp,
                                                                                      const double *__restrict__ inp,
                                                                                      bool *__restrict__ results ) {
-    _cupy_boolrelextrema_1D<double>( n, order, clip, comp, inp, results );
+    _cupy_boolrelextrema_1D<double, op_func<double>>( n, order, clip, inp, results, func_d[comp] );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 //                          BOOLRELEXTREMA 2D                                //
 ///////////////////////////////////////////////////////////////////////////////
 
-template<typename T>
+template<typename T, class U>
 __device__ void _cupy_boolrelextrema_2D( const int  in_x,
                                          const int  in_y,
                                          const int  order,
                                          const bool clip,
-                                         const int  comp,
                                          const int  axis,
                                          const T *__restrict__ inp,
-                                         bool *__restrict__ results ) {
+                                         bool *__restrict__ results,
+                                         U func ) {
 
     const int ty { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int tx { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
@@ -195,8 +201,8 @@ __device__ void _cupy_boolrelextrema_2D( const int  in_x,
                 minus = tx * in_x + minus;
             }
 
-            temp &= func<T>[comp]( data, inp[plus] );
-            temp &= func<T>[comp]( data, inp[minus] );
+            temp &= func( data, inp[plus] );
+            temp &= func( data, inp[minus] );
         }
         results[tid] = temp;
     }
@@ -210,7 +216,7 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_int3
                                                                                    const int  axis,
                                                                                    const int *__restrict__ inp,
                                                                                    bool *__restrict__ results ) {
-    _cupy_boolrelextrema_2D<int>( in_x, in_y, order, clip, comp, axis, inp, results );
+    _cupy_boolrelextrema_2D<int, op_func<int>>( in_x, in_y, order, clip, axis, inp, results, func_i[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_int64( const int  in_x,
@@ -221,7 +227,7 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_int6
                                                                                    const int  axis,
                                                                                    const long int *__restrict__ inp,
                                                                                    bool *__restrict__ results ) {
-    _cupy_boolrelextrema_2D<long int>( in_x, in_y, order, clip, comp, axis, inp, results );
+    _cupy_boolrelextrema_2D<long int, op_func<long int>>( in_x, in_y, order, clip, axis, inp, results, func_l[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_float32( const int  in_x,
@@ -232,7 +238,7 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_floa
                                                                                      const int  axis,
                                                                                      const float *__restrict__ inp,
                                                                                      bool *__restrict__ results ) {
-    _cupy_boolrelextrema_2D<float>( in_x, in_y, order, clip, comp, axis, inp, results );
+    _cupy_boolrelextrema_2D<float, op_func<float>>( in_x, in_y, order, clip, axis, inp, results, func_f[comp] );
 }
 
 extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_float64( const int  in_x,
@@ -243,5 +249,5 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_floa
                                                                                      const int  axis,
                                                                                      const double *__restrict__ inp,
                                                                                      bool *__restrict__ results ) {
-    _cupy_boolrelextrema_2D<double>( in_x, in_y, order, clip, comp, axis, inp, results );
+    _cupy_boolrelextrema_2D<double, op_func<double>>( in_x, in_y, order, clip, axis, inp, results, func_d[comp] );
 }
