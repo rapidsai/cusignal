@@ -161,6 +161,11 @@ mkdir -p ${FAT}/${FOLDER}/
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
 
+echo "Building Peak Finding kernels..."
+FOLDER="peak_finding"
+mkdir -p ${FAT}/${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_peak_finding.cu -odir ${FAT}/${FOLDER}/ &
+
 echo "Building Spectral kernels..."
 FOLDER="spectral_analysis"
 mkdir -p ${FAT}/${FOLDER}/

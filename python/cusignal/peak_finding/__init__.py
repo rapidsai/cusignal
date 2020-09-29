@@ -14,5 +14,5 @@
 from cusignal.peak_finding.peak_finding import (
     argrelmin,
     argrelmax,
-    argrelextrema
+    argrelextrema,
 )

@@ -15,6 +15,8 @@
 
 import cupy as cp
 
+from ._peak_finding_cuda import _peak_finding
+
 
 def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     """
@@ -46,28 +48,31 @@ def _boolrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     --------
     argrelmax, argrelmin
     """
-    data = cp.asarray(data)
     if (int(order) != order) or (order < 1):
         raise ValueError("Order must be an int >= 1")
 
-    datalen = data.shape[axis]
-    locs = cp.arange(0, datalen)
-    results = cp.ones(data.shape, dtype=bool)
+    if data.ndim < 3:
+        results = cp.empty(data.shape, dtype=bool)
+        _peak_finding(data, comparator, axis, order, mode, results)
+    else:
+        datalen = data.shape[axis]
+        locs = cp.arange(0, datalen)
+        results = cp.ones(data.shape, dtype=bool)
+        main = cp.take(data, locs, axis=axis)
+        for shift in cp.arange(1, order + 1):
+            if mode == "clip":
+                p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
+                m_locs = cp.clip(locs - shift, a_min=0)
+            else:
+                p_locs = locs + shift
+                m_locs = locs - shift
+            plus = cp.take(data, p_locs, axis=axis)
+            minus = cp.take(data, m_locs, axis=axis)
+            results &= comparator(main, plus)
+            results &= comparator(main, minus)
 
-    main = cp.take(data, locs, axis=axis)
-    for shift in cp.arange(1, order + 1):
-        if mode == 'clip':
-            p_locs = cp.clip(locs + shift, a_max=(datalen - 1))
-            m_locs = cp.clip(locs - shift, a_min=0)
-        else:
-            p_locs = locs + shift
-            m_locs = locs - shift
-        plus = cp.take(data, p_locs, axis=axis)
-        minus = cp.take(data, m_locs, axis=axis)
-        results &= comparator(main, plus)
-        results &= comparator(main, minus)
-        if ~results.any():
-            return results
+            if ~results.any():
+                return results
 
     return results
 
@@ -227,4 +232,4 @@ def argrelextrema(data, comparator, axis=0, order=1, mode="clip"):
             "CuPy `take` doesn't support `mode='raise'`."
         )
 
-    return cp.asarray(cp.nonzero(results))
+    return cp.nonzero(results)

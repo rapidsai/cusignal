@@ -50,7 +50,7 @@ class TestPeakFinding:
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
             key = self.cpu_version(cpu_sig, axis, order, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            assert array_equal(cp.asnumpy(output[0]), key[0])
 
     @pytest.mark.benchmark(group="TestArgrelmax")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -80,7 +80,7 @@ class TestPeakFinding:
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
             key = self.cpu_version(cpu_sig, axis, order, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            assert array_equal(cp.asnumpy(output[0]), key[0])
 
     @pytest.mark.benchmark(group="Argrelextrema")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -122,4 +122,4 @@ class TestPeakFinding:
             cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
             key = self.cpu_version(cpu_sig, axis, order, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            assert array_equal(cp.asnumpy(output[0]), key[0])
