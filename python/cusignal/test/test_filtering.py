@@ -70,35 +70,6 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Lfiltic")
-    # @pytest.mark.parametrize("num_a", [1.0, 1.0/3])
-    # @pytest.mark.parametrize("num_b", [1.0/2, 1.0/4])
-    # @pytest.mark.parametrize("num_y", [-1.])
-
-    # class TestLfiltic:
-    #     def cpu_version(self, b, a, y):
-    #         return signal.lfiltic(b, a, y)
-
-    #     def gpu_version(self, b, a, y):
-    #         with cp.cuda.Stream.null:
-    #             out = cusignal.lfiltic(b, a, y)
-    #         cp.cuda.Stream.null.synchronize()
-    #         return out
-
-    #     @pytest.mark.cpu
-    #     def test_lfiltic_cpu(self, benchmark, num_b, num_a, num_y):
-
-    #         benchmark(self.cpu_version, num_b, num_a, num_y)
-
-    #     def test_lfiltic_gpu(self, gpubenchmark, num_b, num_a,num_y):
-
-    #         d_num_a = cp.asarray(num_a)
-    #         d_num_b = cp.asarray(num_b)
-    #         output = gpubenchmark(self.gpu_version, d_num_b, d_num_a, num_y)
-
-    #         key = self.cpu_version(num_b, num_a,  num_y)
-    #         assert array_equal(cp.asnumpy(output), key)
-
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
