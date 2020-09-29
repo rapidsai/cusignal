@@ -99,6 +99,13 @@ if hasArg clean; then
     done
 fi
 
+################################################################################
+# Build fatbins
+SRC="cpp/src"
+FAT="python/cusignal"
+GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
+NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
+
 GET_CC(){
     MAJOR=`python3 -c 'from ctypes import *; \
         sms = c_int(); \
@@ -141,7 +148,7 @@ else
     echo "Building for *ALL* supported GPU architectures..."
     echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
     echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
-    NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
+    
 
     GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
     --generate-code arch=compute_50,code=sm_52 \
@@ -160,11 +167,7 @@ else
     fi
 fi
 
-################################################################################
-# Build fatbins
-SRC="cpp/src"
-FAT="python/cusignal"
-GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
+
 
 # Must check GCC for Centos OS
 if [ "$GCC_V" -lt 7 ] || [ "$NVCC_V" -lt 11 ]; then
