@@ -139,11 +139,14 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     
 else
     echo "Building for *ALL* supported GPU architectures..."
-    echo -e "\t including: CUDA 10.X - {60,61,62,70,72,75}"
-    echo -e "\t including: CUDA 11.X - {60,61,62,70,72,75,80}"
+    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
+    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
     NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
 
-    GPU_ARCH="--generate-code arch=compute_60,code=sm_60 \
+    GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
+    --generate-code arch=compute_50,code=sm_52 \
+    --generate-code arch=compute_53,code=sm_53 \
+    --generate-code arch=compute_60,code=sm_60 \
     --generate-code arch=compute_61,code=sm_61 \
     --generate-code arch=compute_62,code=sm_62 \
     --generate-code arch=compute_70,code=sm_70 \
