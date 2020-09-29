@@ -11,42 +11,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <nvfunctional>
+
 ///////////////////////////////////////////////////////////////////////////////
 //                            FUNCTION POINTERS                              //
 ///////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-__device__ __forceinline__ bool less( T a, T b ) {
+__device__ __forceinline__ bool less( const T &a, const T &b ) {
     return ( a < b );
 }
 
 template<typename T>
-__device__ __forceinline__ bool greater( T a, T b ) {
+__device__ __forceinline__ bool greater( const T &a, const T &b ) {
     return ( a > b );
 }
 
 template<typename T>
-__device__ __forceinline__ bool less_equal( T a, T b ) {
+__device__ __forceinline__ bool less_equal( const T &a, const T &b ) {
     return ( a <= b );
 }
 
 template<typename T>
-__device__ __forceinline__ bool greater_equal( T a, T b ) {
+__device__ __forceinline__ bool greater_equal( const T &a, const T &b ) {
     return ( a >= b );
 }
 
 template<typename T>
-__device__ __forceinline__ bool equal( T a, T b ) {
+__device__ __forceinline__ bool equal( const T &a, const T &b ) {
     return ( a == b );
 }
 
 template<typename T>
-__device__ __forceinline__ bool not_equal( T a, T b ) {
+__device__ __forceinline__ bool not_equal( const T &a, const T &b ) {
     return ( a != b );
 }
 
 template<typename T>
-using op_func = bool ( * )( T, T );
+using op_func = bool ( * )( const T &, const T & );
 
 template<typename T>
 __device__ op_func<T> const func[6] = { less, greater, less_equal, greater_equal, equal, not_equal };
@@ -200,7 +202,7 @@ __device__ void _cupy_boolrelextrema_2D( const int  in_x,
     }
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_int32( const int  in_x,
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_int32( const int  in_x,
                                                                                    const int  in_y,
                                                                                    const int  order,
                                                                                    const bool clip,
@@ -211,7 +213,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_int3
     _cupy_boolrelextrema_2D<int>( in_x, in_y, order, clip, comp, axis, inp, results );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_int64( const int  in_x,
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_int64( const int  in_x,
                                                                                    const int  in_y,
                                                                                    const int  order,
                                                                                    const bool clip,
@@ -222,7 +224,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_int6
     _cupy_boolrelextrema_2D<long int>( in_x, in_y, order, clip, comp, axis, inp, results );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_float32( const int  in_x,
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_float32( const int  in_x,
                                                                                      const int  in_y,
                                                                                      const int  order,
                                                                                      const bool clip,
@@ -233,7 +235,7 @@ extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_floa
     _cupy_boolrelextrema_2D<float>( in_x, in_y, order, clip, comp, axis, inp, results );
 }
 
-extern "C" __global__ void __launch_bounds__( 512 ) _cupy_boolrelextrema_2D_float64( const int  in_x,
+extern "C" __global__ void __launch_bounds__( 256 ) _cupy_boolrelextrema_2D_float64( const int  in_x,
                                                                                      const int  in_y,
                                                                                      const int  order,
                                                                                      const bool clip,
