@@ -117,8 +117,8 @@ The complete cuSignal API documentation including a complete list of functionali
 ## Installation
 ### Note: cuSignal installs through Conda will run natively on **ALL** supported GPU architectures.
 
-1. CUDA 10.X -- 60, 61, 62, 70, 72, 75
-2. CUDA 11.X -- 60, 61, 62, 70, 72, 75, 80
+1. CUDA 10.X -- [60, 61, 62] (Pascal), [70, 72] (Volta), [75] (Turing)
+2. CUDA 11.X -- [60, 61, 62] (Pascal), [70, 72] (Volta), [75] (Turing), [80] (Ampere)
 
 If you need to run on an older compute capability such as Kepler or Maxwell, you will need to build from source. Target architecture will be automatically detected at build time.
 
