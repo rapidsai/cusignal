@@ -323,8 +323,13 @@ A full list of subsequent modules, specific to your SDR are listed [here](https:
 - Pluto SDR: `conda install -c conda-forge soapysdr-module-plutosdr`
 - UHD: `conda install -c conda-forge soapysdr-module-uhd`
 
-For examples using SoapySDR and cuSignal, please see the [notebooks/sdr](https://github.com/rapidsai/cusignal/blob/main/notebooks/sdr) directory.
+Another popular SDR library, specific to the rtl-sdr, is [pyrtlsdr](https://github.com/roger-/pyrtlsdr).
 
+For examples using SoapySDR, pyrtlsdr, and cuSignal, please see the [notebooks/sdr](https://github.com/rapidsai/cusignal/blob/main/notebooks/sdr) directory.
+
+Please note, for most rtlsdr devices, you'll need to blacklist the libdvb driver in Linux. To do this, run `sudo vi /etc/modprobe.d/blacklist.conf` and add `blacklist dvb_usb_rtl28xxu` to the end of the file. Restart your computer upon completion.
+
+If you have a SDR that isn't listed above (like the LimeSDR), don't worry! You can symbolically link the system-wide Python bindings installed via `apt-get` to the local conda environment. Please file an issue if you run into any problems.
 
 ## Benchmarking
 cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal processing implementations. To run cuSignal's benchmark suite, **navigate to the topmost python directory ($CUSIGNAL_HOME/python)** and run:
