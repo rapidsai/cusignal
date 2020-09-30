@@ -176,7 +176,7 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Hilbert")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
     class TestHilbert:
         def cpu_version(self, sig):
             return signal.hilbert(sig)
@@ -188,38 +188,15 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps)
+        def test_hilbert_cpu(self, rand_data_gen, benchmark, dim, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, num_samps):
+        def test_hilbert_gpu(
+            self, rand_data_gen, gpubenchmark, dim, num_samps
+        ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(self.gpu_version, gpu_sig)
-
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="Hilbert2")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    class TestHilbert2:
-        def cpu_version(self, sig):
-            return signal.hilbert2(sig)
-
-        def gpu_version(self, sig):
-            with cp.cuda.Stream.null:
-                out = cusignal.hilbert2(sig)
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_hilbert2_cpu(self, rand_data_gen, benchmark, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps, 2)
-            benchmark(self.cpu_version, cpu_sig)
-
-        def test_hilbert2_gpu(self, rand_data_gen, gpubenchmark, num_samps):
-
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
@@ -435,7 +412,7 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="UpFirDn")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 14), (2, 2 ** 8)])
     @pytest.mark.parametrize("up", [2, 3, 7])
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("axis", [-1, 0])
@@ -451,9 +428,9 @@ class TestFilter:
 
         @pytest.mark.cpu
         def test_upfirdn_cpu(
-            self, rand_data_gen, benchmark, num_samps, up, down, axis
+            self, rand_data_gen, benchmark, dim, num_samps, up, down, axis
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
             benchmark(
                 self.cpu_version,
                 cpu_sig,
@@ -466,63 +443,14 @@ class TestFilter:
             self,
             rand_data_gen,
             gpubenchmark,
+            dim,
             num_samps,
             up,
             down,
             axis,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(
-                self.gpu_version,
-                gpu_sig,
-                up,
-                down,
-                axis,
-            )
-
-            key = self.cpu_version(cpu_sig, up, down, axis)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="UpFirDn2d")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    @pytest.mark.parametrize("up", [2, 3, 7])
-    @pytest.mark.parametrize("down", [1, 2, 9])
-    @pytest.mark.parametrize("axis", [-1, 0])
-    class TestUpFirDn2d:
-        def cpu_version(self, sig, up, down, axis):
-            return signal.upfirdn([1, 1, 1], sig, up, down, axis)
-
-        def gpu_version(self, sig, up, down, axis):
-            with cp.cuda.Stream.null:
-                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_upfirdn2d_cpu(
-            self, rand_data_gen, benchmark, num_samps, up, down, axis
-        ):
-            cpu_sig, _ = rand_data_gen(num_samps, 2)
-            benchmark(
-                self.cpu_version,
-                cpu_sig,
-                up,
-                down,
-                axis,
-            )
-
-        def test_upfirdn2d_gpu(
-            self,
-            rand_data_gen,
-            gpubenchmark,
-            num_samps,
-            up,
-            down,
-            axis,
-        ):
-
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
