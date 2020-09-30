@@ -62,13 +62,12 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
         }
     }
 
-    __syncthreads( );
+    block.sync( );
 
     T local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -98,7 +97,7 @@ __device__ void _cupy_channelizer_8x8( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         T local_reg { s_mem[ty][tx] };
 
@@ -215,13 +214,12 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
         }
     }
 
-    __syncthreads( );
+    block.sync( );
 
     T local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -251,7 +249,7 @@ __device__ void _cupy_channelizer_16x16( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         T local_reg { s_mem[ty][tx] };
 
@@ -367,14 +365,12 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
         }
     }
 
-    __syncthreads( );
+    block.sync( );
 
     T local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
-
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -404,7 +400,7 @@ __device__ void _cupy_channelizer_32x32( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         T local_reg { s_mem[ty][tx] };
 
@@ -526,13 +522,12 @@ __device__ void _cupy_channelizer_float32_complex64( const int n_chans,
         s_mem[tx][ty] = 0.0f;
     }
 
-    __syncthreads( );
+    block.sync( );
 
     float local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -546,7 +541,7 @@ __device__ void _cupy_channelizer_float32_complex64( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         float local_reg { s_mem[ty][tx] };
 
@@ -634,13 +629,12 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
         s_mem[tx][ty] = make_cuFloatComplex( 0.0f, 0.0f );
     }
 
-    __syncthreads( );
+    block.sync( );
 
     cuFloatComplex local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -654,7 +648,7 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         cuFloatComplex local_reg { s_mem[ty][tx] };
 
@@ -743,13 +737,12 @@ __device__ void _cupy_channelizer_float64_complex128( const int n_chans,
         s_mem[tx][ty] = 0.0;
     }
 
-    __syncthreads( );
+    block.sync( );
 
     double local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -763,7 +756,7 @@ __device__ void _cupy_channelizer_float64_complex128( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         double local_reg { s_mem[ty][tx] };
 
@@ -851,13 +844,12 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
         s_mem[tx][ty] = make_cuDoubleComplex( 0.0, 0.0 );
     }
 
-    __syncthreads( );
+    block.sync( );
 
     cuDoubleComplex local_h { s_mem[ty][tx] };
 
-    __syncthreads( );
-
     for ( auto bid = blockIdx.y; bid < n_pts; bid += gridDim.y ) {
+        block.sync( );
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
@@ -871,7 +863,7 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
             }
         }
 
-        __syncthreads( );
+        block.sync( );
 
         cuDoubleComplex local_reg { s_mem[ty][tx] };
 
