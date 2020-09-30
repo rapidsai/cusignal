@@ -68,7 +68,6 @@ def linspace_range_gen():
 @pytest.fixture(scope="session")
 def rand_data_gen():
     def _generate(num_samps, dim=1, dtype=np.float64):
-        np.random.seed(1234)
 
         if dtype is np.float32 or dtype is np.float64:
             inp = tuple(np.ones(dim, dtype=int) * num_samps)
