@@ -130,7 +130,7 @@ class TestFilterDesign:
 
         def test_cmplx_sort_gpu(self, gpubenchmark, p):
 
-            output = gpubenchmark(self.gpu_version, p)
+            output, _ = gpubenchmark(self.gpu_version, p)
 
-            key = self.cpu_version(p)
+            key, _ = self.cpu_version(p)
             assert array_equal(cp.asnumpy(output), key)

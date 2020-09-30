@@ -27,7 +27,6 @@ class TestConvolution:
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    @pytest.mark.parametrize("dim", [1])
     class TestCorrelate:
         def cpu_version(self, sig, num_taps, mode, method):
             return signal.correlate(sig, num_taps, mode=mode, method=method)
@@ -46,13 +45,12 @@ class TestConvolution:
             rand_data_gen,
             benchmark,
             num_samps,
-            dim,
             num_taps,
             mode,
             method,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
-            cpu_filt, _ = rand_data_gen(num_taps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
+            cpu_filt, _ = rand_data_gen(num_taps, 1)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, mode, method)
 
         def test_correlate1d_gpu(
@@ -60,14 +58,13 @@ class TestConvolution:
             rand_data_gen,
             gpubenchmark,
             num_samps,
-            dim,
             num_taps,
             mode,
             method,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            cpu_filt, gpu_filt = rand_data_gen(num_taps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 1)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -84,7 +81,6 @@ class TestConvolution:
     @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
-    @pytest.mark.parametrize("dim", [1])
     class TestConvolve:
         def cpu_version(self, sig, win, mode, method):
             return signal.convolve(sig, win, mode=mode, method=method)
@@ -101,13 +97,12 @@ class TestConvolution:
             rand_data_gen,
             benchmark,
             num_samps,
-            dim,
             num_taps,
             mode,
             method,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
-            cpu_win = signal.windows.hann(num_taps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
+            cpu_win = signal.windows.hann(num_taps, 1)
 
             benchmark(self.cpu_version, cpu_sig, cpu_win, mode, method)
 
@@ -116,26 +111,24 @@ class TestConvolution:
             rand_data_gen,
             gpubenchmark,
             num_samps,
-            dim,
             num_taps,
             mode,
             method,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            gpu_win = cusignal.windows.hann(num_taps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
+            gpu_win = cusignal.windows.hann(num_taps, 1)
             output = gpubenchmark(
                 self.gpu_version, gpu_sig, gpu_win, mode, method
             )
 
-            cpu_win = signal.windows.hann(num_taps, dim)
+            cpu_win = signal.windows.hann(num_taps, 1)
             key = self.cpu_version(cpu_sig, cpu_win, mode, method)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="FFTConvolve")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("dim", [1])
     class TestFFTConvolve:
         def cpu_version(self, sig, mode):
             return signal.fftconvolve(sig, sig[::-1], mode=mode)
@@ -148,16 +141,16 @@ class TestConvolution:
 
         @pytest.mark.cpu
         def test_fftconvolve_cpu(
-            self, rand_data_gen, benchmark, num_samps, dim, mode
+            self, rand_data_gen, benchmark, num_samps, mode
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
             benchmark(self.cpu_version, cpu_sig, mode)
 
         def test_fftconvolve_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, dim, mode
+            self, rand_data_gen, gpubenchmark, num_samps, mode
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
             output = gpubenchmark(self.gpu_version, gpu_sig, mode)
 
             key = self.cpu_version(cpu_sig, mode)
@@ -168,7 +161,6 @@ class TestConvolution:
     @pytest.mark.parametrize("num_taps", [5, 100])
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("dim", [2])
     class TestConvolve2d:
         def cpu_version(self, sig, filt, boundary, mode):
             return signal.convolve2d(sig, filt, boundary=boundary, mode=mode)
@@ -187,13 +179,12 @@ class TestConvolution:
             rand_data_gen,
             benchmark,
             num_samps,
-            dim,
             num_taps,
             boundary,
             mode,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
-            cpu_filt, _ = rand_data_gen(num_taps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 2)
+            cpu_filt, _ = rand_data_gen(num_taps, 2)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
         def test_convolve2d_gpu(
@@ -201,14 +192,13 @@ class TestConvolution:
             rand_data_gen,
             gpubenchmark,
             num_samps,
-            dim,
             num_taps,
             boundary,
             mode,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            cpu_filt, gpu_filt = rand_data_gen(num_taps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 2)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -225,7 +215,6 @@ class TestConvolution:
     @pytest.mark.parametrize("num_taps", [5, 100])
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
-    @pytest.mark.parametrize("dim", [2])
     class TestCorrelate2d:
         def cpu_version(self, sig, filt, boundary, mode):
             return signal.correlate2d(sig, filt, boundary=boundary, mode=mode)
@@ -244,13 +233,12 @@ class TestConvolution:
             rand_data_gen,
             benchmark,
             num_samps,
-            dim,
             num_taps,
             boundary,
             mode,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
-            cpu_filt, _ = rand_data_gen(num_taps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 2)
+            cpu_filt, _ = rand_data_gen(num_taps, 2)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
         def test_correlate2d_gpu(
@@ -258,14 +246,13 @@ class TestConvolution:
             rand_data_gen,
             gpubenchmark,
             num_samps,
-            dim,
             num_taps,
             boundary,
             mode,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            cpu_filt, gpu_filt = rand_data_gen(num_taps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 2)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,

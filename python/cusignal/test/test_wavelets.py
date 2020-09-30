@@ -96,9 +96,9 @@ class TestWavelets:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="CWT")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
-    @pytest.mark.parametrize("dim", [1])
     class TestCWT:
         def cpu_version(self, sig, wavelet, widths):
             return signal.cwt(sig, wavelet, np.arange(1, widths))
@@ -111,53 +111,17 @@ class TestWavelets:
 
         @pytest.mark.cpu
         def test_cwt_cpu(
-            self, rand_data_gen, benchmark, num_samps, dim, widths
+            self, rand_data_gen, benchmark, dtype, num_samps, widths
         ):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             wavelet = signal.ricker
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
         def test_cwt_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, dim, widths
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, widths
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
-            cu_wavelet = cusignal.ricker
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, cu_wavelet, widths
-            )
-
-            wavelet = signal.ricker
-            key = self.cpu_version(cpu_sig, wavelet, widths)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="CWTComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("widths", [31, 127])
-    @pytest.mark.parametrize("dim", [1])
-    class TestCWTComplex:
-        def cpu_version(self, sig, wavelet, widths):
-            return signal.cwt(sig, wavelet, np.arange(1, widths))
-
-        def gpu_version(self, sig, wavelet, widths):
-            with cp.cuda.Stream.null:
-                out = cusignal.cwt(sig, wavelet, np.arange(1, widths))
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_cwt_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, dim, widths
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps, dim)
-            wavelet = signal.ricker
-            benchmark(self.cpu_version, cpu_sig, wavelet, widths)
-
-        def test_cwt_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, dim, widths
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
             cu_wavelet = cusignal.ricker
             output = gpubenchmark(
                 self.gpu_version, gpu_sig, cu_wavelet, widths

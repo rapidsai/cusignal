@@ -67,25 +67,19 @@ def linspace_range_gen():
 # Generate array with random data
 @pytest.fixture(scope="session")
 def rand_data_gen():
-    def _generate(num_samps, dim):
+    def _generate(num_samps, dim=1, dtype=np.float64):
+        np.random.seed(1234)
 
-        inp = tuple(np.ones(dim, dtype=int) * num_samps)
-        cpu_sig = np.random.random(inp)
-        gpu_sig = cp.asarray(cpu_sig)
-
-        return cpu_sig, gpu_sig
-
-    return _generate
-
-
-# Generate array with random complex data
-@pytest.fixture(scope="session")
-def rand_complex_data_gen():
-    def _generate(num_samps, dim):
-
-        inp = tuple(np.ones(dim, dtype=int) * num_samps)
-        cpu_sig = np.random.random(inp) + 1j * np.random.random(inp)
-        gpu_sig = cp.asarray(cpu_sig)
+        if dtype is np.float32 or dtype is np.float64:
+            inp = tuple(np.ones(dim, dtype=int) * num_samps)
+            cpu_sig = np.random.random(inp)
+            cpu_sig = cpu_sig.astype(dtype)
+            gpu_sig = cp.asarray(cpu_sig)
+        else:
+            inp = tuple(np.ones(dim, dtype=int) * num_samps)
+            cpu_sig = np.random.random(inp) + 1j * np.random.random(inp)
+            cpu_sig = cpu_sig.astype(dtype)
+            gpu_sig = cp.asarray(cpu_sig)
 
         return cpu_sig, gpu_sig
 
