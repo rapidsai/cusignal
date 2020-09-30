@@ -658,10 +658,12 @@ def channelize_poly(x, h, n_chans):
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
     # Remove with CuPy v8
-    if (x.dtype) in _cupy_fft_cache:
-        plan = _cupy_fft_cache[(x.dtype)]
+    if (x.dtype, n_pts, n_taps, n_chans) in _cupy_fft_cache:
+        plan = _cupy_fft_cache[(x.dtype, n_pts, n_taps, n_chans)]
     else:
-        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(y, axes=-1)
+        plan = _cupy_fft_cache[
+            (x.dtype, n_pts, n_taps, n_chans)
+        ] = fftpack.get_fft_plan(y, axes=-1)
 
     y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 

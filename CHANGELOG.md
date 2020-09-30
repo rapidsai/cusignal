@@ -29,7 +29,9 @@
 - PR #221 - Synchronization issue with cusignal testing 
 - PR #237 - Update conda build files so fatbins are generated
 - PR #239 - Fix mode issue in peak finding module
+- PR #245 - Reduce number of default build architectures
 - PR #246 - Remove lfiltic function
+- PR #248 - Fix channelizer bugs
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
