@@ -22,6 +22,7 @@
 - PR #235 - Improve Wavelets functions performance
 - PR #242 - Add PyTorch disclaimer to notebook
 - PR #243 - Improve Peak Finding function performance
+- PR #249 - Update README to add SDR integration instructions and improved install clarity
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
