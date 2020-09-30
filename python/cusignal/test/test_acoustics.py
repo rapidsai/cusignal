@@ -15,17 +15,14 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
-from acoustics.cepstrum import complex_cepstrum, real_cepstrum
+
 from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
-from scipy import signal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
-# # Missing
-# # cceps_unwrap
-# # cceps
 
-def cceps_cpu(x, n=None):
+# https://github.com/python-acoustics/python-acoustics/blob/master/acoustics/cepstrum.py
+def complex_cepstrum(x, n=None):
     """Compute the complex cepstrum of a real sequence.
     Parameters
     ----------
@@ -64,7 +61,8 @@ def cceps_cpu(x, n=None):
 
     return ceps, ndelay
 
-def rceps_cpu(x, n=None):
+
+def real_cepstrum(x, n=None):
     """
     Compute the real cepstrum of a real sequence.
     x : ndarray
@@ -81,70 +79,60 @@ def rceps_cpu(x, n=None):
 
     return ceps
 
+
 class TestAcoustics:
-    @pytest.mark.benchmark(group="Rceps")
+    @pytest.mark.benchmark(group="ComplexCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
-    class TestRceps:
+    class TestComplexCepstrum:
         def cpu_version(self, sig):
-            return rceps_cpu(sig)
+            return complex_cepstrum(sig)
 
         def gpu_version(self, sig):
             with cp.cuda.Stream.null:
-                out = cusignal.rceps(sig)
+                out = cusignal.complex_cepstrum(sig)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
-        def test_rceps_cpu(self, rand_data_gen, benchmark, num_samps):
+        def test_complex_cepstrum_cpu(
+            self, rand_data_gen, benchmark, num_samps
+        ):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_rceps_gpu(self, rand_data_gen, gpubenchmark, num_samps):
+        def test_complex_cepstrum_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output, _ = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key, _ = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="RealCepstrum")
+    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    class TestRealCepstrum:
+        def cpu_version(self, sig):
+            return real_cepstrum(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.real_cepstrum(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_real_cepstrum_cpu(self, rand_data_gen, benchmark, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
+
+        def test_real_cepstrum_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps
+        ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
-
-
-#     @pytest.mark.benchmark(group="CcepsUnwrap")
-#     class TestCcepsUnwrap:
-#         def cpu_version(self, cpu_sig):
-#             return signal.freq_shift(cpu_sig)
-
-#         @pytest.mark.cpu
-#         def test_cceps_unwrap_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
-
-#         def test_cceps_unwrap_gpu(self, gpubenchmark):
-
-#             output = gpubenchmark(cusignal.detrend, gpu_sig)
-
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
-
-# @pytest.mark.benchmark(group="Cceps")
-# @pytest.mark.parametrize("num_samps", [5])
-# class TestCceps:
-#     def cpu_version(self, sig):
-#         return complex_cepstrum(sig)
-
-#     def gpu_version(self, sig):
-#         with cp.cuda.Stream.null:
-#             out = cusignal.cceps(sig)
-#         cp.cuda.Stream.null.synchronize()
-#         return out
-
-#     @pytest.mark.cpu
-#     def test_cceps_cpu(self, rand_data_gen, benchmark,  num_samps):
-#         cpu_sig, _ = rand_data_gen(num_samps)
-#         benchmark(self.cpu_version, cpu_sig)
-
-#     def test_cceps_gpu(self, rand_data_gen, gpubenchmark,  num_samps):
-
-#         cpu_sig, gpu_sig = rand_data_gen(num_samps)
-#         output = gpubenchmark(cusignal.detrend, gpu_sig)
-
-#         key = self.cpu_version(cpu_sig)
-#         assert array_equal(cp.asnumpy(output), key)
