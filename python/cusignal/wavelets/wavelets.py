@@ -12,7 +12,18 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from ..convolution.convolve import convolve
+
+_qmf_kernel = cp.ElementwiseKernel(
+    "T N",
+    "T output",
+    """
+    int sign = ( i % 2 ) ? -1 : 1;
+    output = (N - (i + 1)) * sign;
+    """,
+    "_qmf_kernel",
+)
 
 
 def qmf(hk):
@@ -25,9 +36,32 @@ def qmf(hk):
         Coefficients of high-pass filter.
 
     """
-    N = len(hk) - 1
-    asgn = [{0: 1, 1: -1}[k % 2] for k in range(N + 1)]
-    return hk[::-1] * cp.array(asgn)
+    N = len(hk)
+    output = cp.empty(N, dtype=cp.int64)
+
+    _qmf_kernel(N, output)
+
+    return output
+
+
+_morlet_kernel = cp.ElementwiseKernel(
+    "float64 delta, float64 start, float64 w, float64 pi, bool complete",
+    "T output",
+    """
+    double x = start + delta * i;
+
+    T temp = T(0, w * x);
+
+    temp = exp(temp);
+
+    if (complete) {
+        temp -= exp( -0.5 * (w * w) );
+    }
+
+    output = temp * exp( -0.5 * (x * x)) * pow(pi, -0.25)
+    """,
+    "_morlet_kernel",
+)
 
 
 def morlet(M, w=5.0, s=1.0, complete=True):
@@ -81,15 +115,28 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     with it.
 
     """
-    x = cp.linspace(-s * 2 * cp.pi, s * 2 * cp.pi, M)
-    output = cp.exp(1j * w * x)
+    output = cp.empty(M, dtype=cp.complex128)
+    end = s * 2 * np.pi
+    start = -s * 2 * np.pi
+    delta = (end - start) / (M - 1)
 
-    if complete:
-        output -= cp.exp(-0.5 * (w**2))
-
-    output *= cp.exp(-0.5 * (x**2)) * cp.pi**(-0.25)
+    _morlet_kernel(delta, start, w, np.pi, complete, output, size=M)
 
     return output
+
+
+_ricker_kernel = cp.ElementwiseKernel(
+    "T A, T wsq",
+    "T total",
+    """
+    T vec = i - (_ind.size() - 1.0) / 2;
+    T xsq = vec * vec;
+    T mod = ( 1 - xsq / wsq );
+    T gauss = exp( -xsq / ( 2 * wsq ) );
+    total = A * mod * gauss;
+    """,
+    "_ricker_kernel",
+)
 
 
 def ricker(points, a):
@@ -130,13 +177,13 @@ def ricker(points, a):
     >>> plt.show()
 
     """
-    A = 2 / (cp.sqrt(3 * a) * (cp.pi**0.25))
-    wsq = a**2
-    vec = cp.arange(0, points) - (points - 1.0) / 2
-    xsq = vec**2
-    mod = (1 - xsq / wsq)
-    gauss = cp.exp(-xsq / (2 * wsq))
-    total = A * mod * gauss
+    total = cp.empty(int(points), dtype=cp.float64)
+
+    A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
+    wsq = a ** 2
+
+    _ricker_kernel(float(A), float(wsq), total, size=points)
+
     return total
 
 
@@ -191,9 +238,8 @@ def cwt(data, wavelet, widths):
     >>> plt.show()
 
     """
-    output = cp.zeros([len(widths), len(data)])
+    output = cp.empty([len(widths), len(data)])
     for ind, width in enumerate(widths):
         wavelet_data = wavelet(min(10 * width, len(data)), width)
-        output[ind, :] = convolve(data, wavelet_data,
-                                  mode='same')
+        output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output

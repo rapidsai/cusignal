@@ -24,6 +24,19 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "cpu: mark CPU test cases")
 
 
+# Generate data for using range
+@pytest.fixture(scope="session")
+def range_data_gen():
+    def _generate(num_samps, endpoint=False):
+
+        cpu_sig = np.arange(num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
+
+        return cpu_sig, gpu_sig
+
+    return _generate
+
+
 # Generate data for using linspace
 @pytest.fixture(scope="session")
 def linspace_data_gen():
