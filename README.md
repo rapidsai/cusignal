@@ -114,6 +114,9 @@ The complete cuSignal API documentation including a complete list of functionali
 
 [cuSignal 0.15 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.16 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
+### Installation
+cuSignal has been tested on and supports all modern GPUs - from Maxwell (Jetson Nano) to Ampere. We recommend installing via Anaconda for users and via source for contributors.
+
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
