@@ -624,7 +624,7 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( btx < n_chans && ty < n_taps ) {
-        s_mem[tx][ty] = h[ty * n_chans + btx];
+        s_mem[tx][ty] = cuConjf( h[ty * n_chans + btx] );
     } else {
         s_mem[tx][ty] = make_cuFloatComplex( 0.0f, 0.0f );
     }
@@ -638,11 +638,12 @@ __device__ void _cupy_channelizer_complex64_complex64( const int n_chans,
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
-                s_mem[tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )];
+                s_mem[tx][( n_taps - 1 ) - ty] =
+                    cuConjf( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )] );
             }
         } else {
             if ( btx < n_chans && ty <= bid ) {
-                s_mem[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
+                s_mem[tx][bid - ty] = cuConjf( x[ty * n_chans + ( n_chans - 1 - btx )] );
             } else {
                 s_mem[tx][ty] = make_cuFloatComplex( 0.0f, 0.0f );
             }
@@ -839,7 +840,7 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
     // Initialize shared memory
     // Evaluate type at compile-time
     if ( btx < n_chans && ty < n_taps ) {
-        s_mem[tx][ty] = h[ty * n_chans + btx];
+        s_mem[tx][ty] = cuConj( h[ty * n_chans + btx] );
     } else {
         s_mem[tx][ty] = make_cuDoubleComplex( 0.0, 0.0 );
     }
@@ -853,11 +854,12 @@ __device__ void _cupy_channelizer_complex128_complex128( const int n_chans,
         // Load data
         if ( bid >= n_taps ) {
             if ( btx < n_chans && ty < n_taps ) {
-                s_mem[tx][( n_taps - 1 ) - ty] = x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )];
+                s_mem[tx][( n_taps - 1 ) - ty] =
+                    cuConj( x[( ( bid - n_taps + 1 ) + ty ) * n_chans + ( n_chans - 1 - btx )] );
             }
         } else {
             if ( btx < n_chans && ty <= bid ) {
-                s_mem[tx][bid - ty] = x[ty * n_chans + ( n_chans - 1 - btx )];
+                s_mem[tx][bid - ty] = cuConj( x[ty * n_chans + ( n_chans - 1 - btx )] );
             } else {
                 s_mem[tx][ty] = make_cuDoubleComplex( 0.0, 0.0 );
             }

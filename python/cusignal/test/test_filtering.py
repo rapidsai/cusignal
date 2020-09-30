@@ -15,6 +15,7 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+import scipy
 
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
@@ -87,7 +88,7 @@ def channelize_poly_cpu(x, h, n_chans):
         for mm in range(n_chans):
             vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
 
-        yy[:, i] = np.conj(np.fft.fft(vv))
+        yy[:, i] = np.conj(scipy.fft.fft(vv))
 
     return yy
 
@@ -509,10 +510,12 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="ChannelizePoly")
-    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize(
+        "dtype", [np.float32, np.float64, np.complex64, np.complex128]
+    )
     @pytest.mark.parametrize("num_samps", [2 ** 12])
     @pytest.mark.parametrize("filt_samps", [2048])
-    @pytest.mark.parametrize("n_chan", [64, 128])
+    @pytest.mark.parametrize("n_chan", [64, 128, 256])
     class TestChannelizePoly:
         def cpu_version(self, x, h, n_chan):
             return channelize_poly_cpu(x, h, n_chan)
@@ -554,4 +557,7 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig, gpu_filt, n_chan)
 
             key = self.cpu_version(cpu_sig, cpu_filt, n_chan)
-            assert array_equal(cp.asnumpy(output), key)
+            if dtype is np.float32 or dtype is np.complex64:
+                assert array_equal(cp.asnumpy(output), key, tol=1e-3)
+            else:
+                assert array_equal(cp.asnumpy(output), key)
