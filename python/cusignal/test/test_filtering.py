@@ -509,8 +509,8 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="ChannelizePoly")
-    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 16])
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("num_samps", [2 ** 12])
     @pytest.mark.parametrize("filt_samps", [2048])
     @pytest.mark.parametrize("n_chan", [64, 128])
     class TestChannelizePoly:
