@@ -22,10 +22,6 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-# lfiltic
-
-
 def freq_shift_cpu(x, freq, fs):
     """
     Frequency shift signal by freq at fs sample rate
@@ -42,6 +38,58 @@ def freq_shift_cpu(x, freq, fs):
     """
     x = np.asarray(x)
     return x * np.exp(-1j * 2 * np.pi * freq / fs * np.arange(x.size))
+
+
+def channelize_poly_cpu(x, h, n_chans):
+    """
+    Polyphase channelize signal into n channels
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+    Returns
+    ----------
+    yy : channelized output matrix
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
+
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
+
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
+    # order F if input from MATLAB
+    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
+    vv = np.empty(n_chans, dtype=dtype)
+
+    if x.dtype == np.float32 or x.dtype == np.complex64:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex64)
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex128)
+
+    reg = np.zeros((n_chans, n_taps), dtype=dtype)
+
+    # instead of n_chans here, this could be channel separation
+    for i, nn in enumerate(range(0, len(x), n_chans)):
+        reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
+        reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
+        for mm in range(n_chans):
+            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+
+        yy[:, i] = np.conj(np.fft.fft(vv))
+
+    return yy
 
 
 class TestFilter:
@@ -531,4 +579,39 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filter)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="ChannelizePoly")
+    @pytest.mark.parametrize("n_chan", [128])
+    class TestChannelizePoly:
+        def cpu_version(self, x, h, n_chan):
+            return channelize_poly_cpu(x, h, n_chan)
+
+        def gpu_version(self, x, h, n_chan):
+            with cp.cuda.Stream.null:
+                out = cusignal.channelize_poly(x, h, n_chan)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_channelizepoly_cpu(self, benchmark, n_chan):
+
+            x = np.random.rand(2 ** 10)
+            h = np.random.rand(4096)
+            x = x.astype(np.complex128)
+            h = h.astype(np.complex128)
+            benchmark(self.cpu_version, x, h, n_chan)
+
+        def test_channelizepoly_gpu(self, gpubenchmark, n_chan):
+
+            x = np.random.rand(2 ** 10)
+            h = np.random.rand(4096)
+            x = x.astype(np.complex128)
+            h = h.astype(np.complex128)
+            d_x = cp.asarray(x)
+            d_h = cp.asarray(h)
+
+            output = gpubenchmark(self.gpu_version, d_x, d_h, n_chan)
+
+            key = self.cpu_version(x, h, n_chan)
             assert array_equal(cp.asnumpy(output), key)
