@@ -83,56 +83,60 @@ def real_cepstrum(x, n=None):
 class TestAcoustics:
     @pytest.mark.benchmark(group="ComplexCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("n", [123, 256])
     class TestComplexCepstrum:
-        def cpu_version(self, sig):
-            return complex_cepstrum(sig)
+        def cpu_version(self, sig, n):
+            return complex_cepstrum(sig, n)
 
-        def gpu_version(self, sig):
+        def gpu_version(self, sig, n):
             with cp.cuda.Stream.null:
-                out = cusignal.complex_cepstrum(sig)
+                out = cusignal.complex_cepstrum(sig, n)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
         def test_complex_cepstrum_cpu(
-            self, rand_data_gen, benchmark, num_samps
+            self, rand_data_gen, benchmark, num_samps, n
         ):
             cpu_sig, _ = rand_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig)
+            benchmark(self.cpu_version, cpu_sig, n)
 
         def test_complex_cepstrum_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps
+            self, rand_data_gen, gpubenchmark, num_samps, n
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output, _ = gpubenchmark(self.gpu_version, gpu_sig)
+            output, _ = gpubenchmark(self.gpu_version, gpu_sig, n)
 
-            key, _ = self.cpu_version(cpu_sig)
+            key, _ = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="RealCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("n", [123, 256])
     class TestRealCepstrum:
-        def cpu_version(self, sig):
-            return real_cepstrum(sig)
+        def cpu_version(self, sig, n):
+            return real_cepstrum(sig, n)
 
-        def gpu_version(self, sig):
+        def gpu_version(self, sig, n):
             with cp.cuda.Stream.null:
-                out = cusignal.real_cepstrum(sig)
+                out = cusignal.real_cepstrum(sig, n)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
-        def test_real_cepstrum_cpu(self, rand_data_gen, benchmark, num_samps):
+        def test_real_cepstrum_cpu(
+            self, rand_data_gen, benchmark, num_samps, n
+        ):
             cpu_sig, _ = rand_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig)
+            benchmark(self.cpu_version, cpu_sig, n)
 
         def test_real_cepstrum_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps
+            self, rand_data_gen, gpubenchmark, num_samps, n
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(self.gpu_version, gpu_sig)
+            output = gpubenchmark(self.gpu_version, gpu_sig, n)
 
-            key = self.cpu_version(cpu_sig)
+            key = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
