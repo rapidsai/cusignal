@@ -22,9 +22,6 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-
-
 class TestSpectral:
     @pytest.mark.benchmark(group="LombScargle")
     @pytest.mark.parametrize("num_in_samps", [2 ** 10])

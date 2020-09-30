@@ -15,6 +15,7 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
 
