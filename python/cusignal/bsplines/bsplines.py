@@ -88,23 +88,39 @@ def cubic(x):
     This is a special case of `bspline`, and equivalent to ``bspline(x, 3)``.
     """
     ax = abs(cp.asarray(x))
-    res = np.zeros_like(ax)
+    res = cp.zeros_like(ax)
 
-    cond1 = cp.less(ax, 1)
-    ax1 = ax[cond1]
-    
+    cond1 = cp.less(ax, 1)  
     cond2 = ~cond1 & cp.less(ax, 2)
-    ax2 = ax[cond2]
-
+    
     #return _cubic_test_kernel(ax, cond1, cond2, ax1, ax2, res)
     if cond1.any():
+        ax1 = ax[cond1]
         temp = _cubic_kernel(ax1)
         res[cond1] =  temp
     if cond2.any():
+        ax2 = ax[cond2]
         temp = _cubic_kernel_two(ax2)
         res[cond2] = temp
     return  res
-    
+
+_quadratic_kernel = cp.ElementwiseKernel(
+    "T ax1",
+    "T out",
+    """
+    out =  0.75 - ax1 * ax1;
+    """,
+    "_quadratic_kernel",
+)
+
+_quadratic_kernel_two = cp.ElementwiseKernel(
+    "T ax2",
+    "T out",
+    """
+    out = (ax2 - 1.5) * (ax2 - 1.5) / 2.0;
+    """,
+    "_quadratic_kernel_two",
+)
 def quadratic(x):
     """A quadratic B-spline.
 
@@ -112,15 +128,19 @@ def quadratic(x):
     """
     ax = abs(cp.asarray(x))
     res = cp.zeros_like(ax)
-    cond1 = cp.less(ax, 0.5)
     
+    cond1 = cp.less(ax, 0.5)
+
     if cond1.any():
         ax1 = ax[cond1]
-        res[cond1] = 0.75 - ax1 ** 2
+        temp = _quadratic_kernel(ax1)
+        res[cond1] = temp
+    
     cond2 = ~cond1 & cp.less(ax, 1.5)
     if cond2.any():
         ax2 = ax[cond2]
-        res[cond2] = (ax2 - 1.5) ** 2 / 2.0
+        out = _quadratic_kernel_two(ax2)
+        res[cond2] = out
     return res
 
 
