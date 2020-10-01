@@ -98,34 +98,3 @@ class TestBsplines:
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="Cspline1d")
-    @pytest.mark.parametrize("num_samps", [2 ** 16])
-    class TestCspline1d:
-        def cpu_version(self, sig):
-            return signal.cspline1d(sig)
-
-        def gpu_version(self, sig):
-            with cp.cuda.Stream.null:
-                out = cusignal.cspline1d(sig)
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_cspline1d_cpu(self, benchmark, linspace_data_gen, num_samps):
-            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
-
-            benchmark(self.cpu_version, cpu_sig)
-
-        def test_cspline1d_gpu(
-            self, gpubenchmark, linspace_data_gen, num_samps
-        ):
-
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
-
-            output = gpubenchmark(self.gpu_version, gpu_sig)
-
-            key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
