@@ -46,62 +46,32 @@ def gauss_spline(x, n):
     r_signsq = 0.5 / signsq
     return _gauss_spline_kernel(x, np.pi, signsq, r_signsq)
 
-
-_cubic_kernel = cp.ElementwiseKernel(
-    "T ax1",
-    "T out",
+_cubic_abs_kernel= cp.ElementwiseKernel(
+    "T x",
+    "T res",
     """
-    temp =  2.0 / 3 - 1.0 / 2 * ax1 * ax1 * (2 - ax1);
+    T ax = abs( x );
+    
+    if( ax < 1 ) {
+        res =  2.0 / 3 - 1.0 / 2  * ax * ax * ( 2 - ax );
+    } else if( !( ax < 1 ) && ( ax < 2 ) ) {
+        res = 1.0 / 6 * ( 2 - ax ) *  ( 2 - ax ) * ( 2 - ax );
+    } else {
+        res = 0;
+    }
     """,
-    "_cubic_kernel",
+    "_cubic_abs_kernel",
 )
 
-_cubic_kernel_two = cp.ElementwiseKernel(
-    "T ax2",
-    "T out",
-    """
-    out = 1.0 / 6 * (2 - ax2) *  (2 - ax2) * (2 - ax2);
-    """,
-    "_cubic_kernel_two",
-)
-
-# Working on getting this one kernel working, but gives error:
-# ValueError: zero-size array to reduction operation maximum which has no identity
-
-# _cubic_test_kernel= cp.ElementwiseKernel(
-#     "T ax, bool cond1, bool cond2, T ax1, T ax2, T res",
-#     "T temp",
-#     """
-#     if cond1.any():
-#         res[cond1] = 2.0 / 3 - 1.0 / 2 * ax1 * ax1 * 2 * (2 - ax1);
-#     if cond2.any():
-#         res[cond2] = 1.0 / 6 * (2 - ax2) * (2 - ax2) * (2 - ax2);
-
-#     temp = res;
-#     """,
-#     "_cubic_test_kernel",
-# )
 
 def cubic(x):
     """A cubic B-spline.
 
     This is a special case of `bspline`, and equivalent to ``bspline(x, 3)``.
     """
-    ax = abs(cp.asarray(x))
-    res = cp.zeros_like(ax)
+    x = cp.asarray(x)
+    res = _cubic_abs_kernel(x)
 
-    cond1 = cp.less(ax, 1)  
-    cond2 = ~cond1 & cp.less(ax, 2)
-    
-    #return _cubic_test_kernel(ax, cond1, cond2, ax1, ax2, res)
-    if cond1.any():
-        ax1 = ax[cond1]
-        temp = _cubic_kernel(ax1)
-        res[cond1] =  temp
-    if cond2.any():
-        ax2 = ax[cond2]
-        temp = _cubic_kernel_two(ax2)
-        res[cond2] = temp
     return  res
 
 _quadratic_kernel = cp.ElementwiseKernel(
@@ -233,19 +203,19 @@ def _cubic_coeff(signal):
     return output * 6.0
 
 
-def _quadratic_coeff(signal):
-    zi = -3 + 2 * cp.sqrt(2.0)
-    K = len(signal)
-    yplus = cp.zeros((K,), signal.dtype.char)
-    powers = zi ** cp.arange(K)
-    yplus[0] = signal[0] + zi * cp.sum(powers * signal)
-    for k in range(1, K):
-        yplus[k] = signal[k] + zi * yplus[k - 1]
-    output = cp.zeros((K,), signal.dtype.char)
-    output[K - 1] = zi / (zi - 1) * yplus[K - 1]
-    for k in range(K - 2, -1, -1):
-        output[k] = zi * (output[k + 1] - yplus[k])
-    return output * 8.0
+# def _quadratic_coeff(signal):
+#     zi = -3 + 2 * cp.sqrt(2.0)
+#     K = len(signal)
+#     yplus = cp.zeros((K,), signal.dtype.char)
+#     powers = zi ** cp.arange(K)
+#     yplus[0] = signal[0] + zi * cp.sum(powers * signal)
+#     for k in range(1, K):
+#         yplus[k] = signal[k] + zi * yplus[k - 1]
+#     output = cp.zeros((K,), signal.dtype.char)
+#     output[K - 1] = zi / (zi - 1) * yplus[K - 1]
+#     for k in range(K - 2, -1, -1):
+#         output[k] = zi * (output[k + 1] - yplus[k])
+#     return output * 8.0
 
 
 def cspline1d(signal, lamb=0.0):

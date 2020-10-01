@@ -54,7 +54,7 @@ class TestBsplines:
             assert array_equal(cp.asnumpy(output), key)
 
 
-    @pytest.mark.parametrize("x", [-1.0, 1.0, -1.0])
+    @pytest.mark.parametrize("x", [2 ** 16])
     @pytest.mark.benchmark(group="Cubic")
     class TestCubic:
         def cpu_version(self, x):
@@ -67,15 +67,17 @@ class TestBsplines:
             return out
 
         @pytest.mark.cpu
-        def test_cubic_cpu(self, benchmark, x):
-            benchmark(self.cpu_version, x)
+        def test_cubic_cpu(self, benchmark, rand_data_gen, x):
 
-        def test_cubic_gpu(self, gpubenchmark, x):
+            cpu_sig, _ = rand_data_gen(x)
+            benchmark(self.cpu_version, cpu_sig)
 
-            d_x = cp.asarray(x)
-            output = gpubenchmark(self.gpu_version, d_x)
+        def test_cubic_gpu(self, gpubenchmark, rand_data_gen, x):
 
-            key = self.cpu_version(x)
+            cpu_sig, gpu_sig = rand_data_gen(x)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.parametrize("x", [-1.0, 0.0, -1.0])
