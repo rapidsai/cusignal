@@ -100,7 +100,7 @@ class TestBsplines:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Cspline1d")
-    @pytest.mark.parametrize("num_samps", [10, 50, 100])
+    @pytest.mark.parametrize("num_samps", [2 ** 16])
     class TestCspline1d:
         def cpu_version(self, sig):
             return signal.cspline1d(sig)
