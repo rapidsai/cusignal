@@ -120,7 +120,7 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     start = -s * 2 * np.pi
     delta = (end - start) / (M - 1)
 
-    _morlet_kernel(delta, start, w, np.pi, complete, output, size=M)
+    _morlet_kernel(delta, start, w, np.pi, complete, output)
 
     return output
 
@@ -182,7 +182,7 @@ def ricker(points, a):
     A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
     wsq = a ** 2
 
-    _ricker_kernel(float(A), float(wsq), total, size=points)
+    _ricker_kernel(float(A), float(wsq), total)
 
     return total
 

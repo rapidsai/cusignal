@@ -88,8 +88,16 @@ def kaiser_atten(numtaps, width):
     return a
 
 
-def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
-           scale=True, nyq=1.0, fs=None):
+def firwin(
+    numtaps,
+    cutoff,
+    width=None,
+    window="hamming",
+    pass_zero=True,
+    scale=True,
+    nyq=1.0,
+    fs=None,
+):
     """
     FIR filter design using the window method.
 
@@ -215,28 +223,35 @@ def firwin(numtaps, cutoff, width=None, window='hamming', pass_zero=True,
 
     # Check for invalid input.
     if cutoff.ndim > 1:
-        raise ValueError("The cutoff argument must be at most "
-                         "one-dimensional.")
+        raise ValueError(
+            "The cutoff argument must be at most " "one-dimensional."
+        )
     if cutoff.size == 0:
         raise ValueError("At least one cutoff frequency must be given.")
     if cutoff.min() <= 0 or cutoff.max() >= 1:
-        raise ValueError("Invalid cutoff frequency: frequencies must be "
-                         "greater than 0 and less than nyq.")
+        raise ValueError(
+            "Invalid cutoff frequency: frequencies must be "
+            "greater than 0 and less than nyq."
+        )
     if cp.any(cp.diff(cutoff) <= 0):
-        raise ValueError("Invalid cutoff frequencies: the frequencies "
-                         "must be strictly increasing.")
+        raise ValueError(
+            "Invalid cutoff frequencies: the frequencies "
+            "must be strictly increasing."
+        )
 
     if width is not None:
         # A width was given.  Find the beta parameter of the Kaiser window
         # and set `window`.  This overrides the value of `window` passed in.
         atten = kaiser_atten(numtaps, float(width) / nyq)
         beta = kaiser_beta(atten)
-        window = ('kaiser', beta)
+        window = ("kaiser", beta)
 
     pass_nyquist = bool(cutoff.size & 1) ^ pass_zero
     if pass_nyquist and numtaps % 2 == 0:
-        raise ValueError("A filter with an even number of coefficients must "
-                         "have zero response at the Nyquist rate.")
+        raise ValueError(
+            "A filter with an even number of coefficients must "
+            "have zero response at the Nyquist rate."
+        )
 
     # Insert 0 and/or 1 at the ends of cutoff so that the length of cutoff
     # is even, and each pair in cutoff corresponds to passband.

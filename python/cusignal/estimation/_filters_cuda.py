@@ -771,7 +771,14 @@ class _cupy_predict_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, alpha_sq, x, u, B, F, P, Q,
+        self,
+        alpha_sq,
+        x,
+        u,
+        B,
+        F,
+        P,
+        Q,
     ):
 
         if B is not None and u is not None:
@@ -848,7 +855,10 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
         )
         module = cp.RawModule(
             code=cuda_code_cupy_v8,
-            options=("-std=c++11", "-fmad=true",),
+            options=(
+                "-std=c++11",
+                "-fmad=true",
+            ),
             name_expressions=specializations,
         )
 

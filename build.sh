@@ -136,7 +136,7 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
         done
     else
         IFS=',' read -r -a arr <<< ${DEVICES}
-        for i in ${arr[@]}
+        for (( i=0; i<"${#arr[@]}"; i++ ))
         do
             GET_CC ${i}
             echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
