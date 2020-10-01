@@ -47,24 +47,64 @@ def gauss_spline(x, n):
     return _gauss_spline_kernel(x, np.pi, signsq, r_signsq)
 
 
+_cubic_kernel = cp.ElementwiseKernel(
+    "T ax1",
+    "T out",
+    """
+    temp =  2.0 / 3 - 1.0 / 2 * ax1 * ax1 * (2 - ax1);
+    """,
+    "_cubic_kernel",
+)
+
+_cubic_kernel_two = cp.ElementwiseKernel(
+    "T ax2",
+    "T out",
+    """
+    out = 1.0 / 6 * (2 - ax2) *  (2 - ax2) * (2 - ax2);
+    """,
+    "_cubic_kernel_two",
+)
+
+# Working on getting this one kernel working, but gives error:
+# ValueError: zero-size array to reduction operation maximum which has no identity
+
+# _cubic_test_kernel= cp.ElementwiseKernel(
+#     "T ax, bool cond1, bool cond2, T ax1, T ax2, T res",
+#     "T temp",
+#     """
+#     if cond1.any():
+#         res[cond1] = 2.0 / 3 - 1.0 / 2 * ax1 * ax1 * 2 * (2 - ax1);
+#     if cond2.any():
+#         res[cond2] = 1.0 / 6 * (2 - ax2) * (2 - ax2) * (2 - ax2);
+
+#     temp = res;
+#     """,
+#     "_cubic_test_kernel",
+# )
+
 def cubic(x):
     """A cubic B-spline.
 
     This is a special case of `bspline`, and equivalent to ``bspline(x, 3)``.
     """
     ax = abs(cp.asarray(x))
-    res = cp.zeros_like(ax)
+    res = np.zeros_like(ax)
+
     cond1 = cp.less(ax, 1)
-    if cond1.any():
-        ax1 = ax[cond1]
-        res[cond1] = 2.0 / 3 - 1.0 / 2 * ax1 ** 2 * (2 - ax1)
+    ax1 = ax[cond1]
+    
     cond2 = ~cond1 & cp.less(ax, 2)
+    ax2 = ax[cond2]
+
+    #return _cubic_test_kernel(ax, cond1, cond2, ax1, ax2, res)
+    if cond1.any():
+        temp = _cubic_kernel(ax1)
+        res[cond1] =  temp
     if cond2.any():
-        ax2 = ax[cond2]
-        res[cond2] = 1.0 / 6 * (2 - ax2) ** 3
-    return res
-
-
+        temp = _cubic_kernel_two(ax2)
+        res[cond2] = temp
+    return  res
+    
 def quadratic(x):
     """A quadratic B-spline.
 
@@ -73,6 +113,7 @@ def quadratic(x):
     ax = abs(cp.asarray(x))
     res = cp.zeros_like(ax)
     cond1 = cp.less(ax, 0.5)
+    
     if cond1.any():
         ax1 = ax[cond1]
         res[cond1] = 0.75 - ax1 ** 2

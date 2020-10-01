@@ -54,21 +54,29 @@ class TestBsplines:
             assert array_equal(cp.asnumpy(output), key)
 
 
-#     @pytest.mark.benchmark(group="Cubic")
-#     class TestCubic:
-#         def cpu_version(self, cpu_sig):
-#             return signal.cubic(cpu_sig)
+    @pytest.mark.parametrize("x", [-1.0, 1.0, -1.0])
+    @pytest.mark.benchmark(group="Cubic")
+    class TestCubic:
+        def cpu_version(self, x):
+            return signal.cubic(x)
 
-#         @pytest.mark.cpu
-#         def test_cubic_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+        def gpu_version(self, d_x):
+            with cp.cuda.Stream.null:
+                out = cusignal.cubic(d_x)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#         def test_cubic_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_cubic_cpu(self, benchmark, x):
+            benchmark(self.cpu_version, x)
 
-#             output = gpubenchmark(cusignal.cubic, gpu_sig)
+        def test_cubic_gpu(self, gpubenchmark, x):
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+            d_x = cp.asarray(x)
+            output = gpubenchmark(self.gpu_version, d_x)
+
+            key = self.cpu_version(x)
+            assert array_equal(cp.asnumpy(output), key)
 
 #     @pytest.mark.benchmark(group="Quadratic")
 #     class TestQuadratic:
