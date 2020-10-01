@@ -80,7 +80,7 @@ _quadratic_kernel = cp.ElementwiseKernel(
     "T res",
     """
     T ax = abs( x );
-    
+
     if( ax < 0.5 ) {
         res = 0.75 - ax * ax;
     } else if( !( ax < 0.5 ) && ( ax < 1.5 ) ) {
