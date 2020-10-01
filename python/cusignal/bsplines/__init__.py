@@ -15,5 +15,4 @@ from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
-    cspline1d,
 )
