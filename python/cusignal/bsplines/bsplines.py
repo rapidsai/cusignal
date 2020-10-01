@@ -138,9 +138,9 @@ def _cubic_smooth_coeff(signal, lamb):
     rho, omega = _coeff_smooth(lamb)
     cs = 1 - 2 * rho * cp.cos(omega) + rho * rho
     K = len(signal)
-    yp = zeros((K,), signal.dtype.char)
-    k = arange(K)
-    yp[0] = _hc(0, cs, rho, omega) * signal[0] + add(
+    yp = cp.zeros((K,), signal.dtype.char)
+    k = cp.arange(K)
+    yp[0] = _hc(0, cs, rho, omega) * signal[0] + cp.add(
         _hc(k + 1, cs, rho, omega) * signal
     )
 
