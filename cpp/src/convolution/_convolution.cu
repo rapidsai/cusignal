@@ -167,7 +167,7 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
             if ( !swapped_inputs ) {
                 start = 0 - P1 + tid;
             } else {
-                start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid;
+                start = ( ( inpW - 1 ) / 2 ) - ( kerW - 1 ) + tid + 1;
             }
             for ( int j = 0; j < kerW; j++ ) {
                 if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {

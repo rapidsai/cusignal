@@ -18,7 +18,7 @@ _gauss_spline_kernel = cp.ElementwiseKernel(
     "T x, float64 pi, float64 signsq, float64 r_siqnsq",
     "T output",
     """
-    output = 1 / sqrt(2 * pi * signsq) * exp( -(x * x) * r_siqnsq);
+    output = 1 / sqrt( 2 * pi * signsq ) * exp( -(x * x) * r_siqnsq );
     """,
     "_gauss_spline_kernel",
 )
@@ -46,7 +46,8 @@ def gauss_spline(x, n):
     r_signsq = 0.5 / signsq
     return _gauss_spline_kernel(x, np.pi, signsq, r_signsq)
 
-_cubic_abs_kernel= cp.ElementwiseKernel(
+
+_cubic_kernel = cp.ElementwiseKernel(
     "T x",
     "T res",
     """
@@ -60,7 +61,7 @@ _cubic_abs_kernel= cp.ElementwiseKernel(
         res = 0;
     }
     """,
-    "_cubic_abs_kernel",
+    "_cubic_kernel",
 )
 
 
@@ -70,48 +71,36 @@ def cubic(x):
     This is a special case of `bspline`, and equivalent to ``bspline(x, 3)``.
     """
     x = cp.asarray(x)
-    res = _cubic_abs_kernel(x)
 
-    return  res
+    return _cubic_kernel(x)
+
 
 _quadratic_kernel = cp.ElementwiseKernel(
-    "T ax1",
-    "T out",
+    "T x",
+    "T res",
     """
-    out =  0.75 - ax1 * ax1;
+    T ax = abs( x );
+
+    if( ax < 0.5 ) {
+        res = 0.75 - ax * ax;
+    } else if( !( ax < 0.5 ) && ( ax < 1.5 ) ) {
+        res = ( ( ax - 1.5 ) * ( ax - 1.5 ) ) * 0.5 ;
+    } else {
+        res = 0;
+    }
     """,
     "_quadratic_kernel",
 )
 
-_quadratic_kernel_two = cp.ElementwiseKernel(
-    "T ax2",
-    "T out",
-    """
-    out = (ax2 - 1.5) * (ax2 - 1.5) / 2.0;
-    """,
-    "_quadratic_kernel_two",
-)
+
 def quadratic(x):
     """A quadratic B-spline.
 
     This is a special case of `bspline`, and equivalent to ``bspline(x, 2)``.
     """
-    ax = abs(cp.asarray(x))
-    res = cp.zeros_like(ax)
-    
-    cond1 = cp.less(ax, 0.5)
+    x = cp.asarray(x)
 
-    if cond1.any():
-        ax1 = ax[cond1]
-        temp = _quadratic_kernel(ax1)
-        res[cond1] = temp
-    
-    cond2 = ~cond1 & cp.less(ax, 1.5)
-    if cond2.any():
-        ax2 = ax[cond2]
-        out = _quadratic_kernel_two(ax2)
-        res[cond2] = out
-    return res
+    return _quadratic_kernel(x)
 
 
 def _coeff_smooth(lam):
@@ -149,9 +138,9 @@ def _cubic_smooth_coeff(signal, lamb):
     rho, omega = _coeff_smooth(lamb)
     cs = 1 - 2 * rho * cp.cos(omega) + rho * rho
     K = len(signal)
-    yp = cp.zeros((K,), signal.dtype.char)
-    k = cp.arange(K)
-    yp[0] = _hc(0, cs, rho, omega) * signal[0] + cp.add(
+    yp = zeros((K,), signal.dtype.char)
+    k = arange(K)
+    yp[0] = _hc(0, cs, rho, omega) * signal[0] + add(
         _hc(k + 1, cs, rho, omega) * signal
     )
 

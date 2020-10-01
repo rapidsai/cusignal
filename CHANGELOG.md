@@ -23,6 +23,8 @@
 - PR #236 - Improve Bsplines functions performance
 - PR #242 - Add PyTorch disclaimer to notebook
 - PR #243 - Improve Peak Finding function performance
+- PR #249 - Update README to add SDR integration instructions and improved install clarity
+- PR #250 Update ci/local/README.md
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
@@ -32,6 +34,7 @@
 - PR #239 - Fix mode issue in peak finding module
 - PR #245 - Reduce number of default build architectures
 - PR #246 - Remove lfiltic function
+- PR #248 - Fix channelizer bugs
 
 # cuSignal 0.15.0 (26 Aug 2020)
 

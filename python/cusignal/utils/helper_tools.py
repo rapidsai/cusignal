@@ -37,7 +37,9 @@ def _get_function(fatbin, func):
 
     dir = os.path.dirname(Path(__file__).parent)
 
-    module = cp.RawModule(path=dir + fatbin,)
+    module = cp.RawModule(
+        path=dir + fatbin,
+    )
     return module.get_function(func)
 
 

@@ -31,7 +31,12 @@ class _cupy_lombscargle_wrapper(object):
         self.kernel = kernel
 
     def __call__(
-        self, x, y, freqs, pgram, y_dot,
+        self,
+        x,
+        y,
+        freqs,
+        pgram,
+        y_dot,
     ):
 
         kernel_args = (
@@ -83,7 +88,10 @@ def _lombscargle(x, y, freqs, pgram, y_dot):
     _populate_kernel_cache(pgram.dtype, k_type)
 
     kernel = _get_backend_kernel(
-        pgram.dtype, blockspergrid, threadsperblock, k_type,
+        pgram.dtype,
+        blockspergrid,
+        threadsperblock,
+        k_type,
     )
 
     kernel(x, y, freqs, pgram, y_dot)

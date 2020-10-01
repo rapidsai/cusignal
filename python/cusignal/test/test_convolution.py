@@ -13,7 +13,6 @@
 
 import cupy as cp
 import cusignal
-import numpy as np
 import pytest
 
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
@@ -42,12 +41,17 @@ class TestConvolution:
 
         @pytest.mark.cpu
         def test_correlate1d_cpu(
-            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+            self,
+            rand_data_gen,
+            benchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
-            benchmark(
-                self.cpu_version, cpu_sig, np.ones(num_taps), mode, method
-            )
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
+            cpu_filt, _ = rand_data_gen(num_taps, 1)
+            benchmark(self.cpu_version, cpu_sig, cpu_filt, mode, method)
 
         def test_correlate1d_gpu(
             self,
@@ -59,16 +63,17 @@ class TestConvolution:
             method,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 1)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
-                np.ones(num_taps),
+                gpu_filt,
                 mode,
                 method,
             )
 
-            key = self.cpu_version(cpu_sig, np.ones(num_taps), mode, method)
+            key = self.cpu_version(cpu_sig, cpu_filt, mode, method)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Convolve")
@@ -88,10 +93,16 @@ class TestConvolution:
 
         @pytest.mark.cpu
         def test_convolve1d_cpu(
-            self, rand_data_gen, benchmark, num_samps, num_taps, mode, method
+            self,
+            rand_data_gen,
+            benchmark,
+            num_samps,
+            num_taps,
+            mode,
+            method,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
-            cpu_win = signal.windows.hann(num_taps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
+            cpu_win = signal.windows.hann(num_taps, 1)
 
             benchmark(self.cpu_version, cpu_sig, cpu_win, mode, method)
 
@@ -105,13 +116,13 @@ class TestConvolution:
             method,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            gpu_win = cusignal.windows.hann(num_taps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
+            gpu_win = cusignal.windows.hann(num_taps, 1)
             output = gpubenchmark(
                 self.gpu_version, gpu_sig, gpu_win, mode, method
             )
 
-            cpu_win = signal.windows.hann(num_taps)
+            cpu_win = signal.windows.hann(num_taps, 1)
             key = self.cpu_version(cpu_sig, cpu_win, mode, method)
             assert array_equal(cp.asnumpy(output), key)
 
@@ -132,14 +143,14 @@ class TestConvolution:
         def test_fftconvolve_cpu(
             self, rand_data_gen, benchmark, num_samps, mode
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1)
             benchmark(self.cpu_version, cpu_sig, mode)
 
         def test_fftconvolve_gpu(
             self, rand_data_gen, gpubenchmark, num_samps, mode
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
             output = gpubenchmark(self.gpu_version, gpu_sig, mode)
 
             key = self.cpu_version(cpu_sig, mode)
@@ -165,20 +176,20 @@ class TestConvolution:
         @pytest.mark.cpu
         def test_convolve2d_cpu(
             self,
-            rand_2d_data_gen,
+            rand_data_gen,
             benchmark,
             num_samps,
             num_taps,
             boundary,
             mode,
         ):
-            cpu_sig, _ = rand_2d_data_gen(num_samps)
-            cpu_filt, _ = rand_2d_data_gen(num_taps)
+            cpu_sig, _ = rand_data_gen(num_samps, 2)
+            cpu_filt, _ = rand_data_gen(num_taps, 2)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
         def test_convolve2d_gpu(
             self,
-            rand_2d_data_gen,
+            rand_data_gen,
             gpubenchmark,
             num_samps,
             num_taps,
@@ -186,8 +197,8 @@ class TestConvolution:
             mode,
         ):
 
-            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 2)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -219,20 +230,20 @@ class TestConvolution:
         @pytest.mark.cpu
         def test_correlate2d_cpu(
             self,
-            rand_2d_data_gen,
+            rand_data_gen,
             benchmark,
             num_samps,
             num_taps,
             boundary,
             mode,
         ):
-            cpu_sig, _ = rand_2d_data_gen(num_samps)
-            cpu_filt, _ = rand_2d_data_gen(num_taps)
+            cpu_sig, _ = rand_data_gen(num_samps, 2)
+            cpu_filt, _ = rand_data_gen(num_taps, 2)
             benchmark(self.cpu_version, cpu_sig, cpu_filt, boundary, mode)
 
         def test_correlate2d_gpu(
             self,
-            rand_2d_data_gen,
+            rand_data_gen,
             gpubenchmark,
             num_samps,
             num_taps,
@@ -240,8 +251,8 @@ class TestConvolution:
             mode,
         ):
 
-            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            cpu_filt, gpu_filt = rand_2d_data_gen(num_taps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 2)
+            cpu_filt, gpu_filt = rand_data_gen(num_taps, 2)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
