@@ -18,7 +18,7 @@ _gauss_spline_kernel = cp.ElementwiseKernel(
     "T x, float64 pi, float64 signsq, float64 r_siqnsq",
     "T output",
     """
-    output = 1 / sqrt( 2 * pi * signsq ) * exp( -(x * x) * r_siqnsq );
+    output = 1 / sqrt( 2 * pi * signsq ) * exp( -( x * x ) * r_siqnsq );
     """,
     "_gauss_spline_kernel",
 )
