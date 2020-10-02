@@ -20,6 +20,7 @@
 - PR #219 - Add missing pytests
 - PR #222 - Improved performance for various window functions
 - PR #235 - Improve Wavelets functions performance
+- PR #236 - Improve Bsplines functions performance
 - PR #242 - Add PyTorch disclaimer to notebook
 - PR #243 - Improve Peak Finding function performance
 - PR #249 - Update README to add SDR integration instructions and improved install clarity
