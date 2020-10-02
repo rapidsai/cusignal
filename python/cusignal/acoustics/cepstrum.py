@@ -15,7 +15,6 @@ import cupy as cp
 import cupyx.scipy.fftpack as fft
 import math
 
-
 def real_cepstrum(x, n=None, axis=-1):
     r"""
     Calculates the real cepstrum of an input sequence x where the cepstrum is
@@ -87,31 +86,67 @@ def complex_cepstrum(x, n=None, axis=-1):
     ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
 
     return ceps, ndelay
-    
+
+
 def inverse_complex_cepstrum(ceps, ndelay):
-        r"""Compute the inverse complex cepstrum of a real sequence.
-        ceps : ndarray
-            Real sequence to compute inverse complex cepstrum of.
-        ndelay: int
-            The amount of samples of circular delay added to `x`.
-        Returns
-        -------
-        x : ndarray
-            The inverse complex cepstrum of the real sequence `ceps`.
-        The inverse complex cepstrum is given by
-        .. math:: x[n] = F^{-1}\left{\exp(F(c[n]))\right}
-        where :math:`c_[n]` is the input signal and :math:`F` and :math:`F_{-1}
-        are respectively the forward and backward Fourier transform.
-        """
+    r"""Compute the inverse complex cepstrum of a real sequence.
+    ceps : ndarray
+        Real sequence to compute inverse complex cepstrum of.
+    ndelay: int
+        The amount of samples of circular delay added to `x`.
+    Returns
+    -------
+    x : ndarray
+        The inverse complex cepstrum of the real sequence `ceps`.
+    The inverse complex cepstrum is given by
+    .. math:: x[n] = F^{-1}\left{\exp(F(c[n]))\right}
+    where :math:`c_[n]` is the input signal and :math:`F` and :math:`F_{-1}
+    are respectively the forward and backward Fourier transform.
+    """
 
     def _wrap(phase, ndelay):
         ndelay = cp.array(ndelay)
         samples = phase.shape[-1]
         center = (samples + 1) // 2
-        wrapped = phase + cp.pi * ndelay[..., None] * cp.arange(samples) / center
+        wrapped = (
+            phase + cp.pi * ndelay[..., None] * cp.arange(samples) / center
+        )
         return wrapped
 
     log_spectrum = fft.fft(ceps)
-    spectrum = cp.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
+    spectrum = cp.exp(
+        log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
+    )
     x = fft.ifft(spectrum).real
     return x
+
+
+def minimum_phase(x, n=None):
+    r"""Compute the minimum phase reconstruction of a real sequence.
+    x : ndarray
+        Real sequence to compute the minimum phase reconstruction of.
+    n : {None, int}, optional
+        Length of the Fourier transform.
+    Compute the minimum phase reconstruction of a real sequence using the
+    real cepstrum.
+    Returns
+    -------
+    m : ndarray
+        The minimum phase reconstruction of the real sequence `x`.
+    """
+    if n is None:
+        n = len(x)
+    ceps = real_cepstrum(x, n=n)
+    odd = n % 2
+
+    window = cp.concatenate(
+        (
+            cp.array([1.0]),
+            2.0 * cp.ones((n + odd) // 2 - 1),
+            cp.ones(1 - odd),
+            cp.zeros((n + odd) // 2 - 1),
+        )
+    )
+    m = fft.ifft(cp.exp(fft.fft(window * ceps))).real
+
+    return m
