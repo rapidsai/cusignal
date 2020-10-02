@@ -12,12 +12,12 @@
 # limitations under the License.
 
 from cusignal.acoustics.cepstrum import (
-    rceps,
-    cceps,
-    cceps_unwrap,
+    real_cepstrum,
+    complex_cepstrum,
     inverse_complex_cepstrum,
-    _wrap,
-    minimum_phase,
+)
+from cusignal.estimation.filters import (
+    KalmanFilter
 )
 from cusignal.estimation.filters import KalmanFilter
 from cusignal.filtering.resample import (
@@ -29,7 +29,6 @@ from cusignal.filtering.resample import (
 from cusignal.filtering.filtering import (
     wiener,
     firfilter,
-    lfiltic,
     sosfilt,
     hilbert,
     hilbert2,

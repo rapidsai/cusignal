@@ -12,10 +12,7 @@
 # limitations under the License.
 
 from cusignal.acoustics.cepstrum import (
-    rceps,
-    cceps,
-    cceps_unwrap,
+    real_cepstrum,
+    complex_cepstrum,
     inverse_complex_cepstrum,
-    _wrap,
-    minimum_phase,
 )

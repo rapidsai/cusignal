@@ -11,67 +11,192 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import cupy as cp
-# import cusignal
-# import numpy as np
-# import pytest
+import cupy as cp
+import cusignal
+import numpy as np
+import pytest
+from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
-# from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
-# from scipy import signal
-
-# gpubenchmark = _check_rapids_pytest_benchmark()
-
-# # Missing
-# # rceps
-# # cceps_unwrap
-# # cceps
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# class TestAcoustics:
-#     @pytest.mark.benchmark(group="Rceps")
-#     class TestRceps:
-#         def cpu_version(self, cpu_sig):
-#             return signal.rceps(cpu_sig)
+# https://github.com/python-acoustics/python-acoustics/blob/master/acoustics/cepstrum.py
+def complex_cepstrum(x, n=None):
+    """Compute the complex cepstrum of a real sequence.
+    Parameters
+    ----------
+    x : ndarray
+        Real sequence to compute complex cepstrum of.
+    n : {None, int}, optional
+        Length of the Fourier transform.
+    Returns
+    -------
+    ceps : ndarray
+        The complex cepstrum of the real data sequence `x` computed using the
+        Fourier transform.
+    ndelay : int
+        The amount of samples of circular delay added to `x`.
+    The complex cepstrum is given by
+    .. math:: c[n] = F^{-1}\\left{\\log_{10}{\\left(F{x[n]}\\right)}\\right}
+    where :math:`x_[n]` is the input signal and :math:`F` and :math:`F_{-1}
+    are respectively the forward and backward Fourier transform.
+    --------
+    """
 
-#         @pytest.mark.cpu
-#         def test_rceps_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+    def _unwrap(phase):
+        samples = phase.shape[-1]
+        unwrapped = np.unwrap(phase)
+        center = (samples + 1) // 2
+        if samples == 1:
+            center = 0
+        ndelay = np.array(np.round(unwrapped[..., center] / np.pi))
+        unwrapped -= np.pi * ndelay[..., None] * np.arange(samples) / center
+        return unwrapped, ndelay
 
-#         def test_rceps_gpu(self, gpubenchmark):
+    spectrum = np.fft.fft(x, n=n)
+    unwrapped_phase, ndelay = _unwrap(np.angle(spectrum))
+    log_spectrum = np.log(np.abs(spectrum)) + 1j * unwrapped_phase
+    ceps = np.fft.ifft(log_spectrum).real
 
-#             output = gpubenchmark(cusignal.detrend, gpu_sig)
+    return ceps, ndelay
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
 
-#     @pytest.mark.benchmark(group="CcepsUnwrap")
-#     class TestCcepsUnwrap:
-#         def cpu_version(self, cpu_sig):
-#             return signal.freq_shift(cpu_sig)
+def real_cepstrum(x, n=None):
+    """
+    Compute the real cepstrum of a real sequence.
+    x : ndarray
+        Real sequence to compute real cepstrum of.
+    n : {None, int}, optional
+        Length of the Fourier transform.
+    Returns
+    -------
+    ceps: ndarray
+        The real cepstrum.
+    """
+    spectrum = np.fft.fft(x, n=n)
+    ceps = np.fft.ifft(np.log(np.abs(spectrum))).real
 
-#         @pytest.mark.cpu
-#         def test_cceps_unwrap_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+    return ceps
 
-#         def test_cceps_unwrap_gpu(self, gpubenchmark):
 
-#             output = gpubenchmark(cusignal.detrend, gpu_sig)
+def inverse_complex_cepstrum(ceps, ndelay):
+    r"""Compute the inverse complex cepstrum of a real sequence.
+    ceps : ndarray
+        Real sequence to compute inverse complex cepstrum of.
+    ndelay: int
+        The amount of samples of circular delay added to `x`.
+    Returns
+    -------
+    x : ndarray
+        The inverse complex cepstrum of the real sequence `ceps`.
+    The inverse complex cepstrum is given by
+    .. math:: x[n] = F^{-1}\left{\exp(F(c[n]))\right}
+    where :math:`c_[n]` is the input signal and :math:`F` and :math:`F_{-1}
+    are respectively the forward and backward Fourier transform.
+    """
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+    def _wrap(phase, ndelay):
+        ndelay = np.array(ndelay)
+        samples = phase.shape[-1]
+        center = (samples + 1) // 2
+        wrapped = phase + np.pi * ndelay[..., None] * np.arange(samples) / center
+        return wrapped
 
-#     @pytest.mark.benchmark(group="Cceps")
-#     class TestCceps:
-#         def cpu_version(self, cpu_sig):
-#             return signal.freq_shift(cpu_sig)
+    log_spectrum = np.fft.fft(ceps)
+    spectrum = np.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
+    x = np.fft.ifft(spectrum).real
+    return x
 
-#         @pytest.mark.cpu
-#         def test_cceps_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
 
-#         def test_cceps_gpu(self, gpubenchmark):
 
-#             output = gpubenchmark(cusignal.detrend, gpu_sig)
+class TestAcoustics:
+    @pytest.mark.benchmark(group="ComplexCepstrum")
+    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("n", [123, 256])
+    class TestComplexCepstrum:
+        def cpu_version(self, sig, n):
+            return complex_cepstrum(sig, n)
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+        def gpu_version(self, sig, n):
+            with cp.cuda.Stream.null:
+                out = cusignal.complex_cepstrum(sig, n)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_complex_cepstrum_cpu(
+            self, rand_data_gen, benchmark, num_samps, n
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig, n)
+
+        def test_complex_cepstrum_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps, n
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output, _ = gpubenchmark(self.gpu_version, gpu_sig, n)
+
+            key, _ = self.cpu_version(cpu_sig, n)
+            assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="RealCepstrum")
+    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("n", [123, 256])
+    class TestRealCepstrum:
+        def cpu_version(self, sig, n):
+            return real_cepstrum(sig, n)
+
+        def gpu_version(self, sig, n):
+            with cp.cuda.Stream.null:
+                out = cusignal.real_cepstrum(sig, n)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_real_cepstrum_cpu(
+            self, rand_data_gen, benchmark, num_samps, n
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig, n)
+
+        def test_real_cepstrum_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps, n
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig, n)
+
+            key = self.cpu_version(cpu_sig, n)
+            assert array_equal(cp.asnumpy(output), key)
+
+
+    @pytest.mark.benchmark(group="InverseComplexCepstrum")
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("n", [123, 123])
+    class TestInverseComplexCepstrum:
+        def cpu_version(self, sig, n):
+            return inverse_complex_cepstrum(sig, n)
+
+        def gpu_version(self, sig, n):
+            with cp.cuda.Stream.null:
+                out = cusignal.inverse_complex_cepstrum(sig, n)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_inverse_complex_cepstrum_cpu(
+            self, rand_data_gen, benchmark, num_samps, n
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig, n)
+
+        def test_inverse_complex_cepstrum_gpu(
+            self, rand_data_gen, gpubenchmark, num_samps, n
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig, n)
+
+            key = self.cpu_version(cpu_sig, n)
+            assert array_equal(cp.asnumpy(output), key)
