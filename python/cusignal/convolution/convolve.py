@@ -303,9 +303,6 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
-    ver = cp.__version__
-    print(ver)
-    print(ver.split("."))
     major_ver = cp.__version__.split(".")
 
     if int(major_ver[0]) >= 8:
