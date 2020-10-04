@@ -305,9 +305,9 @@ def fftconvolve(in1, in2, mode="full", axes=None):
 
     ver = cp.__version__
     print(ver)
-    print(ver.split('.'))
-    major_ver = cp.__version__.split('.')
-    
+    print(ver.split("."))
+    major_ver = cp.__version__.split(".")
+
     if int(major_ver[0]) >= 8:
         if not complex_result:
             sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
@@ -317,14 +317,16 @@ def fftconvolve(in1, in2, mode="full", axes=None):
             sp1 = fftpack.fftn(in1, fshape, axes=axes)
             sp2 = fftpack.fftn(in2, fshape, axes=axes)
             ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-    else: # CuPy v7
+    else:  # CuPy v7
         if not complex_result:
             if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
                 rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
             else:
                 rplan = _cupy_fft_cache[
                     (str(fshape), str(axes), "R2C")
-                ] = fftpack.get_fft_plan(in1, fshape, axes=axes, value_type="R2C")
+                ] = fftpack.get_fft_plan(
+                    in1, fshape, axes=axes, value_type="R2C"
+                )
             try:
                 with rplan:
                     sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
@@ -351,7 +353,6 @@ def fftconvolve(in1, in2, mode="full", axes=None):
                 sp1 = fftpack.fftn(in1, fshape, axes=axes)
                 sp2 = fftpack.fftn(in2, fshape, axes=axes)
                 ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-
 
     if mode == "full":
         return ret
