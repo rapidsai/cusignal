@@ -35,6 +35,7 @@
 - PR #245 - Reduce number of default build architectures
 - PR #246 - Remove lfiltic function
 - PR #248 - Fix channelizer bugs
+- PR #254 - Use CuPy v8 FFT cache plan
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
