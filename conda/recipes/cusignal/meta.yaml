@@ -28,7 +28,7 @@ requirements:
     - numpy>=1.17.3
     - boost
     - numba>=0.49.0
-    - cupy>=7.2.0,<9.0
+    - cupy>=7.2.0,<9.0.0a
 
 test:
   requires:
