@@ -32,7 +32,8 @@
 - PR #242 - Add PyTorch disclaimer to notebook
 - PR #243 - Improve Peak Finding function performance
 - PR #249 - Update README to add SDR integration instructions and improved install clarity
-- PR #250 Update ci/local/README.md
+- PR #250 - Update ci/local/README.md
+- PR #256 - Update to CuPy 8.0.0
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
