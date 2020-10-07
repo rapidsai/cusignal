@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import numpy as np
 
 from six import string_types
 
@@ -107,6 +106,18 @@ def square(t, duty=0.5):
     return y
 
 
+_gausspulse_kernel = cp.ElementwiseKernel(
+    "T t, T a, int32 fc, T pi",
+    "T yenv, T yI, T yQ",
+    """
+    yenv = exp(-a * t * t);
+    yI = yenv * cos( 2 * pi * fc * t);
+    yQ = yenv * sin( 2 * pi * fc * t);
+    """,
+    "_gausspulse_kernel",
+)
+
+
 def gausspulse(
     t, fc=1000, bw=0.5, bwr=-6, tpr=-60, retquad=False, retenv=False
 ):
@@ -169,47 +180,58 @@ def gausspulse(
                  cp.asnumpy(t), cp.asnumpy(e), '--')
 
     """
-    if fc < 0:
-        raise ValueError("Center frequency (fc=%.2f) must be >=0." % fc)
-    if bw <= 0:
-        raise ValueError("Fractional bandwidth (bw=%.2f) must be > 0." % bw)
-    if bwr >= 0:
-        raise ValueError(
-            "Reference level for bandwidth (bwr=%.2f) must " "be < 0 dB" % bwr
-        )
+    # print('ehy')
+    # if fc < 0:
+    #     raise ValueError("Center frequency (fc=%.2f) must be >=0." % fc)
+    # if bw <= 0:
+    #     raise ValueError("Fractional bandwidth (bw=%.2f) must be > 0." % bw)
+    # if bwr >= 0:
+    #     raise ValueError(
+    #         "Reference level for bandwidth (bwr=%.2f) must " "be < 0 dB" % bwr
+    #     )
 
     # exp(-a t^2) <->  sqrt(pi/a) exp(-pi^2/a * f^2)  = g(f)
 
-    ref = pow(10.0, bwr / 20.0)
-    # fdel = fc*bw/2:  g(fdel) = ref --- solve this for a
-    #
-    # pi^2/a * fc^2 * bw^2 /4=-log(ref)
-    a = -((cp.pi * fc * bw) ** 2) / (4.0 * cp.log(ref))
+    # ref = pow(10.0, bwr / 20.0)
+    # # fdel = fc*bw/2:  g(fdel) = ref --- solve this for a
+    # #
+    # # pi^2/a * fc^2 * bw^2 /4=-log(ref)
+    # a = -((cp.pi * fc * bw) ** 2) / (4.0 * cp.log(ref))
 
-    if isinstance(t, string_types):
-        if t == "cutoff":  # compute cut_off point
-            #  Solve exp(-a tc**2) = tref  for tc
-            #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)
-            if tpr >= 0:
-                raise ValueError(
-                    "Reference level for time cutoff must " "be < 0 dB"
-                )
-            tref = pow(10.0, tpr / 20.0)
-            return cp.sqrt(-cp.log(tref) / a)
-        else:
-            raise ValueError("If `t` is a string, it must be 'cutoff'")
+    # if isinstance(t, string_types):
+    #     print('ehy')
+    #     if t == "cutoff":  # compute cut_off point
+    #         #  Solve exp(-a tc**2) = tref  for tc
+    #         #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)
+    #         if tpr >= 0:
+    #             raise ValueError(
+    #                 "Reference level for time cutoff must " "be < 0 dB"
+    #             )
+    #         tref = pow(10.0, tpr / 20.0)
+    #         return cp.sqrt(-cp.log(tref) / a)
+    #     else:
+    #         raise ValueError("If `t` is a string, it must be 'cutoff'")
 
-    yenv = cp.exp(-a * t * t)
-    yI = yenv * cp.cos(2 * cp.pi * fc * t)
-    yQ = yenv * cp.sin(2 * cp.pi * fc * t)
-    if not retquad and not retenv:
-        return yI
-    if not retquad and retenv:
-        return yI, yenv
-    if retquad and not retenv:
-        return yI, yQ
-    if retquad and retenv:
-        return yI, yQ, yenv
+    # t = cp.asarray(t)
+    # yenv = cp.empty_like(t)
+    # yI = cp.empty_like(t)
+    # yQ = cp.empty_like(t)
+
+    # # _gausspulse_kernel(t, a, fc, cp.pi, yenv, yI, yQ)
+
+    # print('ehy')
+
+    # # yenv = cp.exp(-a * t * t)
+    # # yI = yenv * cp.cos(2 * cp.pi * fc * t)
+    # # yQ = yenv * cp.sin(2 * cp.pi * fc * t)
+    # if not retquad and not retenv:
+    #     return yI
+    # if not retquad and retenv:
+    #     return yI, yenv
+    # if retquad and not retenv:
+    #     return yI, yQ
+    # if retquad and retenv:
+    #     return yI, yQ, yenv
 
 
 def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
