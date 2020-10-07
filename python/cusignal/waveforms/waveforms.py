@@ -12,9 +12,36 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import asarray, zeros, place, nan, mod, pi, log, sqrt, exp, cos, sin
+import numpy as np
 
 from six import string_types
+
+
+_square_kernel = cp.ElementwiseKernel(
+    "T t, T w, T pi",
+    "T y",
+    """
+    T tmod;
+    bool mask1 = ( ( w > 1 ) || ( w < 0 ) );
+    if ( mask1 ) {
+        y = nan("0xfff8000000000000ULL");
+    }
+
+    tmod = fmod(t, 2 * pi);
+    bool mask2 = ( ( 1 - mask1 ) && ( tmod < ( w * 2 * pi ) ) );
+
+    if ( mask2 ) {
+        y = 1;
+    }
+
+    bool mask3 = ( ( 1 - mask1 ) && ( 1 - mask2 ) );
+    if ( mask3 ) {
+        y = -1;
+    }
+
+    """,
+    "_square_kernel",
+)
 
 
 def square(t, duty=0.5):
@@ -66,29 +93,17 @@ def square(t, duty=0.5):
     >>> plt.ylim(-1.5, 1.5)
 
     """
-    t, w = asarray(t), asarray(duty)
-    w = asarray(w + (t - t))
-    t = asarray(t + (w - w))
+    t, w = cp.asarray(t), cp.asarray(duty)
+
     if t.dtype.char in ["fFdD"]:
         ytype = t.dtype.char
     else:
         ytype = "d"
 
-    y = zeros(t.shape, ytype)
+    y = cp.zeros(t.shape, ytype)
 
-    # width must be between 0 and 1 inclusive
-    mask1 = (w > 1) | (w < 0)
-    place(y, mask1, nan)
+    _square_kernel(t, w, cp.pi, y)
 
-    # on the interval 0 to duty*2*pi function is 1
-    tmod = mod(t, 2 * pi)
-    mask2 = (1 - mask1) & (tmod < w * 2 * pi)
-    place(y, mask2, 1)
-
-    # on the interval duty*2*pi to 2*pi function is
-    #  (pi*(w+1)-tmod) / (pi*(1-w))
-    mask3 = (1 - mask1) & (1 - mask2)
-    place(y, mask3, -1)
     return y
 
 
@@ -169,7 +184,7 @@ def gausspulse(
     # fdel = fc*bw/2:  g(fdel) = ref --- solve this for a
     #
     # pi^2/a * fc^2 * bw^2 /4=-log(ref)
-    a = -((pi * fc * bw) ** 2) / (4.0 * log(ref))
+    a = -((cp.pi * fc * bw) ** 2) / (4.0 * cp.log(ref))
 
     if isinstance(t, string_types):
         if t == "cutoff":  # compute cut_off point
@@ -180,13 +195,13 @@ def gausspulse(
                     "Reference level for time cutoff must " "be < 0 dB"
                 )
             tref = pow(10.0, tpr / 20.0)
-            return sqrt(-log(tref) / a)
+            return cp.sqrt(-cp.log(tref) / a)
         else:
             raise ValueError("If `t` is a string, it must be 'cutoff'")
 
-    yenv = exp(-a * t * t)
-    yI = yenv * cos(2 * pi * fc * t)
-    yQ = yenv * sin(2 * pi * fc * t)
+    yenv = cp.exp(-a * t * t)
+    yI = yenv * cp.cos(2 * cp.pi * fc * t)
+    yQ = yenv * cp.sin(2 * cp.pi * fc * t)
     if not retquad and not retenv:
         return yI
     if not retquad and retenv:
@@ -276,8 +291,8 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
     # 'phase' is computed in _chirp_phase, to make testing easier.
     phase = _chirp_phase(t, f0, t1, f1, method, vertex_zero)
     # Convert  phi to radians.
-    phi *= pi / 180
-    return cos(phase + phi)
+    phi *= cp.pi / 180
+    return cp.cos(phase + phi)
 
 
 def _chirp_phase(t, f0, t1, f1, method="linear", vertex_zero=True):
@@ -287,20 +302,20 @@ def _chirp_phase(t, f0, t1, f1, method="linear", vertex_zero=True):
     See `chirp` for a description of the arguments.
 
     """
-    t = asarray(t)
+    t = cp.asarray(t)
     f0 = float(f0)
     t1 = float(t1)
     f1 = float(f1)
     if method in ["linear", "lin", "li"]:
         beta = (f1 - f0) / t1
-        phase = 2 * pi * (f0 * t + 0.5 * beta * t * t)
+        phase = 2 * cp.pi * (f0 * t + 0.5 * beta * t * t)
 
     elif method in ["quadratic", "quad", "q"]:
         beta = (f1 - f0) / (t1 ** 2)
         if vertex_zero:
-            phase = 2 * pi * (f0 * t + beta * t ** 3 / 3)
+            phase = 2 * cp.pi * (f0 * t + beta * t ** 3 / 3)
         else:
-            phase = 2 * pi * (f1 * t + beta * ((t1 - t) ** 3 - t1 ** 3) / 3)
+            phase = 2 * cp.pi * (f1 * t + beta * ((t1 - t) ** 3 - t1 ** 3) / 3)
 
     elif method in ["logarithmic", "log", "lo"]:
         if f0 * f1 <= 0.0:
@@ -309,10 +324,10 @@ def _chirp_phase(t, f0, t1, f1, method="linear", vertex_zero=True):
                 "nonzero and have the same sign."
             )
         if f0 == f1:
-            phase = 2 * pi * f0 * t
+            phase = 2 * cp.pi * f0 * t
         else:
-            beta = t1 / log(f1 / f0)
-            phase = 2 * pi * beta * f0 * (pow(f1 / f0, t / t1) - 1.0)
+            beta = t1 / cp.log(f1 / f0)
+            phase = 2 * cp.pi * beta * f0 * (pow(f1 / f0, t / t1) - 1.0)
 
     elif method in ["hyperbolic", "hyp"]:
         if f0 == 0 or f1 == 0:
@@ -321,12 +336,12 @@ def _chirp_phase(t, f0, t1, f1, method="linear", vertex_zero=True):
             )
         if f0 == f1:
             # Degenerate case: constant frequency.
-            phase = 2 * pi * f0 * t
+            phase = 2 * cp.pi * f0 * t
         else:
             # Singular point: the instantaneous frequency blows up
             # when t == sing.
             sing = -f1 * t1 / (f0 - f1)
-            phase = 2 * pi * (-sing * f0) * log(cp.abs(1 - t / sing))
+            phase = 2 * cp.pi * (-sing * f0) * cp.log(cp.abs(1 - t / sing))
 
     else:
         raise ValueError(
@@ -393,7 +408,7 @@ def unit_impulse(shape, idx=None, dtype=float):
            [ 0.,  0.,  1.,  0.],
            [ 0.,  0.,  0.,  0.]])
     """
-    out = zeros(shape, dtype)
+    out = cp.zeros(shape, dtype)
 
     shape = cp.atleast_1d(shape)
 
