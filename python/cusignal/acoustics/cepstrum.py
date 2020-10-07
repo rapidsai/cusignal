@@ -25,6 +25,7 @@ _real_cepstrum_kernel = cp.ElementwiseKernel(
     "_real_cepstrum_kernel",
 )
 
+
 def real_cepstrum(x, n=None, axis=-1):
     r"""
     Calculates the real cepstrum of an input sequence x where the cepstrum is
@@ -51,6 +52,7 @@ def real_cepstrum(x, n=None, axis=-1):
     spectrum = _real_cepstrum_kernel(spectrum)
     return fft.ifft(spectrum, n=n, axis=axis).real
 
+
 _complex_cepstrum_kernel = cp.ElementwiseKernel(
     "float64 samples, T ndelay, float64 pi, int64 ar, T center, T unwrapped, complex128 spectrum",
     "complex128 log_spectrum",
@@ -60,6 +62,7 @@ _complex_cepstrum_kernel = cp.ElementwiseKernel(
     """,
     "_complex_cepstrum_kernel",
 )
+
 
 def complex_cepstrum(x, n=None, axis=-1):
     r"""
@@ -104,7 +107,6 @@ def complex_cepstrum(x, n=None, axis=-1):
 
     return ceps, ndelay
 
-
     # spectrum = fft.fft(x, n=n, axis=axis)
     # ang_spec = cp.angle(spectrum)
     # unwrapped = cp.unwrap(ang_spec)
@@ -117,14 +119,18 @@ def complex_cepstrum(x, n=None, axis=-1):
     # ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
     # return ceps, ndelay
 
+
 _inverse_complex_cepstrum_kernel = cp.ElementwiseKernel(
-    "complex128 log_spectrum, float64 wrapped, complex128 ndelay",
+    "complex128 log_spectrum, int64 ndelay, float64 pi",
     "complex128 spectrum",
     """
-    spectrum = cexp( wrapped, ndelay);
+    int center = ( ( sizeof( imag( log_spectrum ) ) + 1 ) / 2 );
+    spectrum = imag( log_spectrum ) + pi * ndelay * sizeof( imag( log_spectrum ) ) / center;
+    spectrum = exp( real(log_spectrum) + imag( spectrum ))
     """,
     "_inverse_complex_cepstrum_kernel",
 )
+
 
 def inverse_complex_cepstrum(ceps, ndelay):
     r"""Compute the inverse complex cepstrum of a real sequence.
@@ -141,24 +147,10 @@ def inverse_complex_cepstrum(ceps, ndelay):
     where :math:`c_[n]` is the input signal and :math:`F` and :math:`F_{-1}
     are respectively the forward and backward Fourier transform.
     """
-
-    def _wrap(phase, ndelay):
-        ndelay = cp.array(ndelay)
-        samples = phase.shape[-1]
-        center = (samples + 1) // 2
-        wrapped = (
-            phase + cp.pi * ndelay[..., None] * cp.arange(samples) / center
-        )
-        return wrapped
-
     log_spectrum = fft.fft(ceps)
-    wrapped = _wrap(log_spectrum.imag, ndelay)
-    
-    #spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, wrapped, ndelay)
-    spectrum = cp.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
+    spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, ndelay, np.pi)
     x = fft.ifft(spectrum).real
     return x
-
 
 def minimum_phase(x, n=None):
     r"""Compute the minimum phase reconstruction of a real sequence.
