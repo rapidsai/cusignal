@@ -73,7 +73,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = gpubenchmark(self.cpu_version, gpu_sig, fc)
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fc)
 
             _, _, key = self.cpu_version(cpu_sig, fc)
             assert array_equal(cp.asnumpy(output), key)
