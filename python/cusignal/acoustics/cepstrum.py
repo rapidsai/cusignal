@@ -12,8 +12,18 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 import cupyx.scipy.fftpack as fft
 import math
+
+_real_cepstrum_kernel = cp.ElementwiseKernel(
+    "T spectrum",
+    "T output",
+    """
+    output = log( abs( spectrum ) );
+    """,
+    "_real_cepstrum_kernel",
+)
 
 def real_cepstrum(x, n=None, axis=-1):
     r"""
@@ -37,12 +47,19 @@ def real_cepstrum(x, n=None, axis=-1):
         Complex cepstrum result
     """
     x = cp.asarray(x)
-
     spectrum = fft.fft(x, n=n, axis=axis)
-    ceps = fft.ifft(cp.log(cp.abs(spectrum)), n=n, axis=axis).real
+    spectrum = _real_cepstrum_kernel(spectrum)
+    return fft.ifft(spectrum, n=n, axis=axis).real
 
-    return ceps
-
+_complex_cepstrum_kernel = cp.ElementwiseKernel(
+    "float64 samples, T ndelay, float64 pi, int64 ar, T center, T unwrapped, complex128 spectrum",
+    "complex128 log_spectrum",
+    """
+    T unwrapped_phase = unwrapped - pi * ndelay * ar / center;
+    log_spectrum =  log( abs( spectrum ) ) * unwrapped_phase;
+    """,
+    "_complex_cepstrum_kernel",
+)
 
 def complex_cepstrum(x, n=None, axis=-1):
     r"""
@@ -88,6 +105,27 @@ def complex_cepstrum(x, n=None, axis=-1):
     return ceps, ndelay
 
 
+    # spectrum = fft.fft(x, n=n, axis=axis)
+    # ang_spec = cp.angle(spectrum)
+    # unwrapped = cp.unwrap(ang_spec)
+    # samples = len(ang_spec)
+    # center = math.floor((samples + 1) / 2)
+    # ndelay = cp.round_(unwrapped[center] / cp.pi)
+    # ar = cp.arange(samples)
+
+    # log_spectrum = _complex_cepstrum_kernel(samples, ndelay, np.pi, ar, center, unwrapped, spectrum)
+    # ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
+    # return ceps, ndelay
+
+_inverse_complex_cepstrum_kernel = cp.ElementwiseKernel(
+    "complex128 log_spectrum, float64 wrapped, complex128 ndelay",
+    "complex128 spectrum",
+    """
+    spectrum = cexp( wrapped, ndelay);
+    """,
+    "_inverse_complex_cepstrum_kernel",
+)
+
 def inverse_complex_cepstrum(ceps, ndelay):
     r"""Compute the inverse complex cepstrum of a real sequence.
     ceps : ndarray
@@ -114,9 +152,10 @@ def inverse_complex_cepstrum(ceps, ndelay):
         return wrapped
 
     log_spectrum = fft.fft(ceps)
-    spectrum = cp.exp(
-        log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
-    )
+    wrapped = _wrap(log_spectrum.imag, ndelay)
+    
+    #spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, wrapped, ndelay)
+    spectrum = cp.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
     x = fft.ifft(spectrum).real
     return x
 
