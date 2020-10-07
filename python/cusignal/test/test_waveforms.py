@@ -83,7 +83,7 @@ class TestWaveforms:
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
     @pytest.mark.parametrize("f1", [10])
-    @pytest.mark.parametrize("method", ["linear", "quadratic"])
+    @pytest.mark.parametrize("method", ["lin", "quad", "log", "hyp"])
     class TestChirp:
         def cpu_version(self, sig, f0, t1, f1, method):
             return signal.chirp(sig, f0, t1, f1, method)
