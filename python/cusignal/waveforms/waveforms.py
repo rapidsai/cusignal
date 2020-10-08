@@ -447,50 +447,6 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
             " or 'hyperbolic', but a value of %r was given." % method
         )
 
-    # Convert  phi to radians.
-    # phi *= cp.pi / 180
-    # return cp.cos(phase + phi)
-
-
-def _chirp_phase(t, f0, t1, f1, method="linear", vertex_zero=True):
-    """
-    Calculate the phase used by `chirp` to generate its output.
-
-    See `chirp` for a description of the arguments.
-
-    """
-    t = cp.asarray(t)
-    f0 = float(f0)
-    t1 = float(t1)
-    f1 = float(f1)
-
-    if method in ["linear", "lin", "li"]:
-        return _chirp_phase_lin_kernel(t, f0, t1, f1, cp.pi)
-
-    elif method in ["quadratic", "quad", "q"]:
-        return _chirp_phase_quad_kernel(t, f0, t1, f1, cp.pi, vertex_zero)
-
-    elif method in ["logarithmic", "log", "lo"]:
-        if f0 * f1 <= 0.0:
-            raise ValueError(
-                "For a logarithmic chirp, f0 and f1 must be "
-                "nonzero and have the same sign."
-            )
-        return _chirp_phase_log_kernel(t, f0, t1, f1, cp.pi)
-
-    elif method in ["hyperbolic", "hyp"]:
-        if f0 == 0 or f1 == 0:
-            raise ValueError(
-                "For a hyperbolic chirp, f0 and f1 must be " "nonzero."
-            )
-        return _chirp_phase_hyp_kernel(t, f0, t1, f1, cp.pi)
-
-    else:
-        raise ValueError(
-            "method must be 'linear', 'quadratic', 'logarithmic',"
-            " or 'hyperbolic', but a value of %r was given." % method
-        )
-
 
 def unit_impulse(shape, idx=None, dtype=float):
     """
