@@ -41,7 +41,7 @@ logger "Check GPU usage..."
 nvidia-smi
 
 logger "Activate conda env..."
-source activate gdf
+source activate rapids
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
     "rapids-build-env=$MINOR_VERSION.*" \
@@ -68,6 +68,10 @@ $WORKSPACE/build.sh clean cusignal
 # TEST - Run GoogleTest and py.tests for cusignal
 ################################################################################
 
+set +e -Eo pipefail
+EXITCODE=0
+trap "EXITCODE=1" ERR
+
 if hasArg --skip-tests; then
     logger "Skipping Tests..."
     exit 0
@@ -86,3 +90,7 @@ conda install -y -c pytorch "pytorch>=1.4"
 
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
+
+return ${EXITCODE}
+
+
