@@ -45,6 +45,8 @@
 - PR #246 - Remove lfiltic function
 - PR #248 - Fix channelizer bugs
 - PR #254 - Use CuPy v8 FFT cache plan
+- PR #259 - Fix notebook error handling in gpuCI
+
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
