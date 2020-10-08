@@ -21,26 +21,26 @@ _square_kernel = cp.ElementwiseKernel(
     "T t, T w, T pi",
     "T y",
     """
-    T tmod;
-    bool mask1 = ( ( w > 1 ) || ( w < 0 ) );
+    bool mask1 { ( ( w > 1 ) || ( w < 0 ) ) };
     if ( mask1 ) {
         y = nan("0xfff8000000000000ULL");
     }
 
-    tmod = fmod(t, 2 * pi);
-    bool mask2 = ( ( 1 - mask1 ) && ( tmod < ( w * 2 * pi ) ) );
+    T tmod { fmod(t, 2 * pi) };
+    bool mask2 { ( ( 1 - mask1 ) && ( tmod < ( w * 2 * pi ) ) ) };
 
     if ( mask2 ) {
         y = 1;
     }
 
-    bool mask3 = ( ( 1 - mask1 ) && ( 1 - mask2 ) );
+    bool mask3 { ( ( 1 - mask1 ) && ( 1 - mask2 ) ) };
     if ( mask3 ) {
         y = -1;
     }
 
     """,
     "_square_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -114,6 +114,7 @@ _gausspulse_kernel_F_F = cp.ElementwiseKernel(
     yenv = exp(-a * t * t);
     """,
     "_gausspulse_kernel",
+    options=('-std=c++11',)
 )
 
 _gausspulse_kernel_F_T = cp.ElementwiseKernel(
@@ -124,17 +125,19 @@ _gausspulse_kernel_F_T = cp.ElementwiseKernel(
     yI = yenv * cos( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
+    options=('-std=c++11',)
 )
 
 _gausspulse_kernel_T_F = cp.ElementwiseKernel(
     "T t, T a, T fc, T pi",
     "T yI, T yQ",
     """
-    T yenv = exp(-a * t * t);
+    T yenv { exp(-a * t * t) };
     yI = yenv * cos( 2 * pi * fc * t);
     yQ = yenv * sin( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
+    options=('-std=c++11',)
 )
 
 _gausspulse_kernel_T_T = cp.ElementwiseKernel(
@@ -146,6 +149,7 @@ _gausspulse_kernel_T_T = cp.ElementwiseKernel(
     yQ = yenv * sin( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -257,23 +261,22 @@ _chirp_phase_lin_kernel = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi, T pi",
     "T phase",
     """
-    T l_phi = phi;
-    T beta = (f1 - f0) / t1;
-    T temp = 2 * pi * (f0 * t + 0.5 * beta * t * t);
+    T beta { (f1 - f0) / t1 };
+    T temp { 2 * pi * (f0 * t + 0.5 * beta * t * t) };
 
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
     "_chirp_phase_lin_kernel",
+    options=('-std=c++11',)
 )
 
 _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi, T pi, bool vertex_zero",
     "T phase",
     """
-    T l_phi = phi;
-    T temp = 0;
-    T beta = (f1 - f0) / (t1 * t1);
+    T temp {};
+    T beta { (f1 - f0) / (t1 * t1) };
 
     if ( vertex_zero ) {
         temp = 2 * pi * (f0 * t + beta * (t * t * t) / 3);
@@ -287,19 +290,19 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_quad_kernel",
+    options=('-std=c++11',)
 )
 
 _chirp_phase_log_kernel = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi, T pi",
     "T phase",
     """
-    T l_phi = phi;
-    T temp = 0;
+    T temp {};
 
     if ( f0 == f1 ) {
         temp = 2 * pi * f0 * t;
     } else {
-        T beta = t1 / log(f1 / f0);
+        T beta { t1 / log(f1 / f0) };
         temp = 2 * pi * beta * f0 * ( pow(f1 / f0, t / t1) - 1.0 );
     }
 
@@ -307,19 +310,19 @@ _chirp_phase_log_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_log_kernel",
+    options=('-std=c++11',)
 )
 
 _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi, T pi",
     "T phase",
     """
-    T l_phi = phi;
-    T temp = 0;
+    T temp {};
 
     if ( f0 == f1 ) {
         temp = 2 * pi * f0 * t;
     } else {
-        T sing = -f1 * t1 / (f0 - f1);
+        T sing { -f1 * t1 / (f0 - f1) };
         temp = 2 * pi * ( -sing * f0 ) * log( abs( 1 - t / sing ) );
     }
 
@@ -327,6 +330,7 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_hyp_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -452,6 +456,7 @@ _unit_impulse_kernel = cp.ElementwiseKernel(
     }
     """,
     "_unit_impulse_kernel",
+    options=('-std=c++11',)
 )
 
 
