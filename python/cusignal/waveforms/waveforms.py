@@ -261,12 +261,10 @@ _chirp_phase_lin_kernel = cp.ElementwiseKernel(
     T beta = (f1 - f0) / t1;
     T temp = 2 * pi * (f0 * t + 0.5 * beta * t * t);
 
-    l_phi *= pi / 180;
-
     // Convert  phi to radians.
-    phase = cos(temp + l_phi);
+    phase = cos(temp + phi);
     """,
-    "__chirp_phase_lin_kernel",
+    "_chirp_phase_lin_kernel",
 )
 
 _chirp_phase_quad_kernel = cp.ElementwiseKernel(
@@ -278,19 +276,17 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     T beta = (f1 - f0) / (t1 * t1);
 
     if ( vertex_zero ) {
-        temp = 2 * pi * (f0 * t + beta * ( t * t * t)  / 3);
+        temp = 2 * pi * (f0 * t + beta * (t * t * t) / 3);
     } else {
         temp = 2 * pi *
             ( f1 * t + beta *
-            ( ( (t1 - t) * (t1 - t) * (t1 - t) ) - ( t1 * t1 * t1 )) / 3);
+            ( ( (t1 - t) * (t1 - t) * (t1 - t) ) - (t1 * t1 * t1)) / 3);
     }
 
-    l_phi *= pi / 180;
-
     // Convert  phi to radians.
-    phase = cos(temp + l_phi);
+    phase = cos(temp + phi);
     """,
-    "__chirp_phase_quad_kernel",
+    "_chirp_phase_quad_kernel",
 )
 
 _chirp_phase_log_kernel = cp.ElementwiseKernel(
@@ -304,15 +300,13 @@ _chirp_phase_log_kernel = cp.ElementwiseKernel(
         temp = 2 * pi * f0 * t;
     } else {
         T beta = t1 / log(f1 / f0);
-        temp = 2 * pi * beta * f0 * (pow(f1 / f0, t / t1) - 1.0);
+        temp = 2 * pi * beta * f0 * ( pow(f1 / f0, t / t1) - 1.0 );
     }
 
-    l_phi *= pi / 180;
-
     // Convert  phi to radians.
-    phase = cos(temp + l_phi);
+    phase = cos(temp + phi);
     """,
-    "__chirp_phase_log_kernel",
+    "_chirp_phase_log_kernel",
 )
 
 _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
@@ -329,12 +323,10 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
         temp = 2 * pi * ( -sing * f0 ) * log( abs( 1 - t / sing ) );
     }
 
-    l_phi *= pi / 180;
-
     // Convert  phi to radians.
-    phase = cos(temp + l_phi);
+    phase = cos(temp + phi);
     """,
-    "__chirp_phase_hyp_kernel",
+    "_chirp_phase_hyp_kernel",
 )
 
 
@@ -419,6 +411,7 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
     f0 = float(f0)
     t1 = float(t1)
     f1 = float(f1)
+    phi *= np.pi / 180
 
     if method in ["linear", "lin", "li"]:
         return _chirp_phase_lin_kernel(t, f0, t1, f1, phi, cp.pi)
@@ -446,6 +439,20 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
             "method must be 'linear', 'quadratic', 'logarithmic',"
             " or 'hyperbolic', but a value of %r was given." % method
         )
+
+
+_unit_impulse_kernel = cp.ElementwiseKernel(
+    "int32 idx",
+    "T out",
+    """
+    if (i == idx) {
+        out = 1;
+    } else {
+        out = 0;
+    }
+    """,
+    "_unit_impulse_kernel",
+)
 
 
 def unit_impulse(shape, idx=None, dtype=float):
@@ -504,9 +511,9 @@ def unit_impulse(shape, idx=None, dtype=float):
            [ 0.,  0.,  1.,  0.],
            [ 0.,  0.,  0.,  0.]])
     """
-    out = cp.zeros(shape, dtype)
+    out = cp.empty(shape, dtype)
 
-    shape = cp.atleast_1d(shape)
+    shape = np.atleast_1d(shape)
 
     if idx is None:
         idx = (0,) * len(shape)
@@ -515,5 +522,4 @@ def unit_impulse(shape, idx=None, dtype=float):
     elif not hasattr(idx, "__iter__"):
         idx = (idx,) * len(shape)
 
-    out[idx] = 1
-    return out
+    return _unit_impulse_kernel(idx[0], out)
