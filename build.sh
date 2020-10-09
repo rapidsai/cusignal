@@ -127,7 +127,7 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     if [ -z "${DEVICES}" ]
     then
         # If DEVICES is empty, retrieve all attached NVIDIA GPU
-        NUMGPU=`nvidia-smi -L | wc -l`
+        NUMGPU=`lspci | grep VGA | grep NVIDIA | wc -l`
         for (( i=0; i<${NUMGPU}; i++ ))
         do
             GET_CC ${i}
