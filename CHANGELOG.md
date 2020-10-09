@@ -47,7 +47,7 @@
 - PR #248 - Fix channelizer bugs
 - PR #254 - Use CuPy v8 FFT cache plan
 - PR #259 - Fix notebook error handling in gpuCI
-
+- PR #264 - Fix Build error w/ nvidia-smi
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
