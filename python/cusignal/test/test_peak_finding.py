@@ -11,67 +11,138 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import cupy as cp
-# import cusignal
-# import numpy as np
-# import pytest
+import cupy as cp
+import cusignal
+import numpy as np
+import pytest
 
-# from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
-# from scipy import signal
+from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
+from scipy import signal
 
-# gpubenchmark = _check_rapids_pytest_benchmark()
-
-# # Missing
-# # argrelmin
-# # argrelmax
-# # argrelextrema
+gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# class TestPeakFinding:
-#     @pytest.mark.benchmark(group="Argrelmin")
-#     class TestArgrelmin:
-#         def cpu_version(self, cpu_sig):
-#             return signal.argrelmin(cpu_sig)
+class TestPeakFinding:
+    @pytest.mark.benchmark(group="Argrelmin")
+    @pytest.mark.parametrize(
+        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
+    )
+    @pytest.mark.parametrize("axis", [-1])
+    @pytest.mark.parametrize("order", [1, 2])
+    @pytest.mark.parametrize("mode", ["clip", "wrap"])
+    class TestArgrelmin:
+        def cpu_version(self, sig, axis, order, mode):
+            return signal.argrelmin(sig, axis, order, mode)
 
-#         @pytest.mark.cpu
-#         def test_argrelmin_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+        def gpu_version(self, sig, axis, order, mode):
+            with cp.cuda.Stream.null:
+                out = cusignal.argrelmin(sig, axis, order, mode)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#         def test_argrelmin_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_argrelmin_cpu(
+            self, rand_data_gen, benchmark, dim, num_samps, axis, order, mode
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
-#             output = gpubenchmark(cusignal.argrelmin, gpu_sig)
+        def test_argrelmin_gpu(
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            dim,
+            num_samps,
+            axis,
+            order,
+            mode,
+        ):
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
+            key = self.cpu_version(cpu_sig, axis, order, mode)
+            assert array_equal(cp.asnumpy(output[0]), key[0])
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+    @pytest.mark.benchmark(group="TestArgrelmax")
+    @pytest.mark.parametrize(
+        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
+    )
+    @pytest.mark.parametrize("axis", [-1])
+    @pytest.mark.parametrize("order", [1, 2])
+    @pytest.mark.parametrize("mode", ["clip", "wrap"])
+    class TestArgrelmax:
+        def cpu_version(self, sig, axis, order, mode):
+            return signal.argrelmax(sig, axis, order, mode)
 
-#     @pytest.mark.benchmark(group="Argrelmax")
-#     class TestArgrelmax:
-#         def cpu_version(self, cpu_sig):
-#             return signal.argrelmax(cpu_sig)
+        def gpu_version(self, sig, axis, order, mode):
+            with cp.cuda.Stream.null:
+                out = cusignal.argrelmax(sig, axis, order, mode)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#         @pytest.mark.cpu
-#         def test_argrelmax_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
+        @pytest.mark.cpu
+        def test_argrelmax_cpu(
+            self, rand_data_gen, benchmark, dim, num_samps, axis, order, mode
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
-#         def test_argrelmax_gpu(self, gpubenchmark):
+        def test_argrelmax_gpu(
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            dim,
+            num_samps,
+            axis,
+            order,
+            mode,
+        ):
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
+            key = self.cpu_version(cpu_sig, axis, order, mode)
+            assert array_equal(cp.asnumpy(output[0]), key[0])
 
-#             output = gpubenchmark(cusignal.argrelmax, gpu_sig)
+    @pytest.mark.benchmark(group="Argrelextrema")
+    @pytest.mark.parametrize(
+        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
+    )
+    @pytest.mark.parametrize("axis", [-1])
+    @pytest.mark.parametrize("order", [1, 2])
+    @pytest.mark.parametrize("mode", ["clip", "wrap"])
+    class TestArgrelextrema:
+        def cpu_version(self, sig, axis, order, mode):
+            return signal.argrelextrema(sig, np.less, axis, order, mode)
 
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+        def gpu_version(self, sig, axis, order, mode):
+            with cp.cuda.Stream.null:
+                out = cusignal.argrelextrema(sig, cp.less, axis, order, mode)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-#     @pytest.mark.benchmark(group="Argrelextrema")
-#     class TestArgrelextrema:
-#         def cpu_version(self, cpu_sig):
-#             return signal.argrelextrema(cpu_sig)
+        @pytest.mark.cpu
+        def test_argrelextrema_cpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            dim,
+            num_samps,
+            axis,
+            order,
+            mode,
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            benchmark(self.cpu_version, cpu_sig, axis, order, mode)
 
-#         @pytest.mark.cpu
-#         def test_argrelextrema_cpu(self, benchmark):
-#             benchmark(self.cpu_version, cpu_sig)
-
-#         def test_argrelextrema_gpu(self, gpubenchmark):
-
-#             output = gpubenchmark(cusignal.argrelextrema, gpu_sig)
-
-#             key = self.cpu_version(cpu_sig)
-#             assert array_equal(cp.asnumpy(output), key)
+        def test_argrelextrema_gpu(
+            self,
+            rand_data_gen,
+            gpubenchmark,
+            dim,
+            num_samps,
+            axis,
+            order,
+            mode,
+        ):
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            output = gpubenchmark(self.gpu_version, gpu_sig, axis, order, mode)
+            key = self.cpu_version(cpu_sig, axis, order, mode)
+            assert array_equal(cp.asnumpy(output[0]), key[0])

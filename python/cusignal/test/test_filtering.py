@@ -15,6 +15,7 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+import scipy
 
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
@@ -22,10 +23,74 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-# lfiltic
-# detrend
-# freq_shift
+def freq_shift_cpu(x, freq, fs):
+    """
+    Frequency shift signal by freq at fs sample rate
+    Parameters
+    ----------
+    x : array_like, complex valued
+        The data to be shifted.
+    freq : float
+        Shift by this many (Hz)
+    fs : float
+        Sampling rate of the signal
+    domain : string
+        freq or time
+    """
+    x = np.asarray(x)
+    return x * np.exp(-1j * 2 * np.pi * freq / fs * np.arange(x.size))
+
+
+def channelize_poly_cpu(x, h, n_chans):
+    """
+    Polyphase channelize signal into n channels
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+    Returns
+    ----------
+    yy : channelized output matrix
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used
+    """
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
+
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
+
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
+    # order F if input from MATLAB
+    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
+    vv = np.empty(n_chans, dtype=dtype)
+
+    if x.dtype == np.float32 or x.dtype == np.complex64:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex64)
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
+        yy = np.empty((n_chans, n_pts), dtype=np.complex128)
+
+    reg = np.zeros((n_chans, n_taps), dtype=dtype)
+
+    # instead of n_chans here, this could be channel separation
+    for i, nn in enumerate(range(0, len(x), n_chans)):
+        reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
+        reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
+        for mm in range(n_chans):
+            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+
+        yy[:, i] = np.conj(scipy.fft.fft(vv))
+
+    return yy
 
 
 class TestFilter:
@@ -54,37 +119,6 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Lfiltic")
-    # @pytest.mark.parametrize("num_a", [1.0, -1.0/3])
-    # @pytest.mark.parametrize("num_b", [1.0/2, 1.0/4])
-    # @pytest.mark.parametrize("num_y", [2.])
-
-    # class TestLfiltic:
-    #     #def cpu_version(self, a, b, y):
-    #     def cpu_version(self, b, a, y):
-    #         #return signal.lfiltic(a, b, y)
-    #         return signal.lfiltic(b, a, y)
-
-    #     @pytest.mark.cpu
-    #     #def test_lfiltic_cpu(self, benchmark, num_a, num_b, num_y):
-    #     def test_lfiltic_cpu(self, benchmark, num_b, num_a, num_y):
-
-    #         #benchmark(self.cpu_version, num_a, num_b, num_y)
-    #         benchmark(self.cpu_version, num_b, num_a, num_y)
-
-    #     def test_lfiltic_gpu(self, gpubenchmark, num_b, num_a,num_y):
-    #     #def test_lfiltic_gpu(self, gpubenchmark, num_a, num_b, num_y):
-    #         d_num_a = cp.asarray(num_a)
-    #         d_num_b = cp.asarray(num_b)
-    #         d_num_y = cp.asarray(num_y)
-
-    #         output = gpubenchmark(cusignal.lfiltic, d_num_b,d_num_a, d_num_y)
-    #         #output = gpubenchmark(cusignal.lfiltic, d_num_a,num_b, num_y)
-
-    #         key = self.cpu_version(num_b, num_a,  num_y)
-    #         #key = self.cpu_version(num_a, num_b, num_y)
-    #         assert array_equal(cp.asnumpy(output), key)
-
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
@@ -105,7 +139,6 @@ class TestFilter:
         @pytest.mark.cpu
         def test_sosfilt_cpu(
             self,
-            rand_2d_data_gen,
             benchmark,
             num_signals,
             num_samps,
@@ -114,13 +147,12 @@ class TestFilter:
         ):
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
-            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.random.random((num_signals, num_samps))
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             benchmark(self.cpu_version, cpu_sos, cpu_sig)
 
         def test_sosfilt_gpu(
             self,
-            rand_2d_data_gen,
             gpubenchmark,
             num_signals,
             num_samps,
@@ -131,7 +163,7 @@ class TestFilter:
             cpu_sos = signal.ellip(order, 0.009, 80, 0.05, output="sos")
             cpu_sos = np.array(cpu_sos, dtype=dtype)
             gpu_sos = cp.asarray(cpu_sos)
-            cpu_sig = np.random.rand(num_signals, num_samps)
+            cpu_sig = np.random.random((num_signals, num_samps))
             cpu_sig = np.array(cpu_sig, dtype=dtype)
             gpu_sig = cp.asarray(cpu_sig)
 
@@ -145,7 +177,7 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Hilbert")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
     class TestHilbert:
         def cpu_version(self, sig):
             return signal.hilbert(sig)
@@ -157,81 +189,75 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert_cpu(self, rand_data_gen, benchmark, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps)
+        def test_hilbert_cpu(self, rand_data_gen, benchmark, dim, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, num_samps):
+        def test_hilbert_gpu(
+            self, rand_data_gen, gpubenchmark, dim, num_samps
+        ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="Hilbert2")
+    @pytest.mark.benchmark(group="Detrend")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
-    class TestHilbert2:
+    class TestDetrend:
         def cpu_version(self, sig):
-            return signal.hilbert2(sig)
+            return signal.detrend(sig)
 
         def gpu_version(self, sig):
             with cp.cuda.Stream.null:
-                out = cusignal.hilbert2(sig)
+                out = cusignal.detrend(sig)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
-        def test_hilbert2_cpu(self, rand_2d_data_gen, benchmark, num_samps):
-            cpu_sig, _ = rand_2d_data_gen(num_samps)
+        def test_detrend_cpu(self, linspace_data_gen, benchmark, num_samps):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert2_gpu(self, rand_2d_data_gen, gpubenchmark, num_samps):
+        def test_detrend_gpu(self, linspace_data_gen, gpubenchmark, num_samps):
 
-            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
-            output = gpubenchmark(self.gpu_version, gpu_sig)
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps)
+            output = gpubenchmark(cusignal.detrend, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="Detrend")
-    # @pytest.mark.parametrize("randgen", np.random.RandomState(9))
-    # @pytest.mark.parametrize("num_npoints", 1000)
-    # @pytest.mark.parametrize("num_noise", randgen.randn(num_npoints))
-    # @pytest.mark.parametrize(
-    #   "num_x", 3 + 2*np.linspace(0,1, num_npoints) + num_noise)
+    @pytest.mark.benchmark(group="FreqShift")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
+    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
+    @pytest.mark.parametrize("fs", [0.3])
+    class TestFreqShift:
+        def cpu_version(self, freq, fs, num_samps):
+            return freq_shift_cpu(freq, fs, num_samps)
 
-    # class TestDetrend:
-    #     def cpu_version(self, x):
-    #         return signal.detrend(x)
+        def gpu_version(self, freq, fs, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.freq_shift(freq, fs, num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     @pytest.mark.cpu
-    #     def test_detrend_cpu(self, benchmark, num_x):
-    #         benchmark(self.cpu_version, num_x)
+        @pytest.mark.cpu
+        def test_freq_shift_cpu(
+            self, rand_data_gen, benchmark, dtype, num_samps, freq, fs
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
+            benchmark(self.cpu_version, cpu_sig, freq, fs)
 
-    #     def test_detrend_gpu(self, gpubenchmark, num_x):
+        def test_freq_shift_gpu(
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, freq, fs
+        ):
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            output = gpubenchmark(self.gpu_version, gpu_sig, freq, fs)
 
-    #         output = gpubenchmark(cusignal.detrend, num_x)
-
-    #         key = self.cpu_version(num_x)
-    #         assert array_equal(cp.asnumpy(output), key)
-
-    # @pytest.mark.benchmark(group="FreqShift")
-    # @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
-    # class TestFreqShift:
-    #     def cpu_version(self, cpu_sig, freq):
-    #         return signal.freq_shift(freq)
-
-    #     @pytest.mark.cpu
-    #     def test_freq_shift_cpu(self, benchmark, freq):
-    #         benchmark(self.cpu_version, freq)
-
-    #     def test_freq_shift_gpu(self, gpubenchmark):
-
-    #         output = gpubenchmark(cusignal.detrend, freq)
-
-    #         key = self.cpu_version(freq)
-    #         assert array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig, freq, fs)
+            assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Decimate")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
@@ -387,7 +413,7 @@ class TestFilter:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="UpFirDn")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 14), (2, 2 ** 8)])
     @pytest.mark.parametrize("up", [2, 3, 7])
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("axis", [-1, 0])
@@ -403,9 +429,9 @@ class TestFilter:
 
         @pytest.mark.cpu
         def test_upfirdn_cpu(
-            self, rand_data_gen, benchmark, num_samps, up, down, axis
+            self, rand_data_gen, benchmark, dim, num_samps, up, down, axis
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
             benchmark(
                 self.cpu_version,
                 cpu_sig,
@@ -418,63 +444,14 @@ class TestFilter:
             self,
             rand_data_gen,
             gpubenchmark,
+            dim,
             num_samps,
             up,
             down,
             axis,
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output = gpubenchmark(
-                self.gpu_version,
-                gpu_sig,
-                up,
-                down,
-                axis,
-            )
-
-            key = self.cpu_version(cpu_sig, up, down, axis)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="UpFirDn2d")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
-    @pytest.mark.parametrize("up", [2, 3, 7])
-    @pytest.mark.parametrize("down", [1, 2, 9])
-    @pytest.mark.parametrize("axis", [-1, 0])
-    class TestUpFirDn2d:
-        def cpu_version(self, sig, up, down, axis):
-            return signal.upfirdn([1, 1, 1], sig, up, down, axis)
-
-        def gpu_version(self, sig, up, down, axis):
-            with cp.cuda.Stream.null:
-                out = cusignal.upfirdn([1, 1, 1], sig, up, down, axis)
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_upfirdn2d_cpu(
-            self, rand_2d_data_gen, benchmark, num_samps, up, down, axis
-        ):
-            cpu_sig, _ = rand_2d_data_gen(num_samps)
-            benchmark(
-                self.cpu_version,
-                cpu_sig,
-                up,
-                down,
-                axis,
-            )
-
-        def test_upfirdn2d_gpu(
-            self,
-            rand_2d_data_gen,
-            gpubenchmark,
-            num_samps,
-            up,
-            down,
-            axis,
-        ):
-
-            cpu_sig, gpu_sig = rand_2d_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -531,3 +508,56 @@ class TestFilter:
 
             key = self.cpu_version(cpu_sig, cpu_filter)
             assert array_equal(cp.asnumpy(output), key)
+
+    @pytest.mark.benchmark(group="ChannelizePoly")
+    @pytest.mark.parametrize(
+        "dtype", [np.float32, np.float64, np.complex64, np.complex128]
+    )
+    @pytest.mark.parametrize("num_samps", [2 ** 12])
+    @pytest.mark.parametrize("filt_samps", [2048])
+    @pytest.mark.parametrize("n_chan", [64, 128, 256])
+    class TestChannelizePoly:
+        def cpu_version(self, x, h, n_chan):
+            return channelize_poly_cpu(x, h, n_chan)
+
+        def gpu_version(self, x, h, n_chan):
+            with cp.cuda.Stream.null:
+                out = cusignal.channelize_poly(x, h, n_chan)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_channelizepoly_cpu(
+            self,
+            benchmark,
+            rand_data_gen,
+            dtype,
+            num_samps,
+            filt_samps,
+            n_chan,
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
+            cpu_filt, _ = rand_data_gen(filt_samps, 1, dtype)
+
+            benchmark(self.cpu_version, cpu_sig, cpu_filt, n_chan)
+
+        def test_channelizepoly_gpu(
+            self,
+            gpubenchmark,
+            rand_data_gen,
+            dtype,
+            num_samps,
+            filt_samps,
+            n_chan,
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            cpu_filt, gpu_filt = rand_data_gen(filt_samps, 1, dtype)
+
+            output = gpubenchmark(self.gpu_version, gpu_sig, gpu_filt, n_chan)
+
+            key = self.cpu_version(cpu_sig, cpu_filt, n_chan)
+            if dtype is np.float32 or dtype is np.complex64:
+                assert array_equal(cp.asnumpy(output), key, tol=1e-3)
+            else:
+                assert array_equal(cp.asnumpy(output), key)

@@ -19,11 +19,29 @@
 - PR #213 - Graceful handling of filter tap limit for polyphase channelizer
 - PR #215 - Improve doc formating for filtering operations
 - PR #219 - Add missing pytests
+- PR #222 - Improved performance for various window functions
+- PR #235 - Improve Wavelets functions performance
+- PR #236 - Improve Bsplines functions performance
+- PR #242 - Add PyTorch disclaimer to notebook
+- PR #243 - Improve Peak Finding function performance
+- PR #249 - Update README to add SDR integration instructions and improved install clarity
+- PR #250 - Update ci/local/README.md
+- PR #256 - Update to CuPy 8.0.0
+- PR #260 - Optimize waveform functions
 
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
 - PR #218 - Remove fatbins from source code on GH
 - PR #221 - Synchronization issue with cusignal testing 
+- PR #237 - Update conda build files so fatbins are generated
+- PR #239 - Fix mode issue in peak finding module
+- PR #245 - Reduce number of default build architectures
+- PR #246 - Remove lfiltic function
+- PR #248 - Fix channelizer bugs
+- PR #254 - Use CuPy v8 FFT cache plan
+- PR #259 - Fix notebook error handling in gpuCI
+- PR #263 - Remove precompile_kernels() from io_examples
+- PR #264 - Fix Build error w/ nvidia-smi
 
 # cuSignal 0.15.0 (26 Aug 2020)
 

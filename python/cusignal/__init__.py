@@ -88,7 +88,6 @@ from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
-    cspline1d,
 )
 from cusignal.waveforms.waveforms import (
     square,

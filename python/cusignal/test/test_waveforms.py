@@ -73,7 +73,7 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = gpubenchmark(self.cpu_version, gpu_sig, fc)
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fc)
 
             _, _, key = self.cpu_version(cpu_sig, fc)
             assert array_equal(cp.asnumpy(output), key)
@@ -83,7 +83,7 @@ class TestWaveforms:
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
     @pytest.mark.parametrize("f1", [10])
-    @pytest.mark.parametrize("method", ["linear", "quadratic"])
+    @pytest.mark.parametrize("method", ["lin", "quad", "log", "hyp"])
     class TestChirp:
         def cpu_version(self, sig, f0, t1, f1, method):
             return signal.chirp(sig, f0, t1, f1, method)

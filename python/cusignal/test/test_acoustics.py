@@ -15,6 +15,10 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
+<<<<<<< HEAD
+=======
+
+>>>>>>> branch-0.16
 from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
@@ -191,6 +195,7 @@ class TestAcoustics:
 
             key = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
+<<<<<<< HEAD
 
 
     @pytest.mark.benchmark(group="InverseComplexCepstrum")
@@ -253,3 +258,5 @@ class TestAcoustics:
             key = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
 
+=======
+>>>>>>> branch-0.16

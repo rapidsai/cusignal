@@ -158,74 +158,6 @@ def firfilter(b, x, axis=None, zi=None):
     return y[: len(x)]
 
 
-def lfiltic(b, a, y, x=None):
-    """
-    Construct initial conditions for lfilter given input and output vectors.
-
-    Given a linear filter (b, a) and initial conditions on the output `y`
-    and the input `x`, return the initial conditions on the state vector zi
-    which is used by `lfilter` to generate the output given the input.
-
-    Parameters
-    ----------
-    b : array_like
-        Linear filter term.
-    a : array_like
-        Linear filter term.
-    y : array_like
-        Initial conditions.
-
-        If ``N = len(a) - 1``, then ``y = {y[-1], y[-2], ..., y[-N]}``.
-
-        If `y` is too short, it is padded with zeros.
-    x : array_like, optional
-        Initial conditions.
-
-        If ``M = len(b) - 1``, then ``x = {x[-1], x[-2], ..., x[-M]}``.
-
-        If `x` is not given, its initial conditions are assumed zero.
-
-        If `x` is too short, it is padded with zeros.
-
-    Returns
-    -------
-    zi : ndarray
-        The state vector ``zi = {z_0[-1], z_1[-1], ..., z_K-1[-1]}``,
-        where ``K = max(M, N)``.
-
-    See Also
-    --------
-    lfilter, lfilter_zi
-
-    """
-    N = cp.size(a) - 1
-    M = cp.size(b) - 1
-    K = cp.max(M, N)
-    y = asarray(y)
-    if y.dtype.kind in "bui":
-        # ensure calculations are floating point
-        y = y.astype(cp.float64)
-    zi = zeros(K, y.dtype)
-    if x is None:
-        x = zeros(M, y.dtype)
-    else:
-        x = asarray(x)
-        L = cp.size(x)
-        if L < M:
-            x = r_[x, zeros(M - L)]
-    L = cp.size(y)
-    if L < N:
-        y = r_[y, zeros(N - L)]
-
-    for m in range(M):
-        zi[m] = cp.sum(b[m + 1 :] * x[: M - m], axis=0)
-
-    for m in range(N):
-        zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
-
-    return zi
-
-
 def sosfilt(
     sos,
     x,
@@ -702,9 +634,13 @@ def channelize_poly(x, h, n_chans):
     # number of taps in each h_n filter
     n_taps = int(len(h) / n_chans)
     if n_taps > 32:
-        raise NotImplementedError('The number of calculated taps ({}) in  \
+        raise NotImplementedError(
+            "The number of calculated taps ({}) in  \
             each filter is currently capped at 32. Please reduce filter \
-                length or number of channels'.format(n_taps))
+                length or number of channels".format(
+                n_taps
+            )
+        )
 
     if n_taps > 32:
         raise NotImplementedError(
@@ -722,14 +658,14 @@ def channelize_poly(x, h, n_chans):
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
     # Remove with CuPy v8
-    if (x.dtype) in _cupy_fft_cache:
-        plan = _cupy_fft_cache[(x.dtype)]
+    if (x.dtype, n_pts, n_taps, n_chans) in _cupy_fft_cache:
+        plan = _cupy_fft_cache[(x.dtype, n_pts, n_taps, n_chans)]
     else:
-        plan = _cupy_fft_cache[(x.dtype)] = fftpack.get_fft_plan(y, axes=-1)
+        plan = _cupy_fft_cache[
+            (x.dtype, n_pts, n_taps, n_chans)
+        ] = fftpack.get_fft_plan(y, axes=-1)
 
-    y = cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
-
-    return y
+    return cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 
 
 def _prod(iterable):

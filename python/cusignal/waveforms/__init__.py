@@ -15,5 +15,5 @@ from cusignal.waveforms.waveforms import (
     square,
     gausspulse,
     chirp,
-    unit_impulse
+    unit_impulse,
 )

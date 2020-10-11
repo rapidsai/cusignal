@@ -22,11 +22,32 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-# qmf
-
-
 class TestWavelets:
+    @pytest.mark.benchmark(group="Qmf")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    class TestQmf:
+        def cpu_version(self, sig):
+            return signal.qmf(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.qmf(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_qmf_cpu(self, range_data_gen, benchmark, num_samps):
+            cpu_sig, _ = range_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
+
+        def test_qmf_gpu(self, range_data_gen, gpubenchmark, num_samps):
+
+            cpu_sig, gpu_sig = range_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Morlet")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     class TestMorlet:
@@ -75,6 +96,7 @@ class TestWavelets:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="CWT")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWT:
@@ -88,14 +110,18 @@ class TestWavelets:
             return out
 
         @pytest.mark.cpu
-        def test_cwt_cpu(self, rand_data_gen, benchmark, num_samps, widths):
-            cpu_sig, _ = rand_data_gen(num_samps)
+        def test_cwt_cpu(
+            self, rand_data_gen, benchmark, dtype, num_samps, widths
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             wavelet = signal.ricker
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        def test_cwt_gpu(self, rand_data_gen, gpubenchmark, num_samps, widths):
+        def test_cwt_gpu(
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, widths
+        ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
             cu_wavelet = cusignal.ricker
             output = gpubenchmark(
                 self.gpu_version, gpu_sig, cu_wavelet, widths
@@ -104,56 +130,3 @@ class TestWavelets:
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)
             assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="CWTComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("widths", [31, 127])
-    class TestCWTComplex:
-        def cpu_version(self, sig, wavelet, widths):
-            return signal.cwt(sig, wavelet, np.arange(1, widths))
-
-        def gpu_version(self, sig, wavelet, widths):
-            with cp.cuda.Stream.null:
-                out = cusignal.cwt(sig, wavelet, np.arange(1, widths))
-            cp.cuda.Stream.null.synchronize()
-            return out
-
-        @pytest.mark.cpu
-        def test_cwt_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, widths
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            wavelet = signal.ricker
-            benchmark(self.cpu_version, cpu_sig, wavelet, widths)
-
-        def test_cwt_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, widths
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            cu_wavelet = cusignal.ricker
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, cu_wavelet, widths
-            )
-
-            wavelet = signal.ricker
-            key = self.cpu_version(cpu_sig, wavelet, widths)
-            assert array_equal(cp.asnumpy(output), key)
-
-    # @pytest.mark.benchmark(group="Qmf")
-    # @pytest.mark.benchmark("f1", [1,1])
-    # @pytest.mark.benchmark("f2", [1,-1])
-    # class TestQmf:
-    #     def cpu_version(self, sig):
-    #         return signal.qmf(sig)
-
-    #     @pytest.mark.cpu
-    #     def test_qmf_cpu(self, benchmark, f1, f2):
-    #         benchmark(self.cpu_version, f1, f2)
-
-    #     def test_qmf_gpu(self, gpubenchmark, f1, f2):
-
-    #         output = gpubenchmark(cusignal.qmf, f1, f2)
-
-    #         key = self.cpu_version(f1, f2)
-    #         assert array_equal(cp.asnumpy(output), key)

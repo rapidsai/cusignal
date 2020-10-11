@@ -11,11 +11,11 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 * [Documentation](#documentation)
 * [Installation](#installation)
     * [Conda: Linux OS](#conda-linux-os)
-    * [Conda: Jetson Nano, TK1, TX2, Xavier, Linux OS](#conda---jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
     * [Source: Linux OS](#source-linux-os)
     * [Source: Windows OS (Experimental)](#source-windows-os-experimental)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
-* [Optional Dependencies](#optional-dependencies)
+* [Software Defined Radio (SDR) Integration](#sdr-integration)
 * [Benchmarking](#benchmarking)
 * [Contribution Guide](#contributing-guide)
 * [cuSignal Blogs and Talks](#cusignal-blogs-and-talks)
@@ -114,7 +114,8 @@ The complete cuSignal API documentation including a complete list of functionali
 
 [cuSignal 0.15 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.16 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
-## Installation
+### Installation
+cuSignal has been tested on and supports all modern GPUs - from Maxwell to Ampere. While Anaconda is the preferred installation mechanism for cuSignal, developers and Jetson users should follow the source build instructions below. As of cuSignal 0.15, there isn't a cuSignal conda package for aarch64.
 
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
@@ -155,7 +156,7 @@ cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
 
 See the [Get RAPIDS version picker](https://rapids.ai/start.html) for more OS and version info.
 
-### Conda - Jetson Nano, TK1, TX2, Xavier, Linux OS
+### Source, aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS
 
 In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda environment from [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) to [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
 
@@ -312,9 +313,23 @@ docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
 
 Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions.
 
-## Optional Dependencies
-* [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) if using Docker 
-* RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
+## SDR Integration
+[SoapySDR](https://github.com/pothosware/SoapySDR/wiki) is a "vendor neutral and platform independent" library for software-defined radio usage. When used in conjunction with device (SDR) specific modules, SoapySDR allows for easy command-and-control of radios from Python or C++. To install SoapySDR into an existing cuSignal Conda environment, run:
+
+`conda install -c conda-forge soapysdr`
+
+A full list of subsequent modules, specific to your SDR are listed [here](https://anaconda.org/search?q=soapysdr), but some common ones:
+- rtlsdr: `conda install -c conda-forge soapysdr-module-rtlsdr`
+- Pluto SDR: `conda install -c conda-forge soapysdr-module-plutosdr`
+- UHD: `conda install -c conda-forge soapysdr-module-uhd`
+
+Another popular SDR library, specific to the rtl-sdr, is [pyrtlsdr](https://github.com/roger-/pyrtlsdr).
+
+For examples using SoapySDR, pyrtlsdr, and cuSignal, please see the [notebooks/sdr](https://github.com/rapidsai/cusignal/blob/main/notebooks/sdr) directory.
+
+Please note, for most rtlsdr devices, you'll need to blacklist the libdvb driver in Linux. To do this, run `sudo vi /etc/modprobe.d/blacklist.conf` and add `blacklist dvb_usb_rtl28xxu` to the end of the file. Restart your computer upon completion.
+
+If you have a SDR that isn't listed above (like the LimeSDR), don't worry! You can symbolically link the system-wide Python bindings installed via `apt-get` to the local conda environment. Please file an issue if you run into any problems.
 
 ## Benchmarking
 cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal processing implementations. To run cuSignal's benchmark suite, **navigate to the topmost python directory ($CUSIGNAL_HOME/python)** and run:
