@@ -1,6 +1,8 @@
 # cuSignal 0.17.0 (Date TBD)
 
 ## New Features
+- PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
+
 
 ## Improvements
 
@@ -14,7 +16,6 @@
 - PR #199 - Added Ampere support
 - PR #208 - Remove CuPy v8 req for Kalman filter
 - PR #210 - Add signal scope example to notebooks
-- PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
 
 ## Improvements
 - PR #196 - Update README for cuSignal 0.15
