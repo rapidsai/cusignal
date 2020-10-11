@@ -35,7 +35,6 @@ from cupy import (
     where,
     zeros,
 )
-from cupyx.scipy import fftpack
 from cupy import linalg
 
 import numpy as np
@@ -415,7 +414,7 @@ def hilbert(x, N=None, axis=-1):
     if N <= 0:
         raise ValueError("N must be positive.")
 
-    Xf = fftpack.fft(x, N, axis=axis)
+    Xf = cp.fft.fft(x, N, axis=axis)
     h = zeros(N)
     if N % 2 == 0:
         h[0] = h[N // 2] = 1
@@ -428,7 +427,7 @@ def hilbert(x, N=None, axis=-1):
         ind = [newaxis] * x.ndim
         ind[axis] = slice(None)
         h = h[tuple(ind)]
-    x = fftpack.ifft(Xf * h, axis=axis)
+    x = cp.fft.ifft(Xf * h, axis=axis)
     return x
 
 
@@ -470,7 +469,7 @@ def hilbert2(x, N=None):
             "When given as a tuple, N must hold exactly two positive integers"
         )
 
-    Xf = fftpack.fft2(x, N, axes=(0, 1))
+    Xf = cp.fft.fft2(x, N, axes=(0, 1))
     h1 = zeros(N[0], "d")
     h2 = zeros(N[1], "d")
     for p in range(2):
@@ -489,7 +488,7 @@ def hilbert2(x, N=None):
     while k > 2:
         h = h[:, newaxis]
         k -= 1
-    x = fftpack.ifft2(Xf * h, axes=(0, 1))
+    x = cp.fft.ifft2(Xf * h, axes=(0, 1))
     return x
 
 
@@ -625,7 +624,6 @@ def channelize_poly(x, h, n_chans):
     Number of filter taps (len of filter / n_chans) must be <=32.
 
     """
-
     dtype = cp.promote_types(x.dtype, h.dtype)
 
     x = asarray(x, dtype=dtype)
@@ -642,17 +640,12 @@ def channelize_poly(x, h, n_chans):
             )
         )
 
-    if n_taps > 32:
-        raise NotImplementedError(
-            "Number of taps ({}) must be less than (32).".format(n_taps)
-        )
-
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
-    if x.dtype == cp.float32 or x.dtype == cp.complex64:
+    if x.dtype.char in ('fF'):
         y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
-    elif x.dtype == cp.float64 or x.dtype == cp.complex128:
+    elif x.dtype.char in ('dD'):
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
