@@ -30,8 +30,6 @@ from .convolution_utils import (
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
-_cupy_fft_cache = {}
-
 
 def convolve(
     in1,
