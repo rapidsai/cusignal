@@ -3,6 +3,7 @@
 ## New Features
 
 ## Improvements
+- PR #267 Add C++11 to Elementwise Kernels
 
 ## Bug Fixes
 
