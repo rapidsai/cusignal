@@ -19,7 +19,7 @@ from six import string_types
 
 _square_kernel = cp.ElementwiseKernel(
     "T t, T w, T pi",
-    "T y",
+    "Y y",
     """
     bool mask1 { ( ( w > 1 ) || ( w < 0 ) ) };
     if ( mask1 ) {
@@ -412,9 +412,6 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
     """
 
     t = cp.asarray(t)
-    f0 = float(f0)
-    t1 = float(t1)
-    f1 = float(f1)
     phi *= np.pi / 180
 
     if method in ["linear", "lin", "li"]:

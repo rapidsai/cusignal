@@ -495,7 +495,7 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
 
     if measure:
         times = {}
-        for method in ["fft", "direct"]:
+        for method in ("fft", "direct"):
             times[method] = _timeit_fast(
                 lambda: convolve(volume, kernel, mode=mode, method=method)
             )
