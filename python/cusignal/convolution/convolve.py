@@ -299,8 +299,6 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
-    major_ver = cp.__version__.split(".")
-
     if not complex_result:
         sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
         sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
