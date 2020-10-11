@@ -19,10 +19,11 @@ _qmf_kernel = cp.ElementwiseKernel(
     "T N",
     "T output",
     """
-    int sign = ( i % 2 ) ? -1 : 1;
-    output = (N - (i + 1)) * sign;
+    int sign { ( i % 2 ) ? -1 : 1 };
+    output = ( N - ( i + 1 ) ) * sign;
     """,
     "_qmf_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -48,19 +49,18 @@ _morlet_kernel = cp.ElementwiseKernel(
     "float64 delta, float64 start, float64 w, float64 pi, bool complete",
     "T output",
     """
-    double x = start + delta * i;
+    auto x = start + delta * i;
 
-    T temp = T(0, w * x);
+    T temp { exp( T( 0, w * x ) ) };
 
-    temp = exp(temp);
-
-    if (complete) {
-        temp -= exp( -0.5 * (w * w) );
+    if ( complete ) {
+        temp -= exp( -0.5 * ( w * w ) );
     }
 
-    output = temp * exp( -0.5 * (x * x)) * pow(pi, -0.25)
+    output = temp * exp( -0.5 * ( x * x ) ) * pow( pi, -0.25 )
     """,
     "_morlet_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -129,13 +129,15 @@ _ricker_kernel = cp.ElementwiseKernel(
     "T A, T wsq",
     "T total",
     """
-    T vec = i - (_ind.size() - 1.0) / 2;
-    T xsq = vec * vec;
-    T mod = ( 1 - xsq / wsq );
-    T gauss = exp( -xsq / ( 2 * wsq ) );
+    T vec { i - ( _ind.size() - 1.0 ) / 2 };
+    T xsq { vec * vec };
+    T mod { 1 - xsq / wsq };
+    T gauss { exp( -xsq / ( 2 * wsq ) ) };
+
     total = A * mod * gauss;
     """,
     "_ricker_kernel",
+    options=('-std=c++11',)
 )
 
 

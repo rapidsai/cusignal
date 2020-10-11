@@ -46,14 +46,15 @@ _general_cosine_kernel = cp.ElementwiseKernel(
     "T delta, T start, raw T a, int64 n",
     "T w",
     """
-    T fac = start + delta * i;
-    T temp = 0.0;
+    T fac { start + delta * i };
+    T temp {};
     for (int k = 0; k < n; k++) {
         temp += a[k] * cos(k * fac);
     }
     w = temp;
     """,
     "_general_cosine_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -199,7 +200,7 @@ _triang_kernel_true = cp.ElementwiseKernel(
     "int64 M",
     "T w",
     """
-    int n;
+    int n {};
     if ( i < static_cast<int>(M/2) ) {
         n = i + 1;
         w = ( 2 * n - 1.0 ) / M;
@@ -209,13 +210,14 @@ _triang_kernel_true = cp.ElementwiseKernel(
     }
     """,
     "_triang_kernel",
+    options=('-std=c++11',)
 )
 
 _triang_kernel_false = cp.ElementwiseKernel(
     "int64 M",
     "T w",
     """
-    int n;
+    int n {};
     if ( i < static_cast<int>(M/2) ) {
         n = i + 1;
         w = 2 * n / ( M + 1.0 );
@@ -225,6 +227,7 @@ _triang_kernel_false = cp.ElementwiseKernel(
     }
     """,
     "_triang_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -296,22 +299,24 @@ _parzen_kernel = cp.ElementwiseKernel(
     "T den, T start, T s1, int64 sizeS1, T s2, int64 sizeS2",
     "T w",
     """
-    T n;
+    T n {};
+    T temp {};
     if ( i < sizeS1 ) {
         n = i + start;
-        T temp = (1 - abs(n) * den);
+        temp = 1 - abs(n) * den;
         w = 2 * (temp * temp * temp);
     } else if ( i >= sizeS1 && i < ( sizeS1 + sizeS2 ) ) {
         n = (i - sizeS1 - s2);
-        T temp = abs(n) * den;
+        temp = abs(n) * den;
         w = 1 - 6 * temp * temp + 6 * temp * temp * temp;
     } else {
         n = -(i - sizeS2 + s1 + sizeS1);
-        T temp = 1 - abs(n) * den;
+        temp = 1 - abs(n) * den;
         w = 2 * temp * temp * temp;
     }
     """,
     "_parzen_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -395,7 +400,7 @@ _bohman_kernel = cp.ElementwiseKernel(
     "T delta, T start, T pi",
     "T w",
     """
-    double fac = abs(start + delta * ( i - 1 ));
+    auto fac = abs( start + delta * ( i - 1 ) );
     if ( i != 0 && i != ( _ind.size() - 1 ) ) {
         w = (1 - fac) * cos(pi * fac) + 1.0 / pi * sin(pi * fac);
     } else {
@@ -403,6 +408,7 @@ _bohman_kernel = cp.ElementwiseKernel(
     }
     """,
     "_bohman_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -724,7 +730,7 @@ _bartlett_kernel = cp.ElementwiseKernel(
     "T N",
     "T w",
     """
-    double temp = (_ind.size() - 1) * 0.5;
+    auto temp = ( _ind.size() - 1 ) * 0.5;
     if ( i <= temp ) {
         w = 2.0 * i * N;
     } else {
@@ -732,6 +738,7 @@ _bartlett_kernel = cp.ElementwiseKernel(
     }
     """,
     "_bartlett_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -932,6 +939,7 @@ _tukey_kernel = cp.ElementwiseKernel(
     }
     """,
     "_tukey_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1017,10 +1025,11 @@ _barthann_kernel = cp.ElementwiseKernel(
     "T N, T pi",
     "T w",
     """
-    T fac = abs(i * N - 0.5);
+    T fac { abs( i * N - 0.5 ) };
     w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
     """,
     "_barthann_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1180,6 +1189,7 @@ _hamming_kernel = cp.ElementwiseKernel(
     w = 0.54 - 0.46 * cos(2.0 * pi * i * N);
     """,
     "_hamming_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1281,11 +1291,12 @@ _kaiser_kernel = cp.ElementwiseKernel(
     "T alpha, T beta",
     "T w",
     """
-    T temp = ( i - alpha ) / alpha;
+    T temp { ( i - alpha ) / alpha };
     w = cyl_bessel_i0(beta * sqrt( 1 - ( temp * temp ) ) ) /
         cyl_bessel_i0( beta );
     """,
     "_kaiser_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1418,12 +1429,13 @@ _gaussian_kernel = cp.ElementwiseKernel(
     "T std",
     "T w",
     """
-    T n = i - (_ind.size() - 1.0) * 0.5;
-    T sig2 = 2 * std * std;
+    T n { i - ( _ind.size() - 1 ) * 0.5 };
+    T sig2 { 2 * std * std };
     w = exp( - ( n * n ) / sig2 );
 
     """,
     "_gaussian_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1495,10 +1507,11 @@ _general_gaussian_kernel = cp.ElementwiseKernel(
     "T p, T sig",
     "T w",
     """
-    T n = i - (_ind.size() - 1.0) * 0.5;
+    T n { i - ( _ind.size() - 1 ) * 0.5 };
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
     """,
     "_general_gaussian_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1578,37 +1591,39 @@ _chebwin_kernel_odd = cp.ElementwiseKernel(
     "T N, T order, T beta, T pi",
     "T p",
     """
-    T x = beta * cos(pi * i * N);
-    if (x > 1) {
-        p = cosh(order * acosh(x));
-    } else if (x < -1) {
-        p = (2 * (_ind.size() % 2) - 1) * cosh(order * acosh(-x));
+    T x { beta * cos( pi * i * N ) };
+    if ( x > 1 ) {
+        p = cosh( order * acosh( x ) );
+    } else if ( x < -1 ) {
+        p = ( 2 * ( _ind.size() % 2 ) - 1 ) * cosh( order * acosh( -x ) );
     } else {
-        p = cos(order * acos(x));
+        p = cos( order * acos( x ) );
     }
     """,
     "_chebwin_kernel_odd",
+    options=('-std=c++11',)
 )
 
 _chebwin_kernel_even = cp.ElementwiseKernel(
     "float64 N, float64 order, float64 beta",
     "T p",
     """
-    double x = beta * cos(i * N);
-    double real;
-    if (x > 1) {
+    double x { beta * cos( i * N ) };
+    double real {};
+    if ( x > 1 ) {
         real = cosh(order * acosh(x));
-    } else if (x < -1) {
-        real = (2 * (_ind.size() % 2) - 1) * cosh(order * acosh(-x));
+    } else if ( x < -1 ) {
+        real = ( 2 * ( _ind.size() % 2 ) - 1 ) * cosh( order * acosh( -x ) );
     } else {
-        real = cos(order * acos(x));
+        real = cos( order * acos( x ) );
     }
 
-    T temp = T(0, N * i);
+    T temp { T(0, N * i) };
 
     p = real * exp(temp);
     """,
     "_chebwin_kernel_even",
+    options=('-std=c++11',)
 )
 
 
@@ -1745,10 +1760,11 @@ _cosine_kernel = cp.ElementwiseKernel(
     "T pi",
     "T w",
     """
-    T n = i + 0.5;
+    T n { i + 0.5 };
     w = sin( pi / _ind.size() * n );
     """,
     "_cosine_kernel",
+    options=('-std=c++11',)
 )
 
 
@@ -1818,9 +1834,10 @@ _exponential_kernel = cp.ElementwiseKernel(
     "T center, T tau",
     "T w",
     """
-    w = exp(-abs(i - center) / tau);
+    w = exp( -abs( i - center ) / tau );
     """,
     "_exponential_kernel",
+    options=('-std=c++11',)
 )
 
 
