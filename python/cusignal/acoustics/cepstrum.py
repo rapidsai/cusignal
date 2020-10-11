@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import cupyx.scipy.fftpack as fft
 import math
 
 
@@ -39,8 +38,8 @@ def real_cepstrum(x, n=None, axis=-1):
     """
     x = cp.asarray(x)
 
-    spectrum = fft.fft(x, n=n, axis=axis)
-    ceps = fft.ifft(cp.log(cp.abs(spectrum)), n=n, axis=axis).real
+    spectrum = cp.fft.fft(x, n=n, axis=axis)
+    ceps = cp.fft.ifft(cp.log(cp.abs(spectrum)), n=n, axis=axis).real
 
     return ceps
 
@@ -81,9 +80,9 @@ def complex_cepstrum(x, n=None, axis=-1):
 
         return unwrapped, ndelay
 
-    spectrum = fft.fft(x, n=n, axis=axis)
+    spectrum = cp.fft.fft(x, n=n, axis=axis)
     unwrapped_phase, ndelay = _unwrap(cp.angle(spectrum))
     log_spectrum = cp.log(cp.abs(spectrum)) + 1j * unwrapped_phase
-    ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
+    ceps = cp.fft.ifft(log_spectrum, n=n, axis=axis).real
 
     return ceps, ndelay
