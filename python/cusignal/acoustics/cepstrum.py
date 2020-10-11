@@ -12,10 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-import numpy as np
-
-# import cupyx.scipy.fft as fft
-import math
 
 
 _real_cepstrum_kernel = cp.ElementwiseKernel(
@@ -60,10 +56,10 @@ _complex_cepstrum_kernel = cp.ElementwiseKernel(
     "C spectrum, raw T unwrapped, T pi",
     "C output, T ndelay",
     """
-    T center { floor( static_cast<T>( _ind.size() + 1 ) / 2 ) }; 
+    T center { floor( static_cast<T>( _ind.size() + 1 ) / 2 ) };
     ndelay = round( unwrapped[static_cast<int>(center)] / pi);
     T temp { unwrapped[i] - ( pi * ndelay * i / center ) };
-    
+
     output = log( abs( spectrum ) ) + C( 0, temp );
     """,
     "_complex_cepstrum_kernel",
