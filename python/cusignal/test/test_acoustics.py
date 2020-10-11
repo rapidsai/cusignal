@@ -15,10 +15,7 @@ import cupy as cp
 import cusignal
 import numpy as np
 import pytest
-<<<<<<< HEAD
-=======
 
->>>>>>> branch-0.16
 from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
