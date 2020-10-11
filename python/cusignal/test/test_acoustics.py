@@ -100,13 +100,18 @@ def inverse_complex_cepstrum(ceps, ndelay):
         ndelay = np.array(ndelay)
         samples = phase.shape[-1]
         center = (samples + 1) // 2
-        wrapped = phase + np.pi * ndelay[..., None] * np.arange(samples) / center
+        wrapped = (
+            phase + np.pi * ndelay[..., None] * np.arange(samples) / center
+        )
         return wrapped
 
     log_spectrum = np.fft.fft(ceps)
-    spectrum = np.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
+    spectrum = np.exp(
+        log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
+    )
     x = np.fft.ifft(spectrum).real
     return x
+
 
 def minimum_phase(x, n=None):
     r"""Compute the minimum phase reconstruction of a real sequence.
@@ -125,7 +130,14 @@ def minimum_phase(x, n=None):
         n = len(x)
     ceps = real_cepstrum(x, n=n)
     odd = n % 2
-    window = np.concatenate(([1.0], 2.0 * np.ones((n + odd) // 2 - 1), np.ones(1 - odd), np.zeros((n + odd) // 2 - 1)))
+    window = np.concatenate(
+        (
+            [1.0],
+            2.0 * np.ones((n + odd) // 2 - 1),
+            np.ones(1 - odd),
+            np.zeros((n + odd) // 2 - 1),
+        )
+    )
 
     m = np.fft.ifft(np.exp(np.fft.fft(window * ceps))).real
 
@@ -192,8 +204,6 @@ class TestAcoustics:
 
             key = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
-<<<<<<< HEAD
-
 
     @pytest.mark.benchmark(group="InverseComplexCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -254,6 +264,3 @@ class TestAcoustics:
 
             key = self.cpu_version(cpu_sig, n)
             assert array_equal(cp.asnumpy(output), key)
-
-=======
->>>>>>> branch-0.16

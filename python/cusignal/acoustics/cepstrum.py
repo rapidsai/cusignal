@@ -16,6 +16,7 @@ import numpy as np
 import cupyx.scipy.fftpack as fft
 import math
 
+
 _real_cepstrum_kernel = cp.ElementwiseKernel(
     "T spectrum",
     "T output",
@@ -151,6 +152,7 @@ def inverse_complex_cepstrum(ceps, ndelay):
     spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, ndelay, np.pi)
     x = fft.ifft(spectrum).real
     return x
+
 
 def minimum_phase(x, n=None):
     r"""Compute the minimum phase reconstruction of a real sequence.
