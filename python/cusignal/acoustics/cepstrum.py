@@ -13,7 +13,8 @@
 
 import cupy as cp
 import numpy as np
-import cupyx.scipy.fftpack as fft
+
+# import cupyx.scipy.fft as fft
 import math
 
 
@@ -24,6 +25,7 @@ _real_cepstrum_kernel = cp.ElementwiseKernel(
     output = log( abs( spectrum ) );
     """,
     "_real_cepstrum_kernel",
+    options=("-std=c++11",),
 )
 
 
@@ -49,19 +51,24 @@ def real_cepstrum(x, n=None, axis=-1):
         Complex cepstrum result
     """
     x = cp.asarray(x)
-    spectrum = fft.fft(x, n=n, axis=axis)
+    spectrum = cp.fft.fft(x, n=n, axis=axis)
     spectrum = _real_cepstrum_kernel(spectrum)
-    return fft.ifft(spectrum, n=n, axis=axis).real
+    return cp.fft.ifft(spectrum, n=n, axis=axis).real
 
 
 _complex_cepstrum_kernel = cp.ElementwiseKernel(
-    "float64 samples, T ndelay, float64 pi, int64 ar, T center, T unwrapped, complex128 spectrum",
-    "complex128 log_spectrum",
+    "C spectrum, raw T unwrapped, T pi",
+    "C output, T ndelay",
     """
-    T unwrapped_phase = unwrapped - pi * ndelay * ar / center;
-    log_spectrum =  log( abs( spectrum ) ) * unwrapped_phase;
+    T center { floor( static_cast<T>( _ind.size() + 1 ) / 2 ) }; 
+    ndelay = round( unwrapped[static_cast<int>(center)] / pi);
+    T temp { unwrapped[i] - ( pi * ndelay * i / center ) };
+    
+    output = log( abs( spectrum ) ) + C( 0, temp );
     """,
     "_complex_cepstrum_kernel",
+    options=("-std=c++11",),
+    return_tuple=True,
 )
 
 
@@ -87,49 +94,25 @@ def complex_cepstrum(x, n=None, axis=-1):
         Complex cepstrum result
     """
     x = cp.asarray(x)
-
-    def _unwrap(x):
-        r"""
-        Unwrap phase for complex cepstrum calculation; helper function
-        """
-
-        samples = len(x)
-        unwrapped = cp.unwrap(x)
-        center = math.floor((samples + 1) / 2)
-        ndelay = cp.round_(unwrapped[center] / cp.pi)
-        unwrapped -= cp.pi * ndelay * cp.arange(samples) / center
-
-        return unwrapped, ndelay
-
-    spectrum = fft.fft(x, n=n, axis=axis)
-    unwrapped_phase, ndelay = _unwrap(cp.angle(spectrum))
-    log_spectrum = cp.log(cp.abs(spectrum)) + 1j * unwrapped_phase
-    ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
+    spectrum = cp.fft.fft(x, n=n, axis=axis)
+    unwrapped = cp.unwrap(cp.angle(spectrum))
+    log_spectrum, ndelay = _complex_cepstrum_kernel(spectrum, unwrapped, cp.pi)
+    ceps = cp.fft.ifft(log_spectrum, n=n, axis=axis).real
 
     return ceps, ndelay
 
-    # spectrum = fft.fft(x, n=n, axis=axis)
-    # ang_spec = cp.angle(spectrum)
-    # unwrapped = cp.unwrap(ang_spec)
-    # samples = len(ang_spec)
-    # center = math.floor((samples + 1) / 2)
-    # ndelay = cp.round_(unwrapped[center] / cp.pi)
-    # ar = cp.arange(samples)
-
-    # log_spectrum = _complex_cepstrum_kernel(samples, ndelay, np.pi, ar, center, unwrapped, spectrum)
-    # ceps = fft.ifft(log_spectrum, n=n, axis=axis).real
-    # return ceps, ndelay
-
 
 _inverse_complex_cepstrum_kernel = cp.ElementwiseKernel(
-    "complex128 log_spectrum, int64 ndelay, float64 pi",
-    "complex128 spectrum",
+    "C log_spectrum, int32 ndelay, float64 pi",
+    "C spectrum",
     """
-    int center = ( ( sizeof( imag( log_spectrum ) ) + 1 ) / 2 );
-    spectrum = imag( log_spectrum ) + pi * ndelay * sizeof( imag( log_spectrum ) ) / center;
-    spectrum = exp( real(log_spectrum) + imag( spectrum ))
+    double center { static_cast<double>( _ind.size() + 1 ) / 2 };
+    double wrapped { log_spectrum.imag() + pi * ndelay * i / center };
+
+    spectrum = exp( C( log_spectrum.real(), wrapped ) )
     """,
     "_inverse_complex_cepstrum_kernel",
+    options=("-std=c++11",),
 )
 
 
@@ -148,10 +131,33 @@ def inverse_complex_cepstrum(ceps, ndelay):
     where :math:`c_[n]` is the input signal and :math:`F` and :math:`F_{-1}
     are respectively the forward and backward Fourier transform.
     """
-    log_spectrum = fft.fft(ceps)
-    spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, ndelay, np.pi)
-    x = fft.ifft(spectrum).real
-    return x
+    ceps = cp.asarray(ceps)
+    log_spectrum = cp.fft.fft(ceps)
+    spectrum = _inverse_complex_cepstrum_kernel(log_spectrum, ndelay, cp.pi)
+    iceps = cp.fft.ifft(spectrum).real
+
+    return iceps
+
+
+_minimum_phase_kernel = cp.ElementwiseKernel(
+    "",
+    "float32 window",
+    """
+    int odd { _ind.size() & 1 };
+    int bend { static_cast<int>( ( _ind.size() + odd ) / 2 ) };
+    if ( !i ) {
+        window = 1;
+    } else if ( i < bend ) {
+        window = 2;
+    } else if ( i == ( bend )  ) {
+        window = 1 - odd;
+    } else {
+        window = 0;
+    }
+    """,
+    "_minimum_phase_kernel",
+    options=("-std=c++11",),
+)
 
 
 def minimum_phase(x, n=None):
@@ -170,16 +176,7 @@ def minimum_phase(x, n=None):
     if n is None:
         n = len(x)
     ceps = real_cepstrum(x, n=n)
-    odd = n % 2
-
-    window = cp.concatenate(
-        (
-            cp.array([1.0]),
-            2.0 * cp.ones((n + odd) // 2 - 1),
-            cp.ones(1 - odd),
-            cp.zeros((n + odd) // 2 - 1),
-        )
-    )
-    m = fft.ifft(cp.exp(fft.fft(window * ceps))).real
+    window = _minimum_phase_kernel(size=n)
+    m = cp.fft.ifft(cp.exp(cp.fft.fft(window * ceps))).real
 
     return m

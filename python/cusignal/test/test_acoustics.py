@@ -103,6 +103,7 @@ def inverse_complex_cepstrum(ceps, ndelay):
         wrapped = (
             phase + np.pi * ndelay[..., None] * np.arange(samples) / center
         )
+        print(wrapped)
         return wrapped
 
     log_spectrum = np.fft.fft(ceps)
@@ -110,6 +111,7 @@ def inverse_complex_cepstrum(ceps, ndelay):
         log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
     )
     x = np.fft.ifft(spectrum).real
+    print(x)
     return x
 
 
@@ -206,7 +208,7 @@ class TestAcoustics:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="InverseComplexCepstrum")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("num_samps", [2 ** 10])
     @pytest.mark.parametrize("n", [123, 256])
     class TestInverseComplexCepstrum:
         def cpu_version(self, sig, n):
@@ -236,7 +238,7 @@ class TestAcoustics:
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="MinimumPhase")
-    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 16])
+    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
     @pytest.mark.parametrize("n", [123, 256])
     class TestMinimumPhase:
         def cpu_version(self, sig, n):
@@ -255,7 +257,7 @@ class TestAcoustics:
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, n)
 
-        def test_minmum_phase_gpu(
+        def test_minimum_phase_gpu(
             self, rand_data_gen, gpubenchmark, num_samps, n
         ):
 
