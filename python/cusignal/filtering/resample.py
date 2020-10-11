@@ -12,14 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (
-    arange,
-    asarray,
-    ndarray,
-    zeros,
-)
-from cupyx.scipy import fftpack
-from cupy.fft import ifftshift
 
 from math import gcd
 
@@ -122,9 +114,9 @@ def decimate(
     Only FIR filter types are currently supported in cuSignal.
     """
 
-    x = asarray(x)
-    if isinstance(n, (list, ndarray)):
-        b = asarray(n)
+    x = cp.asarray(x)
+    if isinstance(n, (list, cp.ndarray)):
+        b = cp.asarray(n)
     else:
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
@@ -236,11 +228,11 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     >>> plt.legend(['data', 'resampled'], loc='best')
     >>> plt.show()
     """
-    x = asarray(x)
+    x = cp.asarray(x)
     Nx = x.shape[axis]
 
     if domain == "time":
-        X = fftpack.fft(x, axis=axis)
+        X = cp.fft.fft(x, axis=axis)
     elif domain == "freq":
         X = x
     else:
@@ -248,13 +240,13 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
 
     if window is not None:
         if callable(window):
-            W = window(fftpack.fftfreq(Nx))
-        elif isinstance(window, ndarray):
+            W = window(cp.fft.fftfreq(Nx))
+        elif isinstance(window, cp.ndarray):
             if window.shape != (Nx,):
                 raise ValueError("window must have the same length as data")
             W = window
         else:
-            W = ifftshift(get_window(window, Nx))
+            W = cp.fft.ifftshift(get_window(window, Nx))
         newshape = [1] * x.ndim
         newshape[axis] = len(W)
         W.shape = newshape
@@ -263,12 +255,12 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     newshape = list(x.shape)
     newshape[axis] = num
     N = int(cp.minimum(num, Nx))
-    Y = zeros(newshape, "D")
+    Y = cp.zeros(newshape, "D")
     sl[axis] = slice(0, (N + 1) // 2)
     Y[sl] = X[sl]
     sl[axis] = slice(-(N - 1) // 2, None)
     Y[sl] = X[sl]
-    y = fftpack.ifft(Y, axis=axis) * (float(num) / float(Nx))
+    y = cp.fft.ifft(Y, axis=axis) * (float(num) / float(Nx))
 
     if x.dtype.char not in ["F", "D"]:
         y = y.real
@@ -276,7 +268,7 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     if t is None:
         return y
     else:
-        new_t = arange(0, num) * (t[1] - t[0]) * Nx / float(num) + t[0]
+        new_t = cp.arange(0, num) * (t[1] - t[0]) * Nx / float(num) + t[0]
         return y, new_t
 
 
@@ -372,7 +364,7 @@ def resample_poly(
     >>> plt.show()
     """
 
-    x = asarray(x)
+    x = cp.asarray(x)
     up = int(up)
     down = int(down)
     if up < 1 or down < 1:
@@ -389,8 +381,8 @@ def resample_poly(
     n_out = x.shape[axis] * up
     n_out = n_out // down + bool(n_out % down)
 
-    if isinstance(window, (list, ndarray)):
-        window = asarray(window)
+    if isinstance(window, (list, cp.ndarray)):
+        window = cp.asarray(window)
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
@@ -411,7 +403,7 @@ def resample_poly(
         n_post_pad += 1
 
     h = cp.concatenate(
-        (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+        (cp.zeros(n_pre_pad, h.dtype), h, cp.zeros(n_post_pad, h.dtype))
     )
     n_pre_remove_end = n_pre_remove + n_out
 
