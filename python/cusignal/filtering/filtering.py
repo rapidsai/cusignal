@@ -12,29 +12,29 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (
-    arange,
-    asarray,
-    atleast_2d,
-    dot,
-    exp,
-    expand_dims,
-    iscomplexobj,
-    mean,
-    newaxis,
-    ones,
-    pi,
-    prod,
-    r_,
-    ravel,
-    reshape,
-    sort,
-    take,
-    transpose,
-    unique,
-    where,
-    zeros,
-)
+# from cupy import (
+#     arange,
+#     asarray,
+#     atleast_2d,
+#     dot,
+#     exp,
+#     expand_dims,
+#     iscomplexobj,
+#     mean,
+#     newaxis,
+#     ones,
+#     pi,
+#     prod,
+#     r_,
+#     ravel,
+#     reshape,
+#     sort,
+#     take,
+#     transpose,
+#     unique,
+#     where,
+#     zeros,
+# )
 from cupy import linalg
 
 import numpy as np
@@ -73,7 +73,7 @@ def wiener(im, mysize=None, noise=None):
         Wiener filtered result with the same shape as `im`.
 
     """
-    im = asarray(im)
+    im = cp.asarray(im)
     if mysize is None:
         mysize = [3] * im.ndim
     mysize = np.asarray(mysize)
@@ -82,22 +82,22 @@ def wiener(im, mysize=None, noise=None):
         mysize = np.asarray(mysize)
 
     # Estimate the local mean
-    lMean = correlate(im, ones(mysize), "same") / prod(mysize, axis=0)
+    lMean = correlate(im, cp.ones(mysize), "same") / cp.prod(mysize, axis=0)
 
     # Estimate the local variance
     lVar = (
-        correlate(im ** 2, ones(mysize), "same") / prod(mysize, axis=0)
+        correlate(im ** 2, cp.ones(mysize), "same") / cp.prod(mysize, axis=0)
         - lMean ** 2
     )
 
     # Estimate the noise power if needed.
     if noise is None:
-        noise = mean(ravel(lVar), axis=0)
+        noise = cp.mean(cp.ravel(lVar), axis=0)
 
     res = im - lMean
     res *= 1 - noise / lVar
     res += lMean
-    out = where(lVar < noise, lMean, res)
+    out = cp.where(lVar < noise, lMean, res)
 
     return out
 
@@ -236,8 +236,8 @@ def sosfilt(
     >>> y = cusignal.sosfilt(sos, x)
     """
 
-    x = asarray(x)
-    sos = asarray(sos)
+    x = cp.asarray(x)
+    sos = cp.asarray(sos)
     if x.ndim == 0:
         raise ValueError("x must be at least 1D")
     sos, n_sections = _validate_sos(sos)
@@ -406,8 +406,8 @@ def hilbert(x, N=None, axis=-1):
            ISBN 13: 978-1292-02572-8
 
     """
-    x = asarray(x)
-    if iscomplexobj(x):
+    x = cp.asarray(x)
+    if cp.iscomplexobj(x):
         raise ValueError("x must be real.")
     if N is None:
         N = x.shape[axis]
@@ -415,7 +415,7 @@ def hilbert(x, N=None, axis=-1):
         raise ValueError("N must be positive.")
 
     Xf = cp.fft.fft(x, N, axis=axis)
-    h = zeros(N)
+    h = cp.zeros(N)
     if N % 2 == 0:
         h[0] = h[N // 2] = 1
         h[1 : N // 2] = 2
@@ -424,7 +424,7 @@ def hilbert(x, N=None, axis=-1):
         h[1 : (N + 1) // 2] = 2
 
     if x.ndim > 1:
-        ind = [newaxis] * x.ndim
+        ind = [cp.newaxis] * x.ndim
         ind[axis] = slice(None)
         h = h[tuple(ind)]
     x = cp.fft.ifft(Xf * h, axis=axis)
@@ -453,10 +453,10 @@ def hilbert2(x, N=None):
         https://en.wikipedia.org/wiki/Analytic_signal
 
     """
-    x = atleast_2d(x)
+    x = cp.atleast_2d(x)
     if x.ndim > 2:
         raise ValueError("x must be 2-D.")
-    if iscomplexobj(x):
+    if cp.iscomplexobj(x):
         raise ValueError("x must be real.")
     if N is None:
         N = x.shape
@@ -470,8 +470,8 @@ def hilbert2(x, N=None):
         )
 
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
-    h1 = zeros(N[0], "d")
-    h2 = zeros(N[1], "d")
+    h1 = cp.zeros(N[0], "d")
+    h2 = cp.zeros(N[1], "d")
     for p in range(2):
         h = eval("h%d" % (p + 1))
         N1 = N[p]
@@ -483,10 +483,10 @@ def hilbert2(x, N=None):
             h[1 : (N1 + 1) // 2] = 2
         exec("h%d = h" % (p + 1), globals(), locals())
 
-    h = h1[:, newaxis] * h2[newaxis, :]
+    h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim
     while k > 2:
-        h = h[:, newaxis]
+        h = h[:, cp.newaxis]
         k -= 1
     x = cp.fft.ifft2(Xf * h, axes=(0, 1))
     return x
@@ -533,17 +533,17 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     """
     if type not in ["linear", "l", "constant", "c"]:
         raise ValueError("Trend type must be 'linear' or 'constant'.")
-    data = asarray(data)
+    data = cp.asarray(data)
     dtype = data.dtype.char
     if dtype not in "dfDF":
         dtype = "d"
     if type in ["constant", "c"]:
-        ret = data - expand_dims(mean(data, axis), axis)
+        ret = data - cp.expand_dims(cp.mean(data, axis), axis)
         return ret
     else:
         dshape = data.shape
         N = dshape[axis]
-        bp = sort(unique(r_[0, bp, N]))
+        bp = cp.sort(cp.unique(cp.r_[0, bp, N]))
         if cp.any(bp > N):
             raise ValueError(
                 "Breakpoints must be less than length of \
@@ -556,8 +556,8 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         if axis < 0:
             axis = axis + rnk
         newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
-        newdata = reshape(
-            transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
+        newdata = cp.reshape(
+            cp.transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )
         if not overwrite_data:
             newdata = newdata.copy()  # make sure we have a copy
@@ -566,17 +566,17 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         # Find leastsq fit and remove it for each piece
         for m in range(Nreg):
             Npts = int(bp[m + 1] - bp[m])
-            A = ones((Npts, 2), dtype)
-            A[:, 0] = arange(1, Npts + 1) * 1.0 / Npts
+            A = cp.ones((Npts, 2), dtype)
+            A[:, 0] = cp.arange(1, Npts + 1) * 1.0 / Npts
             sl = slice(bp[m], bp[m + 1])
-            coef, resids, rank, s = linalg.lstsq(A, newdata[sl])
-            newdata[sl] = newdata[sl] - dot(A, coef)
+            coef, _, _, _ = linalg.lstsq(A, newdata[sl])
+            newdata[sl] = newdata[sl] - cp.dot(A, coef)
         # Put data back in original shape.
-        tdshape = take(asarray(dshape), asarray(newdims), 0)
-        ret = reshape(newdata, tuple(cp.asnumpy(tdshape)))
+        tdshape = cp.take(cp.asarray(dshape), cp.asarray(newdims), 0)
+        ret = cp.reshape(newdata, tuple(cp.asnumpy(tdshape)))
         vals = list(range(1, rnk))
         olddims = vals[:axis] + [0] + vals[axis:]
-        ret = transpose(ret, tuple(cp.asnumpy(olddims)))
+        ret = cp.transpose(ret, tuple(cp.asnumpy(olddims)))
         return ret
 
 
@@ -595,8 +595,8 @@ def freq_shift(x, freq, fs):
     domain : string
         freq or time
     """
-    x = asarray(x)
-    return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
+    x = cp.asarray(x)
+    return x * cp.exp(-1j * 2 * cp.pi * freq / fs * cp.arange(x.size))
 
 
 def channelize_poly(x, h, n_chans):
@@ -626,8 +626,8 @@ def channelize_poly(x, h, n_chans):
     """
     dtype = cp.promote_types(x.dtype, h.dtype)
 
-    x = asarray(x, dtype=dtype)
-    h = asarray(h, dtype=dtype)
+    x = cp.asarray(x, dtype=dtype)
+    h = cp.asarray(h, dtype=dtype)
 
     # number of taps in each h_n filter
     n_taps = int(len(h) / n_chans)
