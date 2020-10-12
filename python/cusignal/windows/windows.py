@@ -13,6 +13,7 @@
 
 import cupy as cp
 import numpy as np
+import cupyx
 
 import warnings
 
@@ -41,18 +42,19 @@ def _truncate(w, needed):
 
 
 _general_cosine_kernel = cp.ElementwiseKernel(
-    "T delta, T start, raw T a, int64 n",
+    "raw T a",
     "T w",
     """
-    T fac { start + delta * i };
+    T fac { -M_PI + delta * i };
     T temp {};
-    for (int k = 0; k < n; k++) {
-        temp += a[k] * cos(k * fac);
+    for ( int k = 0; k < _ind.size(); k++ ) {
+        temp += a[k] * cos( k * fac );
     }
     w = temp;
     """,
     "_general_cosine_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double delta { ( M_PI - -M_PI ) / ( _ind.size() - 1 ) }"
 )
 
 
@@ -131,11 +133,9 @@ def general_cosine(M, a, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
     a = cp.asarray(a, dtype=cp.float64)
-    delta = (cp.pi - -cp.pi) / (M - 1)
 
-    _general_cosine_kernel(delta, -cp.pi, a, len(a), w)
+    w = _general_cosine_kernel(a, size=M)
 
     return _truncate(w, needs_trunc)
 
@@ -195,37 +195,39 @@ def boxcar(M, sym=True):
 
 
 _triang_kernel_true = cp.ElementwiseKernel(
-    "int64 M",
-    "T w",
+    "",
+    "float64 w",
     """
     int n {};
-    if ( i < static_cast<int>(M/2) ) {
+    if ( i < m ) {
         n = i + 1;
-        w = ( 2 * n - 1.0 ) / M;
+        w = ( 2 * n - 1.0 ) / _ind.size();
     } else {
-        n = M - i;
-        w = ( 2 * n - 1.0 ) / M;
+        n = _ind.size() - i;
+        w = ( 2 * n - 1.0 ) / _ind.size();
     }
     """,
     "_triang_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="int m { static_cast<int>( _ind.size() / 2 ) }"
 )
 
 _triang_kernel_false = cp.ElementwiseKernel(
-    "int64 M",
-    "T w",
+    "",
+    "float64 w",
     """
     int n {};
-    if ( i < static_cast<int>(M/2) ) {
+    if ( i < m ) {
         n = i + 1;
-        w = 2 * n / ( M + 1.0 );
+        w = 2 * n / ( _ind.size() + 1.0 );
     } else {
-        n = M - i;
-        w = 2 * n / ( M + 1.0 );
+        n = _ind.size() - i;
+        w = 2 * n / ( _ind.size() + 1.0 );
     }
     """,
     "_triang_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="int m { static_cast<int>( _ind.size() / 2 ) }"
 )
 
 
@@ -283,33 +285,32 @@ def triang(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
     if M % 2 == 0:
-        _triang_kernel_true(M, w)
+        w = _triang_kernel_true(size=M)
     else:
-        _triang_kernel_false(M, w)
+        w = _triang_kernel_false(size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _parzen_kernel = cp.ElementwiseKernel(
-    "T den, T start, T s1, int64 sizeS1, T s2, int64 sizeS2",
-    "T w",
+    "float64 den, float64 start, float64 s1, \
+    float64 sizeS1, float64 s2, float64 sizeS2",
+    "float64 w",
     """
-    T n {};
-    T temp {};
+    int n {};
+    double temp {};
     if ( i < sizeS1 ) {
         n = i + start;
-        temp = (1 - abs(n) * den);
-        w = 2 * (temp * temp * temp);
+        temp = (1 - abs( n ) * den);
+        w = 2 * ( temp * temp * temp );
     } else if ( i >= sizeS1 && i < ( sizeS1 + sizeS2 ) ) {
-        n = (i - sizeS1 - s2);
-        temp = abs(n) * den;
+        n = ( i - sizeS1 - s2 );
+        temp = abs( n ) * den;
         w = 1 - 6 * temp * temp + 6 * temp * temp * temp;
     } else {
-        n = -(i - sizeS2 + s1 + sizeS1);
-        temp = 1 - abs(n) * den;
+        n = -( i - sizeS2 + s1 + sizeS1 );
+        temp = 1 - abs( n ) * den;
         w = 2 * temp * temp * temp;
     }
     """,
@@ -387,26 +388,26 @@ def parzen(M, sym=True):
 
     den = 1 / (M / 2.0)
 
-    w = cp.empty(totalSize, dtype=cp.float64)
-
-    _parzen_kernel(den, start, s1, sizeS1, s2, sizeS2, w)
+    w = _parzen_kernel(den, start, s1, sizeS1, s2, sizeS2, size=totalSize)
 
     return _truncate(w, needs_trunc)
 
 
 _bohman_kernel = cp.ElementwiseKernel(
-    "T delta, T start, T pi",
-    "T w",
+    "",
+    "float64 w",
     """
-    T fac = { abs( start + delta * ( i - 1 ) ) };
+    double fac = { abs( start + delta * ( i - 1 ) ) };
     if ( i != 0 && i != ( _ind.size() - 1 ) ) {
-        w = ( 1 - fac ) * cos( pi * fac ) + 1.0 / pi * sin( pi * fac );
+        w = ( 1 - fac ) * cos( M_PI * fac ) + 1.0 / M_PI * sin( M_PI * fac );
     } else {
         w = 0;
     }
     """,
     "_bohman_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double delta { 2 / static_cast<double>( _ind.size() - 1 ) }; \
+               double start { -1 + delta };"
 )
 
 
@@ -459,10 +460,7 @@ def bohman(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-    delta = (1 - -1) / (M - 1)
-
-    _bohman_kernel(delta, (-1 + delta), cp.pi, w)
+    w = _bohman_kernel(size=M)
 
     return _truncate(w, needs_trunc)
 
@@ -725,10 +723,9 @@ def flattop(M, sym=True):
 
 
 _bartlett_kernel = cp.ElementwiseKernel(
-    "T N",
-    "T w",
+    "",
+    "float64 w",
     """
-    T temp { (_ind.size() - 1) * 0.5 };
     if ( i <= temp ) {
         w = 2.0 * i * N;
     } else {
@@ -736,7 +733,9 @@ _bartlett_kernel = cp.ElementwiseKernel(
     }
     """,
     "_bartlett_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double N { 1 / static_cast<double>( _ind.size() - 1 ) }; \
+               double temp { ( _ind.size() - 1 ) * 0.5 };"
 )
 
 
@@ -832,10 +831,7 @@ def bartlett(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    N = 1 / (M - 1)
-    _bartlett_kernel(N, w)
+    w = _bartlett_kernel(size=M)
 
     return _truncate(w, needs_trunc)
 
@@ -924,20 +920,23 @@ def hann(M, sym=True):
 
 
 _tukey_kernel = cp.ElementwiseKernel(
-    "T N, int64 width, T alpha, T pi",
-    "T w",
+    "float64 alpha",
+    "float64 w",
     """
-    if (i < (width + 1)) {
-        w = 0.5 * (1 + cos(pi * (-1 + 2.0 * i / alpha * N)));
-    } else if ( i > (width + 1) && i < (_ind.size() - width - 1) ) {
+    if ( i < ( width + 1 ) ) {
+        w = 0.5 * ( 1 + cos( M_PI * ( -1 + 2.0 * i / alpha * N ) ) );
+    } else if ( i > ( width + 1 ) && i < ( _ind.size() - width - 1) ) {
         w = 1.0;
     } else {
         w = 0.5 *
-            (1 + cos(pi * (-2.0 / alpha + 1 + 2.0 * i / alpha * N)));
+            ( 1 + cos( M_PI * ( -2.0 / alpha + 1 + 2.0 * i / alpha * N ) ) );
     }
     """,
     "_tukey_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double N { 1 / static_cast<double>( _ind.size() - 1 ) }; \
+               int width { static_cast<int>( alpha * ( _ind.size() - 1 ) \
+                   * 0.5 ) }"
 )
 
 
@@ -1010,24 +1009,21 @@ def tukey(M, alpha=0.5, sym=True):
 
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-    width = int(np.floor(alpha * (M - 1) / 2.0))
-
-    N = 1 / (M - 1)
-    _tukey_kernel(N, width, alpha, cp.pi, w)
+    w = _tukey_kernel(alpha, size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _barthann_kernel = cp.ElementwiseKernel(
-    "T N, T pi",
-    "T w",
+    "",
+    "float64 w",
     """
-    T fac { abs(i * N - 0.5) };
-    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * pi * fac);
+    double fac { abs( i * N - 0.5 ) };
+    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * M_PI * fac);
     """,
     "_barthann_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double N { 1 / static_cast<double>( _ind.size() - 1 ) };"
 )
 
 
@@ -1080,10 +1076,7 @@ def barthann(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    N = 1 / (M - 1)
-    _barthann_kernel(N, cp.pi, w)
+    w = _barthann_kernel(size=M)
 
     return _truncate(w, needs_trunc)
 
@@ -1181,13 +1174,14 @@ def general_hamming(M, alpha, sym=True):
 
 
 _hamming_kernel = cp.ElementwiseKernel(
-    "T N, T pi",
-    "T w",
+    "",
+    "float64 w",
     """
-    w = 0.54 - 0.46 * cos(2.0 * pi * i * N);
+    w = 0.54 - 0.46 * cos(2.0 * M_PI * i * N);
     """,
     "_hamming_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double N { 1 / static_cast<double>( _ind.size() - 1 ) };"
 )
 
 
@@ -1275,10 +1269,7 @@ def hamming(M, sym=True):
     if not sym and not odd:
         M = M + 1
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    N = 1 / (M - 1)
-    _hamming_kernel(N, cp.pi, w)
+    w = _hamming_kernel(size=M)
 
     if not sym and not odd:
         w = w[:-1]
@@ -1286,15 +1277,16 @@ def hamming(M, sym=True):
 
 
 _kaiser_kernel = cp.ElementwiseKernel(
-    "T alpha, T beta",
-    "T w",
+    "float64 beta",
+    "float64 w",
     """
-    T temp { ( i - alpha ) / alpha };
+    double temp { ( i - alpha ) / alpha };
     w = cyl_bessel_i0( beta * sqrt( 1 - ( temp * temp ) ) ) /
         cyl_bessel_i0( beta );
     """,
     "_kaiser_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double alpha { ( _ind.size() - 1 ) * 0.5 };"
 )
 
 
@@ -1413,10 +1405,7 @@ def kaiser(M, beta, sym=True):
     if not sym and not odd:
         M = M + 1
 
-    w = cp.empty(M, dtype=cp.float64)
-    alpha = (M - 1) / 2.0
-
-    _kaiser_kernel(alpha, beta, w)
+    w = _kaiser_kernel(beta, size=M)
 
     if not sym and not odd:
         w = w[:-1]
@@ -1424,16 +1413,15 @@ def kaiser(M, beta, sym=True):
 
 
 _gaussian_kernel = cp.ElementwiseKernel(
-    "T std",
-    "T w",
+    "float64 std",
+    "float64 w",
     """
-    T n { i - (_ind.size() - 1.0) * 0.5 };
-    T sig2 { 2 * std * std };
+    double n { i - (_ind.size() - 1.0) * 0.5 };
     w = exp( - ( n * n ) / sig2 );
-
     """,
     "_gaussian_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double sig2 { 2 * std * std };"
 )
 
 
@@ -1494,18 +1482,16 @@ def gaussian(M, std, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    _gaussian_kernel(std, w)
+    w = _gaussian_kernel(std, size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _general_gaussian_kernel = cp.ElementwiseKernel(
-    "T p, T sig",
-    "T w",
+    "float64 p, float64 sig",
+    "float64 w",
     """
-    T n { i - ( _ind.size() - 1.0 ) * 0.5 };
+    double n { i - ( _ind.size() - 1.0 ) * 0.5 };
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
     """,
     "_general_gaussian_kernel",
@@ -1578,18 +1564,16 @@ def general_gaussian(M, p, sig, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    _general_gaussian_kernel(p, sig, w)
+    w = _general_gaussian_kernel(p, sig, size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _chebwin_kernel_odd = cp.ElementwiseKernel(
-    "T N, T order, T beta, T pi",
-    "T p",
+    "float64 beta",
+    "float64 p",
     """
-    T x { beta * cos( pi * i * N ) };
+    double x { beta * cos( i * N ) };
     if ( x > 1 ) {
         p = cosh( order * acosh( x ) );
     } else if ( x < -1 ) {
@@ -1599,12 +1583,31 @@ _chebwin_kernel_odd = cp.ElementwiseKernel(
     }
     """,
     "_chebwin_kernel_odd",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double order { static_cast<double>( _ind.size() ) - 1.0 }; \
+               double N { ( 1 / static_cast<double>( _ind.size() ) ) * M_PI };"
+)
+
+_concat_chebwin_odd = cp.ElementwiseKernel(
+    "raw float64 maxValue",
+    "raw float64 w",
+    """
+    double temp {};
+    int n = static_cast<int>( _ind.size() / 2 );
+    if ( i < n ) {
+        temp = w[n - i];
+    } else {
+        temp = w[i - n];
+    }
+    w[i] = temp / maxValue[0];
+    """,
+    "_concat_chebwin_even",
+    options=('-std=c++11',),
 )
 
 _chebwin_kernel_even = cp.ElementwiseKernel(
-    "float64 N, float64 order, float64 beta",
-    "T p",
+    "float64 beta",
+    "complex128 p",
     """
     double x { beta * cos( i * N ) };
     double real {};
@@ -1616,100 +1619,35 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
         real = cos( order * acos( x ) );
     }
 
-    p = real * exp( T( 0, N * i ) );
+    p = real * exp( thrust::complex<double>( 0, N * i ) );
     """,
     "_chebwin_kernel_even",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
+    loop_prep="double order { static_cast<double>( _ind.size() ) - 1.0 }; \
+               double N { ( 1 / static_cast<double>( _ind.size() ) ) * M_PI };"
+)
+
+_concat_chebwin_even = cp.ElementwiseKernel(
+    "raw float64 maxValue",
+    "raw float64 w",
+    """
+    double temp {};
+    int n = static_cast<int>( _ind.size() / 2 );
+    if ( i < n ) {
+        temp = w[n - i];
+    } else {
+        temp = w[i - n + 1];
+    }
+    w[i] = temp / maxValue[0];
+    """,
+    "_concat_chebwin_even",
+    options=('-std=c++11',),
 )
 
 
 # `chebwin` contributed by Kumar Appaiah.
 def chebwin(M, at, sym=True):
-    r"""Return a Dolph-Chebyshev window.
 
-    Parameters
-    ----------
-    M : int
-        Number of points in the output window. If zero or less, an empty
-        array is returned.
-    at : float
-        Attenuation (in dB).
-    sym : bool, optional
-        When True (default), generates a symmetric window, for use in filter
-        design.
-        When False, generates a periodic window, for use in spectral analysis.
-
-    Returns
-    -------
-    w : ndarray
-        The window, with the maximum value always normalized to 1
-
-    Notes
-    -----
-    This window optimizes for the narrowest main lobe width for a given order
-    `M` and sidelobe equiripple attenuation `at`, using Chebyshev
-    polynomials.  It was originally developed by Dolph to optimize the
-    directionality of radio antenna arrays.
-
-    Unlike most windows, the Dolph-Chebyshev is defined in terms of its
-    frequency response:
-
-    .. math:: W(k) = \frac
-              {\cos\{M \cos^{-1}[\beta \cos(\frac{\pi k}{M})]\}}
-              {\cosh[M \cosh^{-1}(\beta)]}
-
-    where
-
-    .. math:: \beta = \cosh \left [\frac{1}{M}
-              \cosh^{-1}(10^\frac{A}{20}) \right ]
-
-    and 0 <= abs(k) <= M-1. A is the attenuation in decibels (`at`).
-
-    The time domain window is then generated using the IFFT, so
-    power-of-two `M` are the fastest to generate, and prime number `M` are
-    the slowest.
-
-    The equiripple condition in the frequency domain creates impulses in the
-    time domain, which appear at the ends of the window.
-
-    References
-    ----------
-    .. [1] C. Dolph, "A current distribution for broadside arrays which
-           optimizes the relationship between beam width and side-lobe level",
-           Proceedings of the IEEE, Vol. 34, Issue 6
-    .. [2] Peter Lynch, "The Dolph-Chebyshev Window: A Simple Optimal Filter",
-           American Meteorological Society (April 1997)
-           http://mathsci.ucd.ie/~plynch/Publications/Dolph.pdf
-    .. [3] F. J. Harris, "On the use of windows for harmonic analysis with the
-           discrete Fourier transforms", Proceedings of the IEEE, Vol. 66,
-           No. 1, January 1978
-
-    Examples
-    --------
-    Plot the window and its frequency response:
-
-    >>> import cusignal
-    >>> import cupy as cp
-    >>> from cupy.fft import fft, fftshift
-    >>> import matplotlib.pyplot as plt
-
-    >>> window = cusignal.chebwin(51, at=100)
-    >>> plt.plot(cp.asnumpy(window))
-    >>> plt.title("Dolph-Chebyshev window (100 dB)")
-    >>> plt.ylabel("Amplitude")
-    >>> plt.xlabel("Sample")
-
-    >>> plt.figure()
-    >>> A = fft(window, 2048) / (len(window)/2.0)
-    >>> freq = cp.linspace(-0.5, 0.5, len(A))
-    >>> response = 20 * cp.log10(cp.abs(fftshift(A / cp.abs(A).max())))
-    >>> plt.plot(cp.asnumpy(freq), cp.asnumpy(response))
-    >>> plt.axis([-0.5, 0.5, -120, 0])
-    >>> plt.title("Frequency response of the Dolph-Chebyshev window (100 dB)")
-    >>> plt.ylabel("Normalized magnitude [dB]")
-    >>> plt.xlabel("Normalized frequency [cycles per sample]")
-
-    """
     if abs(at) < 45:
         warnings.warn(
             "This window is not suitable for spectral analysis "
@@ -1726,37 +1664,31 @@ def chebwin(M, at, sym=True):
     # compute the parameter beta
     order = M - 1.0
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
-    N = (1 / M) * np.pi
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
     if M % 2:
-        p = cp.empty(M, dtype=cp.float64)
-
-        _chebwin_kernel_odd(N, order, beta, p)
+        p = _chebwin_kernel_odd(beta, size=M)
 
         w = cp.real(cp.fft.fft(p))
-        n = (M + 1) // 2
-        w = w[:n]
-        w = cp.concatenate((w[n - 1 : 0 : -1], w))
+        maxValue = cp.max(w)
+        _concat_chebwin_odd(maxValue, w, size=M)
+
     else:
-        p = cp.empty(M, dtype=cp.complex128)
-
-        _chebwin_kernel_even(N, order, beta, p)
+        p = _chebwin_kernel_even(beta, size=M)
 
         w = cp.real(cp.fft.fft(p))
-        n = M // 2 + 1
-        w = cp.concatenate((w[n - 1 : 0 : -1], w[1:n]))
-    w = w / cp.max(w)
+        maxValue = cp.max(w)
+        _concat_chebwin_even(maxValue, w, size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _cosine_kernel = cp.ElementwiseKernel(
-    "T pi",
-    "T w",
+    "",
+    "float64 w",
     """
-    w = sin( pi / _ind.size() * ( i + 0.5 ) );
+    w = sin( M_PI / _ind.size() * ( i + 0.5 ) );
     """,
     "_cosine_kernel",
     options=('-std=c++11',)
@@ -1818,18 +1750,16 @@ def cosine(M, sym=True):
         return cp.ones(M)
     M, needs_trunc = _extend(M, sym)
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    _cosine_kernel(cp.pi, w)
+    w = _cosine_kernel(size=M)
 
     return _truncate(w, needs_trunc)
 
 
 _exponential_kernel = cp.ElementwiseKernel(
-    "T center, T tau",
-    "T w",
+    "float64 center, float64 tau",
+    "float64 w",
     """
-    w = exp(-abs(i - center) / tau);
+    w = exp( -abs( i - center ) / tau );
     """,
     "_exponential_kernel",
     options=('-std=c++11',)
@@ -1919,9 +1849,7 @@ def exponential(M, center=None, tau=1.0, sym=True):
     if center is None:
         center = (M - 1) / 2
 
-    w = cp.empty(M, dtype=cp.float64)
-
-    _exponential_kernel(center, tau, w)
+    w = _exponential_kernel(center, tau, size=M)
 
     return _truncate(w, needs_trunc)
 
