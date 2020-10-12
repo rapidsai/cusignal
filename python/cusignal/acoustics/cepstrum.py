@@ -53,18 +53,18 @@ def real_cepstrum(x, n=None, axis=-1):
 
 
 _complex_cepstrum_kernel = cp.ElementwiseKernel(
-    "C spectrum, raw T unwrapped, T pi",
+    "C spectrum, raw T unwrapped",
     "C output, T ndelay",
     """
-    T center { floor( static_cast<T>( _ind.size() + 1 ) / 2 ) };
-    ndelay = round( unwrapped[static_cast<int>(center)] / pi);
-    T temp { unwrapped[i] - ( pi * ndelay * i / center ) };
+    ndelay = round( unwrapped[center] / M_PI );
+    const T temp { unwrapped[i] - ( M_PI * ndelay * i / center ) };
 
     output = log( abs( spectrum ) ) + C( 0, temp );
     """,
     "_complex_cepstrum_kernel",
     options=("-std=c++11",),
     return_tuple=True,
+    loop_prep="const int center { static_cast<int>( 0.5 * ( _ind.size() + 1 ) ) };"
 )
 
 
@@ -92,7 +92,7 @@ def complex_cepstrum(x, n=None, axis=-1):
     x = cp.asarray(x)
     spectrum = cp.fft.fft(x, n=n, axis=axis)
     unwrapped = cp.unwrap(cp.angle(spectrum))
-    log_spectrum, ndelay = _complex_cepstrum_kernel(spectrum, unwrapped, cp.pi)
+    log_spectrum, ndelay = _complex_cepstrum_kernel(spectrum, unwrapped)
     ceps = cp.fft.ifft(log_spectrum, n=n, axis=axis).real
 
     return ceps, ndelay
@@ -102,13 +102,13 @@ _inverse_complex_cepstrum_kernel = cp.ElementwiseKernel(
     "C log_spectrum, int32 ndelay, float64 pi",
     "C spectrum",
     """
-    double center { static_cast<double>( _ind.size() + 1 ) / 2 };
-    double wrapped { log_spectrum.imag() + pi * ndelay * i / center };
+    const double wrapped { log_spectrum.imag() + M_PI * ndelay * i / center };
 
     spectrum = exp( C( log_spectrum.real(), wrapped ) )
     """,
     "_inverse_complex_cepstrum_kernel",
     options=("-std=c++11",),
+    loop_prep="const double center { 0.5 * ( _ind.size() + 1 ) };"
 )
 
 
@@ -139,13 +139,11 @@ _minimum_phase_kernel = cp.ElementwiseKernel(
     "",
     "float32 window",
     """
-    int odd { _ind.size() & 1 };
-    int bend { static_cast<int>( ( _ind.size() + odd ) / 2 ) };
     if ( !i ) {
         window = 1;
     } else if ( i < bend ) {
         window = 2;
-    } else if ( i == ( bend )  ) {
+    } else if ( i == bend ) {
         window = 1 - odd;
     } else {
         window = 0;
@@ -153,6 +151,8 @@ _minimum_phase_kernel = cp.ElementwiseKernel(
     """,
     "_minimum_phase_kernel",
     options=("-std=c++11",),
+    loop_prep="const bool odd { _ind.size() & 1 }; \
+               const int bend { static_cast<int>( 0.5 * ( _ind.size() + odd ) ) };"
 )
 
 
