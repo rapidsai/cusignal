@@ -1527,12 +1527,12 @@ _chebwin_kernel = cp.ElementwiseKernel(
     "float64 beta",
     "complex128 p",
     """
-    double x { beta * cos( i * N ) };
+    const double x { beta * cos( i * N ) };
     double real {};
     if ( x > 1 ) {
         real = cosh( order * acosh( x ) );
     } else if ( x < -1 ) {
-        real = ( 2 * ( _ind.size() & 1 ) - 1 ) * cosh( order * acosh( -x ) );
+        real = (2 * ( _ind.size() & 1 ) - 1 ) * cosh( order * acosh( -x ) );
     } else {
         real = cos( order * acos( x ) );
     }
@@ -1546,9 +1546,9 @@ _chebwin_kernel = cp.ElementwiseKernel(
     """,
     "_chebwin_kernel",
     options=('-std=c++11',),
-    loop_prep="double order { static_cast<double>( _ind.size() - 1 ) }; \
-               double N { ( 1.0 / _ind.size() ) * M_PI }; \
-               bool odd { _ind.size() & 1 };"
+    loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
+               const double N { ( 1 / static_cast<double>( _ind.size() ) ) * M_PI }; \
+               const bool odd { _ind.size() & 1 };"
 )
 
 _concat_chebwin = cp.ElementwiseKernel(
@@ -1569,8 +1569,8 @@ _concat_chebwin = cp.ElementwiseKernel(
     """,
     "_concat_chebwin",
     options=('-std=c++11',),
-    loop_prep="int n { static_cast<int>( _ind.size() * 0.5 )}; \
-               bool odd { _ind.size() & 1 };"
+    loop_prep="const int n = static_cast<int>( _ind.size() / 2 ); \
+               const bool odd { _ind.size() & 1 };"
 )
 
 
@@ -1680,7 +1680,7 @@ def chebwin(M, at, sym=True):
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
 
     # Appropriate IDFT and filling up
-    # depending on even/odd M
+    # # depending on even/odd M
     p = _chebwin_kernel(beta, size=M)
 
     w = cp.real(cp.fft.fft(p))
