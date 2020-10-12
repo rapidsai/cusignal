@@ -15,7 +15,7 @@ dependencies:
   - numba>=0.49
   - pytest
   - pytest-benchmark
-  - cupy>=7.2.0
+  - cupy>=8.0.0
   - pytorch
   - cudf
   - cuml
