@@ -15,10 +15,10 @@ import cupy as cp
 import numpy as np
 
 _gauss_spline_kernel = cp.ElementwiseKernel(
-    "T x, float64 pi, float64 signsq, float64 r_siqnsq",
+    "T x, float64 signsq, float64 r_siqnsq",
     "T output",
     """
-    output = 1 / sqrt( 2 * pi * signsq ) * exp( -( x * x ) * r_siqnsq );
+    output = 1 / sqrt( 2 * M_PI * signsq ) * exp( -( x * x ) * r_siqnsq );
     """,
     "_gauss_spline_kernel",
     options=('-std=c++11',)
@@ -52,7 +52,7 @@ _cubic_kernel = cp.ElementwiseKernel(
     "T x",
     "T res",
     """
-    T ax { abs( x ) };
+    const T ax { abs( x ) };
 
     if( ax < 1 ) {
         res =  2.0 / 3 - 1.0 / 2  * ax * ax * ( 2 - ax );
@@ -81,7 +81,7 @@ _quadratic_kernel = cp.ElementwiseKernel(
     "T x",
     "T res",
     """
-    T ax { abs( x ) };
+    const T ax { abs( x ) };
 
     if( ax < 0.5 ) {
         res = 0.75 - ax * ax;
