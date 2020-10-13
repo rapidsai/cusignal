@@ -108,7 +108,7 @@ def square(t, duty=0.5):
 
 
 _gausspulse_kernel_F_F = cp.ElementwiseKernel(
-    "T t, T a, T fc, T pi",
+    "T t, T a, T fc",
     "T yenv",
     """
     yenv = exp(-a * t * t);
@@ -118,35 +118,35 @@ _gausspulse_kernel_F_F = cp.ElementwiseKernel(
 )
 
 _gausspulse_kernel_F_T = cp.ElementwiseKernel(
-    "T t, T a, T fc, T pi",
+    "T t, T a, T fc",
     "T yI, T yenv",
     """
     yenv = exp(-a * t * t);
-    yI = yenv * cos( 2 * pi * fc * t);
+    yI = yenv * cos( 2 * M_PI * fc * t);
     """,
     "_gausspulse_kernel",
     options=('-std=c++11',)
 )
 
 _gausspulse_kernel_T_F = cp.ElementwiseKernel(
-    "T t, T a, T fc, T pi",
+    "T t, T a, T fc",
     "T yI, T yQ",
     """
     T yenv { exp(-a * t * t) };
-    yI = yenv * cos( 2 * pi * fc * t);
-    yQ = yenv * sin( 2 * pi * fc * t);
+    yI = yenv * cos( 2 * M_PI * fc * t);
+    yQ = yenv * sin( 2 * M_PI * fc * t);
     """,
     "_gausspulse_kernel",
     options=('-std=c++11',)
 )
 
 _gausspulse_kernel_T_T = cp.ElementwiseKernel(
-    "T t, T a, T fc, T pi",
+    "T t, T a, T fc",
     "T yI, T yQ, T yenv",
     """
     yenv = exp(-a * t * t);
-    yI = yenv * cos( 2 * pi * fc * t);
-    yQ = yenv * sin( 2 * pi * fc * t);
+    yI = yenv * cos( 2 * M_PI * fc * t);
+    yQ = yenv * sin( 2 * M_PI * fc * t);
     """,
     "_gausspulse_kernel",
     options=('-std=c++11',)
@@ -248,40 +248,40 @@ def gausspulse(
     t = cp.asarray(t)
 
     if not retquad and not retenv:
-        return _gausspulse_kernel_F_F(t, a, fc, cp.pi)
+        return _gausspulse_kernel_F_F(t, a, fc)
     if not retquad and retenv:
-        return _gausspulse_kernel_F_T(t, a, fc, cp.pi)
+        return _gausspulse_kernel_F_T(t, a, fc)
     if retquad and not retenv:
-        return _gausspulse_kernel_T_F(t, a, fc, cp.pi)
+        return _gausspulse_kernel_T_F(t, a, fc)
     if retquad and retenv:
-        return _gausspulse_kernel_T_T(t, a, fc, cp.pi)
+        return _gausspulse_kernel_T_T(t, a, fc)
 
 
 _chirp_phase_lin_kernel = cp.ElementwiseKernel(
-    "T t, T f0, T t1, T f1, T phi, T pi",
+    "T t, T f0, T t1, T f1, T phi",
     "T phase",
     """
     T beta { (f1 - f0) / t1 };
-    T temp { 2 * pi * (f0 * t + 0.5 * beta * t * t) };
+    T temp { 2 * M_PI * (f0 * t + 0.5 * beta * t * t) };
 
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
     "_chirp_phase_lin_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
 )
 
 _chirp_phase_quad_kernel = cp.ElementwiseKernel(
-    "T t, T f0, T t1, T f1, T phi, T pi, bool vertex_zero",
+    "T t, T f0, T t1, T f1, T phi, bool vertex_zero",
     "T phase",
     """
     T temp {};
     T beta { (f1 - f0) / (t1 * t1) };
 
     if ( vertex_zero ) {
-        temp = 2 * pi * (f0 * t + beta * (t * t * t) / 3);
+        temp = 2 * M_PI * (f0 * t + beta * (t * t * t) / 3);
     } else {
-        temp = 2 * pi *
+        temp = 2 * M_PI *
             ( f1 * t + beta *
             ( ( (t1 - t) * (t1 - t) * (t1 - t) ) - (t1 * t1 * t1)) / 3);
     }
@@ -290,47 +290,47 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_quad_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
 )
 
 _chirp_phase_log_kernel = cp.ElementwiseKernel(
-    "T t, T f0, T t1, T f1, T phi, T pi",
+    "T t, T f0, T t1, T f1, T phi",
     "T phase",
     """
     T temp {};
 
     if ( f0 == f1 ) {
-        temp = 2 * pi * f0 * t;
+        temp = 2 * M_PI * f0 * t;
     } else {
         T beta { t1 / log(f1 / f0) };
-        temp = 2 * pi * beta * f0 * ( pow(f1 / f0, t / t1) - 1.0 );
+        temp = 2 * M_PI * beta * f0 * ( pow(f1 / f0, t / t1) - 1.0 );
     }
 
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
     "_chirp_phase_log_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
 )
 
 _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
-    "T t, T f0, T t1, T f1, T phi, T pi",
+    "T t, T f0, T t1, T f1, T phi",
     "T phase",
     """
     T temp {};
 
     if ( f0 == f1 ) {
-        temp = 2 * pi * f0 * t;
+        temp = 2 * M_PI * f0 * t;
     } else {
         T sing { -f1 * t1 / (f0 - f1) };
-        temp = 2 * pi * ( -sing * f0 ) * log( abs( 1 - t / sing ) );
+        temp = 2 * M_PI * ( -sing * f0 ) * log( abs( 1 - t / sing ) );
     }
 
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
     "_chirp_phase_hyp_kernel",
-    options=('-std=c++11',)
+    options=('-std=c++11',),
 )
 
 
@@ -415,10 +415,10 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
     phi *= np.pi / 180
 
     if method in ["linear", "lin", "li"]:
-        return _chirp_phase_lin_kernel(t, f0, t1, f1, phi, cp.pi)
+        return _chirp_phase_lin_kernel(t, f0, t1, f1, phi)
 
     elif method in ["quadratic", "quad", "q"]:
-        return _chirp_phase_quad_kernel(t, f0, t1, f1, phi, cp.pi, vertex_zero)
+        return _chirp_phase_quad_kernel(t, f0, t1, f1, phi, vertex_zero)
 
     elif method in ["logarithmic", "log", "lo"]:
         if f0 * f1 <= 0.0:
@@ -426,14 +426,14 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
                 "For a logarithmic chirp, f0 and f1 must be "
                 "nonzero and have the same sign."
             )
-        return _chirp_phase_log_kernel(t, f0, t1, f1, phi, cp.pi)
+        return _chirp_phase_log_kernel(t, f0, t1, f1, phi)
 
     elif method in ["hyperbolic", "hyp"]:
         if f0 == 0 or f1 == 0:
             raise ValueError(
                 "For a hyperbolic chirp, f0 and f1 must be " "nonzero."
             )
-        return _chirp_phase_hyp_kernel(t, f0, t1, f1, phi, cp.pi)
+        return _chirp_phase_hyp_kernel(t, f0, t1, f1, phi)
 
     else:
         raise ValueError(
@@ -444,7 +444,7 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
 
 _unit_impulse_kernel = cp.ElementwiseKernel(
     "int32 idx",
-    "T out",
+    "float64 out",
     """
     if (i == idx) {
         out = 1;
@@ -513,8 +513,6 @@ def unit_impulse(shape, idx=None, dtype=float):
            [ 0.,  0.,  1.,  0.],
            [ 0.,  0.,  0.,  0.]])
     """
-    out = cp.empty(shape, dtype)
-
     shape = np.atleast_1d(shape)
 
     if idx is None:
@@ -524,4 +522,4 @@ def unit_impulse(shape, idx=None, dtype=float):
     elif not hasattr(idx, "__iter__"):
         idx = (idx,) * len(shape)
 
-    return _unit_impulse_kernel(idx[0], out)
+    return _unit_impulse_kernel(idx[0], size=shape[0])
