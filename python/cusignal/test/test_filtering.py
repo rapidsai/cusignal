@@ -205,6 +205,33 @@ class TestFilter:
             key = self.cpu_version(cpu_sig)
             assert array_equal(cp.asnumpy(output), key)
 
+    @pytest.mark.benchmark(group="Hilbert2")
+    @pytest.mark.parametrize("dim, num_samps", [(2, 2 ** 8)])
+    class TestHilbert2:
+        def cpu_version(self, sig):
+            return signal.hilbert2(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.hilbert2(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_hilbert2_cpu(self, rand_data_gen, benchmark, dim, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
+            benchmark(self.cpu_version, cpu_sig)
+
+        def test_hilbert2_gpu(
+            self, rand_data_gen, gpubenchmark, dim, num_samps
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Detrend")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
     class TestDetrend:

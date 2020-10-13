@@ -339,7 +339,7 @@ _hilbert_kernel = cp.ElementwiseKernel(
         }
     }
     """,
-    "_hilbertkernel",
+    "_hilbert_kernel",
     options=("-std=c++11",),
     loop_prep="const bool odd { _ind.size() & 1 }; \
                const int bend = odd ? \
@@ -454,6 +454,43 @@ def hilbert(x, N=None, axis=-1):
     return x
 
 
+_hilbert2_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 h1, float64 h2",
+    """
+    if ( !odd ) {
+        if ( ( i == 0 ) || ( i == bend ) ) {
+            h1 = 1.0;
+            h2 = 1.0;
+        } else if ( i > 0 && i < bend ) {
+            h1 = 2.0;
+            h2 = 2.0;
+        } else {
+            h1 = 0.0;
+            h2 = 0.0;
+        }
+    } else {
+        if ( i == 0 ) {
+            h1 = 1.0;
+            h2 = 1.0;
+        } else if ( i > 0 && i < bend) {
+            h1 = 2.0;
+            h2 = 2.0;
+        } else {
+            h1 = 0.0;
+            h2 = 0.0;
+        }
+    }
+    """,
+    "_hilbert2_kernel",
+    options=("-std=c++11",),
+    loop_prep="const bool odd { _ind.size() & 1 }; \
+               const int bend = odd ? \
+                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                   static_cast<int>( 0.5 * _ind.size() );",
+)
+
+
 def hilbert2(x, N=None):
     """
     Compute the '2-D' analytic signal of `x`
@@ -493,18 +530,8 @@ def hilbert2(x, N=None):
         )
 
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
-    h1 = cp.zeros(N[0], "d")
-    h2 = cp.zeros(N[1], "d")
-    for p in range(2):
-        h = eval("h%d" % (p + 1))
-        N1 = N[p]
-        if N1 % 2 == 0:
-            h[0] = h[N1 // 2] = 1
-            h[1 : N1 // 2] = 2
-        else:
-            h[0] = 1
-            h[1 : (N1 + 1) // 2] = 2
-        exec("h%d = h" % (p + 1), globals(), locals())
+
+    h1, h2 = _hilbert2_kernel(size=N[1])
 
     h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim
