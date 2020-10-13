@@ -1,6 +1,8 @@
 # cuSignal 0.17.0 (Date TBD)
 
 ## New Features
+- PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
+
 
 ## Improvements
 - PR #267 Add C++11 to Elementwise Kernels
