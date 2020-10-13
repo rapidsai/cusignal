@@ -12,30 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-
-# from cupy import (
-#     arange,
-#     asarray,
-#     atleast_2d,
-#     dot,
-#     exp,
-#     expand_dims,
-#     iscomplexobj,
-#     mean,
-#     newaxis,
-#     ones,
-#     pi,
-#     prod,
-#     r_,
-#     ravel,
-#     reshape,
-#     sort,
-#     take,
-#     transpose,
-#     unique,
-#     where,
-#     zeros,
-# )
 from cupy import linalg
 
 import numpy as np
