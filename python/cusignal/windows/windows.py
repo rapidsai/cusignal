@@ -13,7 +13,6 @@
 
 import cupy as cp
 import numpy as np
-import cupyx
 
 import warnings
 
@@ -1547,7 +1546,7 @@ _chebwin_kernel = cp.ElementwiseKernel(
     "_chebwin_kernel",
     options=("-std=c++11",),
     loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
-               const double N { ( 1 / static_cast<double>( _ind.size() ) ) * M_PI }; \
+               const double N { ( 1.0 / _ind.size() ) * M_PI }; \
                const bool odd { _ind.size() & 1 };",
 )
 
@@ -1569,7 +1568,7 @@ _concat_chebwin = cp.ElementwiseKernel(
     """,
     "_concat_chebwin",
     options=("-std=c++11",),
-    loop_prep="const int n = static_cast<int>( _ind.size() / 2 ); \
+    loop_prep="const int n = static_cast<int>( 0.5 * _ind.size() ); \
                const bool odd { _ind.size() & 1 };",
 )
 
