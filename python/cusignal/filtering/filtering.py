@@ -317,6 +317,37 @@ def sosfilt(
     return out
 
 
+_hilbert_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 h",
+    """
+    int bend {};
+    if ( !odd ) {
+        bend = static_cast<int>( _ind.size() / 2 );
+        if ( ( i == 0 ) || ( i == bend ) ) {
+            h = 1.0;
+        } else if ( i > 0 && i < bend ) {
+            h = 2.0;
+        } else {
+            h = 0.0;
+        }
+    } else {
+        bend = static_cast<int>( ( _ind.size()  + 1 ) / 2 );
+        if ( i == 0 ) {
+            h = 1.0;
+        } else if ( i > 0 && i < bend) {
+            h = 2.0;
+        } else {
+            h = 0.0;
+        }
+    }
+    """,
+    "_hilbertkernel",
+    options=("-std=c++11",),
+    loop_prep="const bool odd { _ind.size() & 1 };",
+)
+
+
 def hilbert(x, N=None, axis=-1):
     """
     Compute the analytic signal, using the Hilbert transform.
@@ -413,13 +444,7 @@ def hilbert(x, N=None, axis=-1):
         raise ValueError("N must be positive.")
 
     Xf = cp.fft.fft(x, N, axis=axis)
-    h = cp.zeros(N)
-    if N % 2 == 0:
-        h[0] = h[N // 2] = 1
-        h[1 : N // 2] = 2
-    else:
-        h[0] = 1
-        h[1 : (N + 1) // 2] = 2
+    h = _hilbert_kernel(size=N)
 
     if x.ndim > 1:
         ind = [cp.newaxis] * x.ndim
