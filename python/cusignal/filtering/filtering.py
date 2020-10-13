@@ -23,13 +23,13 @@ from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
 
 _wiener_prep_kernel = cp.ElementwiseKernel(
-    "T my_lMean, T my_lVar, T my_prod",
+    "T iMean, T iVar, T prod",
     "T lMean, T lVar",
     """
     // Estimate the local mean
-    T temp { my_lMean / my_prod };
+    T temp { iMean / prod };
     lMean = temp;
-    lVar = my_lVar / my_prod - (temp * temp);
+    lVar = iVar / prod - (temp * temp);
     """,
     "_wiener_prep_kernel",
     options=("-std=c++11",),
@@ -87,11 +87,11 @@ def wiener(im, mysize=None, noise=None):
         mysize = cp.repeat(mysize.item(), im.ndim)
         mysize = np.asarray(mysize)
 
-    my_prod = cp.prod(mysize, axis=0)
-    my_lMean = correlate(im, cp.ones(mysize), "same")
-    my_lVar = correlate(im ** 2, cp.ones(mysize), "same")
+    lprod = cp.prod(mysize, axis=0)
+    lMean = correlate(im, cp.ones(mysize), "same")
+    lVar = correlate(im ** 2, cp.ones(mysize), "same")
 
-    lMean, lVar = _wiener_prep_kernel(my_lMean, my_lVar, my_prod)
+    lMean, lVar = _wiener_prep_kernel(lMean, lVar, lprod)
 
     # Estimate the noise power if needed.
     if noise is None:
