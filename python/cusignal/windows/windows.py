@@ -350,7 +350,7 @@ _bohman_kernel = cp.ElementwiseKernel(
     "",
     "float64 w",
     """
-    double fac = { abs( start + delta * ( i - 1 ) ) };
+    double fac { abs( start + delta * ( i - 1 ) ) };
     if ( i != 0 && i != ( _ind.size() - 1 ) ) {
         w = ( 1 - fac ) * cos( M_PI * fac ) + 1.0 / M_PI * sin( M_PI * fac );
     } else {
