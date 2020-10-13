@@ -126,29 +126,10 @@ def _populate_kernel_cache(np_type, k_type):
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
 
-    if k_type == "convolve":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/convolution/_convolution.fatbin",
-            "_cupy_convolve_" + str(np_type),
-        )
-
-    elif k_type == "correlate":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/convolution/_convolution.fatbin",
-            "_cupy_correlate_" + str(np_type),
-        )
-
-    elif k_type == "convolve2D":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/convolution/_convolution.fatbin",
-            "_cupy_convolve2D_" + str(np_type),
-        )
-
-    elif k_type == "correlate2D":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/convolution/_convolution.fatbin",
-            "_cupy_correlate2D_" + str(np_type),
-        )
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+        "/convolution/_convolution.fatbin",
+        "_cupy_" + k_type + "_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(

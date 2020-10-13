@@ -134,17 +134,10 @@ def _populate_kernel_cache(np_type, k_type):
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
 
-    if k_type == "upfirdn1D":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_upfirdn.fatbin",
-            "_cupy_upfirdn1D_" + str(np_type),
-        )
-
-    elif k_type == "upfirdn2D":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/filtering/_upfirdn.fatbin",
-            "_cupy_upfirdn2D_" + str(np_type),
-        )
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+        "/filtering/_upfirdn.fatbin",
+        "_cupy_" + k_type + "_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(

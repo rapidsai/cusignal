@@ -105,16 +105,10 @@ def _populate_kernel_cache(np_type, k_type):
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
 
-    if k_type == "boolrelextrema_1D":
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/peak_finding/_peak_finding.fatbin",
-            "_cupy_" + str(k_type) + "_" + str(np_type),
-        )
-    else:
-        _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-            "/peak_finding/_peak_finding.fatbin",
-            "_cupy_" + str(k_type) + "_" + str(np_type),
-        )
+    _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
+        "/peak_finding/_peak_finding.fatbin",
+        "_cupy_" + k_type + "_" + str(np_type),
+    )
 
 
 def _get_backend_kernel(dtype, grid, block, k_type):
