@@ -439,10 +439,10 @@ _unit_impulse_kernel = cp.ElementwiseKernel(
     "int32 idx",
     "float64 out",
     """
-    if (i == idx) {
-        out = 1;
-    } else {
+    if (i != idx) {
         out = 0;
+    } else {
+        out = 1;
     }
     """,
     "_unit_impulse_kernel",
