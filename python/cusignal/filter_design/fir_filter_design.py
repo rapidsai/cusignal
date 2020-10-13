@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from ..windows.windows import get_window
 
 
@@ -219,7 +220,7 @@ def firwin(
     array([ 0.04890915,  0.91284326,  0.04890915])
 
     """
-    cutoff = cp.atleast_1d(cutoff) / float(nyq)
+    cutoff = np.atleast_1d(cutoff) / float(nyq)
 
     # Check for invalid input.
     if cutoff.ndim > 1:
@@ -255,7 +256,7 @@ def firwin(
 
     # Insert 0 and/or 1 at the ends of cutoff so that the length of cutoff
     # is even, and each pair in cutoff corresponds to passband.
-    cutoff = cp.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
+    cutoff = np.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
 
     # `bands` is a 2D array; each row gives the left and right edges of
     # a passband.
@@ -263,14 +264,14 @@ def firwin(
 
     # Build up the coefficients.
     alpha = 0.5 * (numtaps - 1)
-    m = cp.arange(0, numtaps) - alpha
+    m = np.arange(0, numtaps) - alpha
     h = 0
     for left, right in bands:
-        h += right * cp.sinc(right * m)
-        h -= left * cp.sinc(left * m)
+        h += right * np.sinc(right * m)
+        h -= left * np.sinc(left * m)
 
     # Get and apply the window function.
-    win = get_window(window, numtaps, fftbins=False)
+    win = cp.asnumpy(get_window(window, numtaps, fftbins=False))
     h *= win
 
     # Now handle scaling if desired.
@@ -283,8 +284,8 @@ def firwin(
             scale_frequency = 1.0
         else:
             scale_frequency = 0.5 * (left + right)
-        c = cp.cos(cp.pi * m * scale_frequency)
-        s = cp.sum(h * c)
+        c = np.cos(np.pi * m * scale_frequency)
+        s = np.sum(h * c)
         h /= s
 
     return h

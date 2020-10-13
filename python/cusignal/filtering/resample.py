@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 
 from math import gcd
 
@@ -254,7 +255,7 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     sl = [slice(None)] * x.ndim
     newshape = list(x.shape)
     newshape[axis] = num
-    N = int(cp.minimum(num, Nx))
+    N = int(np.minimum(num, Nx))
     Y = cp.zeros(newshape, "D")
     sl[axis] = slice(0, (N + 1) // 2)
     Y[sl] = X[sl]
@@ -382,7 +383,7 @@ def resample_poly(
     n_out = n_out // down + bool(n_out % down)
 
     if isinstance(window, (list, cp.ndarray)):
-        window = cp.asarray(window)
+        window = np.asarray(window)
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
@@ -402,8 +403,8 @@ def resample_poly(
     ):
         n_post_pad += 1
 
-    h = cp.concatenate(
-        (cp.zeros(n_pre_pad, h.dtype), h, cp.zeros(n_post_pad, h.dtype))
+    h = np.concatenate(
+        (np.zeros(n_pre_pad, h.dtype), h, np.zeros(n_post_pad, h.dtype))
     )
     n_pre_remove_end = n_pre_remove + n_out
 
