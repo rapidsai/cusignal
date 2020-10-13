@@ -95,7 +95,9 @@ def channelize_poly_cpu(x, h, n_chans):
 
 class TestFilter:
     @pytest.mark.benchmark(group="Wiener")
-    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 24])
+    @pytest.mark.parametrize(
+        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)]
+    )
     class TestWiener:
         def cpu_version(self, sig):
             return signal.wiener(sig)
@@ -107,13 +109,13 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_wiener_cpu(self, rand_data_gen, benchmark, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps)
+        def test_wiener_cpu(self, rand_data_gen, benchmark, dim, num_samps):
+            cpu_sig, _ = rand_data_gen(num_samps, dim)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_wiener_gpu(self, rand_data_gen, gpubenchmark, num_samps):
+        def test_wiener_gpu(self, rand_data_gen, gpubenchmark, dim, num_samps):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)

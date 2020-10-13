@@ -22,7 +22,36 @@ from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
 
-_cupy_fft_cache = {}
+_wiener_prep_kernel = cp.ElementwiseKernel(
+    "T my_lMean, T my_lVar, T my_prod",
+    "T lMean, T lVar",
+    """
+    // Estimate the local mean
+    T temp { my_lMean / my_prod };
+    lMean = temp;
+    lVar = my_lVar / my_prod - (temp * temp);
+    """,
+    "_wiener_prep_kernel",
+    options=("-std=c++11",),
+)
+
+_wiener_post_kernel = cp.ElementwiseKernel(
+    "T im, T lMean, T lVar, T noise",
+    "T out",
+    """
+    // Estimate the local mean
+    T res { im - lMean };
+    res *= 1.0 - noise / lVar;
+    res += lMean;
+    if ( lVar < noise ) {
+        out = lMean;
+    } else {
+        out = res;
+    }
+    """,
+    "_wiener_post_kernel",
+    options=("-std=c++11",),
+)
 
 
 def wiener(im, mysize=None, noise=None):
@@ -58,25 +87,17 @@ def wiener(im, mysize=None, noise=None):
         mysize = cp.repeat(mysize.item(), im.ndim)
         mysize = np.asarray(mysize)
 
-    # Estimate the local mean
-    lMean = correlate(im, cp.ones(mysize), "same") / cp.prod(mysize, axis=0)
+    my_prod = cp.prod(mysize, axis=0)
+    my_lMean = correlate(im, cp.ones(mysize), "same")
+    my_lVar = correlate(im ** 2, cp.ones(mysize), "same")
 
-    # Estimate the local variance
-    lVar = (
-        correlate(im ** 2, cp.ones(mysize), "same") / cp.prod(mysize, axis=0)
-        - lMean ** 2
-    )
+    lMean, lVar = _wiener_prep_kernel(my_lMean, my_lVar, my_prod)
 
     # Estimate the noise power if needed.
     if noise is None:
         noise = cp.mean(cp.ravel(lVar), axis=0)
 
-    res = im - lMean
-    res *= 1 - noise / lVar
-    res += lMean
-    out = cp.where(lVar < noise, lMean, res)
-
-    return out
+    return _wiener_post_kernel(im, lMean, lVar, noise)
 
 
 def firfilter(b, x, axis=None, zi=None):
