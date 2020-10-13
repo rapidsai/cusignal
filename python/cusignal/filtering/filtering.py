@@ -321,9 +321,7 @@ _hilbert_kernel = cp.ElementwiseKernel(
     "",
     "float64 h",
     """
-    int bend {};
     if ( !odd ) {
-        bend = static_cast<int>( _ind.size() / 2 );
         if ( ( i == 0 ) || ( i == bend ) ) {
             h = 1.0;
         } else if ( i > 0 && i < bend ) {
@@ -332,7 +330,6 @@ _hilbert_kernel = cp.ElementwiseKernel(
             h = 0.0;
         }
     } else {
-        bend = static_cast<int>( ( _ind.size()  + 1 ) / 2 );
         if ( i == 0 ) {
             h = 1.0;
         } else if ( i > 0 && i < bend) {
@@ -344,7 +341,10 @@ _hilbert_kernel = cp.ElementwiseKernel(
     """,
     "_hilbertkernel",
     options=("-std=c++11",),
-    loop_prep="const bool odd { _ind.size() & 1 };",
+    loop_prep="const bool odd { _ind.size() & 1 }; \
+               const int bend = odd ? \
+                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                   static_cast<int>( 0.5 * _ind.size() );",
 )
 
 
