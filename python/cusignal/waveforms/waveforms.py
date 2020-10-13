@@ -40,7 +40,7 @@ _square_kernel = cp.ElementwiseKernel(
 
     """,
     "_square_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -114,7 +114,7 @@ _gausspulse_kernel_F_F = cp.ElementwiseKernel(
     yenv = exp(-a * t * t);
     """,
     "_gausspulse_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _gausspulse_kernel_F_T = cp.ElementwiseKernel(
@@ -125,7 +125,7 @@ _gausspulse_kernel_F_T = cp.ElementwiseKernel(
     yI = yenv * cos( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _gausspulse_kernel_T_F = cp.ElementwiseKernel(
@@ -137,7 +137,7 @@ _gausspulse_kernel_T_F = cp.ElementwiseKernel(
     yQ = yenv * sin( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _gausspulse_kernel_T_T = cp.ElementwiseKernel(
@@ -149,7 +149,7 @@ _gausspulse_kernel_T_T = cp.ElementwiseKernel(
     yQ = yenv * sin( 2 * pi * fc * t);
     """,
     "_gausspulse_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -268,7 +268,7 @@ _chirp_phase_lin_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_lin_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _chirp_phase_quad_kernel = cp.ElementwiseKernel(
@@ -290,7 +290,7 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_quad_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _chirp_phase_log_kernel = cp.ElementwiseKernel(
@@ -310,7 +310,7 @@ _chirp_phase_log_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_log_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
@@ -330,7 +330,7 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
     phase = cos(temp + phi);
     """,
     "_chirp_phase_hyp_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -456,7 +456,7 @@ _unit_impulse_kernel = cp.ElementwiseKernel(
     }
     """,
     "_unit_impulse_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
