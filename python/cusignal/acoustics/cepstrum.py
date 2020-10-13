@@ -64,7 +64,8 @@ _complex_cepstrum_kernel = cp.ElementwiseKernel(
     "_complex_cepstrum_kernel",
     options=("-std=c++11",),
     return_tuple=True,
-    loop_prep="const int center { static_cast<int>( 0.5 * ( _ind.size() + 1 ) ) };",
+    loop_prep="const int center { static_cast<int>( 0.5 *\
+        ( _ind.size() + 1 ) ) };",
 )
 
 
@@ -152,7 +153,8 @@ _minimum_phase_kernel = cp.ElementwiseKernel(
     "_minimum_phase_kernel",
     options=("-std=c++11",),
     loop_prep="const bool odd { _ind.size() & 1 }; \
-               const int bend { static_cast<int>( 0.5 * ( _ind.size() + odd ) ) };",
+               const int bend { static_cast<int>( 0.5 * \
+                    ( _ind.size() + odd ) ) };",
 )
 
 
