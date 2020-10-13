@@ -137,15 +137,15 @@ def inverse_complex_cepstrum(ceps, ndelay):
 
 
 _minimum_phase_kernel = cp.ElementwiseKernel(
-    "",
-    "float32 window",
+    "T ceps",
+    "T window",
     """
     if ( !i ) {
-        window = 1;
+        window = ceps;
     } else if ( i < bend ) {
-        window = 2;
+        window = ceps * 2.0;
     } else if ( i == bend ) {
-        window = 1 - odd;
+        window = ceps * ( 1 - odd );
     } else {
         window = 0;
     }
@@ -174,7 +174,7 @@ def minimum_phase(x, n=None):
     if n is None:
         n = len(x)
     ceps = real_cepstrum(x, n=n)
-    window = _minimum_phase_kernel(size=n)
-    m = cp.fft.ifft(cp.exp(cp.fft.fft(window * ceps))).real
+    window = _minimum_phase_kernel(ceps)
+    m = cp.fft.ifft(cp.exp(cp.fft.fft(window))).real
 
     return m
