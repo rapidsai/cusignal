@@ -53,8 +53,8 @@ _general_cosine_kernel = cp.ElementwiseKernel(
     w = temp;
     """,
     "_general_cosine_kernel",
-    options=('-std=c++11',),
-    loop_prep="double delta { ( M_PI - -M_PI ) / ( _ind.size() - 1 ) }"
+    options=("-std=c++11",),
+    loop_prep="double delta { ( M_PI - -M_PI ) / ( _ind.size() - 1 ) }",
 )
 
 
@@ -208,8 +208,8 @@ _triang_kernel_true = cp.ElementwiseKernel(
     }
     """,
     "_triang_kernel",
-    options=('-std=c++11',),
-    loop_prep="int m { static_cast<int>( _ind.size() / 2 ) }"
+    options=("-std=c++11",),
+    loop_prep="int m { static_cast<int>( _ind.size() / 2 ) }",
 )
 
 _triang_kernel_false = cp.ElementwiseKernel(
@@ -226,8 +226,8 @@ _triang_kernel_false = cp.ElementwiseKernel(
     }
     """,
     "_triang_kernel",
-    options=('-std=c++11',),
-    loop_prep="int m { static_cast<int>( _ind.size() * 0.5 ) }"
+    options=("-std=c++11",),
+    loop_prep="int m { static_cast<int>( _ind.size() * 0.5 ) }",
 )
 
 
@@ -326,13 +326,13 @@ _parzen_kernel = cp.ElementwiseKernel(
     }
     """,
     "_parzen_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="double idx_f { static_cast<double>( _ind.size () ) }; \
                double start { -( idx_f - 1 ) * 0.5 }; \
                double s1 { floor( -( idx_f - 1 ) / 4 ) }; \
                double s2 { floor( ( idx_f - 1 ) / 4 ) }; \
                double den { 1.0 / ( idx_f * 0.5 ) }; \
-               bool odd { _ind.size() & 1 };"
+               bool odd { _ind.size() & 1 };",
 )
 
 
@@ -359,9 +359,9 @@ _bohman_kernel = cp.ElementwiseKernel(
     }
     """,
     "_bohman_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="double delta { 2.0 / ( _ind.size() - 1 ) }; \
-               double start { -1.0 + delta };"
+               double start { -1.0 + delta };",
 )
 
 
@@ -687,9 +687,9 @@ _bartlett_kernel = cp.ElementwiseKernel(
     }
     """,
     "_bartlett_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="double N { 1.0 / ( _ind.size() - 1 ) }; \
-               double temp { 0.5 * ( _ind.size() - 1 ) };"
+               double temp { 0.5 * ( _ind.size() - 1 ) };",
 )
 
 
@@ -887,10 +887,10 @@ _tukey_kernel = cp.ElementwiseKernel(
     }
     """,
     "_tukey_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="double N { 1.0 / ( _ind.size() - 1 ) }; \
                int width { static_cast<int>( alpha * ( _ind.size() - 1 ) \
-                   * 0.5 ) }"
+                   * 0.5 ) }",
 )
 
 
@@ -976,8 +976,8 @@ _barthann_kernel = cp.ElementwiseKernel(
     w = 0.62 - 0.48 * fac + 0.38 * cos(2 * M_PI * fac);
     """,
     "_barthann_kernel",
-    options=('-std=c++11',),
-    loop_prep="double N { 1.0 / ( _ind.size() - 1 ) };"
+    options=("-std=c++11",),
+    loop_prep="double N { 1.0 / ( _ind.size() - 1 ) };",
 )
 
 
@@ -1134,8 +1134,8 @@ _hamming_kernel = cp.ElementwiseKernel(
     w = 0.54 - 0.46 * cos(2.0 * M_PI * i * N);
     """,
     "_hamming_kernel",
-    options=('-std=c++11',),
-    loop_prep="double N { 1.0 / ( _ind.size() - 1 ) };"
+    options=("-std=c++11",),
+    loop_prep="double N { 1.0 / ( _ind.size() - 1 ) };",
 )
 
 
@@ -1239,8 +1239,8 @@ _kaiser_kernel = cp.ElementwiseKernel(
         cyl_bessel_i0( beta );
     """,
     "_kaiser_kernel",
-    options=('-std=c++11',),
-    loop_prep="double alpha { 0.5 * ( _ind.size() - 1 ) };"
+    options=("-std=c++11",),
+    loop_prep="double alpha { 0.5 * ( _ind.size() - 1 ) };",
 )
 
 
@@ -1374,8 +1374,8 @@ _gaussian_kernel = cp.ElementwiseKernel(
     w = exp( - ( n * n ) / sig2 );
     """,
     "_gaussian_kernel",
-    options=('-std=c++11',),
-    loop_prep="double sig2 { 2 * std * std };"
+    options=("-std=c++11",),
+    loop_prep="double sig2 { 2 * std * std };",
 )
 
 
@@ -1449,7 +1449,7 @@ _general_gaussian_kernel = cp.ElementwiseKernel(
     w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
     """,
     "_general_gaussian_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -1545,10 +1545,10 @@ _chebwin_kernel = cp.ElementwiseKernel(
 
     """,
     "_chebwin_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
                const double N { ( 1 / static_cast<double>( _ind.size() ) ) * M_PI }; \
-               const bool odd { _ind.size() & 1 };"
+               const bool odd { _ind.size() & 1 };",
 )
 
 _concat_chebwin = cp.ElementwiseKernel(
@@ -1568,9 +1568,9 @@ _concat_chebwin = cp.ElementwiseKernel(
     w[i] = temp / maxValue[0];
     """,
     "_concat_chebwin",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="const int n = static_cast<int>( _ind.size() / 2 ); \
-               const bool odd { _ind.size() & 1 };"
+               const bool odd { _ind.size() & 1 };",
 )
 
 
@@ -1697,7 +1697,7 @@ _cosine_kernel = cp.ElementwiseKernel(
     w = sin( M_PI / _ind.size() * ( i + 0.5 ) );
     """,
     "_cosine_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -1768,7 +1768,7 @@ _exponential_kernel = cp.ElementwiseKernel(
     w = exp( -abs( i - center ) / tau );
     """,
     "_exponential_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 

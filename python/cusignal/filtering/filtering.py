@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+
 # from cupy import (
 #     arange,
 #     asarray,
@@ -643,9 +644,9 @@ def channelize_poly(x, h, n_chans):
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
-    if x.dtype.char in ('fF'):
+    if x.dtype.char in ("fF"):
         y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
-    elif x.dtype.char in ('dD'):
+    elif x.dtype.char in ("dD"):
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)

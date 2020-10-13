@@ -21,7 +21,7 @@ _gauss_spline_kernel = cp.ElementwiseKernel(
     output = 1 / sqrt( 2 * M_PI * signsq ) * exp( -( x * x ) * r_siqnsq );
     """,
     "_gauss_spline_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -63,7 +63,7 @@ _cubic_kernel = cp.ElementwiseKernel(
     }
     """,
     "_cubic_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 
@@ -92,7 +92,7 @@ _quadratic_kernel = cp.ElementwiseKernel(
     }
     """,
     "_quadratic_kernel",
-    options=('-std=c++11',)
+    options=("-std=c++11",),
 )
 
 

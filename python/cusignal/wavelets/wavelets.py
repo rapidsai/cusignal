@@ -23,7 +23,7 @@ _qmf_kernel = cp.ElementwiseKernel(
     output = ( _ind.size() - ( i + 1 ) ) * sign;
     """,
     "_qmf_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
 )
 
 
@@ -56,11 +56,12 @@ _morlet_kernel = cp.ElementwiseKernel(
     output = temp * exp( -0.5 * ( x * x ) ) * pow( M_PI, -0.25 )
     """,
     "_morlet_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="const double end { s * 2.0 * M_PI }; \
                const double start { -s * 2.0 * M_PI }; \
-               const double delta { ( end - start ) / ( _ind.size() - 1 ) };"
+               const double delta { ( end - start ) / ( _ind.size() - 1 ) };",
 )
+
 
 def morlet(M, w=5.0, s=1.0, complete=True):
     """
@@ -128,9 +129,9 @@ _ricker_kernel = cp.ElementwiseKernel(
     total = A * mod * gauss;
     """,
     "_ricker_kernel",
-    options=('-std=c++11',),
+    options=("-std=c++11",),
     loop_prep="const double A { 2.0 / ( sqrt( 3 * a ) * pow( M_PI, 0.25 ) ) }; \
-               const double wsq { a * a };"
+               const double wsq { a * a };",
 )
 
 
