@@ -18,22 +18,22 @@ from six import string_types
 
 
 _square_kernel = cp.ElementwiseKernel(
-    "T t, T w, T pi",
-    "Y y",
+    "T t, T w",
+    "float64 y",
     """
-    bool mask1 { ( ( w > 1 ) || ( w < 0 ) ) };
+    const bool mask1 { ( ( w > 1 ) || ( w < 0 ) ) };
     if ( mask1 ) {
         y = nan("0xfff8000000000000ULL");
     }
 
-    T tmod { fmod(t, 2 * pi) };
-    bool mask2 { ( ( 1 - mask1 ) && ( tmod < ( w * 2 * pi ) ) ) };
+    const T tmod { fmod( t, 2.0 * M_PI ) };
+    const bool mask2 { ( ( 1 - mask1 ) && ( tmod < ( w * 2.0 * M_PI ) ) ) };
 
     if ( mask2 ) {
         y = 1;
     }
 
-    bool mask3 { ( ( 1 - mask1 ) && ( 1 - mask2 ) ) };
+    const bool mask3 { ( ( 1 - mask1 ) && ( 1 - mask2 ) ) };
     if ( mask3 ) {
         y = -1;
     }
@@ -95,14 +95,7 @@ def square(t, duty=0.5):
     """
     t, w = cp.asarray(t), cp.asarray(duty)
 
-    if t.dtype.char in ["fFdD"]:
-        ytype = t.dtype.char
-    else:
-        ytype = "d"
-
-    y = cp.zeros(t.shape, ytype)
-
-    _square_kernel(t, w, cp.pi, y)
+    y = _square_kernel(t, w)
 
     return y
 
@@ -261,8 +254,8 @@ _chirp_phase_lin_kernel = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi",
     "T phase",
     """
-    T beta { (f1 - f0) / t1 };
-    T temp { 2 * M_PI * (f0 * t + 0.5 * beta * t * t) };
+    const T beta { (f1 - f0) / t1 };
+    const T temp { 2 * M_PI * (f0 * t + 0.5 * beta * t * t) };
 
     // Convert  phi to radians.
     phase = cos(temp + phi);
@@ -276,7 +269,7 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     "T phase",
     """
     T temp {};
-    T beta { (f1 - f0) / (t1 * t1) };
+    const T beta { (f1 - f0) / (t1 * t1) };
 
     if ( vertex_zero ) {
         temp = 2 * M_PI * (f0 * t + beta * (t * t * t) / 3);
