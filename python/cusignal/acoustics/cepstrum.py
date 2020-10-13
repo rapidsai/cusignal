@@ -64,7 +64,7 @@ _complex_cepstrum_kernel = cp.ElementwiseKernel(
     "_complex_cepstrum_kernel",
     options=("-std=c++11",),
     return_tuple=True,
-    loop_prep="const int center { static_cast<int>( 0.5 *\
+    loop_prep="const int center { static_cast<int>( 0.5 * \
         ( _ind.size() + 1 ) ) };",
 )
 
