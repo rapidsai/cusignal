@@ -21,7 +21,7 @@ from ._upfirdn_cuda import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
 
 
-def _design_resample_poly(up, down, window):
+def _design_resample_poly(up, down, window, gpupath=True):
     """
     Design a prototype FIR low-pass filter using the window method
     for use in polyphase rational resampling.
@@ -35,6 +35,9 @@ def _design_resample_poly(up, down, window):
     window : string or tuple
         Desired window to use to design the low-pass filter.
         See below for details.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small
 
     Returns
     -------
@@ -72,7 +75,7 @@ def _design_resample_poly(up, down, window):
     # reasonable cutoff for our sinc-like function
     half_len = 10 * max_rate
 
-    h = firwin(2 * half_len + 1, f_c, window=window)
+    h = firwin(2 * half_len + 1, f_c, window=window, gpupath=gpupath)
     return h
 
 
@@ -82,6 +85,7 @@ def decimate(
     n=None,
     axis=-1,
     zero_phase=True,
+    gpupath=True
 ):
     """
     Downsample the signal after applying an anti-aliasing filter.
@@ -101,6 +105,9 @@ def decimate(
         Prevent shifting the outputs back by the filter's
         group delay when using an FIR filter. The default value of ``True`` is
         recommended, since a phase shift is generally not desired.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small
 
     Returns
     -------
@@ -116,19 +123,24 @@ def decimate(
     """
 
     x = cp.asarray(x)
-    if isinstance(n, (list, np.ndarray)):
-        b = np.asarray(n)
+    if (gpupath):
+        pp = cp
+    else:
+        pp = np
+
+    if isinstance(n, (list, pp.ndarray)):
+        b = pp.asarray(n)
     else:
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
 
-        b = firwin(n + 1, 1.0 / q, window="hamming")
+        b = firwin(n + 1, 1.0 / q, window="hamming", gpupath=gpupath)
 
     sl = [slice(None)] * x.ndim
 
     if zero_phase:
-        y = resample_poly(x, 1, q, axis=axis, window=b)
+        y = resample_poly(x, 1, q, axis=axis, window=b, gpupath=gpupath)
     else:
         # upfirdn is generally faster than lfilter by a factor equal to the
         # downsampling factor, since it only calculates the needed outputs
@@ -279,6 +291,7 @@ def resample_poly(
     down,
     axis=0,
     window=("kaiser", 5.0),
+    gpupath=True
 ):
     """
     Resample `x` along the given axis using polyphase filtering.
@@ -302,6 +315,9 @@ def resample_poly(
     window : string, tuple, or array_like, optional
         Desired window to use to design the low-pass filter, or the FIR filter
         coefficients to employ. See below for details.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small
 
     Returns
     -------
@@ -382,15 +398,23 @@ def resample_poly(
     n_out = x.shape[axis] * up
     n_out = n_out // down + bool(n_out % down)
 
-    if isinstance(window, (list, np.ndarray)):
-        window = np.asarray(window)
+    # If the window size is greater than 8192, use GPU
+    if (gpupath):
+        pp = cp
+    else:
+        pp = np
+
+    # print("window", window.size)
+
+    if isinstance(window, (list, pp.ndarray)):
+        window = pp.asarray(window)
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
         h = up * window
     else:
         half_len = 10 * max(up, down)
-        h = up * _design_resample_poly(up, down, window)
+        h = up * _design_resample_poly(up, down, window, gpupath)
 
     # Zero-pad our filter to put the output samples at the center
     n_pre_pad = down - half_len % down
@@ -403,8 +427,8 @@ def resample_poly(
     ):
         n_post_pad += 1
 
-    h = np.concatenate(
-        (np.zeros(n_pre_pad, h.dtype), h, np.zeros(n_post_pad, h.dtype))
+    h = pp.concatenate(
+        (pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype))
     )
     n_pre_remove_end = n_pre_remove + n_out
 

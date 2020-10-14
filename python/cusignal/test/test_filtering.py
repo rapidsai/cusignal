@@ -288,18 +288,22 @@ class TestFilter:
 
     @pytest.mark.benchmark(group="Decimate")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
-    @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
+    @pytest.mark.parametrize("downsample_factor", [128, 256, 1024, 2048])
     @pytest.mark.parametrize("zero_phase", [True, False])
+    @pytest.mark.parametrize("gpupath", [True, False])
     class TestDecimate:
         def cpu_version(self, sig, downsample_factor, zero_phase):
             return signal.decimate(
                 sig, downsample_factor, ftype="fir", zero_phase=zero_phase
             )
 
-        def gpu_version(self, sig, downsample_factor, zero_phase):
+        def gpu_version(self, sig, downsample_factor, zero_phase, gpupath):
             with cp.cuda.Stream.null:
                 out = cusignal.decimate(
-                    sig, downsample_factor, zero_phase=zero_phase
+                    sig,
+                    downsample_factor,
+                    zero_phase=zero_phase,
+                    gpupath=gpupath,
                 )
             cp.cuda.Stream.null.synchronize()
             return out
@@ -312,6 +316,7 @@ class TestFilter:
             num_samps,
             downsample_factor,
             zero_phase,
+            gpupath
         ):
             cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
             benchmark(self.cpu_version, cpu_sig, downsample_factor, zero_phase)
@@ -323,6 +328,7 @@ class TestFilter:
             num_samps,
             downsample_factor,
             zero_phase,
+            gpupath,
         ):
             cpu_sig, gpu_sig = linspace_data_gen(
                 0, 10, num_samps, endpoint=False
@@ -332,6 +338,7 @@ class TestFilter:
                 gpu_sig,
                 downsample_factor,
                 zero_phase,
+                gpupath,
             )
 
             key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)

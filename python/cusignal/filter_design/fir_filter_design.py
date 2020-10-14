@@ -13,6 +13,7 @@
 
 import cupy as cp
 import numpy as np
+
 from scipy import signal
 from ..windows.windows import get_window
 
@@ -99,6 +100,7 @@ def firwin(
     scale=True,
     nyq=1.0,
     fs=None,
+    gpupath=True,
 ):
     """
     FIR filter design using the window method.
@@ -157,6 +159,9 @@ def firwin(
     fs : float, optional
         The sampling frequency of the signal.  Each frequency in `cutoff`
         must be between 0 and ``fs/2``.  Default is 2.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small
 
     Returns
     -------
@@ -222,6 +227,12 @@ def firwin(
 
     """
     cutoff = np.atleast_1d(cutoff) / float(nyq)
+    if gpupath:
+        pp = cp
+    else:
+        pp = np
+
+    # print("cutoff", cutoff.size)
 
     # Check for invalid input.
     if cutoff.ndim > 1:
@@ -235,7 +246,7 @@ def firwin(
             "Invalid cutoff frequency: frequencies must be "
             "greater than 0 and less than nyq."
         )
-    if np.any(np.diff(cutoff) <= 0):
+    if pp.any(pp.diff(cutoff) <= 0):
         raise ValueError(
             "Invalid cutoff frequencies: the frequencies "
             "must be strictly increasing."
@@ -257,23 +268,34 @@ def firwin(
 
     # Insert 0 and/or 1 at the ends of cutoff so that the length of cutoff
     # is even, and each pair in cutoff corresponds to passband.
-    cutoff = np.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
+    cutoff = pp.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
 
     # `bands` is a 2D array; each row gives the left and right edges of
     # a passband.
     bands = cutoff.reshape(-1, 2)
 
+    if gpupath:
+        pp = cp
+    else:
+        pp = np
+
     # Build up the coefficients.
     alpha = 0.5 * (numtaps - 1)
-    m = np.arange(0, numtaps) - alpha
+    m = pp.arange(0, numtaps) - alpha
     h = 0
     for left, right in bands:
-        h += right * np.sinc(right * m)
-        h -= left * np.sinc(left * m)
+        h += right * pp.sinc(right * m)
+        h -= left * pp.sinc(left * m)
 
     # Get and apply the window function.
-    # print(type(window))
-    win = signal.get_window(window, numtaps, fftbins=False)
+    if gpupath:
+        win = get_window(window, numtaps, fftbins=False)
+    else:
+        try:
+            win = signal.get_window(window, numtaps, fftbins=False)
+        except NameError:
+            raise RuntimeError("CPU path requires SciPy Signal's get_windows.")
+
     h *= win
 
     # Now handle scaling if desired.
@@ -286,8 +308,8 @@ def firwin(
             scale_frequency = 1.0
         else:
             scale_frequency = 0.5 * (left + right)
-        c = np.cos(np.pi * m * scale_frequency)
-        s = np.sum(h * c)
+        c = pp.cos(pp.pi * m * scale_frequency)
+        s = pp.sum(h * c)
         h /= s
 
     return h
