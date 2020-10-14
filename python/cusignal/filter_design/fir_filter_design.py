@@ -13,6 +13,7 @@
 
 import cupy as cp
 import numpy as np
+from scipy import signal
 from ..windows.windows import get_window
 
 
@@ -85,7 +86,7 @@ def kaiser_atten(numtaps, width):
     a : float
         The attenuation of the ripple, in dB.
     """
-    a = 2.285 * (numtaps - 1) * cp.pi * width + 7.95
+    a = 2.285 * (numtaps - 1) * np.pi * width + 7.95
     return a
 
 
@@ -234,7 +235,7 @@ def firwin(
             "Invalid cutoff frequency: frequencies must be "
             "greater than 0 and less than nyq."
         )
-    if cp.any(cp.diff(cutoff) <= 0):
+    if np.any(np.diff(cutoff) <= 0):
         raise ValueError(
             "Invalid cutoff frequencies: the frequencies "
             "must be strictly increasing."
@@ -271,7 +272,8 @@ def firwin(
         h -= left * np.sinc(left * m)
 
     # Get and apply the window function.
-    win = cp.asnumpy(get_window(window, numtaps, fftbins=False))
+    # print(type(window))
+    win = signal.get_window(window, numtaps, fftbins=False)
     h *= win
 
     # Now handle scaling if desired.

@@ -116,8 +116,8 @@ def decimate(
     """
 
     x = cp.asarray(x)
-    if isinstance(n, (list, cp.ndarray)):
-        b = cp.asarray(n)
+    if isinstance(n, (list, np.ndarray)):
+        b = np.asarray(n)
     else:
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
@@ -382,7 +382,7 @@ def resample_poly(
     n_out = x.shape[axis] * up
     n_out = n_out // down + bool(n_out % down)
 
-    if isinstance(window, (list, cp.ndarray)):
+    if isinstance(window, (list, np.ndarray)):
         window = np.asarray(window)
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
