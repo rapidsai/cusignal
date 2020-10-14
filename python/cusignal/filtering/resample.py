@@ -37,7 +37,7 @@ def _design_resample_poly(up, down, window, gpupath=True):
         See below for details.
     gpupath : bool, Optional
         Optional path for filter design. gpupath == False may be desirable if
-        filter sizes are small
+        filter sizes are small.
 
     Returns
     -------
@@ -107,7 +107,7 @@ def decimate(
         recommended, since a phase shift is generally not desired.
     gpupath : bool, Optional
         Optional path for filter design. gpupath == False may be desirable if
-        filter sizes are small
+        filter sizes are small.
 
     Returns
     -------
@@ -317,7 +317,7 @@ def resample_poly(
         coefficients to employ. See below for details.
     gpupath : bool, Optional
         Optional path for filter design. gpupath == False may be desirable if
-        filter sizes are small
+        filter sizes are small.
 
     Returns
     -------

@@ -161,7 +161,7 @@ def firwin(
         must be between 0 and ``fs/2``.  Default is 2.
     gpupath : bool, Optional
         Optional path for filter design. gpupath == False may be desirable if
-        filter sizes are small
+        filter sizes are small.
 
     Returns
     -------
