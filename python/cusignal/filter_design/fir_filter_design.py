@@ -91,6 +91,51 @@ def kaiser_atten(numtaps, width):
     return a
 
 
+_firwin_kernel = cp.ElementwiseKernel(
+    "float64 win, int32 numtaps, raw float64 bands, int32 steps, bool scale",
+    "float64 h, float64 hc",
+    """
+    double m { static_cast<double>( i ) - alpha ?
+        static_cast<double>( i ) - alpha : 1.0e-20 };
+
+    double temp {};
+    double left {};
+    double right {};
+
+    for ( int s = 0; s < steps; s++ ) {
+        left = bands[s * 2 + 0] ? bands[s * 2 + 0] : 1.0e-20;
+        right = bands[s * 2 + 1] ? bands[s * 2 + 1] : 1.0e-20;
+
+        temp += right * ( sin( right * m * M_PI ) / ( right * m * M_PI ) );
+        temp -= left * ( sin( left * m * M_PI ) / ( left * m * M_PI ) );
+    }
+
+    temp *= win;
+    h = temp;
+
+    double scale_frequency {};
+
+    if ( scale ) {
+        left = bands[0];
+        right = bands[1];
+
+        if ( left == 0 ) {
+            scale_frequency = 0.0;
+        } else if ( right == 1 ) {
+            scale_frequency = 1.0;
+        } else {
+            scale_frequency = 0.5 * ( left + right );
+        }
+        double c { cos( M_PI * m * scale_frequency ) };
+        hc = temp * c;
+    }
+    """,
+    "_firwin_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double alpha { 0.5 * ( numtaps - 1 ) };",
+)
+
+
 def firwin(
     numtaps,
     cutoff,
@@ -226,11 +271,12 @@ def firwin(
     array([ 0.04890915,  0.91284326,  0.04890915])
 
     """
-    cutoff = np.atleast_1d(cutoff) / float(nyq)
     if gpupath:
         pp = cp
     else:
         pp = np
+
+    cutoff = pp.atleast_1d(cutoff) / float(nyq)
 
     # print("cutoff", cutoff.size)
 
@@ -275,42 +321,40 @@ def firwin(
     bands = cutoff.reshape(-1, 2)
 
     if gpupath:
-        pp = cp
-    else:
-        pp = np
-
-    # Build up the coefficients.
-    alpha = 0.5 * (numtaps - 1)
-    m = pp.arange(0, numtaps) - alpha
-    h = 0
-    for left, right in bands:
-        h += right * pp.sinc(right * m)
-        h -= left * pp.sinc(left * m)
-
-    # Get and apply the window function.
-    if gpupath:
         win = get_window(window, numtaps, fftbins=False)
+        h, hc = _firwin_kernel(win, numtaps, bands, bands.shape[0], scale)
+        if scale:
+            s = cp.sum(hc)
+            h /= s
     else:
         try:
             win = signal.get_window(window, numtaps, fftbins=False)
         except NameError:
             raise RuntimeError("CPU path requires SciPy Signal's get_windows.")
 
-    h *= win
+        # Build up the coefficients.
+        alpha = 0.5 * (numtaps - 1)
+        m = np.arange(0, numtaps) - alpha
+        h = 0
+        for left, right in bands:
+            h += right * np.sinc(right * m)
+            h -= left * np.sinc(left * m)
 
-    # Now handle scaling if desired.
-    if scale:
-        # Get the first passband.
-        left, right = bands[0]
-        if left == 0:
-            scale_frequency = 0.0
-        elif right == 1:
-            scale_frequency = 1.0
-        else:
-            scale_frequency = 0.5 * (left + right)
-        c = pp.cos(pp.pi * m * scale_frequency)
-        s = pp.sum(h * c)
-        h /= s
+        h *= win
+
+        # Now handle scaling if desired.
+        if scale:
+            # Get the first passband.
+            left, right = bands[0]
+            if left == 0:
+                scale_frequency = 0.0
+            elif right == 1:
+                scale_frequency = 1.0
+            else:
+                scale_frequency = 0.5 * (left + right)
+            c = np.cos(np.pi * m * scale_frequency)
+            s = np.sum(h * c)
+            h /= s
 
     return h
 
