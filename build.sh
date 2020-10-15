@@ -121,35 +121,7 @@ GET_CC(){
         print(sms.value)'`
 }
 
-if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
-    echo "Building for the architecture of the GPU in the system..."
-    DEVICES=${CUDA_VISIBLE_DEVICES}
-    if [ -z "${DEVICES}" ]
-    then
-        # If DEVICES is empty, retrieve all attached NVIDIA GPU
-        NUMGPU=`lspci | grep VGA | grep NVIDIA | wc -l`
-        for (( i=0; i<${NUMGPU}; i++ ))
-        do
-            GET_CC ${i}
-            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
-            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
-        done
-    else
-        IFS=',' read -r -a arr <<< ${DEVICES}
-        for (( i=0; i<"${#arr[@]}"; i++ ))
-        do
-            GET_CC ${i}
-            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
-            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
-        done
-    fi
-    
-else
-    echo "Building for *ALL* supported GPU architectures..."
-    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
-    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
-    
-
+RETURN_ALL(){
     GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
     --generate-code arch=compute_50,code=sm_52 \
     --generate-code arch=compute_53,code=sm_53 \
@@ -165,6 +137,43 @@ else
         GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
         --generate-code arch=compute_80,code=[sm_80,compute_80]"
     fi
+}
+
+if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
+    echo "Building for the architecture of the GPU in the system..."
+    DEVICES=${CUDA_VISIBLE_DEVICES}
+    if [ -z "${DEVICES}" ]
+    then
+        # If DEVICES is empty, retrieve all attached NVIDIA GPU
+        NUMGPU=`lspci | grep VGA | grep NVIDIA | wc -l`
+        # If now gpus can be found build all
+        if [ $NUMGPU -eq "0" ]
+        then
+            RETURN_ALL
+        else
+            for (( i=0; i<${NUMGPU}; i++ ))
+            do
+                GET_CC ${i}
+                echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
+                GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
+            done
+        fi
+    else
+        IFS=',' read -r -a arr <<< ${DEVICES}
+        for (( i=0; i<"${#arr[@]}"; i++ ))
+        do
+            GET_CC ${i}
+            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
+        done
+    fi
+    
+else
+    echo "Building for *ALL* supported GPU architectures..."
+    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
+    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
+    
+    RETURN_ALL
 fi
 
 
