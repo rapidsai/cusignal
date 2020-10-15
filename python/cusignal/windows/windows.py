@@ -1539,7 +1539,7 @@ _chebwin_kernel = cp.ElementwiseKernel(
     if ( !odd ) {
         p = real * exp( thrust::complex<double>( 0, N * i ) );
     } else {
-        p = real;
+        p = thrust::complex<double>( real, 0 );
     }
 
     """,
