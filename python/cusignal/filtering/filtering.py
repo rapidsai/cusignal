@@ -21,6 +21,7 @@ from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
+from ..utils.helper_tools import _get_max_smem, _get_max_tpb
 
 _wiener_prep_kernel = cp.ElementwiseKernel(
     "T iMean, T iVar, T prod",
@@ -235,17 +236,22 @@ def sosfilt(
     """
 
     x = cp.asarray(x)
-    sos = cp.asarray(sos)
     if x.ndim == 0:
         raise ValueError("x must be at least 1D")
+
     sos, n_sections = _validate_sos(sos)
+    sos = cp.asarray(sos)
+
     x_zi_shape = list(x.shape)
     x_zi_shape[axis] = 2
     x_zi_shape = tuple([n_sections] + x_zi_shape)
     inputs = [sos, x]
+
     if zi is not None:
         inputs.append(np.asarray(zi))
+
     dtype = cp.result_type(*inputs)
+
     if dtype.char not in "fdgFDGO":
         raise NotImplementedError("input type '%s' not supported" % dtype)
     if zi is not None:
@@ -261,6 +267,7 @@ def sosfilt(
     else:
         zi = cp.zeros(x_zi_shape, dtype=dtype)
         return_zi = False
+
     axis = axis % x.ndim  # make positive
     x = cp.moveaxis(x, axis, -1)
     zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
@@ -270,9 +277,8 @@ def sosfilt(
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
 
-    d = cp.cuda.device.Device(0)
-    max_smem = d.attributes["MaxSharedMemoryPerBlock"]
-    max_tpb = d.attributes["MaxThreadsPerBlock"]
+    max_smem = _get_max_smem()
+    max_tpb = _get_max_tpb()
 
     # Determine how much shared memory is needed
     out_size = sos.shape[0]
@@ -305,6 +311,7 @@ def sosfilt(
         )
 
     _sosfilt(sos, x, zi)
+
     x.shape = x_shape
     x = cp.moveaxis(x, -1, axis)
     if return_zi:
