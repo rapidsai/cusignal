@@ -71,7 +71,8 @@ def channelize_poly_cpu(x, h, n_chans):
     dtype = cp.promote_types(x.dtype, h.dtype)
 
     # order F if input from MATLAB
-    hh = np.matrix(np.reshape(h, (n_taps, n_chans)), dtype=dtype).T
+    h = np.conj(np.reshape(h.astype(dtype=dtype), (n_taps, n_chans)).T)
+
     vv = np.empty(n_chans, dtype=dtype)
 
     if x.dtype == np.float32 or x.dtype == np.complex64:
@@ -86,7 +87,7 @@ def channelize_poly_cpu(x, h, n_chans):
         reg[:, 1:n_taps] = reg[:, 0 : (n_taps - 1)]
         reg[:, 0] = np.conj(np.flipud(x[nn : (nn + n_chans)]))
         for mm in range(n_chans):
-            vv[mm] = np.array(reg[mm, :] * hh[mm, :].H)
+            vv[mm] = np.dot(reg[mm, :], np.atleast_2d(h[mm, :]).T)
 
         yy[:, i] = np.conj(scipy.fft.fft(vv))
 
