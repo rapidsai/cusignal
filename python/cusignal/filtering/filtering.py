@@ -23,6 +23,8 @@ from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
 from ..utils.helper_tools import _get_max_smem, _get_max_tpb
 
+from cupy import prof
+
 _wiener_prep_kernel = cp.ElementwiseKernel(
     "T iMean, T iVar, T prod",
     "T lMean, T lVar",
@@ -549,6 +551,23 @@ def hilbert2(x, N=None):
     return x
 
 
+_detrend_A_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 A",
+    """
+    if ( i & 1 ) {
+        const int new_i { i >> 1 };
+        A = new_i * den;
+    } else {
+        A = 1.0;
+    }
+    """,
+    "_detrend_A_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double den { 1.0 / _ind.size() };"
+)
+
+
 def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     """
     Remove linear trend along axis from data.
@@ -600,40 +619,45 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     else:
         dshape = data.shape
         N = dshape[axis]
-        bp = cp.sort(cp.unique(cp.r_[0, bp, N]))
-        if cp.any(bp > N):
+        bp = np.sort(np.unique(np.r_[0, bp, N]))
+        if np.any(bp > N):
             raise ValueError(
                 "Breakpoints must be less than length of \
                 data along given axis."
             )
+
         Nreg = len(bp) - 1
         # Restructure data so that axis is along first dimension and
         #  all other dimensions are collapsed into second dimension
         rnk = len(dshape)
         if axis < 0:
             axis = axis + rnk
-        newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
+
+        newdims = np.r_[axis, 0:axis, axis + 1: rnk]
         newdata = cp.reshape(
             cp.transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )
+
         if not overwrite_data:
             newdata = newdata.copy()  # make sure we have a copy
         if newdata.dtype.char not in "dfDF":
             newdata = newdata.astype(dtype)
+
         # Find leastsq fit and remove it for each piece
         for m in range(Nreg):
             Npts = int(bp[m + 1] - bp[m])
-            A = cp.ones((Npts, 2), dtype)
-            A[:, 0] = cp.arange(1, Npts + 1) * 1.0 / Npts
+            A = _detrend_A_kernel(size=Npts * 2)
+            A = cp.reshape(A, (Npts, 2))
             sl = slice(bp[m], bp[m + 1])
             coef, _, _, _ = linalg.lstsq(A, newdata[sl])
             newdata[sl] = newdata[sl] - cp.dot(A, coef)
+
         # Put data back in original shape.
-        tdshape = cp.take(cp.asarray(dshape), cp.asarray(newdims), 0)
-        ret = cp.reshape(newdata, tuple(cp.asnumpy(tdshape)))
+        tdshape = np.take(dshape, newdims, 0)
+        ret = cp.reshape(newdata, tuple(tdshape))
         vals = list(range(1, rnk))
         olddims = vals[:axis] + [0] + vals[axis:]
-        ret = cp.transpose(ret, tuple(cp.asnumpy(olddims)))
+        ret = cp.transpose(ret, tuple(olddims))
         return ret
 
 
