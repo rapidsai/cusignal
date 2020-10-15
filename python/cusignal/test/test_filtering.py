@@ -393,7 +393,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, resample_num_samps, window)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key, atol=1e-4)
 
     @pytest.mark.benchmark(group="ResamplePoly")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -593,4 +593,3 @@ class TestFilter:
 
             key = self.cpu_version(cpu_sig, cpu_filt, n_chan)
             array_equal(cp.asnumpy(output), key)
-

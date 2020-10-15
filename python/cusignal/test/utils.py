@@ -15,7 +15,7 @@ import numpy as np
 import pytest_benchmark
 
 
-def array_equal(a, b, rtol=1e-7, atol=1e-7):
+def array_equal(a, b, rtol=1e-7, atol=1e-5):
     if a.dtype == np.float32 or a.dtype == np.complex64:
         rtol = 1e-3
         atol = 1e-3

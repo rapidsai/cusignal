@@ -119,12 +119,14 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            _, output = gpubenchmark(
-                self.gpu_version, gpu_sig, fs, window, scaling
-            )
+            (
+                output_1,
+                output_2,
+            ) = gpubenchmark(self.gpu_version, gpu_sig, fs, window, scaling)
 
-            _, key = self.cpu_version(cpu_sig, fs, window, scaling)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(cpu_sig, fs, window, scaling)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
 
     @pytest.mark.benchmark(group="Welch")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -153,10 +155,14 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            _, output = gpubenchmark(self.gpu_version, cpu_sig, fs, nperseg)
+            (
+                output_1,
+                output_2,
+            ) = gpubenchmark(self.gpu_version, cpu_sig, fs, nperseg)
 
-            _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(cpu_sig, fs, nperseg)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
 
     @pytest.mark.benchmark(group="CSD")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -188,12 +194,14 @@ class TestSpectral:
             cpu_x, gpu_x = rand_data_gen(num_samps, 1, dtype)
             cpu_y, gpu_y = rand_data_gen(num_samps, 1, dtype)
 
-            _, output = gpubenchmark(
-                self.gpu_version, gpu_x, gpu_y, fs, nperseg
-            )
+            (
+                output_1,
+                output_2,
+            ) = gpubenchmark(self.gpu_version, gpu_x, gpu_y, fs, nperseg)
 
-            _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
 
     @pytest.mark.benchmark(group="Spectrogram")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -222,10 +230,14 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
+            output_1, output_2, output_3 = gpubenchmark(
+                self.gpu_version, gpu_sig, fs, nperseg
+            )
 
-            _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2, key_3 = self.cpu_version(cpu_sig, fs, nperseg)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
+            array_equal(cp.asnumpy(output_3), key_3)
 
     @pytest.mark.benchmark(group="STFT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -254,10 +266,14 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
+            output_1, output_2, output_3 = gpubenchmark(
+                self.gpu_version, gpu_sig, fs, nperseg
+            )
 
-            _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2, key_3 = self.cpu_version(cpu_sig, fs, nperseg)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
+            array_equal(cp.asnumpy(output_3), key_3)
 
     @pytest.mark.benchmark(group="Coherence")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -288,16 +304,17 @@ class TestSpectral:
             cpu_x, gpu_x = rand_data_gen(num_samps, 1, dtype)
             cpu_y, gpu_y = rand_data_gen(num_samps, 1, dtype)
 
-            _, output = gpubenchmark(
+            output_1, output_2 = gpubenchmark(
                 self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
-            _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
 
     @pytest.mark.benchmark(group="Vectorstrength")
     @pytest.mark.parametrize("period", [0.75, 5])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2 ** 4])
     class TestVectorstrength:
         def cpu_version(self, events, period):
             return signal.vectorstrength(events, period)
@@ -321,7 +338,10 @@ class TestSpectral:
             events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
             period_gpu = cp.asarray(period)
 
-            output = gpubenchmark(self.gpu_version, events_gpu, period_gpu)
+            output_1, output_2 = gpubenchmark(
+                self.gpu_version, events_gpu, period_gpu
+            )
 
-            key = self.cpu_version(events_cpu, period)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(events_cpu, period)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)

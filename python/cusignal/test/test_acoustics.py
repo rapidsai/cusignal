@@ -171,10 +171,11 @@ class TestAcoustics:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            output, _ = gpubenchmark(self.gpu_version, gpu_sig, n)
+            output_1, output_2 = gpubenchmark(self.gpu_version, gpu_sig, n)
 
-            key, _ = self.cpu_version(cpu_sig, n)
-            array_equal(cp.asnumpy(output), key)
+            key_1, key_2 = self.cpu_version(cpu_sig, n)
+            array_equal(cp.asnumpy(output_1), key_1)
+            array_equal(cp.asnumpy(output_2), key_2)
 
     @pytest.mark.benchmark(group="RealCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
