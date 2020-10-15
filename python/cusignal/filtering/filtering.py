@@ -23,7 +23,6 @@ from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
 from ..utils.helper_tools import _get_max_smem, _get_max_tpb
 
-from cupy import prof
 
 _wiener_prep_kernel = cp.ElementwiseKernel(
     "T iMean, T iVar, T prod",
