@@ -1522,7 +1522,27 @@ def general_gaussian(M, p, sig, sym=True):
     return _truncate(w, needs_trunc)
 
 
-_chebwin_kernel = cp.ElementwiseKernel(
+_chebwin_kernel_odd = cp.ElementwiseKernel(
+    "float64 beta",
+    "float64 p",
+    """
+    const double x { beta * cos( i * N ) };
+    if ( x > 1 ) {
+        p = cosh( order * acosh( x ) );
+    } else if ( x < -1 ) {
+        p = (2 * ( _ind.size() & 1 ) - 1 ) * cosh( order * acosh( -x ) );
+    } else {
+        p = cos( order * acos( x ) );
+    }
+
+    """,
+    "_chebwin_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
+               const double N { ( 1.0 / _ind.size() ) * M_PI };",
+)
+
+_chebwin_kernel_even = cp.ElementwiseKernel(
     "float64 beta",
     "complex128 p",
     """
@@ -1536,18 +1556,12 @@ _chebwin_kernel = cp.ElementwiseKernel(
         real = cos( order * acos( x ) );
     }
 
-    if ( !odd ) {
-        p = real * exp( thrust::complex<double>( 0, N * i ) );
-    } else {
-        p = thrust::complex<double>( real, 0 );
-    }
-
+    p = real * exp( thrust::complex<double>( 0, N * i ) );
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
     loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
-               const double N { ( 1.0 / _ind.size() ) * M_PI }; \
-               const bool odd { _ind.size() & 1 };",
+               const double N { ( 1.0 / _ind.size() ) * M_PI };",
 )
 
 _concat_chebwin = cp.ElementwiseKernel(
@@ -1679,8 +1693,11 @@ def chebwin(M, at, sym=True):
     beta = np.cosh(1.0 / order * np.arccosh(10 ** (abs(at) / 20.0)))
 
     # Appropriate IDFT and filling up
-    # # depending on even/odd M
-    p = _chebwin_kernel(beta, size=M)
+    # depending on even/odd M
+    if M % 2:
+        p = _chebwin_kernel_odd(beta, size=M)
+    else:
+        p = _chebwin_kernel_even(beta, size=M)
 
     w = cp.real(cp.fft.fft(p))
     maxValue = cp.max(w)
