@@ -95,7 +95,7 @@ _firwin_kernel = cp.ElementwiseKernel(
     "float64 win, int32 numtaps, raw float64 bands, int32 steps, bool scale",
     "float64 h, float64 hc",
     """
-    double m { static_cast<double>( i ) - alpha ?
+    const double m { static_cast<double>( i ) - alpha ?
         static_cast<double>( i ) - alpha : 1.0e-20 };
 
     double temp {};
