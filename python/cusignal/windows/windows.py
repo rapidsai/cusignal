@@ -13,6 +13,7 @@
 
 import cupy as cp
 import numpy as np
+import math
 
 import warnings
 
@@ -296,7 +297,7 @@ _parzen_kernel = cp.ElementwiseKernel(
     "",
     "float64 w",
     """
-    int n {};
+    double n {};
     double temp {};
     double sizeS1 {};
 
@@ -312,25 +313,24 @@ _parzen_kernel = cp.ElementwiseKernel(
 
     if ( i < sizeS1 ) {
         n = i + start;
-        temp = (1 - abs( n ) * den);
-        w = 2 * ( temp * temp * temp );
+        temp = (1.0 - abs( n ) * den);
+        w = 2.0 * ( temp * temp * temp );
     } else if ( i >= sizeS1 && i < ( sizeS1 + sizeS2 ) ) {
         n = ( i - sizeS1 - s2 );
         temp = abs( n ) * den;
-        w = 1 - 6 * temp * temp + 6 * temp * temp * temp;
+        w = 1.0 - 6 * temp * temp + 6 * temp * temp * temp;
     } else {
         n = -( i - sizeS2 + s1 + sizeS1 );
         temp = 1 - abs( n ) * den;
-        w = 2 * temp * temp * temp;
+        w = 2.0 * temp * temp * temp;
     }
     """,
     "_parzen_kernel",
     options=("-std=c++11",),
-    loop_prep="double idx_f { static_cast<double>( _ind.size () ) }; \
-               double start { -( idx_f - 1 ) * 0.5 }; \
-               double s1 { floor( -( idx_f - 1 ) / 4 ) }; \
-               double s2 { floor( ( idx_f - 1 ) / 4 ) }; \
-               double den { 1.0 / ( idx_f * 0.5 ) }; \
+    loop_prep="double start { 0.5 * -( _ind.size () - 1 ) }; \
+               double s1 { floor(-0.25 * ( _ind.size () - 1 ) ) }; \
+               double s2 { floor(0.25 * ( _ind.size () - 1 ) ) }; \
+               double den { 1.0 / ( 0.5 * _ind.size () ) }; \
                bool odd { _ind.size() & 1 };",
 )
 

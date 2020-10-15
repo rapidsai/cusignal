@@ -73,7 +73,7 @@ class TestSpectral:
             )
 
             key = self.cpu_version(cpu_x, cpu_y, cpu_f, precenter, normalize)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Periodogram")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -124,7 +124,7 @@ class TestSpectral:
             )
 
             _, key = self.cpu_version(cpu_sig, fs, window, scaling)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Welch")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -156,7 +156,7 @@ class TestSpectral:
             _, output = gpubenchmark(self.gpu_version, cpu_sig, fs, nperseg)
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="CSD")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -193,7 +193,7 @@ class TestSpectral:
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Spectrogram")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -225,7 +225,7 @@ class TestSpectral:
             _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="STFT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -257,7 +257,7 @@ class TestSpectral:
             _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Coherence")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -293,7 +293,7 @@ class TestSpectral:
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Vectorstrength")
     @pytest.mark.parametrize("period", [0.75, 5])
@@ -324,4 +324,4 @@ class TestSpectral:
             output = gpubenchmark(self.gpu_version, events_gpu, period_gpu)
 
             key = self.cpu_version(events_cpu, period)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)

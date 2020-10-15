@@ -103,7 +103,6 @@ def inverse_complex_cepstrum(ceps, ndelay):
         wrapped = (
             phase + np.pi * ndelay[..., None] * np.arange(samples) / center
         )
-        print(wrapped)
         return wrapped
 
     log_spectrum = np.fft.fft(ceps)
@@ -111,7 +110,7 @@ def inverse_complex_cepstrum(ceps, ndelay):
         log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
     )
     x = np.fft.ifft(spectrum).real
-    print(x)
+
     return x
 
 
@@ -175,7 +174,7 @@ class TestAcoustics:
             output, _ = gpubenchmark(self.gpu_version, gpu_sig, n)
 
             key, _ = self.cpu_version(cpu_sig, n)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="RealCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
@@ -205,7 +204,7 @@ class TestAcoustics:
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
 
             key = self.cpu_version(cpu_sig, n)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="InverseComplexCepstrum")
     @pytest.mark.parametrize("num_samps", [2 ** 10])
@@ -235,7 +234,7 @@ class TestAcoustics:
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
 
             key = self.cpu_version(cpu_sig, n)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="MinimumPhase")
     @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
@@ -265,4 +264,4 @@ class TestAcoustics:
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
 
             key = self.cpu_version(cpu_sig, n)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(cp.asnumpy(output), key)

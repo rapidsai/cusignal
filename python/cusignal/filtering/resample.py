@@ -79,14 +79,7 @@ def _design_resample_poly(up, down, window, gpupath=True):
     return h
 
 
-def decimate(
-    x,
-    q,
-    n=None,
-    axis=-1,
-    zero_phase=True,
-    gpupath=True
-):
+def decimate(x, q, n=None, axis=-1, zero_phase=True, gpupath=True):
     """
     Downsample the signal after applying an anti-aliasing filter.
     Parameters
@@ -123,7 +116,7 @@ def decimate(
     """
 
     x = cp.asarray(x)
-    if (gpupath):
+    if gpupath:
         pp = cp
     else:
         pp = np
@@ -285,14 +278,7 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
         return y, new_t
 
 
-def resample_poly(
-    x,
-    up,
-    down,
-    axis=0,
-    window=("kaiser", 5.0),
-    gpupath=True
-):
+def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     """
     Resample `x` along the given axis using polyphase filtering.
 
@@ -399,7 +385,7 @@ def resample_poly(
     n_out = n_out // down + bool(n_out % down)
 
     # If the window size is greater than 8192, use GPU
-    if (gpupath):
+    if gpupath:
         pp = cp
     else:
         pp = np

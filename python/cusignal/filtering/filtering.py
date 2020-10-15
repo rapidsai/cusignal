@@ -563,7 +563,7 @@ _detrend_A_kernel = cp.ElementwiseKernel(
     """,
     "_detrend_A_kernel",
     options=("-std=c++11",),
-    loop_prep="const double den { 1.0 / _ind.size() };"
+    loop_prep="const double den { 1.0 / _ind.size() };",
 )
 
 
@@ -632,7 +632,7 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
         if axis < 0:
             axis = axis + rnk
 
-        newdims = np.r_[axis, 0:axis, axis + 1: rnk]
+        newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
         newdata = cp.reshape(
             cp.transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )
@@ -736,10 +736,14 @@ def channelize_poly(x, h, n_chans):
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
-    if x.dtype.char in ("fF"):
+    if x.dtype == np.float32 or x.dtype == np.complex64:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
-    elif x.dtype.char in ("dD"):
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
+    else:
+        raise NotImplementedError(
+            "Data type ({}) not allowed.".format(x.dtype)
+        )
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 

@@ -15,9 +15,12 @@ import numpy as np
 import pytest_benchmark
 
 
-def array_equal(a, b, tol=1e-4, with_sign=True):
-    res = np.max(np.abs(a - b)) < tol
-    return res
+def array_equal(a, b, rtol=1e-7, atol=1e-7):
+    if a.dtype == np.float32 or a.dtype == np.complex64:
+        rtol = 1e-3
+        atol = 1e-3
+
+    np.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
 
 
 def _check_rapids_pytest_benchmark():
