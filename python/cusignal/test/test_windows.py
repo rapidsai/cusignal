@@ -73,7 +73,7 @@ class TestWindows:
             array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Triang")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
     class TestTriang:
         def cpu_version(self, num_samps):
             return signal.windows.triang(num_samps)
@@ -95,7 +95,7 @@ class TestWindows:
             array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Parzen")
-    @pytest.mark.parametrize("num_samps", [2 ** 5, 2 ** 5 - 1])
+    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
     class TestParzen:
         def cpu_version(self, num_samps):
             return signal.windows.parzen(num_samps)
