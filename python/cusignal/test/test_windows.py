@@ -411,7 +411,7 @@ class TestWindows:
             array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Chebwin")
-    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 8 - 1])
+    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
     @pytest.mark.parametrize("at", [50, 100])
     class TestChebwin:
         def cpu_version(self, num_samps, at):

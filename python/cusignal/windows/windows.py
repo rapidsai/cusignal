@@ -314,7 +314,7 @@ _parzen_kernel = cp.ElementwiseKernel(
                const double den { 1.0 / ( 0.5 * _ind.size () ) }; \
                const bool odd { _ind.size() & 1 }; \
                double s1 { floor(-0.25 * ( _ind.size () - 1 ) ) }; \
-               double s2 { floor(0.25 * ( _ind.size () - 1 ) ) };"
+               double s2 { floor(0.25 * ( _ind.size () - 1 ) ) };",
 )
 
 
@@ -1505,27 +1505,8 @@ def general_gaussian(M, p, sig, sym=True):
     return _truncate(w, needs_trunc)
 
 
-_chebwin_kernel_odd = cp.ElementwiseKernel(
-    "int32 order, float64 beta",
-    "float64 p",
-    """
-    const double x { beta * cos( i * N ) };
-
-    if ( x > 1 ) {
-        p = cosh( order * acosh( x ) );
-    } else if ( x < -1 ) {
-        p = ( 2.0 * ( _ind.size() & 1 ) - 1.0 ) * cosh( order * acosh( -x ) );
-    } else {
-        p = cos( order * acos( x ) );
-    }
-    """,
-    "_chebwin_kernel",
-    options=("-std=c++11",),
-    loop_prep="const double N { M_PI * ( 1.0 / _ind.size() ) };"
-)
-
-_chebwin_kernel_even = cp.ElementwiseKernel(
-    "int32 order, float64 beta",
+_chebwin_kernel = cp.ElementwiseKernel(
+    "int64 order, float64 beta",
     "complex128 p",
     """
     double real {};
@@ -1540,41 +1521,16 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
         real = cos( order * acos( x ) );
     }
 
-    p = real * exp( thrust::complex<double>( 0.0, N * i ) );
+    if ( odd ) {
+        p = real;
+    } else {
+        p = real * exp( thrust::complex<double>( 0.0, N * i ) );
+    }
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
-    loop_prep="const double N { M_PI * ( 1.0 / _ind.size() ) };"
-)
-
-_concat_chebwin = cp.ElementwiseKernel(
-    "raw float64 maxValue",
-    "raw float64 w",
-    """
-    int n {};
-    double temp {};
-    const double max { maxValue[0] };
-
-    if ( odd ) {
-        n = static_cast<int>( floor( 0.5 * ( _ind.size() + 1 ) ) );
-        if ( i < n - 1 ) {
-            temp = w[n - i - 1];
-        } else {
-            temp = w[i - n + 1];
-        }
-    } else {
-        n = static_cast<int>( floor( 0.5 * _ind.size() + 1 ) );
-        if ( i < n - 1 ) {
-            temp = w[n - i - 1];
-        } else {
-            temp = w[i - n + 2];
-        }
-    }
-    w[i] = temp / max;
-    """,
-    "_concat_chebwin",
-    options=("-std=c++11",),
-    loop_prep="const bool odd { _ind.size() & 1 };",
+    loop_prep="const double N { M_PI * ( 1.0 / _ind.size() ) }; \
+               const bool odd { _ind.size() & 1 };",
 )
 
 
@@ -1685,14 +1641,18 @@ def chebwin(M, at, sym=True):
 
     # Appropriate IDFT and filling up
     # depending on even/odd M
+    p = _chebwin_kernel(order, beta, size=M)
     if M % 2:
-        p = _chebwin_kernel_odd(order, beta, size=M)
+        w = cp.real(cp.fft.fft(p))
+        n = (M + 1) // 2
+        w = w[:n]
+        w = cp.concatenate((w[n - 1 : 0 : -1], w))
     else:
-        p = _chebwin_kernel_even(order, beta, size=M)
+        w = cp.real(cp.fft.fft(p))
+        n = M // 2 + 1
+        w = cp.concatenate((w[n - 1 : 0 : -1], w[1:n]))
 
-    w = cp.real(cp.fft.fft(p))
-    maxValue = cp.max(w)
-    _concat_chebwin(maxValue, w, size=M)
+    w = w / cp.max(w)
 
     return _truncate(w, needs_trunc)
 
