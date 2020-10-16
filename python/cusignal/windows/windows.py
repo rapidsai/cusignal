@@ -296,15 +296,15 @@ _parzen_kernel = cp.ElementwiseKernel(
 
     if ( i < sizeS1 ) {
         n = i + start;
-        temp = (1.0 - abs( n ) * den);
+        temp = 1.0 - abs( n ) * den;
         w = 2.0 * ( temp * temp * temp );
     } else if ( i >= sizeS1 && i < ( sizeS1 + sizeS2 ) ) {
         n = ( i - sizeS1 - s2 );
         temp = abs( n ) * den;
-        w = 1.0 - 6 * temp * temp + 6 * temp * temp * temp;
+        w = 1.0 - 6.0 * temp * temp + 6.0 * temp * temp * temp;
     } else {
         n = -( i - sizeS2 + s1 + sizeS1 );
-        temp = 1 - abs( n ) * den;
+        temp = 1.0 - abs( n ) * den;
         w = 2.0 * temp * temp * temp;
     }
     """,
@@ -335,9 +335,9 @@ _bohman_kernel = cp.ElementwiseKernel(
     """
     const double fac { abs( start + delta * ( i - 1 ) ) };
     if ( i != 0 && i != ( _ind.size() - 1 ) ) {
-        w = ( 1 - fac ) * cos( M_PI * fac ) + 1.0 / M_PI * sin( M_PI * fac );
+        w = ( 1.0 - fac ) * cos( M_PI * fac ) + 1.0 / M_PI * sin( M_PI * fac );
     } else {
-        w = 0;
+        w = 0.0;
     }
     """,
     "_bohman_kernel",
@@ -860,12 +860,12 @@ _tukey_kernel = cp.ElementwiseKernel(
     "float64 w",
     """
     if ( i < ( width + 1 ) ) {
-        w = 0.5 * ( 1 + cos( M_PI * ( -1 + 2.0 * i / alpha * N ) ) );
+        w = 0.5 * ( 1 + cos( M_PI * ( -1.0 + 2.0 * i / alpha * N ) ) );
     } else if ( i > ( width + 1 ) && i < ( _ind.size() - width - 1) ) {
         w = 1.0;
     } else {
         w = 0.5 *
-            ( 1 + cos( M_PI * ( -2.0 / alpha + 1 + 2.0 * i / alpha * N ) ) );
+            ( 1.0 + cos( M_PI * ( -2.0 / alpha + 1 + 2.0 * i / alpha * N ) ) );
     }
     """,
     "_tukey_kernel",
@@ -955,7 +955,7 @@ _barthann_kernel = cp.ElementwiseKernel(
     "float64 w",
     """
     const double fac { abs( i * N - 0.5 ) };
-    w = 0.62 - 0.48 * fac + 0.38 * cos(2 * M_PI * fac);
+    w = 0.62 - 0.48 * fac + 0.38 * cos(2.0 * M_PI * fac);
     """,
     "_barthann_kernel",
     options=("-std=c++11",),
@@ -1217,7 +1217,7 @@ _kaiser_kernel = cp.ElementwiseKernel(
     "float64 w",
     """
     const double temp { ( i - alpha ) / alpha };
-    w = cyl_bessel_i0( beta * sqrt( 1 - ( temp * temp ) ) ) /
+    w = cyl_bessel_i0( beta * sqrt( 1.0 - ( temp * temp ) ) ) /
         cyl_bessel_i0( beta );
     """,
     "_kaiser_kernel",
@@ -1357,7 +1357,7 @@ _gaussian_kernel = cp.ElementwiseKernel(
     """,
     "_gaussian_kernel",
     options=("-std=c++11",),
-    loop_prep="const double sig2 { 2 * std * std };",
+    loop_prep="const double sig2 { 2.0 * std * std };",
 )
 
 
@@ -1428,7 +1428,7 @@ _general_gaussian_kernel = cp.ElementwiseKernel(
     "float64 w",
     """
     const double n { i - ( _ind.size() - 1.0 ) * 0.5 };
-    w = exp( -0.5 * pow( abs( n / sig ), 2 * p ) );
+    w = exp( -0.5 * pow( abs( n / sig ), 2.0 * p ) );
     """,
     "_general_gaussian_kernel",
     options=("-std=c++11",),
@@ -1540,7 +1540,7 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
         real = cos( order * acos( x ) );
     }
 
-    p = real * exp( thrust::complex<double>( 0, N * i ) );
+    p = real * exp( thrust::complex<double>( 0.0, N * i ) );
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
