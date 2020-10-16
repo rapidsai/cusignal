@@ -1522,7 +1522,7 @@ def general_gaussian(M, p, sig, sym=True):
 
 
 _chebwin_kernel_odd = cp.ElementwiseKernel(
-    "float64 beta",
+    "int32 order, float64 beta",
     "float64 p",
     """
     const double x { beta * cos( i * N ) };
@@ -1536,12 +1536,11 @@ _chebwin_kernel_odd = cp.ElementwiseKernel(
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
-    loop_prep="const double order { static_cast<double>( _ind.size() - 1 ) }; \
-               const double N { ( 1.0 / _ind.size() ) * M_PI };",
+    loop_prep="const double N { M_PI * ( 1.0 / _ind.size() ) };"
 )
 
 _chebwin_kernel_even = cp.ElementwiseKernel(
-    "float64 beta",
+    "int32 order, float64 beta",
     "complex128 p",
     """
     const double x { beta * cos( i * N ) };
@@ -1559,8 +1558,7 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
-    loop_prep="const double order { static_cast<double>( _ind.size() - 1 ) }; \
-               const double N { ( 1.0 / _ind.size() ) * M_PI };",
+    loop_prep="const double N { M_PI * ( 1.0 / _ind.size() ) };"
 )
 
 _concat_chebwin = cp.ElementwiseKernel(
@@ -1568,9 +1566,10 @@ _concat_chebwin = cp.ElementwiseKernel(
     "raw float64 w",
     """
     double temp {};
+    double max { maxValue[0] };
 
     if ( odd ) {
-        if ( i < n -1 ) {
+        if ( i < n - 1 ) {
             temp = w[n - i - 1];
         } else {
             temp = w[i - n + 1];
@@ -1582,7 +1581,7 @@ _concat_chebwin = cp.ElementwiseKernel(
             temp = w[i - n + 2];
         }
     }
-    w[i] = temp / maxValue[0];
+    w[i] = temp / max;
     """,
     "_concat_chebwin",
     options=("-std=c++11",),
@@ -1698,13 +1697,13 @@ def chebwin(M, at, sym=True):
     # Appropriate IDFT and filling up
     # depending on even/odd M
     if M % 2:
-        p = _chebwin_kernel_odd(beta, size=M)
+        p = _chebwin_kernel_odd(order, beta, size=M)
         w = cp.real(cp.fft.fft(p))
         maxValue = cp.max(w)
         n = (M + 1) // 2
         _concat_chebwin(maxValue, n, w, size=M)
     else:
-        p = _chebwin_kernel_even(beta, size=M)
+        p = _chebwin_kernel_even(order, beta, size=M)
         w = cp.real(cp.fft.fft(p))
         maxValue = cp.max(w)
         n = M // 2 + 1

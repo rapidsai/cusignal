@@ -137,6 +137,10 @@ RETURN_ALL(){
         GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
         --generate-code arch=compute_80,code=[sm_80,compute_80]"
     fi
+
+    echo "Building for *ALL* supported GPU architectures..."
+    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
+    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
 }
 
 if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
@@ -149,6 +153,7 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
         # If now gpus can be found build all
         if [ $NUMGPU -eq "0" ]
         then
+            echo "Unable to determine GPU(s) installed..."
             RETURN_ALL
         else
             for (( i=0; i<${NUMGPU}; i++ ))
@@ -169,10 +174,6 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     fi
     
 else
-    echo "Building for *ALL* supported GPU architectures..."
-    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
-    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
-    
     RETURN_ALL
 fi
 
