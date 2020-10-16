@@ -5,6 +5,7 @@
 
 
 ## Improvements
+- PR #267 Various optimization across all functions
 
 ## Bug Fixes
 

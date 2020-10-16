@@ -11,12 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
+import numpy as np
 
 
 def _validate_sos(sos):
     """Helper to validate a SOS input"""
-    sos = cp.atleast_2d(sos)
+    sos = np.atleast_2d(sos)
     if sos.ndim != 2:
         raise ValueError("sos array must be 2D")
     n_sections, m = sos.shape

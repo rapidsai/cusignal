@@ -12,8 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import angle, arange, asarray, reshape, zeros
-from cupyx.scipy import fftpack
 
 from ..windows.windows import get_window
 from ..utils.arraytools import (
@@ -131,9 +129,9 @@ def lombscargle(
     >>> plt.show()
     """
 
-    x = asarray(x, dtype=cp.float64)
-    y = asarray(y, dtype=cp.float64)
-    freqs = asarray(freqs, dtype=cp.float64)
+    x = cp.asarray(x, dtype=cp.float64)
+    y = cp.asarray(y, dtype=cp.float64)
+    freqs = cp.asarray(freqs, dtype=cp.float64)
     pgram = cp.empty(freqs.shape[0], dtype=cp.float64)
 
     assert x.ndim == 1
@@ -630,8 +628,8 @@ def csd(
     >>> plt.ylabel('CSD [V**2/Hz]')
     >>> plt.show()
     """
-    x = asarray(x)
-    y = asarray(y)
+    x = cp.asarray(x)
+    y = cp.asarray(y)
     freqs, _, Pxy = _spectral_helper(
         x,
         y,
@@ -659,7 +657,7 @@ def csd(
                     'average must be "median" or "mean", got %s' % (average,)
                 )
         else:
-            Pxy = reshape(Pxy, Pxy.shape[:-1])
+            Pxy = cp.reshape(Pxy, Pxy.shape[:-1])
 
     return freqs, Pxy
 
@@ -857,7 +855,7 @@ def spectrogram(
         if mode == "magnitude":
             Sxx = cp.abs(Sxx)
         elif mode in ["angle", "phase"]:
-            Sxx = angle(Sxx)
+            Sxx = cp.angle(Sxx)
             if mode == "phase":
                 # Sxx has one additional dimension for time strides
                 if axis < 0:
@@ -1243,8 +1241,8 @@ def vectorstrength(events, period):
            the spike times fixed.  Biol Cybern. 2013 Aug;107(4):491-94.
            :doi:`10.1007/s00422-013-0560-8`.
     """
-    events = asarray(events)
-    period = asarray(period)
+    events = cp.asarray(events)
+    period = cp.asarray(period)
     if events.ndim > 1:
         raise ValueError("events cannot have dimensions more than 1")
     if period.ndim > 1:
@@ -1265,7 +1263,7 @@ def vectorstrength(events, period):
     # the vector phase is the angle of the mean of the vectors
     vectormean = cp.mean(vectors, axis=1)
     strength = cp.abs(vectormean)
-    phase = angle(vectormean)
+    phase = cp.angle(vectormean)
 
     # if the original period was a scalar, return scalars
     if scalarperiod:
@@ -1405,9 +1403,9 @@ def _spectral_helper(
     axis = int(axis)
 
     # Ensure we have cp.arrays, get outdtype
-    x = asarray(x)
+    x = cp.asarray(x)
     if not same_data:
-        y = asarray(y)
+        y = cp.asarray(y)
         outdtype = cp.result_type(x, y, cp.complex64)
     else:
         outdtype = cp.result_type(x, cp.complex64)
@@ -1444,11 +1442,11 @@ def _spectral_helper(
             if x.shape[-1] < y.shape[-1]:
                 pad_shape = list(x.shape)
                 pad_shape[-1] = y.shape[-1] - x.shape[-1]
-                x = cp.concatenate((x, zeros(pad_shape)), -1)
+                x = cp.concatenate((x, cp.zeros(pad_shape)), -1)
             else:
                 pad_shape = list(y.shape)
                 pad_shape[-1] = x.shape[-1] - y.shape[-1]
-                y = cp.concatenate((y, zeros(pad_shape)), -1)
+                y = cp.concatenate((y, cp.zeros(pad_shape)), -1)
 
     if nperseg is not None:  # if specified by user
         nperseg = int(nperseg)
@@ -1490,10 +1488,10 @@ def _spectral_helper(
         # I.e make x.shape[-1] = nperseg + (nseg-1)*nstep, with integer nseg
         nadd = (-(x.shape[-1] - nperseg) % nstep) % nperseg
         zeros_shape = list(x.shape[:-1]) + [nadd]
-        x = cp.concatenate((x, zeros(zeros_shape)), axis=-1)
+        x = cp.concatenate((x, cp.zeros(zeros_shape)), axis=-1)
         if not same_data:
             zeros_shape = list(y.shape[:-1]) + [nadd]
-            y = cp.concatenate((y, zeros(zeros_shape)), axis=-1)
+            y = cp.concatenate((y, cp.zeros(zeros_shape)), axis=-1)
 
     # Handle detrending and window functions
     if not detrend:
@@ -1573,7 +1571,7 @@ def _spectral_helper(
             # Last point is unpaired Nyquist freq point, don't double
             result[..., 1:-1] *= 2
 
-    time = arange(
+    time = cp.arange(
         nperseg / 2, x.shape[-1] - nperseg / 2 + 1, nperseg - noverlap
     ) / float(fs)
     if boundary is not None:
@@ -1636,7 +1634,7 @@ def _fft_helper(x, win, detrend_func, nperseg, noverlap, nfft, sides):
 
     # Perform the fft. Acts on last axis by default. Zero-pads automatically
     if sides == "twosided":
-        func = fftpack.fft
+        func = cp.fft.fft
     else:
         result = result.real
         func = cp.fft.rfft
@@ -1726,5 +1724,5 @@ def _median_bias(n):
     bias : float
         Calculated bias.
     """
-    ii_2 = 2 * arange(1.0, (n - 1) // 2 + 1)
+    ii_2 = 2 * cp.arange(1.0, (n - 1) // 2 + 1)
     return 1 + cp.sum(1.0 / (ii_2 + 1) - 1.0 / ii_2)

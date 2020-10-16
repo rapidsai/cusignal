@@ -15,8 +15,6 @@ import cupy as cp
 import numpy as np
 import sys
 
-from cupyx.scipy import fftpack
-
 from ..utils.fftpack_helper import (
     _init_nd_shape_and_axes_sorted,
     next_fast_len,
@@ -31,8 +29,6 @@ from .convolution_utils import (
 )
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
-
-_cupy_fft_cache = {}
 
 
 def convolve(
@@ -303,53 +299,14 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
-    major_ver = cp.__version__.split(".")
-
-    if int(major_ver[0]) >= 8:
-        if not complex_result:
-            sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-            sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-            ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
-        else:
-            sp1 = fftpack.fftn(in1, fshape, axes=axes)
-            sp2 = fftpack.fftn(in2, fshape, axes=axes)
-            ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-    else:  # CuPy v7
-        if not complex_result:
-            if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
-                rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
-            else:
-                rplan = _cupy_fft_cache[
-                    (str(fshape), str(axes), "R2C")
-                ] = fftpack.get_fft_plan(
-                    in1, fshape, axes=axes, value_type="R2C"
-                )
-            try:
-                with rplan:
-                    sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-                    sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-            except Exception:
-                sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-                sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-
-            ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
-        else:
-            # Need to move to cupyx.scipy.fft with CuPy v8
-            if (str(fshape), str(axes)) in _cupy_fft_cache:
-                plan = _cupy_fft_cache[(str(fshape), str(axes))]
-            else:
-                plan = _cupy_fft_cache[
-                    (str(fshape), str(axes))
-                ] = fftpack.get_fft_plan(in1, fshape, axes=axes)
-            try:
-                with plan:
-                    sp1 = fftpack.fftn(in1, fshape, axes=axes)
-                    sp2 = fftpack.fftn(in2, fshape, axes=axes)
-                    ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-            except Exception:
-                sp1 = fftpack.fftn(in1, fshape, axes=axes)
-                sp2 = fftpack.fftn(in2, fshape, axes=axes)
-                ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
+    if not complex_result:
+        sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
+        sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
+        ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
+    else:
+        sp1 = cp.fft.fftn(in1, fshape, axes=axes)
+        sp2 = cp.fft.fftn(in2, fshape, axes=axes)
+        ret = cp.fft.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
 
     if mode == "full":
         return ret
@@ -538,7 +495,7 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
 
     if measure:
         times = {}
-        for method in ["fft", "direct"]:
+        for method in ("fft", "direct"):
             times[method] = _timeit_fast(
                 lambda: convolve(volume, kernel, mode=mode, method=method)
             )

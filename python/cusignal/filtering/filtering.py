@@ -12,30 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (
-    arange,
-    asarray,
-    atleast_2d,
-    dot,
-    exp,
-    expand_dims,
-    iscomplexobj,
-    mean,
-    newaxis,
-    ones,
-    pi,
-    prod,
-    r_,
-    ravel,
-    reshape,
-    sort,
-    take,
-    transpose,
-    unique,
-    where,
-    zeros,
-)
-from cupyx.scipy import fftpack
 from cupy import linalg
 
 import numpy as np
@@ -45,8 +21,39 @@ from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
 from ..convolution.convolve import fftconvolve
+from ..utils.helper_tools import _get_max_smem, _get_max_tpb
 
-_cupy_fft_cache = {}
+
+_wiener_prep_kernel = cp.ElementwiseKernel(
+    "T iMean, T iVar, T prod",
+    "T lMean, T lVar",
+    """
+    // Estimate the local mean
+    T temp { iMean / prod };
+    lMean = temp;
+    lVar = iVar / prod - (temp * temp);
+    """,
+    "_wiener_prep_kernel",
+    options=("-std=c++11",),
+)
+
+_wiener_post_kernel = cp.ElementwiseKernel(
+    "T im, T lMean, T lVar, T noise",
+    "T out",
+    """
+    // Estimate the local mean
+    T res { im - lMean };
+    res *= 1.0 - noise / lVar;
+    res += lMean;
+    if ( lVar < noise ) {
+        out = lMean;
+    } else {
+        out = res;
+    }
+    """,
+    "_wiener_post_kernel",
+    options=("-std=c++11",),
+)
 
 
 def wiener(im, mysize=None, noise=None):
@@ -74,7 +81,7 @@ def wiener(im, mysize=None, noise=None):
         Wiener filtered result with the same shape as `im`.
 
     """
-    im = asarray(im)
+    im = cp.asarray(im)
     if mysize is None:
         mysize = [3] * im.ndim
     mysize = np.asarray(mysize)
@@ -82,25 +89,17 @@ def wiener(im, mysize=None, noise=None):
         mysize = cp.repeat(mysize.item(), im.ndim)
         mysize = np.asarray(mysize)
 
-    # Estimate the local mean
-    lMean = correlate(im, ones(mysize), "same") / prod(mysize, axis=0)
+    lprod = cp.prod(mysize, axis=0)
+    lMean = correlate(im, cp.ones(mysize), "same")
+    lVar = correlate(im ** 2, cp.ones(mysize), "same")
 
-    # Estimate the local variance
-    lVar = (
-        correlate(im ** 2, ones(mysize), "same") / prod(mysize, axis=0)
-        - lMean ** 2
-    )
+    lMean, lVar = _wiener_prep_kernel(lMean, lVar, lprod)
 
     # Estimate the noise power if needed.
     if noise is None:
-        noise = mean(ravel(lVar), axis=0)
+        noise = cp.mean(cp.ravel(lVar), axis=0)
 
-    res = im - lMean
-    res *= 1 - noise / lVar
-    res += lMean
-    out = where(lVar < noise, lMean, res)
-
-    return out
+    return _wiener_post_kernel(im, lMean, lVar, noise)
 
 
 def firfilter(b, x, axis=None, zi=None):
@@ -237,18 +236,23 @@ def sosfilt(
     >>> y = cusignal.sosfilt(sos, x)
     """
 
-    x = asarray(x)
-    sos = asarray(sos)
+    x = cp.asarray(x)
     if x.ndim == 0:
         raise ValueError("x must be at least 1D")
+
     sos, n_sections = _validate_sos(sos)
+    sos = cp.asarray(sos)
+
     x_zi_shape = list(x.shape)
     x_zi_shape[axis] = 2
     x_zi_shape = tuple([n_sections] + x_zi_shape)
     inputs = [sos, x]
+
     if zi is not None:
         inputs.append(np.asarray(zi))
+
     dtype = cp.result_type(*inputs)
+
     if dtype.char not in "fdgFDGO":
         raise NotImplementedError("input type '%s' not supported" % dtype)
     if zi is not None:
@@ -264,6 +268,7 @@ def sosfilt(
     else:
         zi = cp.zeros(x_zi_shape, dtype=dtype)
         return_zi = False
+
     axis = axis % x.ndim  # make positive
     x = cp.moveaxis(x, axis, -1)
     zi = cp.moveaxis(zi, [0, axis + 1], [-2, -1])
@@ -273,9 +278,8 @@ def sosfilt(
     zi = cp.ascontiguousarray(cp.reshape(zi, (-1, n_sections, 2)))
     sos = sos.astype(dtype, copy=False)
 
-    d = cp.cuda.device.Device(0)
-    max_smem = d.attributes["MaxSharedMemoryPerBlock"]
-    max_tpb = d.attributes["MaxThreadsPerBlock"]
+    max_smem = _get_max_smem()
+    max_tpb = _get_max_tpb()
 
     # Determine how much shared memory is needed
     out_size = sos.shape[0]
@@ -308,6 +312,7 @@ def sosfilt(
         )
 
     _sosfilt(sos, x, zi)
+
     x.shape = x_shape
     x = cp.moveaxis(x, -1, axis)
     if return_zi:
@@ -318,6 +323,37 @@ def sosfilt(
         out = x
 
     return out
+
+
+_hilbert_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 h",
+    """
+    if ( !odd ) {
+        if ( ( i == 0 ) || ( i == bend ) ) {
+            h = 1.0;
+        } else if ( i > 0 && i < bend ) {
+            h = 2.0;
+        } else {
+            h = 0.0;
+        }
+    } else {
+        if ( i == 0 ) {
+            h = 1.0;
+        } else if ( i > 0 && i < bend) {
+            h = 2.0;
+        } else {
+            h = 0.0;
+        }
+    }
+    """,
+    "_hilbert_kernel",
+    options=("-std=c++11",),
+    loop_prep="const bool odd { _ind.size() & 1 }; \
+               const int bend = odd ? \
+                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                   static_cast<int>( 0.5 * _ind.size() );",
+)
 
 
 def hilbert(x, N=None, axis=-1):
@@ -407,29 +443,60 @@ def hilbert(x, N=None, axis=-1):
            ISBN 13: 978-1292-02572-8
 
     """
-    x = asarray(x)
-    if iscomplexobj(x):
+    x = cp.asarray(x)
+    if cp.iscomplexobj(x):
         raise ValueError("x must be real.")
     if N is None:
         N = x.shape[axis]
     if N <= 0:
         raise ValueError("N must be positive.")
 
-    Xf = fftpack.fft(x, N, axis=axis)
-    h = zeros(N)
-    if N % 2 == 0:
-        h[0] = h[N // 2] = 1
-        h[1 : N // 2] = 2
-    else:
-        h[0] = 1
-        h[1 : (N + 1) // 2] = 2
+    Xf = cp.fft.fft(x, N, axis=axis)
+    h = _hilbert_kernel(size=N)
 
     if x.ndim > 1:
-        ind = [newaxis] * x.ndim
+        ind = [cp.newaxis] * x.ndim
         ind[axis] = slice(None)
         h = h[tuple(ind)]
-    x = fftpack.ifft(Xf * h, axis=axis)
+    x = cp.fft.ifft(Xf * h, axis=axis)
     return x
+
+
+_hilbert2_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 h1, float64 h2",
+    """
+    if ( !odd ) {
+        if ( ( i == 0 ) || ( i == bend ) ) {
+            h1 = 1.0;
+            h2 = 1.0;
+        } else if ( i > 0 && i < bend ) {
+            h1 = 2.0;
+            h2 = 2.0;
+        } else {
+            h1 = 0.0;
+            h2 = 0.0;
+        }
+    } else {
+        if ( i == 0 ) {
+            h1 = 1.0;
+            h2 = 1.0;
+        } else if ( i > 0 && i < bend) {
+            h1 = 2.0;
+            h2 = 2.0;
+        } else {
+            h1 = 0.0;
+            h2 = 0.0;
+        }
+    }
+    """,
+    "_hilbert2_kernel",
+    options=("-std=c++11",),
+    loop_prep="const bool odd { _ind.size() & 1 }; \
+               const int bend = odd ? \
+                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                   static_cast<int>( 0.5 * _ind.size() );",
+)
 
 
 def hilbert2(x, N=None):
@@ -454,10 +521,10 @@ def hilbert2(x, N=None):
         https://en.wikipedia.org/wiki/Analytic_signal
 
     """
-    x = atleast_2d(x)
+    x = cp.atleast_2d(x)
     if x.ndim > 2:
         raise ValueError("x must be 2-D.")
-    if iscomplexobj(x):
+    if cp.iscomplexobj(x):
         raise ValueError("x must be real.")
     if N is None:
         N = x.shape
@@ -470,27 +537,34 @@ def hilbert2(x, N=None):
             "When given as a tuple, N must hold exactly two positive integers"
         )
 
-    Xf = fftpack.fft2(x, N, axes=(0, 1))
-    h1 = zeros(N[0], "d")
-    h2 = zeros(N[1], "d")
-    for p in range(2):
-        h = eval("h%d" % (p + 1))
-        N1 = N[p]
-        if N1 % 2 == 0:
-            h[0] = h[N1 // 2] = 1
-            h[1 : N1 // 2] = 2
-        else:
-            h[0] = 1
-            h[1 : (N1 + 1) // 2] = 2
-        exec("h%d = h" % (p + 1), globals(), locals())
+    Xf = cp.fft.fft2(x, N, axes=(0, 1))
 
-    h = h1[:, newaxis] * h2[newaxis, :]
+    h1, h2 = _hilbert2_kernel(size=N[1])
+
+    h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim
     while k > 2:
-        h = h[:, newaxis]
+        h = h[:, cp.newaxis]
         k -= 1
-    x = fftpack.ifft2(Xf * h, axes=(0, 1))
+    x = cp.fft.ifft2(Xf * h, axes=(0, 1))
     return x
+
+
+_detrend_A_kernel = cp.ElementwiseKernel(
+    "",
+    "float64 A",
+    """
+    if ( i & 1 ) {
+        const int new_i { i >> 1 };
+        A = new_i * den;
+    } else {
+        A = 1.0;
+    }
+    """,
+    "_detrend_A_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double den { 1.0 / _ind.size() };",
+)
 
 
 def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
@@ -534,51 +608,69 @@ def detrend(data, axis=-1, type="linear", bp=0, overwrite_data=False):
     """
     if type not in ["linear", "l", "constant", "c"]:
         raise ValueError("Trend type must be 'linear' or 'constant'.")
-    data = asarray(data)
+    data = cp.asarray(data)
     dtype = data.dtype.char
     if dtype not in "dfDF":
         dtype = "d"
     if type in ["constant", "c"]:
-        ret = data - expand_dims(mean(data, axis), axis)
+        ret = data - cp.expand_dims(cp.mean(data, axis), axis)
         return ret
     else:
         dshape = data.shape
         N = dshape[axis]
-        bp = sort(unique(r_[0, bp, N]))
-        if cp.any(bp > N):
+        bp = np.sort(np.unique(np.r_[0, bp, N]))
+        if np.any(bp > N):
             raise ValueError(
                 "Breakpoints must be less than length of \
                 data along given axis."
             )
+
         Nreg = len(bp) - 1
         # Restructure data so that axis is along first dimension and
         #  all other dimensions are collapsed into second dimension
         rnk = len(dshape)
         if axis < 0:
             axis = axis + rnk
+
         newdims = np.r_[axis, 0:axis, axis + 1 : rnk]
-        newdata = reshape(
-            transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
+        newdata = cp.reshape(
+            cp.transpose(data, tuple(newdims)), (N, _prod(dshape) // N)
         )
+
         if not overwrite_data:
             newdata = newdata.copy()  # make sure we have a copy
         if newdata.dtype.char not in "dfDF":
             newdata = newdata.astype(dtype)
+
         # Find leastsq fit and remove it for each piece
         for m in range(Nreg):
             Npts = int(bp[m + 1] - bp[m])
-            A = ones((Npts, 2), dtype)
-            A[:, 0] = arange(1, Npts + 1) * 1.0 / Npts
+            A = _detrend_A_kernel(size=Npts * 2)
+            A = cp.reshape(A, (Npts, 2))
             sl = slice(bp[m], bp[m + 1])
-            coef, resids, rank, s = linalg.lstsq(A, newdata[sl])
-            newdata[sl] = newdata[sl] - dot(A, coef)
+            coef, _, _, _ = linalg.lstsq(A, newdata[sl])
+            newdata[sl] = newdata[sl] - cp.dot(A, coef)
+
         # Put data back in original shape.
-        tdshape = take(asarray(dshape), asarray(newdims), 0)
-        ret = reshape(newdata, tuple(cp.asnumpy(tdshape)))
+        tdshape = np.take(dshape, newdims, 0)
+        ret = cp.reshape(newdata, tuple(tdshape))
         vals = list(range(1, rnk))
         olddims = vals[:axis] + [0] + vals[axis:]
-        ret = transpose(ret, tuple(cp.asnumpy(olddims)))
+        ret = cp.transpose(ret, tuple(olddims))
         return ret
+
+
+_freq_shift_kernel = cp.ElementwiseKernel(
+    "T x, float64 freq, float64 fs",
+    "complex128 out",
+    """
+    thrust::complex<double> temp(0, neg2pi * freq / fs * i);
+    out = x * exp(temp);
+    """,
+    "_freq_shift_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double neg2pi { -1 * 2 * M_PI };",
+)
 
 
 def freq_shift(x, freq, fs):
@@ -596,8 +688,8 @@ def freq_shift(x, freq, fs):
     domain : string
         freq or time
     """
-    x = asarray(x)
-    return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
+    x = cp.asarray(x)
+    return _freq_shift_kernel(x, freq, fs)
 
 
 def channelize_poly(x, h, n_chans):
@@ -625,11 +717,10 @@ def channelize_poly(x, h, n_chans):
     Number of filter taps (len of filter / n_chans) must be <=32.
 
     """
-
     dtype = cp.promote_types(x.dtype, h.dtype)
 
-    x = asarray(x, dtype=dtype)
-    h = asarray(h, dtype=dtype)
+    x = cp.asarray(x, dtype=dtype)
+    h = cp.asarray(h, dtype=dtype)
 
     # number of taps in each h_n filter
     n_taps = int(len(h) / n_chans)
@@ -642,30 +733,21 @@ def channelize_poly(x, h, n_chans):
             )
         )
 
-    if n_taps > 32:
-        raise NotImplementedError(
-            "Number of taps ({}) must be less than (32).".format(n_taps)
-        )
-
     # number of outputs
     n_pts = int(len(x) / n_chans)
 
-    if x.dtype == cp.float32 or x.dtype == cp.complex64:
+    if x.dtype == np.float32 or x.dtype == np.complex64:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
-    elif x.dtype == cp.float64 or x.dtype == cp.complex128:
+    elif x.dtype == np.float64 or x.dtype == np.complex128:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
+    else:
+        raise NotImplementedError(
+            "Data type ({}) not allowed.".format(x.dtype)
+        )
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 
-    # Remove with CuPy v8
-    if (x.dtype, n_pts, n_taps, n_chans) in _cupy_fft_cache:
-        plan = _cupy_fft_cache[(x.dtype, n_pts, n_taps, n_chans)]
-    else:
-        plan = _cupy_fft_cache[
-            (x.dtype, n_pts, n_taps, n_chans)
-        ] = fftpack.get_fft_plan(y, axes=-1)
-
-    return cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
+    return cp.conj(cp.fft.fft(y)).T
 
 
 def _prod(iterable):
