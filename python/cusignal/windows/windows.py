@@ -1529,15 +1529,14 @@ _chebwin_kernel_odd = cp.ElementwiseKernel(
     if ( x > 1 ) {
         p = cosh( order * acosh( x ) );
     } else if ( x < -1 ) {
-        p = (2 * ( _ind.size() & 1 ) - 1 ) * cosh( order * acosh( -x ) );
+        p = ( 2.0 * ( _ind.size() & 1 ) - 1.0 ) * cosh( order * acosh( -x ) );
     } else {
         p = cos( order * acos( x ) );
     }
-
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
-    loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
+    loop_prep="const double order { static_cast<double>( _ind.size() - 1 ) }; \
                const double N { ( 1.0 / _ind.size() ) * M_PI };",
 )
 
@@ -1550,7 +1549,8 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
     if ( x > 1 ) {
         real = cosh( order * acosh( x ) );
     } else if ( x < -1 ) {
-        real = (2 * ( _ind.size() & 1 ) - 1 ) * cosh( order * acosh( -x ) );
+        real = ( 2.0 * ( _ind.size() & 1 ) - 1.0 ) *
+            cosh( order * acosh( -x ) );
     } else {
         real = cos( order * acos( x ) );
     }
@@ -1559,30 +1559,34 @@ _chebwin_kernel_even = cp.ElementwiseKernel(
     """,
     "_chebwin_kernel",
     options=("-std=c++11",),
-    loop_prep="const double order { static_cast<double>( _ind.size() - 1.0 ) }; \
+    loop_prep="const double order { static_cast<double>( _ind.size() - 1 ) }; \
                const double N { ( 1.0 / _ind.size() ) * M_PI };",
 )
 
 _concat_chebwin = cp.ElementwiseKernel(
-    "raw float64 maxValue",
+    "raw float64 maxValue, raw int32 n",
     "raw float64 w",
     """
     double temp {};
-    if ( i < n ) {
-        temp = w[n - i];
-    } else {
-        if ( odd ) {
-            temp = w[i - n];
+
+    if ( odd ) {
+        if ( i < n -1 ) {
+            temp = w[n - i - 1];
         } else {
             temp = w[i - n + 1];
+        }
+    } else {
+        if ( i < n - 1 ) {
+            temp = w[n - i - 1];
+        } else {
+            temp = w[i - n + 2];
         }
     }
     w[i] = temp / maxValue[0];
     """,
     "_concat_chebwin",
     options=("-std=c++11",),
-    loop_prep="const int n = static_cast<int>( 0.5 * _ind.size() ); \
-               const bool odd { _ind.size() & 1 };",
+    loop_prep="const bool odd { _ind.size() & 1 };",
 )
 
 
@@ -1695,12 +1699,16 @@ def chebwin(M, at, sym=True):
     # depending on even/odd M
     if M % 2:
         p = _chebwin_kernel_odd(beta, size=M)
+        w = cp.real(cp.fft.fft(p))
+        maxValue = cp.max(w)
+        n = (M + 1) // 2
+        _concat_chebwin(maxValue, n, w, size=M)
     else:
         p = _chebwin_kernel_even(beta, size=M)
-
-    w = cp.real(cp.fft.fft(p))
-    maxValue = cp.max(w)
-    _concat_chebwin(maxValue, w, size=M)
+        w = cp.real(cp.fft.fft(p))
+        maxValue = cp.max(w)
+        n = M // 2 + 1
+        _concat_chebwin(maxValue, n, w, size=M)
 
     return _truncate(w, needs_trunc)
 

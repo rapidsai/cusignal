@@ -176,8 +176,6 @@ else
     RETURN_ALL
 fi
 
-
-
 # Must check GCC for Centos OS
 if [ "$GCC_V" -lt 7 ] || [ "$NVCC_V" -lt 11 ]; then
     FLAGS="-std=c++11"
