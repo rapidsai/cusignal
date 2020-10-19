@@ -6,6 +6,7 @@
 
 ## Improvements
 - PR #267 Various optimization across all functions
+- PR #271 Increase robustness of testing
 
 ## Bug Fixes
 - PR #272 Fix bug in gausspulse
