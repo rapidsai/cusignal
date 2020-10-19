@@ -102,9 +102,10 @@ def square(t, duty=0.5):
 
 _gausspulse_kernel_F_F = cp.ElementwiseKernel(
     "T t, T a, T fc",
-    "T yenv",
+    "T yI",
     """
-    yenv = exp(-a * t * t);
+    T yenv = exp(-a * t * t);
+    yI = yenv * cos( 2 * M_PI * fc * t);
     """,
     "_gausspulse_kernel",
     options=("-std=c++11",),
@@ -126,8 +127,12 @@ _gausspulse_kernel_T_F = cp.ElementwiseKernel(
     "T yI, T yQ",
     """
     T yenv { exp(-a * t * t) };
-    yI = yenv * cos( 2 * M_PI * fc * t);
-    yQ = yenv * sin( 2 * M_PI * fc * t);
+
+    T l_yI {};
+    T l_yQ {};
+    sincos(2 * M_PI * fc * t, &l_yQ, &l_yI);
+    yI = yenv * l_yI;
+    yQ = yenv * l_yQ;
     """,
     "_gausspulse_kernel",
     options=("-std=c++11",),
@@ -138,8 +143,12 @@ _gausspulse_kernel_T_T = cp.ElementwiseKernel(
     "T yI, T yQ, T yenv",
     """
     yenv = exp(-a * t * t);
-    yI = yenv * cos( 2 * M_PI * fc * t);
-    yQ = yenv * sin( 2 * M_PI * fc * t);
+
+    T l_yI {};
+    T l_yQ {};
+    sincos(2 * M_PI * fc * t, &l_yQ, &l_yI);
+    yI = yenv * l_yI;
+    yQ = yenv * l_yQ;
     """,
     "_gausspulse_kernel",
     options=("-std=c++11",),

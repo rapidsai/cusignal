@@ -9,6 +9,7 @@
 - PR #271 Increase robustness of testing
 
 ## Bug Fixes
+- PR #272 Fix bug in gausspulse
 
 # cuSignal 0.16.0 (Date TBD)
 

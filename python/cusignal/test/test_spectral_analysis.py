@@ -220,9 +220,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, fs, nperseg
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             key = self.cpu_version(cpu_sig, fs, nperseg)
             array_equal(output, key)
@@ -254,9 +252,7 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, fs, nperseg
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             key = self.cpu_version(cpu_sig, fs, nperseg)
             array_equal(output, key)
@@ -290,9 +286,7 @@ class TestSpectral:
             cpu_x, gpu_x = rand_data_gen(num_samps, 1, dtype)
             cpu_y, gpu_y = rand_data_gen(num_samps, 1, dtype)
 
-            output = gpubenchmark(
-                self.gpu_version, gpu_x, gpu_y, fs, nperseg
-            )
+            output = gpubenchmark(self.gpu_version, gpu_x, gpu_y, fs, nperseg)
 
             key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             array_equal(output, key)
@@ -323,9 +317,7 @@ class TestSpectral:
             events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
             period_gpu = cp.asarray(period)
 
-            output = gpubenchmark(
-                self.gpu_version, events_gpu, period_gpu
-            )
+            output = gpubenchmark(self.gpu_version, events_gpu, period_gpu)
 
             key = self.cpu_version(events_cpu, period)
             array_equal(output, key)
