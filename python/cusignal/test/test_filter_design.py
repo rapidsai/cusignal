@@ -55,7 +55,7 @@ class TestFilterDesign:
             )
 
             key = self.cpu_version(num_samps, f1, f2)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     # Not passing anything to cupy, faster in numba
     @pytest.mark.parametrize("a", [5, 25, 100])
@@ -79,7 +79,7 @@ class TestFilterDesign:
             output = gpubenchmark(self.gpu_version, a)
 
             key = self.cpu_version(a)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     # Not passing anything to cupy, faster in numba
     @pytest.mark.parametrize("numtaps", [5, 25, 100])
@@ -104,7 +104,7 @@ class TestFilterDesign:
             output = gpubenchmark(self.gpu_version, numtaps, width)
 
             key = self.cpu_version(numtaps, width)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     # Not passing anything to cupy, faster in numba
     @pytest.mark.benchmark(group="CmplxSort")
@@ -125,8 +125,7 @@ class TestFilterDesign:
 
         def test_cmplx_sort_gpu(self, gpubenchmark, p):
 
-            output_1, output_2 = gpubenchmark(self.gpu_version, p)
+            output = gpubenchmark(self.gpu_version, p)
 
-            key_1, key_2 = self.cpu_version(p)
-            array_equal(cp.asnumpy(output_1), key_1)
-            array_equal(cp.asnumpy(output_2), key_2)
+            key = self.cpu_version(p)
+            array_equal(output, key)

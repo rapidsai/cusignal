@@ -48,7 +48,7 @@ class TestWaveforms:
             output = gpubenchmark(self.gpu_version, gpu_sig, duty)
 
             key = self.cpu_version(cpu_sig, duty)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="GaussPulse")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -73,10 +73,10 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fc)
+            output = gpubenchmark(self.gpu_version, gpu_sig, fc)
 
-            _, _, key = self.cpu_version(cpu_sig, fc)
-            array_equal(cp.asnumpy(output), key)
+            key = self.cpu_version(cpu_sig, fc)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Chirp")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -111,7 +111,7 @@ class TestWaveforms:
             )
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="UnitImpulse")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -135,4 +135,4 @@ class TestWaveforms:
             output = gpubenchmark(self.gpu_version, num_samps, idx)
 
             key = self.cpu_version(num_samps, idx)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)

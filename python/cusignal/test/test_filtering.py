@@ -118,7 +118,7 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
@@ -175,7 +175,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sos, cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Hilbert")
     @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
@@ -202,7 +202,7 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Hilbert2")
     @pytest.mark.parametrize("dim, num_samps", [(2, 2 ** 8)])
@@ -229,7 +229,7 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Detrend")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -254,7 +254,7 @@ class TestFilter:
             output = gpubenchmark(cusignal.detrend, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="FreqShift")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -285,7 +285,7 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig, freq, fs)
 
             key = self.cpu_version(cpu_sig, freq, fs)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Decimate")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
@@ -343,7 +343,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, downsample_factor, zero_phase)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Resample")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -445,7 +445,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, up, down, window)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="UpFirDn")
     @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 14), (2, 2 ** 8)])
@@ -496,7 +496,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Firfilter")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
@@ -542,7 +542,7 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filter)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="ChannelizePoly")
     @pytest.mark.parametrize(
@@ -592,4 +592,4 @@ class TestFilter:
             output = gpubenchmark(self.gpu_version, gpu_sig, gpu_filt, n_chan)
 
             key = self.cpu_version(cpu_sig, cpu_filt, n_chan)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
