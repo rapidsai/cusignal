@@ -8,6 +8,7 @@
 - PR #267 Various optimization across all functions
 
 ## Bug Fixes
+- PR #272 Fix bug in gausspulse
 
 # cuSignal 0.16.0 (Date TBD)
 
