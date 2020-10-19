@@ -119,7 +119,9 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            output = gpubenchmark(self.gpu_version, gpu_sig, fs, window, scaling)
+            output = gpubenchmark(
+                self.gpu_version, gpu_sig, fs, window, scaling
+            )
 
             key = self.cpu_version(cpu_sig, fs, window, scaling)
             array_equal(output, key)
