@@ -576,3 +576,221 @@ extern "C" __global__ void __launch_bounds__( 256 )
                                   const int pick ) {
     _cupy_correlate2D<thrust::complex<double>>( inp, inpW, inpH, kernel, kerW, kerH, S0, S1, out, outW, outH, pick );
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                              CONVOLVE 1D2O                                //
+///////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+__device__ void _cupy_convolve1D2O( const T *__restrict__ inp,
+                                const int inpW,
+                                const T *__restrict__ kernel,
+                                const int  kerW,
+                                const int  kerH,
+                                const int  mode,
+                                T *__restrict__ out,
+                                const int outW ) {
+
+    const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+    const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
+
+    for ( int tid = tx; tid < outW; tid += stride ) {
+
+        T temp {};
+
+        if ( mode == 0 ) {  // Valid
+            if ( tid >= 0 && tid < inpW ) {
+                for ( int i = 0; i < kerW; i++ ) {
+                    for ( int j = 0; j < kerH; j++ ) {
+                        temp += inp[tid + kerW - i - 1] * inp[tid + kerH - j - 1] * kernel[ kerW * i + j];
+                    }
+                }
+            }
+        }
+        out[tid] = temp;
+    }
+
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D2O_int32( const int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  kerH,
+                                                                          const int  mode,
+                                                                          int *__restrict__ out,
+                                                                          const int outW ) {
+    _cupy_convolve1D2O<int>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D2O_int64( const long int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const long int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  kerH,
+                                                                          const int  mode,
+                                                                          long int *__restrict__ out,
+                                                                          const int outW ) {
+    _cupy_convolve1D2O<long int>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D2O_float32( const float *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const float *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  kerH,
+                                                                            const int  mode,
+                                                                            float *__restrict__ out,
+                                                                            const int outW ) {
+    _cupy_convolve1D2O<float>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D2O_float64( const double *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const double *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  kerH,
+                                                                            const int  mode,
+                                                                            double *__restrict__ out,
+                                                                            const int outW ) {
+    _cupy_convolve1D2O<double>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve1D2O_complex64( thrust::complex<float> *__restrict__ inp,
+                              const int inpW,
+                              thrust::complex<float> *__restrict__ kernel,
+                              const int  kerW,
+                              const int  kerH,
+                              const int  mode,
+                              thrust::complex<float> *__restrict__ out,
+                              const int outW ) {
+    _cupy_convolve1D2O<thrust::complex<float>>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve1D2O_complex128( const thrust::complex<double> *__restrict__ inp,
+                               const int inpW,
+                               const thrust::complex<double> *__restrict__ kernel,
+                               const int  kerW,
+                               const int  kerH,
+                               const int  mode,
+                               thrust::complex<double> *__restrict__ out,
+                               const int outW ) {
+    _cupy_convolve1D2O<thrust::complex<double>>( inp, inpW, kernel, kerW, kerH, mode, out, outW );
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                              CONVOLVE 1D3O                                //
+///////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+__device__ void _cupy_convolve1D3O( const T *__restrict__ inp,
+                                const int inpW,
+                                const T *__restrict__ kernel,
+                                const int  kerW,
+                                const int  kerH,
+                                const int  kerD,
+                                const int  mode,
+                                T *__restrict__ out,
+                                const int outW ) {
+
+    const int tx { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
+    const int stride { static_cast<int>( blockDim.x * gridDim.x ) };
+
+    for ( int tid = tx; tid < outW; tid += stride ) {
+
+        T temp {};
+
+        if ( mode == 0 ) {  // Valid
+            if ( tid >= 0 && tid < inpW ) {
+                for ( int i = 0; i < kerW; i++ ) {
+                    for ( int j = 0; j < kerH; j++ ) {
+                        for ( int k = 0; k < kerD; k++ ) {
+                            temp += inp[tid + kerW - i - 1] * inp[tid + kerH - j - 1] * inp[tid + kerD - k - 1] * kernel[ (kerW * i + j) * kerH + k ];
+                        }
+                    }
+                }
+            }
+        }
+        out[tid] = temp;
+    }
+
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D3O_int32( const int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  kerH,
+                                                                          const int  kerD,
+                                                                          const int  mode,
+                                                                          int *__restrict__ out,
+                                                                          const int outW ) {
+    _cupy_convolve1D3O<int>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D3O_int64( const long int *__restrict__ inp,
+                                                                          const int inpW,
+                                                                          const long int *__restrict__ kernel,
+                                                                          const int  kerW,
+                                                                          const int  kerH,
+                                                                          const int  kerD,
+                                                                          const int  mode,
+                                                                          long int *__restrict__ out,
+                                                                          const int outW ) {
+    _cupy_convolve1D3O<long int>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D3O_float32( const float *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const float *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  kerH,
+                                                                            const int  kerD,
+                                                                            const int  mode,
+                                                                            float *__restrict__ out,
+                                                                            const int outW ) {
+    _cupy_convolve1D3O<float>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 ) _cupy_convolve1D3O_float64( const double *__restrict__ inp,
+                                                                            const int inpW,
+                                                                            const double *__restrict__ kernel,
+                                                                            const int  kerW,
+                                                                            const int  kerH,
+                                                                            const int  kerD,
+                                                                            const int  mode,
+                                                                            double *__restrict__ out,
+                                                                            const int outW ) {
+    _cupy_convolve1D3O<double>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve1D3O_complex64( thrust::complex<float> *__restrict__ inp,
+                              const int inpW,
+                              thrust::complex<float> *__restrict__ kernel,
+                              const int  kerW,
+                              const int  kerH,
+                              const int  kerD,
+                              const int  mode,
+                              thrust::complex<float> *__restrict__ out,
+                              const int outW ) {
+    _cupy_convolve1D3O<thrust::complex<float>>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}
+
+extern "C" __global__ void __launch_bounds__( 512 )
+    _cupy_convolve1D3O_complex128( const thrust::complex<double> *__restrict__ inp,
+                               const int inpW,
+                               const thrust::complex<double> *__restrict__ kernel,
+                               const int  kerW,
+                               const int  kerH,
+                               const int  kerD,
+                               const int  mode,
+                               thrust::complex<double> *__restrict__ out,
+                               const int outW ) {
+    _cupy_convolve1D3O<thrust::complex<double>>( inp, inpW, kernel, kerW, kerH, kerD, mode, out, outW );
+}

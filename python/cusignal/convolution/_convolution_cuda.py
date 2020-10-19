@@ -73,6 +73,73 @@ class _cupy_convolve_wrapper(object):
         self.kernel(self.grid, self.block, kernel_args)
 
 
+class _cupy_convolve_1d2o_wrapper(object):
+    def __init__(self, grid, block, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.kernel = kernel
+
+    def __call__(
+        self,
+        d_inp,
+        d_kernel,
+        mode,
+        out,
+    ):
+
+        kernel_args = (
+            d_inp,
+            d_inp.shape[0],
+            d_kernel,
+            d_kernel.shape[0],
+            d_kernel.shape[1],
+            mode,
+            out,
+            out.shape[0],
+        )
+
+        self.kernel(self.grid, self.block, kernel_args)
+
+
+class _cupy_convolve_1d3o_wrapper(object):
+    def __init__(self, grid, block, kernel):
+        if isinstance(grid, int):
+            grid = (grid,)
+        if isinstance(block, int):
+            block = (block,)
+
+        self.grid = grid
+        self.block = block
+        self.kernel = kernel
+
+    def __call__(
+        self,
+        d_inp,
+        d_kernel,
+        mode,
+        out,
+    ):
+
+        kernel_args = (
+            d_inp,
+            d_inp.shape[0],
+            d_kernel,
+            d_kernel.shape[0],
+            d_kernel.shape[1],
+            d_kernel.shape[2],
+            mode,
+            out,
+            out.shape[0],
+        )
+
+        self.kernel(self.grid, self.block, kernel_args)
+
+
 class _cupy_convolve_2d_wrapper(object):
     def __init__(self, grid, block, kernel):
         if isinstance(grid, int):
@@ -145,6 +212,10 @@ def _get_backend_kernel(
             return _cupy_convolve_wrapper(grid, block, kernel)
         elif k_type == "convolve2D" or k_type == "correlate2D":
             return _cupy_convolve_2d_wrapper(grid, block, kernel)
+        elif k_type == "convolve1D2O":
+            return _cupy_convolve_1d2o_wrapper(grid, block, kernel)
+        elif k_type == "convolve1D3O":
+            return _cupy_convolve_1d3o_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
                 "No CuPY kernel found for k_type {}, datatype {}".format(
@@ -436,6 +507,132 @@ def _convolve2d(in1, in2, use_convolve, mode, boundary, fillvalue):
         bval,
         use_convolve,
         fill,
+    )
+
+    return out
+
+
+def _convolve1d2o_gpu(
+    inp,
+    out,
+    ker,
+    mode,
+):
+
+    d_inp = cp.array(inp)
+    d_kernel = cp.array(ker)
+
+    threadsperblock, blockspergrid = _get_tpb_bpg()
+
+    k_type = "convolve1D2O"
+
+    _populate_kernel_cache(out.dtype, k_type)
+
+    kernel = _get_backend_kernel(
+        out.dtype,
+        blockspergrid,
+        threadsperblock,
+        k_type,
+    )
+
+    kernel(d_inp, d_kernel, mode, out)
+
+    _print_atts(kernel)
+
+    return out
+
+
+def _convolve1d2o(in1, in2, mode):
+
+    val = _valfrommode(mode)
+
+    # Promote inputs
+    promType = cp.promote_types(in1.dtype, in2.dtype)
+    in1 = in1.astype(promType)
+    in2 = in2.astype(promType)
+
+    # Create empty array to hold number of aout dimensions
+    out_dimens = np.empty(in1.ndim, np.int)
+    if val == VALID:
+        for i in range(in1.ndim):
+            out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
+            if out_dimens[i] < 0:
+                raise Exception(
+                    "no part of the output is valid, use option 1 (same) or 2 \
+                     (full) for third argument"
+                )
+
+    # Create empty array out on GPU
+    out = cp.empty(out_dimens.tolist(), in1.dtype)
+
+    out = _convolve1d2o_gpu(
+        in1,
+        out,
+        in2,
+        val,
+    )
+
+    return out
+
+
+def _convolve1d3o_gpu(
+    inp,
+    out,
+    ker,
+    mode,
+):
+
+    d_inp = cp.array(inp)
+    d_kernel = cp.array(ker)
+
+    threadsperblock, blockspergrid = _get_tpb_bpg()
+
+    k_type = "convolve1D3O"
+
+    _populate_kernel_cache(out.dtype, k_type)
+
+    kernel = _get_backend_kernel(
+        out.dtype,
+        blockspergrid,
+        threadsperblock,
+        k_type,
+    )
+
+    kernel(d_inp, d_kernel, mode, out)
+
+    _print_atts(kernel)
+
+    return out
+
+
+def _convolve1d3o(in1, in2, mode):
+
+    val = _valfrommode(mode)
+
+    # Promote inputs
+    promType = cp.promote_types(in1.dtype, in2.dtype)
+    in1 = in1.astype(promType)
+    in2 = in2.astype(promType)
+
+    # Create empty array to hold number of aout dimensions
+    out_dimens = np.empty(in1.ndim, np.int)
+    if val == VALID:
+        for i in range(in1.ndim):
+            out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
+            if out_dimens[i] < 0:
+                raise Exception(
+                    "no part of the output is valid, use option 1 (same) or 2 \
+                     (full) for third argument"
+                )
+
+    # Create empty array out on GPU
+    out = cp.empty(out_dimens.tolist(), in1.dtype)
+
+    out = _convolve1d3o_gpu(
+        in1,
+        out,
+        in2,
+        val,
     )
 
     return out
