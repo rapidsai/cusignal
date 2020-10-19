@@ -61,12 +61,16 @@ class TestWaveforms:
 
         def gpu_version(self, sig, fc, retquad, retenv):
             with cp.cuda.Stream.null:
-                out = cusignal.gausspulse(sig, fc, retquad=retquad, retenv=retenv)
+                out = cusignal.gausspulse(
+                    sig, fc, retquad=retquad, retenv=retenv
+                )
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
-        def test_gausspulse_cpu(self, time_data_gen, benchmark, num_samps, fc, retquad, retenv):
+        def test_gausspulse_cpu(
+            self, time_data_gen, benchmark, num_samps, fc, retquad, retenv
+        ):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, fc, retquad, retenv)
 
@@ -75,7 +79,9 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(self.gpu_version, gpu_sig, fc, retquad, retenv)
+            output = gpubenchmark(
+                self.gpu_version, gpu_sig, fc, retquad, retenv
+            )
 
             key = self.cpu_version(cpu_sig, fc, retquad, retenv)
             array_equal(output, key)
