@@ -48,7 +48,7 @@ class TestWindows:
             output = gpubenchmark(self.cpu_version, num_samps, HFT90D)
 
             key = self.cpu_version(num_samps, HFT90D)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Boxcar")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -70,7 +70,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Triang")
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
@@ -92,7 +92,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Parzen")
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
@@ -114,7 +114,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Bohman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -136,7 +136,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Blackman")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -158,7 +158,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Nuttall")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -180,7 +180,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="BlackmanHarris")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -202,7 +202,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="FlatTop")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -224,7 +224,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Barlett")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -246,7 +246,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Tukey")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -269,7 +269,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, alpha)
 
             key = self.cpu_version(num_samps, alpha)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="BartHann")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -291,7 +291,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="GeneralHamming")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -316,7 +316,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, alpha)
 
             key = self.cpu_version(num_samps, alpha)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Hamming")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -338,7 +338,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Kaiser")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -361,7 +361,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, beta)
 
             key = self.cpu_version(num_samps, beta)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Gaussian")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -384,7 +384,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, std)
 
             key = self.cpu_version(num_samps, std)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="GeneralGaussian")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -408,7 +408,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, p, std)
 
             key = self.cpu_version(num_samps, p, std)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Chebwin")
     @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 15 - 1])
@@ -431,7 +431,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, at)
 
             key = self.cpu_version(num_samps, at)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Cosine")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -453,7 +453,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Exponential")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -476,7 +476,7 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, num_samps, tau)
 
             key = self.cpu_version(num_samps, tau)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="GetWindow")
     @pytest.mark.parametrize("window", ["triang", "boxcar", "nuttall"])
@@ -499,4 +499,4 @@ class TestWindows:
             output = gpubenchmark(self.gpu_version, window, num_samps)
 
             key = self.cpu_version(window, num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)

@@ -46,7 +46,7 @@ class TestWavelets:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Morlet")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -69,7 +69,7 @@ class TestWavelets:
             output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Ricker")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -93,7 +93,7 @@ class TestWavelets:
             output = gpubenchmark(self.gpu_version, num_samps, a)
 
             key = self.cpu_version(num_samps, a)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="CWT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
@@ -129,4 +129,4 @@ class TestWavelets:
 
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)
-            array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
