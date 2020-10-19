@@ -102,9 +102,10 @@ def square(t, duty=0.5):
 
 _gausspulse_kernel_F_F = cp.ElementwiseKernel(
     "T t, T a, T fc",
-    "T yenv",
+    "T yI",
     """
-    yenv = exp(-a * t * t);
+    T yenv = exp(-a * t * t);
+    yI = yenv * cos( 2 * M_PI * fc * t);
     """,
     "_gausspulse_kernel",
     options=("-std=c++11",),
