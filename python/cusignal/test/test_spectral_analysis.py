@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 import cusignal
 import pytest
 
@@ -19,10 +20,6 @@ from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
-
-
-# Missing
-# vectorstrength
 
 
 class TestSpectral:
@@ -34,6 +31,12 @@ class TestSpectral:
     class TestLombScargle:
         def cpu_version(self, x, y, f, precenter, normalize):
             return signal.lombscargle(x, y, f, precenter, normalize)
+
+        def gpu_version(self, x, y, f, precenter, normalize):
+            with cp.cuda.Stream.null:
+                out = cusignal.lombscargle(x, y, f, precenter, normalize)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_lombscargle_cpu(
@@ -66,388 +69,259 @@ class TestSpectral:
                 num_in_samps, num_out_samps
             )
             output = gpubenchmark(
-                cusignal.lombscargle,
-                gpu_x,
-                gpu_y,
-                gpu_f,
-                precenter,
-                normalize,
+                self.gpu_version, gpu_x, gpu_y, gpu_f, precenter, normalize
             )
 
             key = self.cpu_version(cpu_x, cpu_y, cpu_f, precenter, normalize)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Periodogram")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("window", ["flattop", "nuttall"])
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
     class TestPeriodogram:
-        def cpu_version(self, cpu_sig, fs, window, scaling):
-            return signal.periodogram(
-                cpu_sig, fs, window=window, scaling=scaling
-            )
+        def cpu_version(self, sig, fs, window, scaling):
+            return signal.periodogram(sig, fs, window=window, scaling=scaling)
+
+        def gpu_version(self, sig, fs, window, scaling):
+            with cp.cuda.Stream.null:
+                out = cusignal.periodogram(
+                    sig, fs, window=window, scaling=scaling
+                )
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_periodogram_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, window, scaling
+            self,
+            rand_data_gen,
+            benchmark,
+            dtype,
+            num_samps,
+            fs,
+            window,
+            scaling,
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_sig, fs, window, scaling)
 
         def test_periodogram_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, window, scaling
-        ):
-
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.periodogram,
-                gpu_sig,
-                fs,
-                window=window,
-                scaling=scaling,
-            )
-
-            _, key = self.cpu_version(cpu_sig, fs, window, scaling)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="PeriodogramComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("window", ["flattop", "nuttall"])
-    @pytest.mark.parametrize("scaling", ["spectrum", "density"])
-    class TestPeriodogramComplex:
-        def cpu_version(self, cpu_sig, fs, window, scaling):
-            return signal.periodogram(
-                cpu_sig, fs, window=window, scaling=scaling
-            )
-
-        @pytest.mark.cpu
-        def test_periodogram_complex_cpu(
             self,
-            rand_complex_data_gen,
-            benchmark,
-            num_samps,
-            fs,
-            window,
-            scaling,
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig, fs, window, scaling)
-
-        def test_periodogram_complex_gpu(
-            self,
-            rand_complex_data_gen,
+            rand_data_gen,
             gpubenchmark,
+            dtype,
             num_samps,
             fs,
             window,
             scaling,
         ):
 
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
             _, output = gpubenchmark(
-                cusignal.periodogram,
-                gpu_sig,
-                fs,
-                window=window,
-                scaling=scaling,
+                self.gpu_version, gpu_sig, fs, window, scaling
             )
 
             _, key = self.cpu_version(cpu_sig, fs, window, scaling)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Welch")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestWelch:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.welch(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.welch(sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.welch(sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_welch_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_welch_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.welch, gpu_sig, fs, nperseg=nperseg
-            )
-
-            _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="WelchComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    class TestWelchComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.welch(cpu_sig, fs, nperseg=nperseg)
-
-        @pytest.mark.cpu
-        def test_welch_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig, fs, nperseg)
-
-        def test_welch_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.welch, gpu_sig, fs, nperseg=nperseg
-            )
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            _, output = gpubenchmark(self.gpu_version, cpu_sig, fs, nperseg)
 
             _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="CSD")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCSD:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.csd(x, y, fs, nperseg=nperseg)
+
+        def gpu_version(self, x, y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.csd(x, y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_csd_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_x, _ = rand_data_gen(num_samps)
-            cpu_y, _ = rand_data_gen(num_samps)
+            cpu_x, _ = rand_data_gen(num_samps, 1, dtype)
+            cpu_y, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_csd_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
         ):
 
-            cpu_x, gpu_x = rand_data_gen(num_samps)
-            cpu_y, gpu_y = rand_data_gen(num_samps)
+            cpu_x, gpu_x = rand_data_gen(num_samps, 1, dtype)
+            cpu_y, gpu_y = rand_data_gen(num_samps, 1, dtype)
 
             _, output = gpubenchmark(
-                cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
-            )
-
-            _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="CSDComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    class TestCSDComplex:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.csd(cpu_x, cpu_y, fs, nperseg=nperseg)
-
-        @pytest.mark.cpu
-        def test_csd_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
-        ):
-            cpu_x, _ = rand_complex_data_gen(num_samps)
-            cpu_y, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
-
-        def test_csd_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
-        ):
-
-            cpu_x, gpu_x = rand_complex_data_gen(num_samps)
-            cpu_y, gpu_y = rand_complex_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.csd, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Spectrogram")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSpectrogram:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.spectrogram(sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.spectrogram(sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_spectrogram_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_spectrogram_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
-            )
-
-            _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="SpectrogramComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    class TestSpectrogramComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.spectrogram(cpu_sig, fs, nperseg=nperseg)
-
-        @pytest.mark.cpu
-        def test_spectrogram_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig, fs, nperseg)
-
-        def test_spectrogram_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.spectrogram, gpu_sig, fs, nperseg=nperseg
-            )
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="STFT")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSTFT:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.stft(cpu_sig, fs, nperseg=nperseg)
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.stft(sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.stft(sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_stft_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_sig, _ = rand_data_gen(num_samps)
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_sig, fs, nperseg)
 
         def test_stft_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.stft, gpu_sig, fs, nperseg=nperseg
-            )
-
-            _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
-            assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="STFTComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    class TestSTFTComplex:
-        def cpu_version(self, cpu_sig, fs, nperseg):
-            return signal.stft(cpu_sig, fs, nperseg=nperseg)
-
-        @pytest.mark.cpu
-        def test_stft_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_sig, fs, nperseg)
-
-        def test_stft_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            _, _, output = gpubenchmark(
-                cusignal.stft, gpu_sig, fs, nperseg=nperseg
-            )
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            _, _, output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
 
             _, _, key = self.cpu_version(cpu_sig, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="Coherence")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCoherence:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+        def cpu_version(self, x, y, fs, nperseg):
+            return signal.coherence(x, y, fs, nperseg=nperseg)
+
+        def gpu_version(self, x, y, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.coherence(x, y, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_coherence_cpu(
-            self, rand_data_gen, benchmark, num_samps, fs, nperseg
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_x, _ = rand_data_gen(num_samps)
-            cpu_y, _ = rand_data_gen(num_samps)
+            cpu_x, _ = rand_data_gen(num_samps, 1, dtype)
+            cpu_y, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
 
         def test_coherence_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, fs, nperseg
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
         ):
-            cpu_x, gpu_x = rand_data_gen(num_samps)
-            cpu_y, gpu_y = rand_data_gen(num_samps)
+            cpu_x, gpu_x = rand_data_gen(num_samps, 1, dtype)
+            cpu_y, gpu_y = rand_data_gen(num_samps, 1, dtype)
 
             _, output = gpubenchmark(
-                cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
+                self.gpu_version, gpu_x, gpu_y, fs, nperseg
             )
 
             _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
             assert array_equal(cp.asnumpy(output), key)
 
-    @pytest.mark.benchmark(group="CoherenceComplex")
+    @pytest.mark.benchmark(group="Vectorstrength")
+    @pytest.mark.parametrize("period", [0.75, 5])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("fs", [1.0, 1e6])
-    @pytest.mark.parametrize("nperseg", [1024, 2048])
-    class TestCoherenceComplex:
-        def cpu_version(self, cpu_x, cpu_y, fs, nperseg):
-            return signal.coherence(cpu_x, cpu_y, fs, nperseg=nperseg)
+    class TestVectorstrength:
+        def cpu_version(self, events, period):
+            return signal.vectorstrength(events, period)
+
+        def gpu_version(self, events, period):
+            with cp.cuda.Stream.null:
+                out = cusignal.vectorstrength(events, period)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
-        def test_coherence_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, fs, nperseg
+        def test_vectorstrength_cpu(
+            self, time_data_gen, benchmark, num_samps, period
         ):
-            cpu_x, _ = rand_complex_data_gen(num_samps)
-            cpu_y, _ = rand_complex_data_gen(num_samps)
-            benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
+            events_cpu, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, events_cpu, period)
 
-        def test_coherence_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, fs, nperseg
+        def test_vectorstrength_gpu(
+            self, time_data_gen, gpubenchmark, num_samps, period
         ):
+            events_cpu, events_gpu = time_data_gen(0, 10, num_samps)
+            period_gpu = cp.asarray(period)
 
-            cpu_x, gpu_x = rand_complex_data_gen(num_samps)
-            cpu_y, gpu_y = rand_complex_data_gen(num_samps)
-            _, output = gpubenchmark(
-                cusignal.coherence, gpu_x, gpu_y, fs, nperseg=nperseg
-            )
+            output = gpubenchmark(self.gpu_version, events_gpu, period_gpu)
 
-            _, key = self.cpu_version(cpu_x, cpu_y, fs, nperseg)
+            key = self.cpu_version(events_cpu, period)
             assert array_equal(cp.asnumpy(output), key)
-
-    # @pytest.mark.benchmark(group="Vectorstrength")
-    # class TestVectorstrength:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.vectorstrength(cpu_sig)
-
-    #     @pytest.mark.cpu
-    #     def test_vectorstrength_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
-
-    #     def test_vectorstrength_gpu(self, gpubenchmark):
-
-    #         output = gpubenchmark(cusignal.vectorstrength, gpu_sig)
-
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)

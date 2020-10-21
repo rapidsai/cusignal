@@ -12,9 +12,8 @@
 # limitations under the License.
 
 from cusignal.acoustics.cepstrum import (
-    rceps,
-    cceps,
-    cceps_unwrap
+    real_cepstrum,
+    complex_cepstrum,
 )
 from cusignal.estimation.filters import (
     KalmanFilter
@@ -27,11 +26,12 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
-    lfiltic,
+    firfilter,
     sosfilt,
     hilbert,
     hilbert2,
     detrend,
+    channelize_poly,
     freq_shift,
 )
 from cusignal.convolution.correlate import correlate, correlate2d
@@ -85,7 +85,6 @@ from cusignal.bsplines.bsplines import (
     gauss_spline,
     cubic,
     quadratic,
-    cspline1d,
 )
 from cusignal.waveforms.waveforms import (
     square,
@@ -104,6 +103,7 @@ from cusignal.utils.arraytools import (
     get_shared_mem,
     get_pinned_array,
     get_pinned_mem,
+    from_pycuda,
 )
 from cusignal.io.reader import (
     read_bin,

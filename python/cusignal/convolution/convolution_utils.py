@@ -11,8 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cupy import ndarray, array, asarray
 import cupy as cp
+import numpy as np
 
 import timeit
 
@@ -83,7 +83,7 @@ def _numeric_arrays(arrays, kinds="buifc"):
         the ndarrays are not in this string the function returns False and
         otherwise returns True.
     """
-    if type(arrays) == ndarray:
+    if type(arrays) == cp.ndarray:
         return arrays.dtype.kind in kinds
     for array_ in arrays:
         if array_.dtype.kind not in kinds:
@@ -93,8 +93,7 @@ def _numeric_arrays(arrays, kinds="buifc"):
 
 def _centered(arr, newshape):
     # Return the center newshape portion of the array.
-    newshape = asarray(newshape)
-    currshape = array(arr.shape)
+    currshape = arr.shape
     startind = (currshape - newshape) // 2
     endind = startind + newshape
     myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
@@ -148,7 +147,7 @@ def _fftconv_faster(x, h, mode):
     # convolution method is faster (discussed in scikit-image PR #1792)
     direct_time = x.size * h.size * _prod(out_shape)
     fft_time = sum(
-        n * cp.log(n) for n in (x.shape + h.shape + tuple(out_shape))
+        n * np.log(n) for n in (x.shape + h.shape + tuple(out_shape))
     )
 
     return big_O_constant * fft_time < direct_time

@@ -60,12 +60,16 @@ def _populate_kernel_cache(np_type, k_type):
         return
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
-        "/io/_reader.fatbin", "_cupy_unpack_" + str(np_type),
+        "/io/_reader.fatbin",
+        "_cupy_unpack_" + str(np_type),
     )
 
 
 def _get_backend_kernel(
-    dtype, grid, block, k_type,
+    dtype,
+    grid,
+    block,
+    k_type,
 ):
 
     kernel = _cupy_kernel_cache[(str(dtype), k_type)]
@@ -97,7 +101,10 @@ def _unpack(binary, dtype, endianness):
     _populate_kernel_cache(out.dtype, k_type)
 
     kernel = _get_backend_kernel(
-        out.dtype, blockspergrid, threadsperblock, k_type,
+        out.dtype,
+        blockspergrid,
+        threadsperblock,
+        k_type,
     )
 
     kernel(out_size, little, binary, out)

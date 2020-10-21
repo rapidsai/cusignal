@@ -19,10 +19,11 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
-    lfiltic,
+    firfilter,
     sosfilt,
     hilbert,
     hilbert2,
     detrend,
+    channelize_poly,
     freq_shift,
 )

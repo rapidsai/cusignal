@@ -9,7 +9,7 @@ package:
   version: {{ version }}
 
 source:
-  git_url: ../../..
+  path: ../../..
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
@@ -28,7 +28,7 @@ requirements:
     - numpy>=1.17.3
     - boost
     - numba>=0.49.0
-    - cupy>=7.2.0,<8.0.0a0
+    - cupy>=7.2.0,<9.0.0a0
 
 test:
   requires:

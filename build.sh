@@ -18,11 +18,12 @@ ARGS=$*
 # script, and that this script resides in the repo dir!
 REPODIR=$(cd $(dirname $0); pwd)
 
-VALIDARGS="clean cusignal -v -g -n -p --allgpuarch -h"
+VALIDARGS="clean cusignal -c -v -g -n -p --allgpuarch -h"
 HELP="$0 [clean] [cusignal] [-v] [-g] [-n] [--allgpuarch] [-h]
    clean        - remove all existing build artifacts and configuration (start
                   over)
    cusignal     - build the cusignal Python package
+   -c           - ci build
    -v           - verbose build mode
    -g           - build for debug
    -n           - no install step
@@ -98,35 +99,90 @@ if hasArg clean; then
     done
 fi
 
-if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
-    GPU_ARCH="-DGPU_ARCHS="
-    echo "Building for the architecture of the GPU in the system..."
-else
-    GPU_ARCH="-DGPU_ARCHS=ALL"
-    echo "Building for *ALL* supported GPU architectures..."
-fi
-
 ################################################################################
 # Build fatbins
 SRC="cpp/src"
 FAT="python/cusignal"
-FLAGS="-std=c++11"
+GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
+NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
 
-if hasArg -p; then
-    FLAGS="${FLAGS} -Xptxas -v -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
+GET_CC(){
+    MAJOR=`python3 -c 'from ctypes import *; \
+        sms = c_int(); \
+        l = cdll.LoadLibrary("libcuda.so"); \
+        l.cuInit(0); \
+        l.cuDeviceGetAttribute(byref(sms), 75, '${1}'); \
+        print(sms.value)'`
+    MINOR=`python3 -c 'from ctypes import *; \
+        sms = c_int(); \
+        l = cdll.LoadLibrary("libcuda.so"); \
+        l.cuInit(0); \
+        l.cuDeviceGetAttribute(byref(sms), 76, '${1}'); \
+        print(sms.value)'`
+}
+
+if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
+    echo "Building for the architecture of the GPU in the system..."
+    DEVICES=${CUDA_VISIBLE_DEVICES}
+    if [ -z "${DEVICES}" ]
+    then
+        # If DEVICES is empty, retrieve all attached NVIDIA GPU
+        NUMGPU=`lspci | grep VGA | grep NVIDIA | wc -l`
+        for (( i=0; i<${NUMGPU}; i++ ))
+        do
+            GET_CC ${i}
+            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
+        done
+    else
+        IFS=',' read -r -a arr <<< ${DEVICES}
+        for (( i=0; i<"${#arr[@]}"; i++ ))
+        do
+            GET_CC ${i}
+            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
+        done
+    fi
+    
+else
+    echo "Building for *ALL* supported GPU architectures..."
+    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
+    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
+    
+
+    GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
+    --generate-code arch=compute_50,code=sm_52 \
+    --generate-code arch=compute_53,code=sm_53 \
+    --generate-code arch=compute_60,code=sm_60 \
+    --generate-code arch=compute_61,code=sm_61 \
+    --generate-code arch=compute_62,code=sm_62 \
+    --generate-code arch=compute_70,code=sm_70 \
+    --generate-code arch=compute_72,code=sm_72"
+
+    if [ "$NVCC_V" -lt 11 ]; then
+        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
+    else
+        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
+        --generate-code arch=compute_80,code=[sm_80,compute_80]"
+    fi
 fi
 
-GPU_ARCH="--generate-code arch=compute_35,code=sm_35 \
---generate-code arch=compute_35,code=sm_37 \
---generate-code arch=compute_50,code=sm_50 \
---generate-code arch=compute_50,code=sm_52 \
---generate-code arch=compute_53,code=sm_53 \
---generate-code arch=compute_60,code=sm_60 \
---generate-code arch=compute_61,code=sm_61 \
---generate-code arch=compute_62,code=sm_62 \
---generate-code arch=compute_70,code=sm_70 \
---generate-code arch=compute_72,code=sm_72 \
---generate-code arch=compute_75,code=[sm_75,compute_75]"
+
+
+# Must check GCC for Centos OS
+if [ "$GCC_V" -lt 7 ] || [ "$NVCC_V" -lt 11 ]; then
+    FLAGS="-std=c++11"
+else
+    FLAGS="-std=c++17"
+fi
+
+if hasArg -v; then
+    FLAGS="${FLAGS} -Xptxas -v"
+fi
+
+if hasArg -p; then
+    FLAGS="${FLAGS} -Xptxas -warn-lmem-usage -Xptxas -warn-double-usage"
+fi
 
 echo "Building Convolution kernels..."
 FOLDER="convolution"
@@ -138,12 +194,18 @@ FOLDER="filtering"
 mkdir -p ${FAT}/${FOLDER}/
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_channelizer.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building IO kernels..."
 FOLDER="io"
 mkdir -p ${FAT}/${FOLDER}/
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
 nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
+
+echo "Building Peak Finding kernels..."
+FOLDER="peak_finding"
+mkdir -p ${FAT}/${FOLDER}/
+nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_peak_finding.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building Spectral kernels..."
 FOLDER="spectral_analysis"
@@ -158,6 +220,10 @@ if buildAll || hasArg cusignal; then
 
     cd ${REPODIR}/python
     if [[ ${INSTALL_TARGET} != "" ]]; then
-        python setup.py install
+        if hasArg -c; then
+            python setup.py install --single-version-externally-managed --record record.txt
+        else
+            python setup.py install
+        fi
     fi
 fi

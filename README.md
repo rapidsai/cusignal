@@ -11,11 +11,11 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
 * [Documentation](#documentation)
 * [Installation](#installation)
     * [Conda: Linux OS](#conda-linux-os)
-    * [Conda: Jetson Nano, TK1, TX2, Xavier, Linux OS](#conda---jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
     * [Source: Linux OS](#source-linux-os)
     * [Source: Windows OS (Experimental)](#source-windows-os-experimental)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
-* [Optional Dependencies](#optional-dependencies)
+* [Software Defined Radio (SDR) Integration](#sdr-integration)
 * [Benchmarking](#benchmarking)
 * [Contribution Guide](#contributing-guide)
 * [cuSignal Blogs and Talks](#cusignal-blogs-and-talks)
@@ -48,9 +48,6 @@ This code executes on 2x Xeon E5-2600 in 2.36 sec.
 import cupy as cp
 import cusignal
 
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
-
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -70,9 +67,6 @@ This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Sign
 import cupy as cp
 import numpy as np
 import cusignal
-
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
 
 start = 0
 stop = 10
@@ -100,9 +94,6 @@ import cupy as cp
 import numpy as np
 import cusignal
 
-# Optional: Precompile custom CUDA kernels to eliminate JIT overhead on first run
-cusignal.precompile_kernels()
-
 start = 0
 stop = 10
 num_samps = int(1e8)
@@ -121,50 +112,51 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Documentation
 The complete cuSignal API documentation including a complete list of functionality and examples can be found for both the Stable and Nightly (Experimental) releases.
 
-[cuSignal 0.14 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.15 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
+[cuSignal 0.15 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.16 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
-## Installation
+### Installation
+cuSignal has been tested on and supports all modern GPUs - from Maxwell to Ampere. While Anaconda is the preferred installation mechanism for cuSignal, developers and Jetson users should follow the source build instructions below. As of cuSignal 0.15, there isn't a cuSignal conda package for aarch64.
 
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
-For `cusignal version == 0.14`:
+For `cusignal version == 0.15`:
 
 ```
-# For CUDA 10.0
-conda install -c rapidsai -c nvidia -c conda-forge \
-    -c defaults cusignal=0.14 python=3.6 cudatoolkit=10.0
-
-# or, for CUDA 10.1.2
+For CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.14 python=3.6 cudatoolkit=10.1
+    cusignal=0.15 python=3.7 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.14 python=3.6 cudatoolkit=10.2
+    cusignal=0.15 python=3.7 cudatoolkit=10.2
+
+# or, for CUDA 11.0
+conda install -c rapidsai -c nvidia -c numba -c conda-forge \
+    cusignal=0.15 python=3.7 cudatoolkit=11.0
 ```
 
-For the nightly verison of `cusignal`, currently 0.15a:
+For the nightly verison of `cusignal`, currently 0.16a:
 
 ```
-# For CUDA 10.0
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    -c defaults cusignal python=3.6 cudatoolkit=10.0
-
-# or, for CUDA 10.1.2
+# For CUDA 10.1.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.6 cudatoolkit=10.1
+    cusignal python=3.7 cudatoolkit=10.1.2
 
 # or, for CUDA 10.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.6 cudatoolkit=10.2
+    cusignal python=3.7 cudatoolkit=10.2
+
+# or, for CUDA 11.0
+conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
+    cusignal python=3.7 cudatoolkit=11.0
 ```
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
 
 See the [Get RAPIDS version picker](https://rapids.ai/start.html) for more OS and version info.
 
-### Conda - Jetson Nano, TK1, TX2, Xavier, Linux OS
+### Source, aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS
 
 In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda environment from [conda4aarch64](https://github.com/jjhelmus/conda4aarch64/releases) to [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
 
@@ -190,13 +182,6 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
     `conda activate cusignal-dev`
 
 4. Install cuSignal module
-
-    ```bash
-    cd $CUSIGNAL_HOME/python
-    python setup.py install
-    ```
-
-    or
 
     ```bash
     cd $CUSIGNAL_HOME
@@ -254,13 +239,6 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
 4. Install cuSignal module
 
     ```bash
-    cd $CUSIGNAL_HOME/python
-    python setup.py install
-    ```
-
-    or
-
-    ```bash
     cd $CUSIGNAL_HOME
     ./build.sh  # install cuSignal to $PREFIX if set, otherwise $CONDA_PREFIX
                 # run ./build.sh -h to print the supported command line options.
@@ -305,8 +283,7 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
 5. Install cuSignal module
 
     ```
-    cd python
-    python setup.py install
+    ./build.sh
     ```
 
 6. \[Optional\] Run tests
@@ -318,34 +295,92 @@ In the cuSignal top level directory:
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-For `cusignal version == 0.14`:
+For `cusignal version == 0.15`:
 
 ```
-# For CUDA 10.0
-docker pull rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+# For CUDA 11.0
+docker pull rapidsai/rapidsai:cuda11.0-runtime-ubuntu18.04
 docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai:cuda10.0-runtime-ubuntu18.04
+    rapidsai/rapidsai:cuda11.0-runtime-ubuntu18.04
 ```
 
 For the nightly version of `cusignal`
 ```
-docker pull rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+docker pull rapidsai/rapidsai-nightly:cuda11.0-runtime-ubuntu18.04
 docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai-nightly:cuda10.0-runtime-ubuntu18.04
+    rapidsai/rapidsai-nightly:cuda11.0-runtime-ubuntu18.04
 ```
 
 Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions.
 
-## Optional Dependencies
-* [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) if using Docker 
-* RTL-SDR or other SDR Driver/Packaging. Find more information and follow the instructions for setup [here](https://github.com/osmocom/rtl-sdr). We have also tested cuSignal integration with [SoapySDR](https://github.com/pothosware/SoapySDR/wiki)
+## SDR Integration
+[SoapySDR](https://github.com/pothosware/SoapySDR/wiki) is a "vendor neutral and platform independent" library for software-defined radio usage. When used in conjunction with device (SDR) specific modules, SoapySDR allows for easy command-and-control of radios from Python or C++. To install SoapySDR into an existing cuSignal Conda environment, run:
+
+`conda install -c conda-forge soapysdr`
+
+A full list of subsequent modules, specific to your SDR are listed [here](https://anaconda.org/search?q=soapysdr), but some common ones:
+- rtlsdr: `conda install -c conda-forge soapysdr-module-rtlsdr`
+- Pluto SDR: `conda install -c conda-forge soapysdr-module-plutosdr`
+- UHD: `conda install -c conda-forge soapysdr-module-uhd`
+
+Another popular SDR library, specific to the rtl-sdr, is [pyrtlsdr](https://github.com/roger-/pyrtlsdr).
+
+For examples using SoapySDR, pyrtlsdr, and cuSignal, please see the [notebooks/sdr](https://github.com/rapidsai/cusignal/blob/main/notebooks/sdr) directory.
+
+Please note, for most rtlsdr devices, you'll need to blacklist the libdvb driver in Linux. To do this, run `sudo vi /etc/modprobe.d/blacklist.conf` and add `blacklist dvb_usb_rtl28xxu` to the end of the file. Restart your computer upon completion.
+
+If you have a SDR that isn't listed above (like the LimeSDR), don't worry! You can symbolically link the system-wide Python bindings installed via `apt-get` to the local conda environment. Please file an issue if you run into any problems.
 
 ## Benchmarking
 cuSignal uses pytest-benchmark to compare performance between CPU and GPU signal processing implementations. To run cuSignal's benchmark suite, **navigate to the topmost python directory ($CUSIGNAL_HOME/python)** and run:
 
-`pytest --benchmark-only`
+`pytest --benchmark-enable --benchmark-gpu-disable`
 
-As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specifc benchmark to run. When intrepreting the output, we recommend comparing the _minimum_ execution time reported.
+Benchmarks are disabled by default in `setup.cfg` providing only test correctness checks.
+
+As with the standard pytest tool, the user can use the `-v` and `-k` flags for verbose mode and to select a specific benchmark to run. When intrepreting the output, we recommend comparing the _mean_ execution time reported.
+
+To reduce columns in benchmark result's table, add `--benchmark-columns=LABELS`, like `--benchmark-columns=min,max,mean`.
+For more information on `pytest-benchmark` please visit the [Usage Guide](https://pytest-benchmark.readthedocs.io/en/latest/usage.html).
+
+Parameter `--benchmark-gpu-disable` is to disable memory checks from [Rapids GPU benchmark tool](https://github.com/rapidsai/benchmark). 
+Doing so speeds up benchmarking.
+
+If you wish to skip benchmarks of SciPy functions add `-m "not cpu"`
+
+Lastly, benchmarks will be executed on local files. Therefore to test recent changes made to source, rebuild cuSignal.
+
+### Example
+`pytest -k upfirdn2d -m "not cpu" --benchmark-enable --benchmark-gpu-disable --benchmark-columns=mean`
+
+### Output
+```bash
+cusignal/test/test_filtering.py ..................                                                                                                                                                                                                                                   [100%]
+
+
+---------- benchmark 'UpFirDn2d': 18 tests -----------
+Name (time in us, mem in bytes)         Mean          
+------------------------------------------------------
+test_upfirdn2d_gpu[-1-1-3-256]      195.2299 (1.0)    
+test_upfirdn2d_gpu[-1-9-3-256]      196.1766 (1.00)   
+test_upfirdn2d_gpu[-1-1-7-256]      196.2881 (1.01)   
+test_upfirdn2d_gpu[0-2-3-256]       196.9984 (1.01)   
+test_upfirdn2d_gpu[0-9-3-256]       197.5675 (1.01)   
+test_upfirdn2d_gpu[0-1-7-256]       197.9015 (1.01)   
+test_upfirdn2d_gpu[-1-9-7-256]      198.0923 (1.01)   
+test_upfirdn2d_gpu[-1-2-7-256]      198.3325 (1.02)   
+test_upfirdn2d_gpu[0-2-7-256]       198.4676 (1.02)   
+test_upfirdn2d_gpu[0-9-7-256]       198.6437 (1.02)   
+test_upfirdn2d_gpu[0-1-3-256]       198.7477 (1.02)   
+test_upfirdn2d_gpu[-1-2-3-256]      200.1589 (1.03)   
+test_upfirdn2d_gpu[-1-2-2-256]      213.0316 (1.09)   
+test_upfirdn2d_gpu[0-1-2-256]       213.0944 (1.09)   
+test_upfirdn2d_gpu[-1-9-2-256]      214.6168 (1.10)   
+test_upfirdn2d_gpu[0-2-2-256]       214.6975 (1.10)   
+test_upfirdn2d_gpu[-1-1-2-256]      216.4033 (1.11)   
+test_upfirdn2d_gpu[0-9-2-256]       217.1675 (1.11)   
+------------------------------------------------------
+```
 
 ## Contributing Guide
 

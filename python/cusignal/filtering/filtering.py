@@ -40,9 +40,13 @@ from cupy import linalg
 
 import numpy as np
 
+from ._channelizer_cuda import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
 from ._sosfilt_cuda import _sosfilt
+from ..convolution.convolve import fftconvolve
+
+_cupy_fft_cache = {}
 
 
 def wiener(im, mysize=None, noise=None):
@@ -99,76 +103,66 @@ def wiener(im, mysize=None, noise=None):
     return out
 
 
-def lfiltic(b, a, y, x=None):
+def firfilter(b, x, axis=None, zi=None):
     """
-    Construct initial conditions for lfilter given input and output vectors.
+    Filter data along one-dimension with an FIR filter.
 
-    Given a linear filter (b, a) and initial conditions on the output `y`
-    and the input `x`, return the initial conditions on the state vector zi
-    which is used by `lfilter` to generate the output given the input.
+    Filter a data sequence, `x`, using a digital filter. This works for many
+    fundamental data types (including Object type). Please note, cuSignal
+    doesn't support IIR filters presently, and this implementation is optimized
+    for large filtering operations (and inherently depends on fftconvolve)
 
     Parameters
     ----------
     b : array_like
-        Linear filter term.
-    a : array_like
-        Linear filter term.
-    y : array_like
-        Initial conditions.
-
-        If ``N = len(a) - 1``, then ``y = {y[-1], y[-2], ..., y[-N]}``.
-
-        If `y` is too short, it is padded with zeros.
-    x : array_like, optional
-        Initial conditions.
-
-        If ``M = len(b) - 1``, then ``x = {x[-1], x[-2], ..., x[-M]}``.
-
-        If `x` is not given, its initial conditions are assumed zero.
-
-        If `x` is too short, it is padded with zeros.
+        The numerator coefficient vector in a 1-D sequence.
+    x : array_like
+        An N-dimensional input array.
+    axis : int, optional
+        The axis of the input data array along which to apply the
+        linear filter. The filter is applied to each subarray along
+        this axis.  Default is -1.
+    zi : array_like, optional
+        Initial conditions for the filter delays.  It is a vector
+        (or array of vectors for an N-dimensional input) of length
+        ``max(len(a), len(b)) - 1``.  If `zi` is None or is not given then
+        initial rest is assumed.  See `lfiltic` for more information.
 
     Returns
     -------
-    zi : ndarray
-        The state vector ``zi = {z_0[-1], z_1[-1], ..., z_K-1[-1]}``,
-        where ``K = max(M, N)``.
+    y : array
+        The output of the digital filter.
+    zf : array, optional
+        If `zi` is None, this is not returned, otherwise, `zf` holds the
+        final filter delay values.
 
-    See Also
-    --------
-    lfilter, lfilter_zi
+    Examples
+    -------
+    >>> from scipy import signal
+    >>> import cupy as cp
+    >>> import cusignal
+    >>> [b, a] = signal.butter(3, 0.5)
+    >>> b = cp.asarray(b)
+    >>> x = cp.random.randn(2**8)
+    >>> y = cusignal.firfilter(b, x)
 
     """
-    N = cp.size(a) - 1
-    M = cp.size(b) - 1
-    K = cp.max(M, N)
-    y = asarray(y)
-    if y.dtype.kind in "bui":
-        # ensure calculations are floating point
-        y = y.astype(cp.float64)
-    zi = zeros(K, y.dtype)
-    if x is None:
-        x = zeros(M, y.dtype)
-    else:
-        x = asarray(x)
-        L = cp.size(x)
-        if L < M:
-            x = r_[x, zeros(M - L)]
-    L = cp.size(y)
-    if L < N:
-        y = r_[y, zeros(N - L)]
 
-    for m in range(M):
-        zi[m] = cp.sum(b[m + 1 :] * x[: M - m], axis=0)
+    if zi is not None:
+        raise NotImplementedError(
+            "Initial conditions are not currently \
+            supported"
+        )
 
-    for m in range(N):
-        zi[m] -= cp.sum(a[m + 1 :] * y[: N - m], axis=0)
-
-    return zi
+    y = fftconvolve(b, x, mode="full", axes=axis)
+    return y[: len(x)]
 
 
 def sosfilt(
-    sos, x, axis=-1, zi=None,
+    sos,
+    x,
+    axis=-1,
+    zi=None,
 ):
     """
     Filter data along one dimension using cascaded second-order sections.
@@ -604,6 +598,74 @@ def freq_shift(x, freq, fs):
     """
     x = asarray(x)
     return x * exp(-1j * 2 * pi * freq / fs * arange(x.size))
+
+
+def channelize_poly(x, h, n_chans):
+    """
+    Polyphase channelize signal into n channels
+
+    Parameters
+    ----------
+    x : array_like
+        The input data to be channelized
+    h : array_like
+        The 1-D input filter; will be split into n
+        channels of int number of taps
+    n_chans : int
+        Number of channels for channelizer
+
+    Returns
+    ----------
+    yy : channelized output matrix
+
+    Notes
+    ----------
+    Currently only supports simple channelizer where channel
+    spacing is equivalent to the number of channels used (zero overlap).
+    Number of filter taps (len of filter / n_chans) must be <=32.
+
+    """
+
+    dtype = cp.promote_types(x.dtype, h.dtype)
+
+    x = asarray(x, dtype=dtype)
+    h = asarray(h, dtype=dtype)
+
+    # number of taps in each h_n filter
+    n_taps = int(len(h) / n_chans)
+    if n_taps > 32:
+        raise NotImplementedError(
+            "The number of calculated taps ({}) in  \
+            each filter is currently capped at 32. Please reduce filter \
+                length or number of channels".format(
+                n_taps
+            )
+        )
+
+    if n_taps > 32:
+        raise NotImplementedError(
+            "Number of taps ({}) must be less than (32).".format(n_taps)
+        )
+
+    # number of outputs
+    n_pts = int(len(x) / n_chans)
+
+    if x.dtype == cp.float32 or x.dtype == cp.complex64:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex64)
+    elif x.dtype == cp.float64 or x.dtype == cp.complex128:
+        y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
+
+    _channelizer(x, h, y, n_chans, n_taps, n_pts)
+
+    # Remove with CuPy v8
+    if (x.dtype, n_pts, n_taps, n_chans) in _cupy_fft_cache:
+        plan = _cupy_fft_cache[(x.dtype, n_pts, n_taps, n_chans)]
+    else:
+        plan = _cupy_fft_cache[
+            (x.dtype, n_pts, n_taps, n_chans)
+        ] = fftpack.get_fft_plan(y, axes=-1)
+
+    return cp.conj(fftpack.fft(y, overwrite_x=True, plan=plan)).T
 
 
 def _prod(iterable):

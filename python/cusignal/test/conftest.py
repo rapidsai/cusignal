@@ -19,10 +19,22 @@ import numpy as np
 # Fixtures with (scope="session") will execute once
 # and be shared will all tests that need it.
 
+
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "cpu: mark CPU test cases"
-    )
+    config.addinivalue_line("markers", "cpu: mark CPU test cases")
+
+
+# Generate data for using range
+@pytest.fixture(scope="session")
+def range_data_gen():
+    def _generate(num_samps, endpoint=False):
+
+        cpu_sig = np.arange(num_samps)
+        gpu_sig = cp.asarray(cpu_sig)
+
+        return cpu_sig, gpu_sig
+
+    return _generate
 
 
 # Generate data for using linspace
@@ -55,36 +67,18 @@ def linspace_range_gen():
 # Generate array with random data
 @pytest.fixture(scope="session")
 def rand_data_gen():
-    def _generate(num_samps):
+    def _generate(num_samps, dim=1, dtype=np.float64):
 
-        cpu_sig = np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
-
-        return cpu_sig, gpu_sig
-
-    return _generate
-
-
-# Generate array with random complex data
-@pytest.fixture(scope="session")
-def rand_complex_data_gen():
-    def _generate(num_samps):
-
-        cpu_sig = np.random.rand(num_samps) + 1j * np.random.rand(num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
-
-        return cpu_sig, gpu_sig
-
-    return _generate
-
-
-# Generate 2d array with random data
-@pytest.fixture(scope="session")
-def rand_2d_data_gen():
-    def _generate(num_samps):
-
-        cpu_sig = np.random.rand(num_samps, num_samps)
-        gpu_sig = cp.asarray(cpu_sig)
+        if dtype is np.float32 or dtype is np.float64:
+            inp = tuple(np.ones(dim, dtype=int) * num_samps)
+            cpu_sig = np.random.random(inp)
+            cpu_sig = cpu_sig.astype(dtype)
+            gpu_sig = cp.asarray(cpu_sig)
+        else:
+            inp = tuple(np.ones(dim, dtype=int) * num_samps)
+            cpu_sig = np.random.random(inp) + 1j * np.random.random(inp)
+            cpu_sig = cpu_sig.astype(dtype)
+            gpu_sig = cp.asarray(cpu_sig)
 
         return cpu_sig, gpu_sig
 
@@ -114,7 +108,7 @@ def lombscargle_gen(rand_data_gen):
         phi = 0.5 * np.pi
         frac_points = 0.9  # Fraction of points to select
 
-        r, _ = rand_data_gen(num_in_samps)
+        r, _ = rand_data_gen(num_in_samps, 1)
         cpu_x = np.linspace(0.01, 10 * np.pi, num_in_samps)
 
         cpu_x = cpu_x[r >= frac_points]

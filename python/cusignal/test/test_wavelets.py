@@ -22,16 +22,43 @@ from scipy import signal
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
-# Missing
-# qmf
-
-
 class TestWavelets:
+    @pytest.mark.benchmark(group="Qmf")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    class TestQmf:
+        def cpu_version(self, sig):
+            return signal.qmf(sig)
+
+        def gpu_version(self, sig):
+            with cp.cuda.Stream.null:
+                out = cusignal.qmf(sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_qmf_cpu(self, range_data_gen, benchmark, num_samps):
+            cpu_sig, _ = range_data_gen(num_samps)
+            benchmark(self.cpu_version, cpu_sig)
+
+        def test_qmf_gpu(self, range_data_gen, gpubenchmark, num_samps):
+
+            cpu_sig, gpu_sig = range_data_gen(num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig)
+
+            key = self.cpu_version(cpu_sig)
+            assert array_equal(cp.asnumpy(output), key)
+
     @pytest.mark.benchmark(group="Morlet")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     class TestMorlet:
         def cpu_version(self, num_samps):
             return signal.morlet(num_samps)
+
+        def gpu_version(self, num_samps):
+            with cp.cuda.Stream.null:
+                out = cusignal.morlet(num_samps)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
         def test_morlet_cpu(self, benchmark, num_samps):
@@ -39,7 +66,7 @@ class TestWavelets:
 
         def test_morlet_gpu(self, gpubenchmark, num_samps):
 
-            output = gpubenchmark(cusignal.morlet, num_samps)
+            output = gpubenchmark(self.gpu_version, num_samps)
 
             key = self.cpu_version(num_samps)
             assert array_equal(cp.asnumpy(output), key)
@@ -51,83 +78,55 @@ class TestWavelets:
         def cpu_version(self, num_samps, a):
             return signal.ricker(num_samps, a)
 
+        def gpu_version(self, num_samps, a):
+            with cp.cuda.Stream.null:
+                out = cusignal.ricker(num_samps, a)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_ricker_cpu(self, benchmark, num_samps, a):
             benchmark(self.cpu_version, num_samps, a)
 
         def test_ricker_gpu(self, gpubenchmark, num_samps, a):
 
-            output = gpubenchmark(cusignal.ricker, num_samps, a)
+            output = gpubenchmark(self.gpu_version, num_samps, a)
 
             key = self.cpu_version(num_samps, a)
             assert array_equal(cp.asnumpy(output), key)
 
     @pytest.mark.benchmark(group="CWT")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWT:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
+        def cpu_version(self, sig, wavelet, widths):
+            return signal.cwt(sig, wavelet, np.arange(1, widths))
+
+        def gpu_version(self, sig, wavelet, widths):
+            with cp.cuda.Stream.null:
+                out = cusignal.cwt(sig, wavelet, np.arange(1, widths))
+            cp.cuda.Stream.null.synchronize()
+            return out
 
         @pytest.mark.cpu
-        def test_cwt_cpu(self, rand_data_gen, benchmark, num_samps, widths):
-            cpu_sig, _ = rand_data_gen(num_samps)
+        def test_cwt_cpu(
+            self, rand_data_gen, benchmark, dtype, num_samps, widths
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             wavelet = signal.ricker
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        def test_cwt_gpu(self, rand_data_gen, gpubenchmark, num_samps, widths):
+        def test_cwt_gpu(
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, widths
+        ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
             cu_wavelet = cusignal.ricker
             output = gpubenchmark(
-                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
+                self.gpu_version, gpu_sig, cu_wavelet, widths
             )
 
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)
             assert array_equal(cp.asnumpy(output), key)
-
-    @pytest.mark.benchmark(group="CWTComplex")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("widths", [31, 127])
-    class TestCWTComplex:
-        def cpu_version(self, cpu_sig, wavelet, widths):
-            return signal.cwt(cpu_sig, wavelet, np.arange(1, widths))
-
-        @pytest.mark.cpu
-        def test_cwt_complex_cpu(
-            self, rand_complex_data_gen, benchmark, num_samps, widths
-        ):
-            cpu_sig, _ = rand_complex_data_gen(num_samps)
-            wavelet = signal.ricker
-            benchmark(self.cpu_version, cpu_sig, wavelet, widths)
-
-        def test_cwt_complex_gpu(
-            self, rand_complex_data_gen, gpubenchmark, num_samps, widths
-        ):
-
-            cpu_sig, gpu_sig = rand_complex_data_gen(num_samps)
-            cu_wavelet = cusignal.ricker
-            output = gpubenchmark(
-                cusignal.cwt, gpu_sig, cu_wavelet, cp.arange(1, widths)
-            )
-
-            wavelet = signal.ricker
-            key = self.cpu_version(cpu_sig, wavelet, widths)
-            assert array_equal(cp.asnumpy(output), key)
-
-    # @pytest.mark.benchmark(group="Qmf")
-    # class TestQmf:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.qmf(cpu_sig)
-
-    #     @pytest.mark.cpu
-    #     def test_qmf_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
-
-    #     def test_qmf_gpu(self, gpubenchmark):
-
-    #         output = gpubenchmark(cusignal.qmf, gpu_sig)
-
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)

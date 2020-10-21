@@ -1,7 +1,51 @@
+# cuSignal 0.16.0 (21 Oct 2020)
+
+## New Features
+- PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
+- PR #195 - Add explicit FIR filter functionality
+- PR #199 - Added Ampere support
+- PR #208 - Remove CuPy v8 req for Kalman filter
+- PR #210 - Add signal scope example to notebooks
+
+## Improvements
+- PR #196 - Update README for cuSignal 0.15
+- PR #200 - Add if constexpr to binary reader
+- PR #202 - Performance improvement to Lombscargle
+- PR #203 - Update build process
+- PR #207 - Add CUDA 10 compatibility with polyphase channelizer
+- PR #211 - Add firfilter and channelize_poly to documentation; remove CPU only version of channelizer
+- PR #212 - Add KF to documentation build
+- PR #213 - Graceful handling of filter tap limit for polyphase channelizer
+- PR #215 - Improve doc formating for filtering operations
+- PR #219 - Add missing pytests
+- PR #222 - Improved performance for various window functions
+- PR #235 - Improve Wavelets functions performance
+- PR #236 - Improve Bsplines functions performance
+- PR #242 - Add PyTorch disclaimer to notebook
+- PR #243 - Improve Peak Finding function performance
+- PR #249 - Update README to add SDR integration instructions and improved install clarity
+- PR #250 - Update ci/local/README.md
+- PR #256 - Update to CuPy 8.0.0
+- PR #260 - Optimize waveform functions
+
+## Bug Fixes
+- PR #214 - Fix grid-stride loop bug in polyphase channelizer
+- PR #218 - Remove fatbins from source code on GH
+- PR #221 - Synchronization issue with cusignal testing 
+- PR #237 - Update conda build files so fatbins are generated
+- PR #239 - Fix mode issue in peak finding module
+- PR #245 - Reduce number of default build architectures
+- PR #246 - Remove lfiltic function
+- PR #248 - Fix channelizer bugs
+- PR #254 - Use CuPy v8 FFT cache plan
+- PR #259 - Fix notebook error handling in gpuCI
+- PR #263 - Remove precompile_kernels() from io_examples
+- PR #264 - Fix Build error w/ nvidia-smi
 
 # cuSignal 0.15.0 (26 Aug 2020)
 
 ## New Features
+- PR #69 - Multi-point Kalman Filter
 - PR #144 - Added AIR-T conda recipe
 - PR #119 - Added code of conduct
 - PR #122 - GPU accelerated SigMF Reader
@@ -12,6 +56,7 @@
 - PR #148 - Load fatbin at runtime
 - PR #69 - Multi-point Kalman Filter
 - PR #158 - Add debug flag for debugging
+- PR #161 - Basic implementation of polyphase channelizer
 
 ## Improvements
 - PR #112 - Remove Numba kernels

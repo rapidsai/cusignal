@@ -20,6 +20,17 @@ Correlate
     :undoc-members:
 
 
+Estimation
+============
+
+Kalman Filter
+------------
+
+.. automodule:: cusignal.estimation.filters
+    :members:
+    :undoc-members:
+
+
 Filtering
 ============
 
@@ -33,10 +44,20 @@ Resample
 FIR Filters
 ------------
 
+.. automodule:: cusignal.filtering.firfilter
+    :members:
+    :undoc-members:
+
 .. automodule:: cusignal.filtering.fir_filter_design
     :members:
     :undoc-members:
 
+Channelizer
+------------
+
+.. automodule:: cusignal.filtering.channelize_poly
+    :members:
+    :undoc-members:
 
 Filter Design
 ============

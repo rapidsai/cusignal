@@ -195,17 +195,13 @@ class KalmanFilter(object):
     """
 
     def __init__(
-        self, dim_x, dim_z, dim_u=0, points=1, dtype=cp.float32,
+        self,
+        dim_x,
+        dim_z,
+        dim_u=0,
+        points=1,
+        dtype=cp.float32,
     ):
-
-        # Check CuPy version
-        # Update to only check for v8.X in cuSignal 0.16
-        valid = ["8.0.0b4", "8.0.0b5", "8.0.0rc1", "8.0.0"]
-        ver = cp.__version__
-        if ver not in valid:
-            raise NotImplementedError(
-                "Kalman Filter only compatible with CuPy v.8.0.0b4+"
-            )
 
         self.points = points
 
@@ -221,7 +217,14 @@ class KalmanFilter(object):
         self.dim_u = dim_u
 
         # Create data arrays
-        self.x = cp.zeros((self.points, dim_x, 1,), dtype=dtype)  # state
+        self.x = cp.zeros(
+            (
+                self.points,
+                dim_x,
+                1,
+            ),
+            dtype=dtype,
+        )  # state
 
         self.P = cp.repeat(
             cp.identity(dim_x, dtype=dtype)[cp.newaxis, :, :],
@@ -244,7 +247,12 @@ class KalmanFilter(object):
         )  # state transition matrix
 
         self.H = cp.zeros(
-            (self.points, dim_z, dim_z,), dtype=dtype
+            (
+                self.points,
+                dim_z,
+                dim_z,
+            ),
+            dtype=dtype,
         )  # Measurement function
 
         self.R = cp.repeat(
@@ -254,10 +262,22 @@ class KalmanFilter(object):
         )  # process uncertainty
 
         self._alpha_sq = cp.ones(
-            (self.points, 1, 1,), dtype=dtype
+            (
+                self.points,
+                1,
+                1,
+            ),
+            dtype=dtype,
         )  # fading memory control
 
-        self.z = cp.empty((self.points, dim_z, 1,), dtype=dtype)
+        self.z = cp.empty(
+            (
+                self.points,
+                dim_z,
+                1,
+            ),
+            dtype=dtype,
+        )
 
         # Allocate GPU resources
         numSM = _get_numSM()
@@ -283,14 +303,14 @@ class KalmanFilter(object):
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            'predict',
+            "predict",
         )
 
         self.update_kernel = _filters_cuda._get_backend_kernel(
             self.x.dtype,
             blockspergrid,
             threadsperblock,
-            'update',
+            "update",
         )
 
         _print_atts(self.predict_kernel)
@@ -353,7 +373,13 @@ class KalmanFilter(object):
             Q = cp.asarray(Q)
 
         self.predict_kernel(
-            self._alpha_sq, self.x, u, B, F, self.P, Q,
+            self._alpha_sq,
+            self.x,
+            u,
+            B,
+            F,
+            self.P,
+            Q,
         )
 
     def update(self, z, R=None, H=None):
@@ -402,5 +428,9 @@ class KalmanFilter(object):
         z = cp.asarray(z)
 
         self.update_kernel(
-            self.x, z, H, self.P, R,
+            self.x,
+            z,
+            H,
+            self.P,
+            R,
         )

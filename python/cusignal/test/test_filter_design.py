@@ -13,20 +13,12 @@
 
 import cupy as cp
 import cusignal
-
-# import numpy as np
 import pytest
 
 from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
-
-
-# Missing
-# kaiser_beta
-# kaiser_atten
-# cmplx_sort
 
 
 class TestFilterDesign:
@@ -38,65 +30,102 @@ class TestFilterDesign:
         def cpu_version(self, num_samps, f1, f2):
             return signal.firwin(num_samps, [f1, f2], pass_zero=False)
 
+        def gpu_version(self, num_samps, f1, f2):
+            with cp.cuda.Stream.null:
+                out = cusignal.firwin(num_samps, [f1, f2], pass_zero=False)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
         @pytest.mark.cpu
         def test_firwin_cpu(self, benchmark, num_samps, f1, f2):
             benchmark(
-                self.cpu_version, num_samps, f1, f2,
+                self.cpu_version,
+                num_samps,
+                f1,
+                f2,
             )
 
         def test_firwin_gpu(self, gpubenchmark, num_samps, f1, f2):
 
             output = gpubenchmark(
-                cusignal.firwin, num_samps, [f1, f2], pass_zero=False
+                self.gpu_version,
+                num_samps,
+                f1,
+                f2,
             )
 
             key = self.cpu_version(num_samps, f1, f2)
             assert array_equal(cp.asnumpy(output), key)
 
-    # @pytest.mark.benchmark(group="KaiserBeta")
-    # class TestKaiserBeta:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_beta(cpu_sig)
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.parametrize("a", [5, 25, 100])
+    @pytest.mark.benchmark(group="KaiserBeta")
+    class TestKaiserBeta:
+        def cpu_version(self, a):
+            return signal.kaiser_beta(a)
 
-    #     @pytest.mark.cpu
-    #     def test_kaiser_beta_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+        def gpu_version(self, a):
+            with cp.cuda.Stream.null:
+                out = cusignal.kaiser_beta(a)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #     def test_kaiser_beta_gpu(self, gpubenchmark):
+        @pytest.mark.cpu
+        def test_kaiser_beta_cpu(self, benchmark, a):
+            benchmark(self.cpu_version, a)
 
-    #         output = gpubenchmark(cusignal.kaiser_beta, gpu_sig)
+        def test_kaiser_beta_gpu(self, gpubenchmark, a):
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+            output = gpubenchmark(self.gpu_version, a)
 
-    # @pytest.mark.benchmark(group="KaiserAtten")
-    # class TestKaiserAtten:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.kaiser_atten(cpu_sig)
+            key = self.cpu_version(a)
+            assert array_equal(cp.asnumpy(output), key)
 
-    #     @pytest.mark.cpu
-    #     def test_kaiser_atten_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.parametrize("numtaps", [5, 25, 100])
+    @pytest.mark.parametrize("width", [0.01, 0.0375, 2.4])
+    @pytest.mark.benchmark(group="KaiserAtten")
+    class TestKaiserAtten:
+        def cpu_version(self, numtaps, width):
+            return signal.kaiser_atten(numtaps, width)
 
-    #     def test_kaiser_atten_gpu(self, gpubenchmark):
+        def gpu_version(self, numtaps, width):
+            with cp.cuda.Stream.null:
+                out = cusignal.kaiser_atten(numtaps, width)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #         output = gpubenchmark(cusignal.kaiser_atten, gpu_sig)
+        @pytest.mark.cpu
+        def test_kaiser_atten_cpu(self, benchmark, numtaps, width):
+            benchmark(self.cpu_version, numtaps, width)
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+        def test_kaiser_atten_gpu(self, gpubenchmark, numtaps, width):
 
-    # @pytest.mark.benchmark(group="CmplxSort")
-    # class TestCmplxSort:
-    #     def cpu_version(self, cpu_sig):
-    #         return signal.cmplx_sort(cpu_sig)
+            output = gpubenchmark(self.gpu_version, numtaps, width)
 
-    #     @pytest.mark.cpu
-    #     def test_cmplx_sort_cpu(self, benchmark):
-    #         benchmark(self.cpu_version, cpu_sig)
+            key = self.cpu_version(numtaps, width)
+            assert array_equal(cp.asnumpy(output), key)
 
-    #     def test_cmplx_sort_gpu(self, gpubenchmark):
+    # Not passing anything to cupy, faster in numba
+    @pytest.mark.benchmark(group="CmplxSort")
+    @pytest.mark.parametrize("p", [1 + 2j, 2 - 1j, 3 - 2j, 3 - 3j, 3 + 5j])
+    class TestCmplxSort:
+        def cpu_version(self, p):
+            return signal.cmplx_sort(p)
 
-    #         output = gpubenchmark(cusignal.cmplx_sort, gpu_sig)
+        def gpu_version(self, p):
+            with cp.cuda.Stream.null:
+                out = cusignal.cmplx_sort(p)
+            cp.cuda.Stream.null.synchronize()
+            return out
 
-    #         key = self.cpu_version(cpu_sig)
-    #         assert array_equal(cp.asnumpy(output), key)
+        @pytest.mark.cpu
+        def test_cmplx_sort_cpu(self, benchmark, p):
+            benchmark(self.cpu_version, p)
+
+        def test_cmplx_sort_gpu(self, gpubenchmark, p):
+
+            output, _ = gpubenchmark(self.gpu_version, p)
+
+            key, _ = self.cpu_version(p)
+            assert array_equal(cp.asnumpy(output), key)
