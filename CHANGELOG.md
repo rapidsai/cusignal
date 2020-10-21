@@ -2,6 +2,7 @@
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
+- PR #274 - Add nightly benchmarks to CI
 
 
 ## Improvements
