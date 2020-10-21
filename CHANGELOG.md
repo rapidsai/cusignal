@@ -1,4 +1,4 @@
-# cuSignal 0.16.0 (Date TBD)
+# cuSignal 0.16.0 (21 Oct 2020)
 
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
