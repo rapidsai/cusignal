@@ -5,11 +5,6 @@
 ##########################################
 set -e
 
-# Logger function for build status output
-function logger() {
-  echo -e "\n>>>> $@\n"
-}
-
 # Set path and build parallel level
 export PATH=/conda/bin:/usr/local/cuda/bin:$PATH
 export PARALLEL_LEVEL=4
@@ -29,13 +24,13 @@ fi
 # SETUP - Check environment
 ################################################################################
 
-logger "Get env..."
+gpuci_logger "Get env..."
 env
 
-logger "Activate conda env..."
+gpuci_logger "Activate conda env..."
 source activate gdf
 
-logger "Check versions..."
+gpuci_logger "Check versions..."
 python --version
 gcc --version
 g++ --version
@@ -48,12 +43,12 @@ conda config --set ssl_verify False
 # BUILD - Conda package build
 ################################################################################
 
-logger "Build conda pkg for cuSignal..."
+gpuci_logger "Build conda pkg for cuSignal..."
 conda build conda/recipes/cusignal --python=${PYTHON}
 
 ################################################################################
 # UPLOAD - Conda packages
 ################################################################################
 
-logger "Upload conda pkgs for cuSignal..."
+gpuci_logger "Upload conda pkgs for cuSignal..."
 source ci/cpu/upload-anaconda.sh

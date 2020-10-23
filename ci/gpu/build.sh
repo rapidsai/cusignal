@@ -7,11 +7,6 @@ set -e
 NUMARGS=$#
 ARGS=$*
 
-# Logger function for build status output
-function logger() {
-  echo -e "\n>>>> $@\n"
-}
-
 # Arg parsing function
 function hasArg {
     (( ${NUMARGS} != 0 )) && (echo " ${ARGS} " | grep -q " $1 ")
@@ -34,13 +29,13 @@ export MINOR_VERSION=`echo $GIT_DESCRIBE_TAG | grep -o -E '([0-9]+\.[0-9]+)'`
 # SETUP - Check environment
 ################################################################################
 
-logger "Check environment..."
+gpuci_logger "Check environment..."
 env
 
-logger "Check GPU usage..."
+gpuci_logger "Check GPU usage..."
 nvidia-smi
 
-logger "Activate conda env..."
+gpuci_logger "Activate conda env..."
 source activate rapids
 conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
@@ -51,7 +46,7 @@ conda install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
 # conda remove -f rapids-build-env rapids-notebook-env
 # conda install "your-pkg=1.0.0"
 
-logger "Check versions..."
+gpuci_logger "Check versions..."
 python --version
 $CC --version
 $CXX --version
@@ -61,7 +56,7 @@ conda list
 # BUILD - Build cusignal
 ################################################################################
 
-logger "Build cusignal..."
+gpuci_logger "Build cusignal..."
 $WORKSPACE/build.sh clean cusignal
 
 ################################################################################
@@ -73,14 +68,14 @@ EXITCODE=0
 trap "EXITCODE=1" ERR
 
 if hasArg --skip-tests; then
-    logger "Skipping Tests..."
+    gpuci_logger "Skipping Tests..."
     exit 0
 fi
 
-logger "Check GPU usage..."
+gpuci_logger "Check GPU usage..."
 nvidia-smi
 
-logger "Python pytest for cusignal..."
+gpuci_logger "Python pytest for cusignal..."
 cd $WORKSPACE/python
 
 pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
