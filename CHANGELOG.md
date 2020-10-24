@@ -2,7 +2,7 @@
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
-- PR #270 - Add convolve1d2o and convolve1d3o
+- PR #270 - Add second and third order convolutions as convolve1d2o and convolve1d3o 
 
 
 ## Improvements
