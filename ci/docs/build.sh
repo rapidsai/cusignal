@@ -30,7 +30,6 @@ gpuci_logger "Activate conda env"
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
 
-pip install sphinx-markdown-tables
 
 gpuci_logger "Check versions"
 python --version
@@ -58,4 +57,3 @@ for PROJECT in ${PROJECTS[@]}; do
 done
 
 mv $PROJECT_WORKSPACE/docs/build/html/* $DOCS_WORKSPACE/api/cusignal/$BRANCH_VERSION
-
