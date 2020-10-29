@@ -157,7 +157,7 @@ def read_sigmf(
     if meta_file is None:
         meta_ext = ".sigmf-meta"
 
-        pat = re.compile(r"(.+)(\.sigmf-data)")
+        pat = re.compile(r"(.+)(\.)(.+)")
         split_string = pat.split(data_file)
         meta_file = split_string[1] + meta_ext
 
