@@ -10,7 +10,7 @@
 ## Bug Fixes
 - PR #272 Fix bug in gausspulse
 
-# cuSignal 0.16.0 (Date TBD)
+# cuSignal 0.16.0 (21 Oct 2020)
 
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
@@ -43,7 +43,7 @@
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
 - PR #218 - Remove fatbins from source code on GH
-- PR #221 - Synchronization issue with cusignal testing 
+- PR #221 - Synchronization issue with cusignal testing
 - PR #237 - Update conda build files so fatbins are generated
 - PR #239 - Fix mode issue in peak finding module
 - PR #245 - Reduce number of default build architectures
@@ -139,7 +139,7 @@
 - PR #113 - Add git commit to conda package
 
 ## Bug Fixes
-- PR #44 - Fix issues in pytests 
+- PR #44 - Fix issues in pytests
 - PR #52 - Mirror API change in Numba 0.49
 - PR #70 - Typo fix in docs api.rst that broke build
 - PR #93 - Remove `lfilter` due to poor performance in real-time applications
