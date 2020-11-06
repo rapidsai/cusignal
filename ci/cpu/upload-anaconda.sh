@@ -3,7 +3,7 @@ set -e
 
 CUDA_REL=${CUDA_VERSION%.*}
 
-export UPLOADFILE=`conda build conda/recipes/cusignal --python=${PYTHON} --output`
+export UPLOADFILE=`gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON} --output`
 
 
 LABEL_OPTION="--label main"
