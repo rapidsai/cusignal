@@ -9,8 +9,9 @@
 - PR #282 - Update README to reflect current versions
 
 ## Bug Fixes
-- PR #272 - Fix bug in gausspulse
-- PR #275 - Improve gpuCI Scripts
+- PR #272 Fix bug in gausspulse
+- PR #275 Improve gpuCI Scripts
+- PR #281 Fix erroneous path in CI scripts
 
 # cuSignal 0.16.0 (21 Oct 2020)
 
