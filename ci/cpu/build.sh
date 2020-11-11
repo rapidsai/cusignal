@@ -6,14 +6,18 @@
 set -e
 
 # Set path and build parallel level
-export PATH=/conda/bin:/usr/local/cuda/bin:$PATH
-export PARALLEL_LEVEL=4
+export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
+export PARALLEL_LEVEL=${PARALLEL_LEVEL:-4}
 
 # Set home to the job's workspace
 export HOME=$WORKSPACE
 
 # Switch to project root; also root of repo checkout
 cd $WORKSPACE
+
+# Setup 'gpuci_conda_retry' for build retries (results in 2 total attempts)
+export GPUCI_CONDA_RETRY_MAX=1
+export GPUCI_CONDA_RETRY_SLEEP=30
 
 # If nightly build, append current YYMMDD to version
 if [[ "$BUILD_MODE" = "branch" && "$SOURCE_BRANCH" = branch-* ]] ; then
@@ -24,17 +28,22 @@ fi
 # SETUP - Check environment
 ################################################################################
 
-gpuci_logger "Get env..."
+gpuci_logger "Get env"
 env
 
-gpuci_logger "Activate conda env..."
-source activate gdf
+gpuci_logger "Activate conda env"
+. /opt/conda/etc/profile.d/conda.sh
+conda activate rapids
 
-gpuci_logger "Check versions..."
+gpuci_logger "Check versions"
 python --version
 gcc --version
 g++ --version
-conda list
+
+gpuci_logger "Check conda environment"
+conda info
+conda config --show-sources
+conda list --show-channel-urls
 
 # FIX Added to deal with Anancoda SSL verification issues during conda builds
 conda config --set ssl_verify False
@@ -43,12 +52,12 @@ conda config --set ssl_verify False
 # BUILD - Conda package build
 ################################################################################
 
-gpuci_logger "Build conda pkg for cuSignal..."
-conda build conda/recipes/cusignal --python=${PYTHON}
+gpuci_logger "Build conda pkg for cuSignal"
+gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON}
 
 ################################################################################
 # UPLOAD - Conda packages
 ################################################################################
 
-gpuci_logger "Upload conda pkgs for cuSignal..."
-source ci/cpu/upload-anaconda.sh
+gpuci_logger "Upload conda pkgs for cuSignal"
+source ci/cpu/upload.sh

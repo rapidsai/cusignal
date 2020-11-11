@@ -4,15 +4,17 @@
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
 - PR #274 - Add nightly benchmarks to CI
 
-
 ## Improvements
-- PR #267 Various optimization across all functions
-- PR #271 Increase robustness of testing
+- PR #267 - Various optimization across all functions
+- PR #271 - Increase robustness of testing
+- PR #282 - Update README to reflect current versions
 
 ## Bug Fixes
 - PR #272 Fix bug in gausspulse
+- PR #275 Improve gpuCI Scripts
+- PR #281 Fix erroneous path in CI scripts
 
-# cuSignal 0.16.0 (Date TBD)
+# cuSignal 0.16.0 (21 Oct 2020)
 
 ## New Features
 - PR #185 - Add function to translate PyCUDA gpuarray to CuPy ndarray
@@ -45,7 +47,7 @@
 ## Bug Fixes
 - PR #214 - Fix grid-stride loop bug in polyphase channelizer
 - PR #218 - Remove fatbins from source code on GH
-- PR #221 - Synchronization issue with cusignal testing 
+- PR #221 - Synchronization issue with cusignal testing
 - PR #237 - Update conda build files so fatbins are generated
 - PR #239 - Fix mode issue in peak finding module
 - PR #245 - Reduce number of default build architectures
@@ -141,7 +143,7 @@
 - PR #113 - Add git commit to conda package
 
 ## Bug Fixes
-- PR #44 - Fix issues in pytests 
+- PR #44 - Fix issues in pytests
 - PR #52 - Mirror API change in Numba 0.49
 - PR #70 - Typo fix in docs api.rst that broke build
 - PR #93 - Remove `lfilter` due to poor performance in real-time applications
