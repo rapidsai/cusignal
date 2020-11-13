@@ -63,4 +63,4 @@ gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON}
 ################################################################################
 
 gpuci_logger "Upload conda pkgs for cuSignal"
-source ci/cpu/upload-anaconda.sh
+source ci/cpu/upload.sh
