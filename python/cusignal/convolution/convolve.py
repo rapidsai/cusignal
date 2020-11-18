@@ -584,7 +584,7 @@ def convolve1d2o(
     convolve
     convolve1d2o
     convolve1d3o
-    
+
     Examples
     --------
     Convolution of a 2nd order filter on a 1d signal

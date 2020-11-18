@@ -636,3 +636,4 @@ def _convolve1d3o(in1, in2, mode):
     )
 
     return out
+
