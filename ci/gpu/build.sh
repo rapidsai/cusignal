@@ -45,12 +45,14 @@ gpuci_conda_retry install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-for
 
 # https://docs.rapids.ai/maintainers/depmgmt/ 
 # conda remove -f rapids-build-env rapids-notebook-env
-# gpuci_conda_retry install "your-pkg=1.0.0"
+# conda install "your-pkg=1.0.0"
 
 gpuci_logger "Check versions"
 python --version
 $CC --version
 $CXX --version
+
+gpuci_logger "Check conda environment"
 conda info
 conda config --show-sources
 conda list --show-channel-urls

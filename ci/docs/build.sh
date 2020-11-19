@@ -31,11 +31,12 @@ conda activate rapids
 gpuci_conda_retry install -c anaconda markdown beautifulsoup4 jq
 pip install sphinx-markdown-tables
 
-
 gpuci_logger "Check versions"
 python --version
 $CC --version
 $CXX --version
+
+gpuci_logger "Check conda environment"
 conda info
 conda config --show-sources
 conda list --show-channel-urls
@@ -56,4 +57,3 @@ for PROJECT in ${PROJECTS[@]}; do
 done
 
 mv $PROJECT_WORKSPACE/docs/build/html/* $DOCS_WORKSPACE/api/cusignal/$BRANCH_VERSION
-

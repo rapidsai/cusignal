@@ -15,6 +15,10 @@ export HOME=$WORKSPACE
 # Switch to project root; also root of repo checkout
 cd $WORKSPACE
 
+# Setup 'gpuci_conda_retry' for build retries (results in 2 total attempts)
+export GPUCI_CONDA_RETRY_MAX=1
+export GPUCI_CONDA_RETRY_SLEEP=30
+
 # If nightly build, append current YYMMDD to version
 if [[ "$BUILD_MODE" = "branch" && "$SOURCE_BRANCH" = branch-* ]] ; then
   export VERSION_SUFFIX=`date +%y%m%d`
@@ -35,6 +39,7 @@ gpuci_logger "Check versions"
 python --version
 $CC --version
 $CXX --version
+gpuci_logger "Check conda environment"
 conda info
 conda config --show-sources
 conda list --show-channel-urls

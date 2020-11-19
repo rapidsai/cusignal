@@ -40,6 +40,8 @@ from cusignal.convolution.convolve import (
     choose_conv_method,
     convolve,
     convolve2d,
+    convolve1d2o,
+    convolve1d3o,
 )
 from cusignal.filter_design.fir_filter_design import (
     kaiser_beta,
