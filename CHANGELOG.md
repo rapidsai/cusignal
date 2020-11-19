@@ -2,13 +2,19 @@
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
+- PR #270 - Add second and third order convolutions as convolve1d2o and convolve1d3o 
+- PR #274 - Add nightly benchmarks to CI
 
 ## Improvements
-- PR #267 Various optimization across all functions
-- PR #271 Increase robustness of testing
+- PR #267 - Various optimization across all functions
+- PR #271 - Increase robustness of testing
+- PR #282 - Update README to reflect current versions
+- PR #285 - Updates to gpuci scripts
 
 ## Bug Fixes
 - PR #272 Fix bug in gausspulse
+- PR #275 Improve gpuCI Scripts
+- PR #281 Fix erroneous path in CI scripts
 
 # cuSignal 0.16.0 (21 Oct 2020)
 
