@@ -1,3 +1,11 @@
+# cuSignal 0.18.0 (Date TBD)
+
+## New Features
+
+## Improvements
+
+## Bug Fixes
+
 # cuSignal 0.17.0 (Date TBD)
 
 ## New Features
