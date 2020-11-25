@@ -544,6 +544,52 @@ class TestFilter:
             key = self.cpu_version(cpu_sig, cpu_filter)
             array_equal(output, key)
 
+    @pytest.mark.benchmark(group="Firfilter2")
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("filter_len", [8, 32, 128])
+    class TestFirfilter:
+        def cpu_version(self, sig, filt):
+            return signal.filtfilt(filt, 1, sig)
+
+        def gpu_version(self, sig, filt):
+            with cp.cuda.Stream.null:
+                out = cusignal.firfilter2(filt, sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_firfilter2_cpu(
+            self,
+            benchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            benchmark(self.cpu_version, cpu_sig, cpu_filter)
+
+        def test_firfilter2_gpu(
+            self,
+            gpubenchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            gpu_filter = cp.asarray(cpu_filter)
+            output = gpubenchmark(
+                self.gpu_version,
+                gpu_sig,
+                gpu_filter,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filter)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="ChannelizePoly")
     @pytest.mark.parametrize(
         "dtype", [np.float32, np.float64, np.complex64, np.complex128]
