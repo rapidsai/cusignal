@@ -48,6 +48,7 @@ def _get_tpb_bpg():
 
 
 def _get_function(fatbin, func):
+
     dir = os.path.dirname(Path(__file__).parent)
 
     module = cp.RawModule(
