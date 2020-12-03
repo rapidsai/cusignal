@@ -547,7 +547,7 @@ class TestFilter:
     @pytest.mark.benchmark(group="Firfilter2")
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
-    class TestFirfilter:
+    class TestFirfilter2:
         def cpu_version(self, sig, filt):
             return signal.filtfilt(filt, 1, sig)
 

@@ -171,10 +171,10 @@ def firfilter(b, x, axis=-1, zi=None):
                     strides[k] = 0
                 else:
                     raise ValueError('Unexpected shape for zi: expected '
-                                        '%s, found %s.' %
-                                        (expected_shape, zi.shape))
+                                     '%s, found %s.' %
+                                     (expected_shape, zi.shape))
             zi = cp.lib.stride_tricks.as_strided(zi, expected_shape,
-                                                    strides)
+                                                 strides)
         inputs.append(zi)
     dtype = cp.result_type(*inputs)
 
@@ -395,7 +395,6 @@ def _validate_pad(padtype, padlen, x, axis, ntaps):
         ext = x
     return edge, ext
 
-import scipy.signal as sig
 
 def firfilter2(b, x, axis=-1, padtype='odd', padlen=None, method='pad',
                irlen=None):
