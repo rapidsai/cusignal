@@ -9,6 +9,7 @@
 - PR #267 - Various optimization across all functions
 - PR #271 - Increase robustness of testing
 - PR #282 - Update README to reflect current versions
+- PR #283 - Cleanup gpuCI scripts
 - PR #285 - Updates to gpuci scripts
 
 ## Bug Fixes
