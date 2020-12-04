@@ -11,7 +11,7 @@ if [ -z "$PROJECT_WORKSPACE" ]; then
 fi
 
 export DOCS_WORKSPACE=$WORKSPACE/docs
-export PATH=/conda/bin:/usr/local/cuda/bin:$PATH
+export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
 export HOME=$WORKSPACE
 export PROJECT_WORKSPACE=/rapids/cusignal
 export LIBCUDF_KERNEL_CACHE_PATH="$HOME/.jitify-cache"
@@ -25,11 +25,11 @@ gpuci_logger "Check GPU usage"
 nvidia-smi
 
 gpuci_logger "Activate conda env"
-
-gpuci_logger "Activate conda env"
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
-
+# TODO: Move installs to docs-build-env meta package
+gpuci_conda_retry install -c anaconda markdown beautifulsoup4 jq
+pip install sphinx-markdown-tables
 
 gpuci_logger "Check versions"
 python --version
