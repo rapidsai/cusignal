@@ -1,15 +1,16 @@
 #!/bin/bash
-# Copyright (c) 2019, NVIDIA CORPORATION.
+# Copyright (c) 2020, NVIDIA CORPORATION.
 #########################
 # cuSignal Style Tester #
 #########################
 
 # Ignore errors and set path
 set +e
-PATH=/conda/bin:$PATH
+PATH=/opt/conda/bin:$PATH
 
 # Activate common conda env
-source activate gdf
+. /opt/conda/etc/profile.d/conda.sh
+conda activate rapids
 
 cd $WORKSPACE/python
 

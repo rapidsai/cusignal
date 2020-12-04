@@ -28,7 +28,6 @@ fi
 ################################################################################
 
 gpuci_logger "Get conda file output locations"
-
 export CUSIGNAL_FILE=`conda build conda/recipes/cusignal --output`
 
 ################################################################################

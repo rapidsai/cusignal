@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018, NVIDIA CORPORATION.
+# Copyright (c) 2020, NVIDIA CORPORATION.
 ##########################################
 # cuSignal CPU conda build script for CI #
 ##########################################
@@ -37,9 +37,8 @@ conda activate rapids
 
 gpuci_logger "Check versions"
 python --version
-gcc --version
-g++ --version
-
+$CC --version
+$CXX --version
 gpuci_logger "Check conda environment"
 conda info
 conda config --show-sources
@@ -51,6 +50,10 @@ conda config --set ssl_verify False
 ################################################################################
 # BUILD - Conda package build
 ################################################################################
+
+# Setup 'gpuci_conda_retry' for build retries (results in 2 total attempts)
+export GPUCI_CONDA_RETRY_MAX=1
+export GPUCI_CONDA_RETRY_SLEEP=30
 
 gpuci_logger "Build conda pkg for cuSignal"
 gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON}

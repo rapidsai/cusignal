@@ -12,7 +12,9 @@ SKIPNBS="sdr_wfm_demod.ipynb sdr_integration.ipynb io_examples.ipynb estimation_
 
 ## Check env
 env
-conda list
+conda info
+conda config --show-sources
+conda list --show-channel-urls
 
 EXITCODE=0
 
