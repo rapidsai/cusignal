@@ -11,34 +11,38 @@ if [ -z "$PROJECT_WORKSPACE" ]; then
 fi
 
 export DOCS_WORKSPACE=$WORKSPACE/docs
-export PATH=/conda/bin:/usr/local/cuda/bin:$PATH
+export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
 export HOME=$WORKSPACE
 export PROJECT_WORKSPACE=/rapids/cusignal
 export LIBCUDF_KERNEL_CACHE_PATH="$HOME/.jitify-cache"
 export NIGHTLY_VERSION=$(echo $BRANCH_VERSION | awk -F. '{print $2}')
 export PROJECTS=(cusignal)
 
-logger "Check environment..."
+gpuci_logger "Check environment"
 env
 
-logger "Check GPU usage..."
+gpuci_logger "Check GPU usage"
 nvidia-smi
 
-logger "Activate conda env..."
-source activate rapids
+gpuci_logger "Activate conda env"
+. /opt/conda/etc/profile.d/conda.sh
+conda activate rapids
 # TODO: Move installs to docs-build-env meta package
-conda install -c anaconda markdown beautifulsoup4 jq
+gpuci_conda_retry install -c anaconda markdown beautifulsoup4 jq
 pip install sphinx-markdown-tables
 
-
-logger "Check versions..."
+gpuci_logger "Check versions"
 python --version
 $CC --version
 $CXX --version
-conda list
+
+gpuci_logger "Check conda environment"
+conda info
+conda config --show-sources
+conda list --show-channel-urls
 
 # Build Python docs
-logger "Build Sphinx docs..."
+gpuci_logger "Build Sphinx docs"
 cd $PROJECT_WORKSPACE/docs
 make html
 
@@ -53,4 +57,3 @@ for PROJECT in ${PROJECTS[@]}; do
 done
 
 mv $PROJECT_WORKSPACE/docs/build/html/* $DOCS_WORKSPACE/api/cusignal/$BRANCH_VERSION
-

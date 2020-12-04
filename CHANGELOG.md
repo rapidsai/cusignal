@@ -8,7 +8,6 @@
 ## Improvements
 - PR #267 - Various optimization across all functions
 - PR #271 - Increase robustness of testing
-- PR #280 - Fixing issue when reading sigmf data from parent folder
 - PR #282 - Update README to reflect current versions
 
 ## Bug Fixes

@@ -16,5 +16,7 @@ from cusignal.convolution.convolve import (
     fftconvolve,
     convolve2d,
     choose_conv_method,
+    convolve1d2o,
+    convolve1d3o,
 )
 from cusignal.convolution.correlate import correlate, correlate2d
