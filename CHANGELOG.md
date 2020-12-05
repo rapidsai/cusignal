@@ -16,9 +16,8 @@
 ## Improvements
 - PR #267 - Various optimization across all functions
 - PR #271 - Increase robustness of testing
+- PR #280 - Fixing issue when reading sigmf data from parent folder
 - PR #282 - Update README to reflect current versions
-- PR #283 - Cleanup and added functions to gpuCI scripts
-- PR #285 - Updates to gpuci scripts
 
 ## Bug Fixes
 - PR #272 Fix bug in gausspulse
