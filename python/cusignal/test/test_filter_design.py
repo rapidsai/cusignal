@@ -22,6 +22,44 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestFilterDesign:
+    @pytest.mark.benchmark(group="FirWin2")
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("g1", [0.0, 1.0])
+    @pytest.mark.parametrize("g2", [0.5, 1.0])
+    @pytest.mark.parametrize("g3", [0.0, 0.0])
+    class TestFirWin2:
+        def cpu_version(self, num_samps, g1, g2, g3):
+            return signal.firwin2(num_samps, [0.0, 0.5, 1.0], [g1, g2, g3])
+
+        def gpu_version(self, num_samps, g1, g2, g3):
+            with cp.cuda.Stream.null:
+                out = cusignal.firwin2(num_samps, [0.0, 0.5, 1.0], [g1, g2, g3])
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_firwin2_cpu(self, benchmark, num_samps, g1, g2, g3):
+            benchmark(
+                self.cpu_version,
+                num_samps,
+                g1,
+                g2,
+                g3,
+            )
+
+        def test_firwin2_gpu(self, gpubenchmark, num_samps, g1, g2, g3):
+
+            output = gpubenchmark(
+                self.gpu_version,
+                num_samps,
+                g1,
+                g2,
+                g3,
+            )
+
+            key = self.cpu_version(num_samps, g1, g2, g3)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="FirWin")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
     @pytest.mark.parametrize("f1", [0.1, 0.15])

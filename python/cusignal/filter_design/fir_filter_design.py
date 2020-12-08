@@ -361,7 +361,7 @@ def firwin(
 
 
 def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
-            antisymmetric=False, fs=None, gpupath=False):
+            antisymmetric=False, fs=None, gpupath=True):
     """
     FIR filter design using the window method.
     From the given frequencies `freq` and corresponding gains `gain`,
@@ -443,7 +443,9 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
     """
 
     if gpupath:
-        raise NotImplementedError("gpupath not implemented yet")
+        pp = cp
+    else:
+        pp = np
 
     nyq = 0.5 * _get_fs(fs, nyq)
 
@@ -457,7 +459,7 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
 
     if freq[0] != 0 or freq[-1] != nyq:
         raise ValueError('freq must start with 0 and end with fs/2.')
-    d = np.diff(freq)
+    d = pp.diff(freq)
     if (d < 0).any():
         raise ValueError('The values in freq must be nondecreasing.')
     d2 = d[:-1] + d[1:]
@@ -494,36 +496,40 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
 
     if (d == 0).any():
         # Tweak any repeated values in freq so that interp works.
-        freq = np.array(freq, copy=True)
-        eps = np.finfo(float).eps * nyq
+        freq = pp.array(freq, copy=True)
+        eps = pp.finfo(float).eps * nyq
         for k in range(len(freq) - 1):
             if freq[k] == freq[k + 1]:
                 freq[k] = freq[k] - eps
                 freq[k + 1] = freq[k + 1] + eps
         # Check if freq is strictly increasing after tweak
-        d = np.diff(freq)
+        d = pp.diff(freq)
         if (d <= 0).any():
             raise ValueError("freq cannot contain numbers that are too close "
                              "(within eps * (fs/2): "
                              "{}) to a repeated value".format(eps))
 
     # Linearly interpolate the desired response on a uniform mesh `x`.
-    x = np.linspace(0.0, nyq, nfreqs)
-    fx = np.interp(x, freq, gain)
+    x = pp.linspace(0.0, nyq, nfreqs)
+    if gpupath:
+        fx = cp.asarray(np.interp(cp.asnumpy(x), freq, gain))
+    else:
+        fx = np.interp(x, freq, gain)
 
     # Adjust the phases of the coefficients so that the first `ntaps` of the
     # inverse FFT are the desired filter coefficients.
-    shift = np.exp(-(numtaps - 1) / 2. * 1.j * np.pi * x / nyq)
+    shift = pp.exp(-(numtaps - 1) / 2. * 1.j * pp.pi * x / nyq)
     if ftype > 2:
         shift *= 1j
 
     fx2 = fx * shift
 
     # Use irfft to compute the inverse FFT.
-    out_full = np.fft.irfft(fx2)
+    out_full = pp.fft.irfft(fx2)
 
     # Pass to device memory
-    out_full = cp.asarray(out_full)
+    if not gpupath:
+        out_full = cp.asarray(out_full)
 
     if window is not None:
         # Create the window to apply to the filter coefficients.
