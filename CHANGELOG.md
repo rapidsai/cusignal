@@ -3,6 +3,7 @@
 ## New Features
 
 ## Improvements
+- PR #292 - Increment CuPy Version
 
 ## Bug Fixes
 
