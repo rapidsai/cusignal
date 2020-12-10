@@ -15,8 +15,6 @@ import cupy as cp
 import numpy as np
 import sys
 
-from cupyx.scipy import fftpack
-
 from ..utils.fftpack_helper import (
     _init_nd_shape_and_axes_sorted,
     next_fast_len,
@@ -31,8 +29,6 @@ from .convolution_utils import (
 )
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
-
-_cupy_fft_cache = {}
 
 
 def convolve(
@@ -303,53 +299,14 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     fshape = [next_fast_len(d) for d in shape[axes]]
     fslice = tuple([slice(sz) for sz in shape])
 
-    major_ver = cp.__version__.split(".")
-
-    if int(major_ver[0]) >= 8:
-        if not complex_result:
-            sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-            sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-            ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
-        else:
-            sp1 = fftpack.fftn(in1, fshape, axes=axes)
-            sp2 = fftpack.fftn(in2, fshape, axes=axes)
-            ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-    else:  # CuPy v7
-        if not complex_result:
-            if (str(fshape), str(axes), "R2C") in _cupy_fft_cache:
-                rplan = _cupy_fft_cache[(str(fshape), str(axes), "R2C")]
-            else:
-                rplan = _cupy_fft_cache[
-                    (str(fshape), str(axes), "R2C")
-                ] = fftpack.get_fft_plan(
-                    in1, fshape, axes=axes, value_type="R2C"
-                )
-            try:
-                with rplan:
-                    sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-                    sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-            except Exception:
-                sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
-                sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
-
-            ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
-        else:
-            # Need to move to cupyx.scipy.fft with CuPy v8
-            if (str(fshape), str(axes)) in _cupy_fft_cache:
-                plan = _cupy_fft_cache[(str(fshape), str(axes))]
-            else:
-                plan = _cupy_fft_cache[
-                    (str(fshape), str(axes))
-                ] = fftpack.get_fft_plan(in1, fshape, axes=axes)
-            try:
-                with plan:
-                    sp1 = fftpack.fftn(in1, fshape, axes=axes)
-                    sp2 = fftpack.fftn(in2, fshape, axes=axes)
-                    ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
-            except Exception:
-                sp1 = fftpack.fftn(in1, fshape, axes=axes)
-                sp2 = fftpack.fftn(in2, fshape, axes=axes)
-                ret = fftpack.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
+    if not complex_result:
+        sp1 = cp.fft.rfftn(in1, fshape, axes=axes)
+        sp2 = cp.fft.rfftn(in2, fshape, axes=axes)
+        ret = cp.fft.irfftn(sp1 * sp2, fshape, axes=axes)[fslice].copy()
+    else:
+        sp1 = cp.fft.fftn(in1, fshape, axes=axes)
+        sp2 = cp.fft.fftn(in2, fshape, axes=axes)
+        ret = cp.fft.ifftn(sp1 * sp2, axes=axes)[fslice].copy()
 
     if mode == "full":
         return ret
@@ -538,7 +495,7 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
 
     if measure:
         times = {}
-        for method in ["fft", "direct"]:
+        for method in ("fft", "direct"):
             times[method] = _timeit_fast(
                 lambda: convolve(volume, kernel, mode=mode, method=method)
             )
@@ -569,3 +526,189 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
             return "fft"
 
     return "direct"
+
+
+def convolve1d2o(
+    in1,
+    in2,
+    mode="valid",
+    method="direct",
+):
+    """
+    Convolve a 1-dimensional arrays with a 2nd order filter.
+    This results in a second order convolution.
+
+    Convolve `in1` and `in2`, with the output size determined by the
+    `mode` argument.
+
+    Parameters
+    ----------
+    in1 : array_like
+        First input.
+    in2 : array_like
+        Second input. Should have the same number of dimensions as `in1`.
+    mode : str {'full', 'valid', 'same'}, optional
+        A string indicating the size of the output:
+
+        ``full``
+           The output is the full discrete linear convolution
+           of the inputs. (Default)
+        ``valid``
+           The output consists only of those elements that do not
+           rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
+           must be at least as large as the other in every dimension.
+        ``same``
+           The output is the same size as `in1`, centered
+           with respect to the 'full' output.
+    method : str {'auto', 'direct', 'fft'}, optional
+        A string indicating which method to use to calculate the convolution.
+
+        ``direct``
+           The convolution is determined directly from sums, the definition of
+           convolution.
+        ``fft``
+           The Fourier Transform is used to perform the convolution by calling
+           `fftconvolve`.
+        ``auto``
+           Automatically chooses direct or Fourier method based on an estimate
+           of which is faster (default).
+
+    Returns
+    -------
+    out : ndarray
+        A 1-dimensional array containing a subset of the discrete linear
+        convolution of `in1` with `in2`.
+
+    See Also
+    --------
+    convolve
+    convolve1d2o
+    convolve1d3o
+
+    Examples
+    --------
+    Convolution of a 2nd order filter on a 1d signal
+
+    >>> import cusignal as cs
+    >>> import numpy as np
+    >>> d = 50
+    >>> a = np.random.uniform(-1,1,(200))
+    >>> b = np.random.uniform(-1,1,(d,d))
+    >>> c = cs.convolve1d3o(a,b)
+
+    """
+
+    signal = cp.asarray(in1)
+    kernel = cp.asarray(in2)
+
+    if mode == "valid" and signal.shape[0] < kernel.shape[0]:
+        # Convolution is commutative
+        # order doesn't have any effect on output
+        signal, kernel = kernel, signal
+
+    if mode in ["same", "full"]:
+        raise NotImplementedError(
+            "Mode == {} not implemented".format(
+                mode
+            )
+        )
+
+    if method == "direct":
+        return _convolution_cuda._convolve1d2o(
+            signal, kernel, mode
+        )
+    else:
+        raise NotImplementedError("Only Direct method implemented")
+
+
+def convolve1d3o(
+    in1,
+    in2,
+    mode="valid",
+    method="direct",
+):
+    """
+    Convolve a 1-dimensional array with a 3rd order filter.
+    This results in a second order convolution.
+
+    Convolve `in1` and `in2`, with the output size determined by the
+    `mode` argument.
+
+    Parameters
+    ----------
+    in1 : array_like
+        First input.
+    in2 : array_like
+        Second input. Should have the same number of dimensions as `in1`.
+    mode : str {'full', 'valid', 'same'}, optional
+        A string indicating the size of the output:
+
+        ``full``
+           The output is the full discrete linear convolution
+           of the inputs. (Default)
+        ``valid``
+           The output consists only of those elements that do not
+           rely on the zero-padding. In 'valid' mode, either `in1` or `in2`
+           must be at least as large as the other in every dimension.
+        ``same``
+           The output is the same size as `in1`, centered
+           with respect to the 'full' output.
+    method : str {'auto', 'direct', 'fft'}, optional
+        A string indicating which method to use to calculate the convolution.
+
+        ``direct``
+           The convolution is determined directly from sums, the definition of
+           convolution.
+        ``fft``
+           The Fourier Transform is used to perform the convolution by calling
+           `fftconvolve`.
+        ``auto``
+           Automatically chooses direct or Fourier method based on an estimate
+           of which is faster (default).
+
+    Returns
+    -------
+    out : ndarray
+        A 1-dimensional array containing a subset of the discrete linear
+        convolution of `in1` with `in2`.
+
+    See Also
+    --------
+    convolve
+    convolve1d2o
+    convolve1d3o
+
+    Examples
+    --------
+    Convolution of a 3rd order filter on a 1d signal
+
+    >>> import cusignal as cs
+    >>> import numpy as np
+    >>> d = 50
+    >>> a = np.random.uniform(-1,1,(200))
+    >>> b = np.random.uniform(-1,1,(d,d,d))
+    >>> c = cs.convolve1d3o(a,b)
+
+    """
+
+    signal = cp.asarray(in1)
+    kernel = cp.asarray(in2)
+
+    if mode == "valid" and signal.shape[0] < kernel.shape[0]:
+        # Convolution is commutative
+        # order doesn't have any effect on output
+        signal, kernel = kernel, signal
+
+    if mode in ["same", "full"]:
+        raise NotImplementedError(
+            "Mode == {} not implemented".format(
+                mode
+            )
+        )
+
+    if method == "direct":
+        return _convolution_cuda._convolve1d3o(
+            signal, kernel, mode
+        )
+    else:
+        raise NotImplementedError("Only Direct method implemented")

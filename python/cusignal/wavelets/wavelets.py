@@ -12,17 +12,17 @@
 # limitations under the License.
 
 import cupy as cp
-import numpy as np
 from ..convolution.convolve import convolve
 
 _qmf_kernel = cp.ElementwiseKernel(
-    "T N",
-    "T output",
+    "",
+    "int64 output",
     """
-    int sign = ( i % 2 ) ? -1 : 1;
-    output = (N - (i + 1)) * sign;
+    const int sign { ( i & 1 ) ? -1 : 1 };
+    output = ( _ind.size() - ( i + 1 ) ) * sign;
     """,
     "_qmf_kernel",
+    options=("-std=c++11",),
 )
 
 
@@ -36,31 +36,29 @@ def qmf(hk):
         Coefficients of high-pass filter.
 
     """
-    N = len(hk)
-    output = cp.empty(N, dtype=cp.int64)
-
-    _qmf_kernel(N, output)
-
-    return output
+    return _qmf_kernel(size=len(hk))
 
 
 _morlet_kernel = cp.ElementwiseKernel(
-    "float64 delta, float64 start, float64 w, float64 pi, bool complete",
-    "T output",
+    "float64 w, float64 s, bool complete",
+    "complex128 output",
     """
-    double x = start + delta * i;
+    const double x { start + delta * i };
 
-    T temp = T(0, w * x);
+    thrust::complex<double> temp { exp(
+        thrust::complex<double>( 0, w * x ) ) };
 
-    temp = exp(temp);
-
-    if (complete) {
-        temp -= exp( -0.5 * (w * w) );
+    if ( complete ) {
+        temp -= exp( -0.5 * ( w * w ) );
     }
 
-    output = temp * exp( -0.5 * (x * x)) * pow(pi, -0.25)
+    output = temp * exp( -0.5 * ( x * x ) ) * pow( M_PI, -0.25 )
     """,
     "_morlet_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double end { s * 2.0 * M_PI }; \
+               const double start { -s * 2.0 * M_PI }; \
+               const double delta { ( end - start ) / ( _ind.size() - 1 ) };",
 )
 
 
@@ -115,27 +113,24 @@ def morlet(M, w=5.0, s=1.0, complete=True):
     with it.
 
     """
-    output = cp.empty(M, dtype=cp.complex128)
-    end = s * 2 * np.pi
-    start = -s * 2 * np.pi
-    delta = (end - start) / (M - 1)
-
-    _morlet_kernel(delta, start, w, np.pi, complete, output)
-
-    return output
+    return _morlet_kernel(w, s, complete, size=M)
 
 
 _ricker_kernel = cp.ElementwiseKernel(
-    "T A, T wsq",
-    "T total",
+    "float64 a",
+    "float64 total",
     """
-    T vec = i - (_ind.size() - 1.0) / 2;
-    T xsq = vec * vec;
-    T mod = ( 1 - xsq / wsq );
-    T gauss = exp( -xsq / ( 2 * wsq ) );
+    const double vec { i - ( _ind.size() - 1.0 ) * 0.5 };
+    const double xsq { vec * vec };
+    const double mod { 1 - xsq / wsq };
+    const double gauss { exp( -xsq / ( 2.0 * wsq ) ) };
+
     total = A * mod * gauss;
     """,
     "_ricker_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double A { 2.0 / ( sqrt( 3 * a ) * pow( M_PI, 0.25 ) ) }; \
+               const double wsq { a * a };",
 )
 
 
@@ -177,14 +172,7 @@ def ricker(points, a):
     >>> plt.show()
 
     """
-    total = cp.empty(int(points), dtype=cp.float64)
-
-    A = 2 / (np.sqrt(3 * a) * (np.pi ** 0.25))
-    wsq = a ** 2
-
-    _ricker_kernel(float(A), float(wsq), total)
-
-    return total
+    return _ricker_kernel(a, size=points)
 
 
 def cwt(data, wavelet, widths):

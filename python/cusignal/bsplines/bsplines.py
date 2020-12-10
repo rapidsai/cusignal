@@ -12,15 +12,17 @@
 # limitations under the License.
 
 import cupy as cp
-import numpy as np
 
 _gauss_spline_kernel = cp.ElementwiseKernel(
-    "T x, float64 pi, float64 signsq, float64 r_siqnsq",
+    "T x, int32 n",
     "T output",
     """
-    output = 1 / sqrt( 2 * pi * signsq ) * exp( -( x * x ) * r_siqnsq );
+    output = 1 / sqrt( 2.0 * M_PI * signsq ) * exp( -( x * x ) * r_signsq );
     """,
     "_gauss_spline_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double signsq { ( n + 1 ) / 12.0 }; \
+               const double r_signsq { 0.5 / signsq };",
 )
 
 
@@ -42,26 +44,25 @@ def gauss_spline(x, n):
     """
     x = cp.asarray(x)
 
-    signsq = (n + 1) / 12.0
-    r_signsq = 0.5 / signsq
-    return _gauss_spline_kernel(x, np.pi, signsq, r_signsq)
+    return _gauss_spline_kernel(x, n)
 
 
 _cubic_kernel = cp.ElementwiseKernel(
     "T x",
     "T res",
     """
-    T ax = abs( x );
+    const T ax { abs( x ) };
 
     if( ax < 1 ) {
-        res =  2.0 / 3 - 1.0 / 2  * ax * ax * ( 2 - ax );
+        res =  2.0 / 3 - 1.0 / 2  * ax * ax * ( 2.0 - ax );
     } else if( !( ax < 1 ) && ( ax < 2 ) ) {
-        res = 1.0 / 6 * ( 2 - ax ) *  ( 2 - ax ) * ( 2 - ax );
+        res = 1.0 / 6 * ( 2.0 - ax ) *  ( 2.0 - ax ) * ( 2.0 - ax );
     } else {
-        res = 0;
+        res = 0.0;
     }
     """,
     "_cubic_kernel",
+    options=("-std=c++11",),
 )
 
 
@@ -79,17 +80,18 @@ _quadratic_kernel = cp.ElementwiseKernel(
     "T x",
     "T res",
     """
-    T ax = abs( x );
+    const T ax { abs( x ) };
 
     if( ax < 0.5 ) {
         res = 0.75 - ax * ax;
     } else if( !( ax < 0.5 ) && ( ax < 1.5 ) ) {
         res = ( ( ax - 1.5 ) * ( ax - 1.5 ) ) * 0.5 ;
     } else {
-        res = 0;
+        res = 0.0;
     }
     """,
     "_quadratic_kernel",
+    options=("-std=c++11",),
 )
 
 

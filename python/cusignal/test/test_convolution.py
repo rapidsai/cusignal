@@ -74,7 +74,7 @@ class TestConvolution:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, mode, method)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Convolve")
     @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
@@ -124,7 +124,7 @@ class TestConvolution:
 
             cpu_win = signal.windows.hann(num_taps, 1)
             key = self.cpu_version(cpu_sig, cpu_win, mode, method)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="FFTConvolve")
     @pytest.mark.parametrize("num_samps", [2 ** 15])
@@ -154,7 +154,7 @@ class TestConvolution:
             output = gpubenchmark(self.gpu_version, gpu_sig, mode)
 
             key = self.cpu_version(cpu_sig, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Convolve2d")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -208,7 +208,7 @@ class TestConvolution:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.benchmark(group="Correlate2d")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -262,4 +262,4 @@ class TestConvolution:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filt, boundary, mode)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)

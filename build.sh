@@ -104,7 +104,8 @@ fi
 SRC="cpp/src"
 FAT="python/cusignal"
 GCC_V=$(gcc --version | grep gcc | cut -f2 -d')' | cut -f1 -d'.' | xargs)
-NVCC_V=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
+NVCC_MAJOR=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f1 -d'.')
+NVCC_MINOR=$(nvcc --version | grep "release" | awk '{print $6}' | cut -c2- | cut -f2 -d'.')
 
 GET_CC(){
     MAJOR=`python3 -c 'from ctypes import *; \
@@ -121,6 +122,33 @@ GET_CC(){
         print(sms.value)'`
 }
 
+RETURN_ALL(){
+    echo "Building for *ALL* supported GPU architectures..."
+    GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
+        --generate-code arch=compute_50,code=sm_52 \
+        --generate-code arch=compute_53,code=sm_53 \
+        --generate-code arch=compute_60,code=sm_60 \
+        --generate-code arch=compute_61,code=sm_61 \
+        --generate-code arch=compute_62,code=sm_62 \
+        --generate-code arch=compute_70,code=sm_70 \
+        --generate-code arch=compute_72,code=sm_72"
+    
+    if [ "$NVCC_MAJOR" -lt 11 ]; then
+        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
+        echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
+    else
+        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75"
+        if [ "$NVCC_MINOR" -eq 0 ]; then
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_80,code=[sm_80,compute_80]"
+            echo -e "\t including: CUDA 11.0 - {50,52,53,60,61,62,70,72,75,80}"
+        else
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_80,code=sm_80 \
+                --generate-code arch=compute_86,code=[sm_86,compute_86]"
+            echo -e "\t including: CUDA 11.1+ - {50,52,53,60,61,62,70,72,75,80,86}"
+        fi
+    fi
+}
+
 if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     echo "Building for the architecture of the GPU in the system..."
     DEVICES=${CUDA_VISIBLE_DEVICES}
@@ -128,12 +156,19 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     then
         # If DEVICES is empty, retrieve all attached NVIDIA GPU
         NUMGPU=`lspci | grep VGA | grep NVIDIA | wc -l`
-        for (( i=0; i<${NUMGPU}; i++ ))
-        do
-            GET_CC ${i}
-            echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
-            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
-        done
+        # If now gpus can be found build all
+        if [ $NUMGPU -eq "0" ]
+        then
+            echo "Unable to determine GPU(s) installed..."
+            RETURN_ALL
+        else
+            for (( i=0; i<${NUMGPU}; i++ ))
+            do
+                GET_CC ${i}
+                echo -e "\tDevice ${i} - CC ${MAJOR}${MINOR}"
+                GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
+            done
+        fi
     else
         IFS=',' read -r -a arr <<< ${DEVICES}
         for (( i=0; i<"${#arr[@]}"; i++ ))
@@ -145,32 +180,11 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
     fi
     
 else
-    echo "Building for *ALL* supported GPU architectures..."
-    echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
-    echo -e "\t including: CUDA 11.X - {50,52,53,60,61,62,70,72,75,80}"
-    
-
-    GPU_ARCH="--generate-code arch=compute_50,code=sm_50 \
-    --generate-code arch=compute_50,code=sm_52 \
-    --generate-code arch=compute_53,code=sm_53 \
-    --generate-code arch=compute_60,code=sm_60 \
-    --generate-code arch=compute_61,code=sm_61 \
-    --generate-code arch=compute_62,code=sm_62 \
-    --generate-code arch=compute_70,code=sm_70 \
-    --generate-code arch=compute_72,code=sm_72"
-
-    if [ "$NVCC_V" -lt 11 ]; then
-        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
-    else
-        GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=sm_75 \
-        --generate-code arch=compute_80,code=[sm_80,compute_80]"
-    fi
+    RETURN_ALL
 fi
 
-
-
 # Must check GCC for Centos OS
-if [ "$GCC_V" -lt 7 ] || [ "$NVCC_V" -lt 11 ]; then
+if [ "$GCC_V" -lt 7 ] || [ "$NVCC_MAJOR" -lt 11 ]; then
     FLAGS="-std=c++11"
 else
     FLAGS="-std=c++17"

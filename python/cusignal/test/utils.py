@@ -11,13 +11,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
+import cupy as cp
 import pytest_benchmark
 
 
-def array_equal(a, b, tol=1e-4, with_sign=True):
-    res = np.max(np.abs(a - b)) < tol
-    return res
+def array_equal(a, b, rtol=1e-7, atol=1e-5):
+
+    if isinstance(a, tuple):  # Test functions with multiple outputs
+        if a[0].dtype == cp.float32 or a[0].dtype == cp.complex64:
+            rtol = 1e-3
+            atol = 1e-3
+
+        for i in range(len(a)):
+            cp.testing.assert_allclose(a[i], b[i], rtol=rtol, atol=atol)
+
+    elif not isinstance(a, (float, int)):
+        if a.dtype == cp.float32 or a.dtype == cp.complex64:
+            rtol = 1e-3
+            atol = 1e-3
+        cp.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
 
 
 def _check_rapids_pytest_benchmark():

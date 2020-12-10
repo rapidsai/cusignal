@@ -47,7 +47,7 @@ class TestBsplines:
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
 
             key = self.cpu_version(cpu_sig, n)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.parametrize("x", [2 ** 16])
     @pytest.mark.benchmark(group="Cubic")
@@ -72,7 +72,7 @@ class TestBsplines:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)
 
     @pytest.mark.parametrize("x", [2 ** 16])
     @pytest.mark.benchmark(group="Quadratic")
@@ -97,4 +97,4 @@ class TestBsplines:
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
-            assert array_equal(cp.asnumpy(output), key)
+            array_equal(output, key)

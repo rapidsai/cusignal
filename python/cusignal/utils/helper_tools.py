@@ -24,6 +24,20 @@ def _get_numSM():
     return device_id.attributes["MultiProcessorCount"]
 
 
+def _get_max_smem():
+
+    device_id = cp.cuda.Device()
+
+    return device_id.attributes["MaxSharedMemoryPerBlock"]
+
+
+def _get_max_tpb():
+
+    device_id = cp.cuda.Device()
+
+    return device_id.attributes["MaxThreadsPerBlock"]
+
+
 def _get_tpb_bpg():
 
     numSM = _get_numSM()

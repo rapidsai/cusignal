@@ -12,14 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
-from cupy import (
-    arange,
-    asarray,
-    ndarray,
-    zeros,
-)
-from cupyx.scipy import fftpack
-from cupy.fft import ifftshift
+import numpy as np
 
 from math import gcd
 
@@ -28,7 +21,7 @@ from ._upfirdn_cuda import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
 
 
-def _design_resample_poly(up, down, window):
+def _design_resample_poly(up, down, window, gpupath=True):
     """
     Design a prototype FIR low-pass filter using the window method
     for use in polyphase rational resampling.
@@ -42,6 +35,9 @@ def _design_resample_poly(up, down, window):
     window : string or tuple
         Desired window to use to design the low-pass filter.
         See below for details.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small.
 
     Returns
     -------
@@ -79,17 +75,11 @@ def _design_resample_poly(up, down, window):
     # reasonable cutoff for our sinc-like function
     half_len = 10 * max_rate
 
-    h = firwin(2 * half_len + 1, f_c, window=window)
+    h = firwin(2 * half_len + 1, f_c, window=window, gpupath=gpupath)
     return h
 
 
-def decimate(
-    x,
-    q,
-    n=None,
-    axis=-1,
-    zero_phase=True,
-):
+def decimate(x, q, n=None, axis=-1, zero_phase=True, gpupath=True):
     """
     Downsample the signal after applying an anti-aliasing filter.
     Parameters
@@ -108,6 +98,9 @@ def decimate(
         Prevent shifting the outputs back by the filter's
         group delay when using an FIR filter. The default value of ``True`` is
         recommended, since a phase shift is generally not desired.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small.
 
     Returns
     -------
@@ -122,20 +115,25 @@ def decimate(
     Only FIR filter types are currently supported in cuSignal.
     """
 
-    x = asarray(x)
-    if isinstance(n, (list, ndarray)):
-        b = asarray(n)
+    x = cp.asarray(x)
+    if gpupath:
+        pp = cp
+    else:
+        pp = np
+
+    if isinstance(n, (list, pp.ndarray)):
+        b = pp.asarray(n)
     else:
         if n is None:
             half_len = 10 * q  # reasonable cutoff for our sinc-like function
             n = 2 * half_len
 
-        b = firwin(n + 1, 1.0 / q, window="hamming")
+        b = firwin(n + 1, 1.0 / q, window="hamming", gpupath=gpupath)
 
     sl = [slice(None)] * x.ndim
 
     if zero_phase:
-        y = resample_poly(x, 1, q, axis=axis, window=b)
+        y = resample_poly(x, 1, q, axis=axis, window=b, gpupath=gpupath)
     else:
         # upfirdn is generally faster than lfilter by a factor equal to the
         # downsampling factor, since it only calculates the needed outputs
@@ -236,11 +234,11 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     >>> plt.legend(['data', 'resampled'], loc='best')
     >>> plt.show()
     """
-    x = asarray(x)
+    x = cp.asarray(x)
     Nx = x.shape[axis]
 
     if domain == "time":
-        X = fftpack.fft(x, axis=axis)
+        X = cp.fft.fft(x, axis=axis)
     elif domain == "freq":
         X = x
     else:
@@ -248,13 +246,13 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
 
     if window is not None:
         if callable(window):
-            W = window(fftpack.fftfreq(Nx))
-        elif isinstance(window, ndarray):
+            W = window(cp.fft.fftfreq(Nx))
+        elif isinstance(window, cp.ndarray):
             if window.shape != (Nx,):
                 raise ValueError("window must have the same length as data")
             W = window
         else:
-            W = ifftshift(get_window(window, Nx))
+            W = cp.fft.ifftshift(get_window(window, Nx))
         newshape = [1] * x.ndim
         newshape[axis] = len(W)
         W.shape = newshape
@@ -262,13 +260,13 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     sl = [slice(None)] * x.ndim
     newshape = list(x.shape)
     newshape[axis] = num
-    N = int(cp.minimum(num, Nx))
-    Y = zeros(newshape, "D")
+    N = int(np.minimum(num, Nx))
+    Y = cp.zeros(newshape, "D")
     sl[axis] = slice(0, (N + 1) // 2)
     Y[sl] = X[sl]
     sl[axis] = slice(-(N - 1) // 2, None)
     Y[sl] = X[sl]
-    y = fftpack.ifft(Y, axis=axis) * (float(num) / float(Nx))
+    y = cp.fft.ifft(Y, axis=axis) * (float(num) / float(Nx))
 
     if x.dtype.char not in ["F", "D"]:
         y = y.real
@@ -276,17 +274,11 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     if t is None:
         return y
     else:
-        new_t = arange(0, num) * (t[1] - t[0]) * Nx / float(num) + t[0]
+        new_t = cp.arange(0, num) * (t[1] - t[0]) * Nx / float(num) + t[0]
         return y, new_t
 
 
-def resample_poly(
-    x,
-    up,
-    down,
-    axis=0,
-    window=("kaiser", 5.0),
-):
+def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     """
     Resample `x` along the given axis using polyphase filtering.
 
@@ -309,6 +301,9 @@ def resample_poly(
     window : string, tuple, or array_like, optional
         Desired window to use to design the low-pass filter, or the FIR filter
         coefficients to employ. See below for details.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small.
 
     Returns
     -------
@@ -372,7 +367,7 @@ def resample_poly(
     >>> plt.show()
     """
 
-    x = asarray(x)
+    x = cp.asarray(x)
     up = int(up)
     down = int(down)
     if up < 1 or down < 1:
@@ -389,15 +384,23 @@ def resample_poly(
     n_out = x.shape[axis] * up
     n_out = n_out // down + bool(n_out % down)
 
-    if isinstance(window, (list, ndarray)):
-        window = asarray(window)
+    # If the window size is greater than 8192, use GPU
+    if gpupath:
+        pp = cp
+    else:
+        pp = np
+
+    # print("window", window.size)
+
+    if isinstance(window, (list, pp.ndarray)):
+        window = pp.asarray(window)
         if window.ndim > 1:
             raise ValueError("window must be 1-D")
         half_len = (window.size - 1) // 2
         h = up * window
     else:
         half_len = 10 * max(up, down)
-        h = up * _design_resample_poly(up, down, window)
+        h = up * _design_resample_poly(up, down, window, gpupath)
 
     # Zero-pad our filter to put the output samples at the center
     n_pre_pad = down - half_len % down
@@ -410,8 +413,8 @@ def resample_poly(
     ):
         n_post_pad += 1
 
-    h = cp.concatenate(
-        (zeros(n_pre_pad, h.dtype), h, zeros(n_post_pad, h.dtype))
+    h = pp.concatenate(
+        (pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype))
     )
     n_pre_remove_end = n_pre_remove + n_out
 

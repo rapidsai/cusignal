@@ -53,7 +53,7 @@ def _populate_kernel_cache(np_type, k_type):
 
     _cupy_kernel_cache[(str(np_type), k_type)] = _get_function(
         "/filtering/_channelizer.fatbin",
-        "_cupy_" + str(k_type) + "_" + str(np_type),
+        "_cupy_" + k_type + "_" + str(np_type),
     )
 
 

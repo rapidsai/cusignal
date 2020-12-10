@@ -12,6 +12,9 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
+
+from scipy import signal
 from ..windows.windows import get_window
 
 
@@ -84,8 +87,53 @@ def kaiser_atten(numtaps, width):
     a : float
         The attenuation of the ripple, in dB.
     """
-    a = 2.285 * (numtaps - 1) * cp.pi * width + 7.95
+    a = 2.285 * (numtaps - 1) * np.pi * width + 7.95
     return a
+
+
+_firwin_kernel = cp.ElementwiseKernel(
+    "float64 win, int32 numtaps, raw float64 bands, int32 steps, bool scale",
+    "float64 h, float64 hc",
+    """
+    const double m { static_cast<double>( i ) - alpha ?
+        static_cast<double>( i ) - alpha : 1.0e-20 };
+
+    double temp {};
+    double left {};
+    double right {};
+
+    for ( int s = 0; s < steps; s++ ) {
+        left = bands[s * 2 + 0] ? bands[s * 2 + 0] : 1.0e-20;
+        right = bands[s * 2 + 1] ? bands[s * 2 + 1] : 1.0e-20;
+
+        temp += right * ( sin( right * m * M_PI ) / ( right * m * M_PI ) );
+        temp -= left * ( sin( left * m * M_PI ) / ( left * m * M_PI ) );
+    }
+
+    temp *= win;
+    h = temp;
+
+    double scale_frequency {};
+
+    if ( scale ) {
+        left = bands[0];
+        right = bands[1];
+
+        if ( left == 0 ) {
+            scale_frequency = 0.0;
+        } else if ( right == 1 ) {
+            scale_frequency = 1.0;
+        } else {
+            scale_frequency = 0.5 * ( left + right );
+        }
+        double c { cos( M_PI * m * scale_frequency ) };
+        hc = temp * c;
+    }
+    """,
+    "_firwin_kernel",
+    options=("-std=c++11",),
+    loop_prep="const double alpha { 0.5 * ( numtaps - 1 ) };",
+)
 
 
 def firwin(
@@ -97,6 +145,7 @@ def firwin(
     scale=True,
     nyq=1.0,
     fs=None,
+    gpupath=True,
 ):
     """
     FIR filter design using the window method.
@@ -155,6 +204,9 @@ def firwin(
     fs : float, optional
         The sampling frequency of the signal.  Each frequency in `cutoff`
         must be between 0 and ``fs/2``.  Default is 2.
+    gpupath : bool, Optional
+        Optional path for filter design. gpupath == False may be desirable if
+        filter sizes are small.
 
     Returns
     -------
@@ -219,7 +271,14 @@ def firwin(
     array([ 0.04890915,  0.91284326,  0.04890915])
 
     """
-    cutoff = cp.atleast_1d(cutoff) / float(nyq)
+    if gpupath:
+        pp = cp
+    else:
+        pp = np
+
+    cutoff = pp.atleast_1d(cutoff) / float(nyq)
+
+    # print("cutoff", cutoff.size)
 
     # Check for invalid input.
     if cutoff.ndim > 1:
@@ -233,7 +292,7 @@ def firwin(
             "Invalid cutoff frequency: frequencies must be "
             "greater than 0 and less than nyq."
         )
-    if cp.any(cp.diff(cutoff) <= 0):
+    if pp.any(pp.diff(cutoff) <= 0):
         raise ValueError(
             "Invalid cutoff frequencies: the frequencies "
             "must be strictly increasing."
@@ -255,37 +314,47 @@ def firwin(
 
     # Insert 0 and/or 1 at the ends of cutoff so that the length of cutoff
     # is even, and each pair in cutoff corresponds to passband.
-    cutoff = cp.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
+    cutoff = pp.hstack(([0.0] * pass_zero, cutoff, [1.0] * pass_nyquist))
 
     # `bands` is a 2D array; each row gives the left and right edges of
     # a passband.
     bands = cutoff.reshape(-1, 2)
 
-    # Build up the coefficients.
-    alpha = 0.5 * (numtaps - 1)
-    m = cp.arange(0, numtaps) - alpha
-    h = 0
-    for left, right in bands:
-        h += right * cp.sinc(right * m)
-        h -= left * cp.sinc(left * m)
+    if gpupath:
+        win = get_window(window, numtaps, fftbins=False)
+        h, hc = _firwin_kernel(win, numtaps, bands, bands.shape[0], scale)
+        if scale:
+            s = cp.sum(hc)
+            h /= s
+    else:
+        try:
+            win = signal.get_window(window, numtaps, fftbins=False)
+        except NameError:
+            raise RuntimeError("CPU path requires SciPy Signal's get_windows.")
 
-    # Get and apply the window function.
-    win = get_window(window, numtaps, fftbins=False)
-    h *= win
+        # Build up the coefficients.
+        alpha = 0.5 * (numtaps - 1)
+        m = np.arange(0, numtaps) - alpha
+        h = 0
+        for left, right in bands:
+            h += right * np.sinc(right * m)
+            h -= left * np.sinc(left * m)
 
-    # Now handle scaling if desired.
-    if scale:
-        # Get the first passband.
-        left, right = bands[0]
-        if left == 0:
-            scale_frequency = 0.0
-        elif right == 1:
-            scale_frequency = 1.0
-        else:
-            scale_frequency = 0.5 * (left + right)
-        c = cp.cos(cp.pi * m * scale_frequency)
-        s = cp.sum(h * c)
-        h /= s
+        h *= win
+
+        # Now handle scaling if desired.
+        if scale:
+            # Get the first passband.
+            left, right = bands[0]
+            if left == 0:
+                scale_frequency = 0.0
+            elif right == 1:
+                scale_frequency = 1.0
+            else:
+                scale_frequency = 0.5 * (left + right)
+            c = np.cos(np.pi * m * scale_frequency)
+            s = np.sum(h * c)
+            h /= s
 
     return h
 

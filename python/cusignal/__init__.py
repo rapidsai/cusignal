@@ -14,10 +14,10 @@
 from cusignal.acoustics.cepstrum import (
     real_cepstrum,
     complex_cepstrum,
+    inverse_complex_cepstrum,
+    minimum_phase,
 )
-from cusignal.estimation.filters import (
-    KalmanFilter
-)
+from cusignal.estimation.filters import KalmanFilter
 from cusignal.filtering.resample import (
     decimate,
     resample,
@@ -40,6 +40,8 @@ from cusignal.convolution.convolve import (
     choose_conv_method,
     convolve,
     convolve2d,
+    convolve1d2o,
+    convolve1d3o,
 )
 from cusignal.filter_design.fir_filter_design import (
     kaiser_beta,
