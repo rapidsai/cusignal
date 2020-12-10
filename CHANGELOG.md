@@ -1,4 +1,4 @@
-# cuSignal 0.17.0 (Date TBD)
+# cuSignal 0.17.0 (10 Dec 2020)
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
