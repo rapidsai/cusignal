@@ -3,6 +3,7 @@
 ## New Features
 
 ## Improvements
+- PR #296 - Increment cuSignal versions in README
 
 ## Bug Fixes
 
