@@ -4,6 +4,7 @@
 
 ## Improvements
 - PR #296 - Increment cuSignal versions in README
+- PR #297 - Clarify GPU timing in E2E Jupyter example
 
 ## Bug Fixes
 
