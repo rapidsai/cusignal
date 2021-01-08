@@ -33,7 +33,7 @@ export CUSIGNAL_FILE=`conda build conda/recipes/cusignal --output`
 ################################################################################
 # UPLOAD - Conda packages
 ################################################################################
-
+adsfasdf
 gpuci_logger "Starting conda uploads"
 
 test -e ${CUSIGNAL_FILE}
