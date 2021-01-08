@@ -17,8 +17,9 @@ from ..windows.windows import get_window
 
 def pulse_compression(x, template, normalize=False, window=None):
     """
-    Pulse Compression is used to increase the range resolution and SNR by performing
-    matched filtering of the transmitted pulse (template) with the received signal (x)
+    Pulse Compression is used to increase the range resolution and SNR
+    by performing matched filtering of the transmitted pulse (template)
+    with the received signal (x)
 
     Parameters
     ----------
@@ -52,14 +53,15 @@ def pulse_compression(x, template, normalize=False, window=None):
             W = window
         else:
             W = get_window(window, Nx, False)
-        
+
         template = cp.multiply(template, W)
-        
+
     if normalize is True:
         template = cp.linalg.norm(template)
-    
+
     fft_x = cp.fft.fft(x)
-    fft_template = cp.conj(cp.tile(cp.fft.fft(template, samples_per_pulse), (num_pulses, 1)))
+    fft_template = cp.conj(cp.tile(cp.fft.fft(template, samples_per_pulse),
+                                   (num_pulses, 1)))
     compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template))
 
     return compressedIQ
