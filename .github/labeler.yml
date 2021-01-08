@@ -10,8 +10,8 @@ libcusignal:
   - cpp/**
 
 CMake:
-  - **/CMakeLists.txt
-  - **/cmake/**
+  - '**/CMakeLists.txt'
+  - '**/cmake/**'
   
 Java:
   - java/**
@@ -20,6 +20,6 @@ Ops:
   - .github/**
   - /ci/**
   - conda/**
-  - **/Dockerfile
-  - **/.dockerignore
+  - '**/Dockerfile'
+  - '**/.dockerignore'
   - docker/**
