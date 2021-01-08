@@ -62,4 +62,4 @@ def pulse_compression(x, template, normalize=False, window=None):
     fft_template = cp.conj(cp.tile(cp.fft.fft(template, samples_per_pulse), (num_pulses, 1)))
     compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template))
 
-    return compressedIQ    
+    return compressedIQ
