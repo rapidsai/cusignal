@@ -177,6 +177,10 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
     conda env create -f conda/environments/cusignal_jetson_base.yml
     ```
 
+    Note: Compilation and installation of CuPy can be quite lengthy, particularly on the Jetson Nano. Please consider setting this environment variable to decrease the CuPy dependency install time:
+
+    `export CUPY_NVCC_GENERATE_CODE="arch=compute_XX,code=sm_XX"` with `XX` being your GPU's [compute capability](https://developer.nvidia.com/cuda-gpus#compute).
+
 3. Activate conda environment
 
     `conda activate cusignal-dev`
