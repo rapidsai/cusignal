@@ -57,7 +57,7 @@ def pulse_compression(x, template, normalize=False, window=None):
         template = cp.multiply(template, W)
 
     if normalize is True:
-        template = cp.linalg.norm(template)
+        template = cp.divide(template, cp.linalg.norm(template))
 
     fft_x = cp.fft.fft(x)
     fft_template = cp.conj(cp.tile(cp.fft.fft(template, samples_per_pulse),
