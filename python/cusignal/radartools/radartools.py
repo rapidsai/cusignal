@@ -15,7 +15,7 @@ import cupy as cp
 from ..windows.windows import get_window
 
 
-def pulse_compression(x, template, normalize=False, window=None):
+def pulse_compression(x, template, normalize=False, window=None, nfft=None):
     """
     Pulse Compression is used to increase the range resolution and SNR
     by performing matched filtering of the transmitted pulse (template)
@@ -32,9 +32,12 @@ def pulse_compression(x, template, normalize=False, window=None):
     normalize : bool
         Normalize transmitted signal
 
-     window : array_like, callable, string, float, or tuple, optional
+    window : array_like, callable, string, float, or tuple, optional
         Specifies the window applied to the signal in the Fourier
         domain.
+
+    nfft : int, size of FFT for pulse compression. Default is number of
+        samples per pulse
 
     Returns
     -------
@@ -42,6 +45,9 @@ def pulse_compression(x, template, normalize=False, window=None):
         Pulse compressed output
     """
     [num_pulses, samples_per_pulse] = x.shape
+
+    if nfft is None:
+        nfft = samples_per_pulse
 
     if window is not None:
         Nx = len(template)
@@ -59,9 +65,9 @@ def pulse_compression(x, template, normalize=False, window=None):
     if normalize is True:
         template = cp.divide(template, cp.linalg.norm(template))
 
-    fft_x = cp.fft.fft(x)
-    fft_template = cp.conj(cp.tile(cp.fft.fft(template, samples_per_pulse),
+    fft_x = cp.fft.fft(x, nfft)
+    fft_template = cp.conj(cp.tile(cp.fft.fft(template, nfft),
                                    (num_pulses, 1)))
-    compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template))
+    compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template), nfft)
 
     return compressedIQ
