@@ -71,3 +71,53 @@ def pulse_compression(x, template, normalize=False, window=None, nfft=None):
     compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template), nfft)
 
     return compressedIQ
+
+
+def pulse_doppler(x, window=None, nfft=None):
+    """
+    Pulse doppler processing yields a range/doppler data matrix that represents
+    moving target data that's separated from clutter. An estimation of the
+    doppler shift can also be obtained from pulse doppler processing. FFT taken
+    across slow-time (pulse) dimension.
+
+    Parameters
+    ----------
+    x : ndarray
+        Received signal, assume 2D array with [num_pulses, sample_per_pulse]
+
+    window : array_like, callable, string, float, or tuple, optional
+        Specifies the window applied to the signal in the Fourier
+        domain.
+
+    nfft : int, size of FFT for pulse compression. Default is number of
+        samples per pulse
+
+    Returns
+    -------
+    pd_dataMatrix : ndarray
+        Pulse-doppler output (range/doppler matrix)
+    """
+    [num_pulses, samples_per_pulse] = x.shape
+
+    if nfft is None:
+        nfft = num_pulses
+
+    if window is not None:
+        Nx = num_pulses
+        if callable(window):
+            W = window(cp.fft.fftfreq(Nx))
+        elif isinstance(window, cp.ndarray):
+            if window.shape != (Nx,):
+                raise ValueError("window must have the same length as data")
+            W = window
+        else:
+            W = get_window(window, Nx, False)[cp.newaxis]
+
+        pd_dataMatrix = \
+            cp.fft.fft(cp.multiply(x,
+                                   cp.tile(W.T, (1, samples_per_pulse)),
+                                   nfft, axis=0))
+    else:
+        pd_dataMatrix = cp.fft.fft(x, nfft, axis=0)
+
+    return pd_dataMatrix
