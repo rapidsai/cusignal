@@ -12,5 +12,6 @@
 # limitations under the License.
 
 from cusignal.radartools.radartools import (
-    pulse_compression
+    pulse_compression,
+    pulse_doppler,
 )
