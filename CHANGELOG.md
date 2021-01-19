@@ -1,13 +1,17 @@
+
 # cuSignal 0.18.0 (Date TBD)
 
 ## New Features
 
 ## Improvements
 - PR #292 - Increment CuPy Version
+- PR #296 - Increment cuSignal versions in README
+- PR #297 - Clarify GPU timing in E2E Jupyter example
 
 ## Bug Fixes
 
-# cuSignal 0.17.0 (Date TBD)
+
+# cuSignal 0.17.0 (10 Dec 2020)
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
