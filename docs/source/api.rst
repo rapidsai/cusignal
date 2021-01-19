@@ -177,3 +177,19 @@ Writer
 .. automodule:: cusignal.io.writer
     :members:
     :undoc-members:
+
+
+Radar/Phased Array
+============
+
+Radar Tools
+------------
+
+.. automodule:: cusignal.radartools.pulse_compression
+    :members:
+    :undoc-members:
+
+
+.. automodule:: cusignal.radartools.pulse_doppler
+    :members:
+    :undoc-members:
