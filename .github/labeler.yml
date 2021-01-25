@@ -6,20 +6,19 @@ Python:
   - python/**
   - notebooks/**
   
-libcusignal:
+cpp:
   - cpp/**
 
 CMake:
   - '**/CMakeLists.txt'
   - '**/cmake/**'
-  
-Java:
-  - java/**
+
+ci:
+  - /ci/**
+
+conda:
+  - conda/**
   
 Ops:
   - .github/**
-  - /ci/**
-  - conda/**
-  - '**/Dockerfile'
-  - '**/.dockerignore'
-  - docker/**
+
