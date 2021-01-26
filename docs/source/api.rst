@@ -185,11 +185,6 @@ Radar/Phased Array
 Radar Tools
 ------------
 
-.. automodule:: cusignal.radartools.pulse_compression
-    :members:
-    :undoc-members:
-
-
-.. automodule:: cusignal.radartools.pulse_doppler
+.. automodule:: cusignal.radartools.radartools
     :members:
     :undoc-members:
