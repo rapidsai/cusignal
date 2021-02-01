@@ -1,14 +1,6 @@
+# 0.18.0
 
-# cuSignal 0.18.0 (Date TBD)
-
-## New Features
-
-## Improvements
-- PR #296 - Increment cuSignal versions in README
-- PR #297 - Clarify GPU timing in E2E Jupyter example
-
-## Bug Fixes
-
+Please see https://github.com/rapidsai/cusignal/releases/tag/branch-0.18-latest for the latest changes to this development branch.
 
 # cuSignal 0.17.0 (10 Dec 2020)
 
