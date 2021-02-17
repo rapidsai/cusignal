@@ -13,7 +13,7 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
     * [Conda: Linux OS](#conda-linux-os)
     * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
     * [Source: Linux OS](#source-linux-os)
-    * [Source: Windows OS (Experimental)](#source-windows-os-experimental)
+    * [Source: Windows OS (with CUDA on WSL)](#source-windows-os)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
 * [Software Defined Radio (SDR) Integration](#sdr-integration)
 * [Benchmarking](#benchmarking)
@@ -263,7 +263,9 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
     pytest -v -k <function name>  # for more select testing
     ```
 
-### Source, Windows OS [Experimental]
+### Source, Windows OS
+
+We have confirmed that cuSignal successfully builds and runs on Windows by using [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html). Please follow the instructions in the link to install WSL 2 and the associated CUDA drivers. You can then proceed to follow the cuSignal source build instructions, below. 
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
