@@ -117,6 +117,10 @@ from cusignal.io.writer import (
     pack_bin,
     write_sigmf,
 )
+from cusignal.radartools.radartools import (
+    pulse_compression,
+    pulse_doppler,
+)
 
 # Versioneer
 from ._version import get_versions
