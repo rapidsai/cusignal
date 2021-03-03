@@ -232,17 +232,18 @@ def gausspulse(
     # pi^2/a * fc^2 * bw^2 /4=-log(ref)
     a = -((np.pi * fc * bw) ** 2) / (4.0 * np.log(ref))
 
-    if t == "cutoff":  # compute cut_off point
-        #  Solve exp(-a tc**2) = tref  for tc
-        #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)
-        if tpr >= 0:
-            raise ValueError(
-                "Reference level for time cutoff must " "be < 0 dB"
-            )
-        tref = pow(10.0, tpr / 20.0)
-        return np.sqrt(-np.log(tref) / a)
-    else:
-        raise ValueError("If `t` is a string, it must be 'cutoff'")
+    try:
+        if t == "cutoff":  # compute cut_off point
+            #  Solve exp(-a tc**2) = tref  for tc
+            #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)
+            if tpr >= 0:
+                raise ValueError(
+                    "Reference level for time cutoff must " "be < 0 dB"
+                )
+            tref = pow(10.0, tpr / 20.0)
+            return np.sqrt(-np.log(tref) / a)
+    except ValueError:
+        print("If `t` is a string, it must be 'cutoff'")
 
     t = cp.asarray(t)
 
