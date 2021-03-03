@@ -15,7 +15,6 @@ import cupy as cp
 import numpy as np
 
 
-
 _square_kernel = cp.ElementwiseKernel(
     "T t, T w",
     "float64 y",
