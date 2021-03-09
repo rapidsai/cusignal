@@ -76,7 +76,8 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
-    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples)
+    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples,
+                   dtype=dtype)
 
     if buffer is not None:
         out = cp.empty(buffer.shape, buffer.dtype)
