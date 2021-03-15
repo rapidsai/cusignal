@@ -205,8 +205,6 @@ class _UpFIRDn(object):
         h_per_phase = len(self._h_trans_flip) // self._up
         padded_len = x.shape[axis] + (len(self._h_trans_flip) // self._up) - 1
 
-        print(output_shape)
-
         if out.ndim > 1:
             threadsperblock = (8, 8)
             blocks = ceil(out.shape[0] / threadsperblock[0])
@@ -239,8 +237,6 @@ class _UpFIRDn(object):
             k_type = "upfirdn2D"
 
             _populate_kernel_cache(out.dtype, k_type)
-
-            print(out.dtype, blockspergrid, threadsperblock, k_type)
 
             kernel = _get_backend_kernel(
                 out.dtype,
