@@ -396,7 +396,10 @@ class TestFilter:
             array_equal(cp.asnumpy(output), key, atol=1e-4)
 
     @pytest.mark.benchmark(group="ResamplePoly")
-    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 14), (1, 2 ** 18), (2, 2 ** 14), (2, 2 ** 18)])
+    @pytest.mark.parametrize(
+        "dim, num_samps",
+        [(1, 2 ** 14), (1, 2 ** 18), (2, 2 ** 14), (2, 2 ** 18)],
+    )
     @pytest.mark.parametrize("up", [8])
     @pytest.mark.parametrize("down", [1])
     @pytest.mark.parametrize("axis", [-1, 0])
@@ -407,16 +410,28 @@ class TestFilter:
 
         def gpu_version(self, sig, up, down, axis, window):
             with cp.cuda.Stream.null:
-                out = cusignal.resample_poly(sig, up, down, axis, window=window)
+                out = cusignal.resample_poly(
+                    sig, up, down, axis, window=window
+                )
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
         def test_resample_poly_cpu(
-            self, linspace_data_gen, benchmark, dim, num_samps, up, down, axis, window
+            self,
+            linspace_data_gen,
+            benchmark,
+            dim,
+            num_samps,
+            up,
+            down,
+            axis,
+            window,
         ):
             if dim == 1:
-                cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+                cpu_sig, _ = linspace_data_gen(
+                    0, 10, num_samps, endpoint=False
+                )
             else:
                 cpu_sig = np.random.rand(dim, num_samps)
             benchmark(
