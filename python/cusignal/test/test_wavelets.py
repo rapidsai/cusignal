@@ -95,6 +95,30 @@ class TestWavelets:
             key = self.cpu_version(num_samps, a)
             array_equal(output, key)
 
+    @pytest.mark.benchmark(group="Morlet2")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("s", [10, 1000])
+    class TestMorlet2:
+        def cpu_version(self, num_samps, s):
+            return signal.morlet2(num_samps, s)
+
+        def gpu_version(self, num_samps, s):
+            with cp.cuda.Stream.null:
+                out = cusignal.morlet2(num_samps, s)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_morlet2_cpu(self, benchmark, num_samps, s):
+            benchmark(self.cpu_version, num_samps, s)
+
+        def test_morlet2_gpu(self, gpubenchmark, num_samps, s):
+
+            output = gpubenchmark(self.gpu_version, num_samps, s)
+
+            key = self.cpu_version(num_samps, s)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="CWT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
