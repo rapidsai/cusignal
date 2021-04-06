@@ -15,6 +15,72 @@ import cupy as cp
 import numpy as np
 
 
+_sawtooth_kernel = cp.ElementwiseKernel(
+    "T t, T w",
+    "float64 y",
+    """
+    double out {};
+    const bool mask1 { ( ( w > 1 ) || ( w < 0 ) ) };
+    if ( mask1 ) {
+        out = nan("0xfff8000000000000ULL");
+    }
+
+    const T tmod { fmod( t, 2.0 * M_PI ) };
+    const bool mask2 { ( ( 1 - mask1 ) && ( tmod < ( w * 2.0 * M_PI ) ) ) };
+
+    if ( mask2 ) {
+        out = tmod / ( M_PI * w ) - 1;
+    }
+
+    const bool mask3 { ( ( 1 - mask1 ) && ( 1 - mask2 ) ) };
+    if ( mask3 ) {
+        out = ( M_PI * ( w + 1 ) - tmod ) / ( M_PI * ( 1 - w ) );
+    }
+    y = out;
+    """,
+    "_sawtooth_kernel",
+    options=("-std=c++11",),
+)
+
+
+def sawtooth(t, width=1.0):
+    """
+    Return a periodic sawtooth or triangle waveform.
+    The sawtooth waveform has a period ``2*pi``, rises from -1 to 1 on the
+    interval 0 to ``width*2*pi``, then drops from 1 to -1 on the interval
+    ``width*2*pi`` to ``2*pi``. `width` must be in the interval [0, 1].
+    Note that this is not band-limited.  It produces an infinite number
+    of harmonics, which are aliased back and forth across the frequency
+    spectrum.
+    Parameters
+    ----------
+    t : array_like
+        Time.
+    width : array_like, optional
+        Width of the rising ramp as a proportion of the total cycle.
+        Default is 1, producing a rising ramp, while 0 produces a falling
+        ramp.  `width` = 0.5 produces a triangle wave.
+        If an array, causes wave shape to change over time, and must be the
+        same length as t.
+    Returns
+    -------
+    y : ndarray
+        Output array containing the sawtooth waveform.
+    Examples
+    --------
+    A 5 Hz waveform sampled at 500 Hz for 1 second:
+    >>> from scipy import signal
+    >>> import matplotlib.pyplot as plt
+    >>> t = np.linspace(0, 1, 500)
+    >>> plt.plot(t, signal.sawtooth(2 * np.pi * 5 * t))
+    """
+    t, w = cp.asarray(t), cp.asarray(width)
+
+    y = _sawtooth_kernel(t, w)
+
+    return y
+
+
 _square_kernel = cp.ElementwiseKernel(
     "T t, T w",
     "float64 y",

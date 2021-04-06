@@ -12,6 +12,7 @@
 # limitations under the License.
 
 from cusignal.waveforms.waveforms import (
+    sawtooth,
     square,
     gausspulse,
     chirp,

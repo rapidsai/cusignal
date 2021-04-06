@@ -90,6 +90,7 @@ from cusignal.bsplines.bsplines import (
     quadratic,
 )
 from cusignal.waveforms.waveforms import (
+    sawtooth,
     square,
     gausspulse,
     chirp,
