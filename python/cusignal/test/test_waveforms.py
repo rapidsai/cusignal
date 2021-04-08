@@ -22,6 +22,34 @@ gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestWaveforms:
+    @pytest.mark.benchmark(group="Sawtooth")
+    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("w", [0.25, 0.5])
+    class TestSawtooth:
+        def cpu_version(self, sig, w):
+            return signal.sawtooth(sig, w)
+
+        def gpu_version(self, sig, w):
+            with cp.cuda.Stream.null:
+                out = cusignal.sawtooth(sig, w)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_sawtooth_cpu(self, time_data_gen, benchmark, num_samps, w):
+            cpu_sig, _ = time_data_gen(0, 10, num_samps)
+            benchmark(self.cpu_version, cpu_sig, w)
+
+        def test_sawtooth_gpu(
+            self, time_data_gen, gpubenchmark, num_samps, w
+        ):
+
+            cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
+            output = gpubenchmark(self.gpu_version, gpu_sig, w)
+
+            key = self.cpu_version(cpu_sig, w)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="Square")
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("duty", [0.25, 0.5])
