@@ -44,7 +44,7 @@ __device__ void _cupy_sosfilt( const int n_signals,
 
     // Load SOS
     // b is in s_sos[tx * sos_width + [0-2]]
-    // a is in s_sos[tx * sos_width + [3-6]]
+    // a is in s_sos[tx * sos_width + [3-5]]
 #pragma unroll sos_width
     for ( int i = 0; i < sos_width; i++ ) {
         s_sos[tx * sos_width + i] = sos[tx * sos_width + i];
