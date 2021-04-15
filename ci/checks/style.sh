@@ -12,7 +12,7 @@ PATH=/opt/conda/bin:$PATH
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
 
-cd $WORKSPACE/python
+cd "$WORKSPACE/python"
 
 # Run flake8 and get results/return code
 FLAKE=`flake8`
