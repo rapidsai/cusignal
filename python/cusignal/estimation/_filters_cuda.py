@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import cupy as cp
-from string import Template
 
 from ..utils._caches import _cupy_kernel_cache
 
@@ -462,7 +461,7 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
         ),
     )
     module = cp.RawModule(
-        code=cuda_code_cupy_kalman,
+        code=cuda_code_kalman,
         options=(
             "-std=c++11",
             "-fmad=true",
