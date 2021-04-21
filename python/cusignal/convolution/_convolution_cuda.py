@@ -237,8 +237,8 @@ def _convolve_gpu(
     swapped_inputs,
 ):
 
-    d_inp = cp.array(inp)
-    d_kernel = cp.array(ker)
+    d_inp = cp.asarray(inp)
+    d_kernel = cp.asarray(ker)
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
@@ -352,8 +352,8 @@ def _convolve2d_gpu(
     outW = out.shape[1]
     outH = out.shape[0]
 
-    d_inp = cp.array(inp)
-    d_kernel = cp.array(ker)
+    d_inp = cp.asarray(inp)
+    d_kernel = cp.asarray(ker)
 
     threadsperblock = (16, 16)
     blockspergrid = (
@@ -519,8 +519,8 @@ def _convolve1d2o_gpu(
     mode,
 ):
 
-    d_inp = cp.array(inp)
-    d_kernel = cp.array(ker)
+    d_inp = cp.asarray(inp)
+    d_kernel = cp.asarray(ker)
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 
@@ -582,8 +582,8 @@ def _convolve1d3o_gpu(
     mode,
 ):
 
-    d_inp = cp.array(inp)
-    d_kernel = cp.array(ker)
+    d_inp = cp.asarray(inp)
+    d_kernel = cp.asarray(ker)
 
     threadsperblock, blockspergrid = _get_tpb_bpg()
 

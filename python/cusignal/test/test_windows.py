@@ -478,6 +478,30 @@ class TestWindows:
             key = self.cpu_version(num_samps, tau)
             array_equal(output, key)
 
+    @pytest.mark.benchmark(group="Taylor")
+    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("nbar", [20, 100])
+    @pytest.mark.parametrize("norm", [True, False])
+    class TestTaylor:
+        def cpu_version(self, num_samps, nbar, norm):
+            return signal.windows.taylor(num_samps, nbar, norm=norm)
+
+        def gpu_version(self, num_samps, nbar, norm):
+            with cp.cuda.Stream.null:
+                out = cusignal.windows.taylor(num_samps, nbar, norm=norm)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_taylor_cpu(self, benchmark, num_samps, nbar, norm):
+            benchmark(self.cpu_version, num_samps, nbar, norm)
+
+        def test_taylor_gpu(self, gpubenchmark, num_samps, nbar, norm):
+            output = gpubenchmark(self.gpu_version, num_samps, nbar, norm)
+
+            key = self.cpu_version(num_samps, nbar, norm)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="GetWindow")
     @pytest.mark.parametrize("window", ["triang", "boxcar", "nuttall"])
     @pytest.mark.parametrize("num_samps", [2 ** 15])

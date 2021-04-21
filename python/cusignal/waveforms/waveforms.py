@@ -14,8 +14,6 @@
 import cupy as cp
 import numpy as np
 
-from six import string_types
-
 
 _square_kernel = cp.ElementwiseKernel(
     "T t, T w",
@@ -234,7 +232,7 @@ def gausspulse(
     # pi^2/a * fc^2 * bw^2 /4=-log(ref)
     a = -((np.pi * fc * bw) ** 2) / (4.0 * np.log(ref))
 
-    if isinstance(t, string_types):
+    if isinstance(t, str):
         if t == "cutoff":  # compute cut_off point
             #  Solve exp(-a tc**2) = tref  for tc
             #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)

@@ -16,7 +16,13 @@ import cupy as cp
 from math import ceil
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
+from ..utils.helper_tools import (
+    _print_atts,
+    _get_function,
+    _get_tpb_bpg,
+    _get_max_gdx,
+    _get_max_gdy,
+)
 
 
 _SUPPORTED_TYPES = ["float32", "float64", "complex64", "complex128"]
@@ -200,9 +206,17 @@ class _UpFIRDn(object):
         padded_len = x.shape[axis] + (len(self._h_trans_flip) // self._up) - 1
 
         if out.ndim > 1:
-            threadsperblock = (16, 16)
-            blockspergrid_x = ceil(out.shape[0] / threadsperblock[0])
-            blockspergrid_y = ceil(out.shape[1] / threadsperblock[1])
+            threadsperblock = (8, 8)
+            blocks = ceil(out.shape[0] / threadsperblock[0])
+            blockspergrid_x = (
+                blocks if blocks < _get_max_gdx() else _get_max_gdx()
+            )
+
+            blocks = ceil(out.shape[1] / threadsperblock[1])
+            blockspergrid_y = (
+                blocks if blocks < _get_max_gdy() else _get_max_gdy()
+            )
+
             blockspergrid = (blockspergrid_x, blockspergrid_y)
 
         else:

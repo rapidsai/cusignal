@@ -38,6 +38,20 @@ def _get_max_tpb():
     return device_id.attributes["MaxThreadsPerBlock"]
 
 
+def _get_max_gdx():
+
+    device_id = cp.cuda.Device()
+
+    return device_id.attributes["MaxGridDimX"]
+
+
+def _get_max_gdy():
+
+    device_id = cp.cuda.Device()
+
+    return device_id.attributes["MaxGridDimY"]
+
+
 def _get_tpb_bpg():
 
     numSM = _get_numSM()

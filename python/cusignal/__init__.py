@@ -71,6 +71,7 @@ from cusignal.windows.windows import (
     chebwin,
     cosine,
     exponential,
+    taylor,
     get_window,
 )
 from cusignal.spectral_analysis.spectral import (
@@ -94,7 +95,7 @@ from cusignal.waveforms.waveforms import (
     chirp,
     unit_impulse,
 )
-from cusignal.wavelets.wavelets import qmf, morlet, ricker, cwt
+from cusignal.wavelets.wavelets import qmf, morlet, ricker, morlet2, cwt
 from cusignal.peak_finding.peak_finding import (
     argrelmin,
     argrelmax,

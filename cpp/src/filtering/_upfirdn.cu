@@ -131,41 +131,46 @@ __device__ void _cupy_upfirdn2D( const T *__restrict__ inp,
     const int ty { static_cast<int>( blockIdx.x * blockDim.x + threadIdx.x ) };
     const int tx { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
 
-    if ( ( tx < outH ) && ( ty < outW ) ) {
-        int x_idx {};
-        int h_idx {};
+    const int stride_y { static_cast<int>( blockDim.x * gridDim.x ) }; 
+    const int stride_x { static_cast<int>( blockDim.y * gridDim.y ) };
 
-        if ( axis == 1 ) {
-            x_idx = ( static_cast<int>( tx * down ) / up ) % padded_len;
-            h_idx = ( tx * down ) % up * h_per_phase;
-        } else {
-            x_idx = ( static_cast<int>( ty * down ) / up ) % padded_len;
-            h_idx = ( ty * down ) % up * h_per_phase;
-        }
+    for (int x = tx; x < outH; x += stride_x) {
+        for (int y = ty; y < outW; y += stride_y) {
+            int x_idx {};
+            int h_idx {};
 
-        int x_conv_idx { x_idx - h_per_phase + 1 };
-        if ( x_conv_idx < 0 ) {
-            h_idx -= x_conv_idx;
-            x_conv_idx = 0;
-        }
-
-        T temp {};
-
-        for ( int x_c = x_conv_idx; x_c < ( x_idx + 1 ); x_c++ ) {
-            if ( x_c < x_shape_a && x_c >= 0 ) {
-                if ( axis == 1 ) {
-                    temp += inp[ty * inpH + x_c] * h_trans_flip[h_idx];
-                } else {
-                    temp += inp[x_c * inpH + tx] * h_trans_flip[h_idx];
-                }
+            if ( axis == 1 ) {
+                x_idx = ( static_cast<int>( x * down ) / up ) % padded_len;
+                h_idx = ( x * down ) % up * h_per_phase;
+            } else {
+                x_idx = ( static_cast<int>( y * down ) / up ) % padded_len;
+                h_idx = ( y * down ) % up * h_per_phase;
             }
-            h_idx += 1;
+
+            int x_conv_idx { x_idx - h_per_phase + 1 };
+            if ( x_conv_idx < 0 ) {
+                h_idx -= x_conv_idx;
+                x_conv_idx = 0;
+            }
+
+            T temp {};
+
+            for ( int x_c = x_conv_idx; x_c < ( x_idx + 1 ); x_c++ ) {
+                if ( x_c < x_shape_a && x_c >= 0 ) {
+                    if ( axis == 1 ) {
+                        temp += inp[y * inpH + x_c] * h_trans_flip[h_idx];
+                    } else {
+                        temp += inp[x_c * inpH + x] * h_trans_flip[h_idx];
+                    }
+                }
+                h_idx += 1;
+            }
+            out[y * outH + x] = temp;
         }
-        out[ty * outH + tx] = temp;
     }
 }
 
-extern "C" __global__ void __launch_bounds__( 256 ) _cupy_upfirdn2D_float32( const float *__restrict__ inp,
+extern "C" __global__ void __launch_bounds__( 64 ) _cupy_upfirdn2D_float32( const float *__restrict__ inp,
                                                                              const int inpH,
                                                                              const float *__restrict__ h_trans_flip,
                                                                              const int up,
@@ -181,7 +186,7 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_upfirdn2D_float32( con
         inp, inpH, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out, outW, outH );
 }
 
-extern "C" __global__ void __launch_bounds__( 256 ) _cupy_upfirdn2D_float64( const double *__restrict__ inp,
+extern "C" __global__ void __launch_bounds__( 64 ) _cupy_upfirdn2D_float64( const double *__restrict__ inp,
                                                                              const int inpH,
                                                                              const double *__restrict__ h_trans_flip,
                                                                              const int up,
@@ -197,7 +202,7 @@ extern "C" __global__ void __launch_bounds__( 256 ) _cupy_upfirdn2D_float64( con
         inp, inpH, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out, outW, outH );
 }
 
-extern "C" __global__ void __launch_bounds__( 256 )
+extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_upfirdn2D_complex64( const thrust::complex<float> *__restrict__ inp,
                                const int inpH,
                                const thrust::complex<float> *__restrict__ h_trans_flip,
@@ -214,7 +219,7 @@ extern "C" __global__ void __launch_bounds__( 256 )
         inp, inpH, h_trans_flip, up, down, axis, x_shape_a, h_per_phase, padded_len, out, outW, outH );
 }
 
-extern "C" __global__ void __launch_bounds__( 256 )
+extern "C" __global__ void __launch_bounds__( 64 )
     _cupy_upfirdn2D_complex128( const thrust::complex<double> *__restrict__ inp,
                                 const int inpH,
                                 const thrust::complex<double> *__restrict__ h_trans_flip,
