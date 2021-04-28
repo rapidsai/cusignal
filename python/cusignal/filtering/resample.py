@@ -390,8 +390,6 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     else:
         pp = np
 
-    # print("window", window.size)
-
     if isinstance(window, (list, pp.ndarray)):
         window = pp.asarray(window)
         if window.ndim > 1:

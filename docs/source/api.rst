@@ -177,3 +177,14 @@ Writer
 .. automodule:: cusignal.io.writer
     :members:
     :undoc-members:
+
+
+Radar/Phased Array
+============
+
+Radar Tools
+------------
+
+.. automodule:: cusignal.radartools.radartools
+    :members:
+    :undoc-members:

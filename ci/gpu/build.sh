@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018-2019, NVIDIA CORPORATION.
+# Copyright (c) 2018-2020, NVIDIA CORPORATION.
 #############################################
 # cuSignal GPU build and test script for CI #
 #############################################
@@ -38,15 +38,14 @@ nvidia-smi
 gpuci_logger "Activate conda env"
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
-
 gpuci_conda_retry install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
     "rapids-build-env=$MINOR_VERSION.*" \
     "rapids-notebook-env=$MINOR_VERSION."
 
 # https://docs.rapids.ai/maintainers/depmgmt/ 
-# gpuci_conda_retry remove -f rapids-build-env rapids-notebook-env
-# gpuci_conda_retry install "your-pkg=1.0.0"
+# conda remove -f rapids-build-env rapids-notebook-env
+# conda install "your-pkg=1.0.0"
 
 gpuci_logger "Check versions"
 python --version

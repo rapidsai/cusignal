@@ -1,12 +1,39 @@
-# cuSignal 0.18.0 (Date TBD)
+# cuSignal 0.19.0 (Date TBD)
 
-## New Features
+Please see https://github.com/rapidsai/cusignal/releases/tag/v0.19.0a for the latest changes to this development branch.
 
-## Improvements
+# cuSignal 0.18.0 (24 Feb 2021)
 
-## Bug Fixes
+## Bug Fixes 🐛
 
-# cuSignal 0.17.0 (Date TBD)
+- Fix labeler.yml GitHub Action (#301) @ajschmidt8
+- Fix Branch 0.18 merge 0.17 (#298) @BradReesWork
+
+## Documentation 📖
+
+- Add WSL instructions for cuSignal Windows Builds (#323) @awthomp
+- Fix Radar API Docs (#311) @awthomp
+- Update cuSignal Documentation to Include Radar Functions (#309) @awthomp
+- Specify CuPy install time on Jetson Platform (#306) @awthomp
+- Update README to optimize CuPy build time on Jetson (#305) @awthomp
+
+## New Features 🚀
+
+- Include scaffolding for new radar/phased array module and add new pulse compression feature (#300) @awthomp
+
+## Improvements 🛠️
+
+- Update stale GHA with exemptions &amp; new labels (#321) @mike-wendt
+- Add GHA to mark issues/prs as stale/rotten (#319) @Ethyling
+- Prepare Changelog for Automation (#314) @ajschmidt8
+- Auto-label PRs based on their content (#313) @jolorunyomi
+- Fix typo in convolution jupyter notebook example (#310) @awthomp
+- Add Pulse-Doppler Processing to radartools (#307) @awthomp
+- Create labeler.yml (#299) @jolorunyomi
+- Clarify GPU timing in E2E Jupyter Notebook (#297) @awthomp
+- Bump cuSignal Version (#296) @awthomp
+
+# cuSignal 0.17.0 (10 Dec 2020)
 
 ## New Features
 - PR #241 - Add inverse_complex_cepstrum and minimum_phase to acoustics module
@@ -16,6 +43,7 @@
 ## Improvements
 - PR #267 - Various optimization across all functions
 - PR #271 - Increase robustness of testing
+- PR #280 - Fixing issue when reading sigmf data from parent folder
 - PR #282 - Update README to reflect current versions
 
 ## Bug Fixes

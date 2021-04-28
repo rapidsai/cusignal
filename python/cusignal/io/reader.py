@@ -15,6 +15,7 @@ import cupy as cp
 import numpy as np
 
 import json
+import re
 
 from ._reader_cuda import _unpack
 
@@ -75,7 +76,8 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
-    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples)
+    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples,
+                   dtype=dtype)
 
     if buffer is not None:
         out = cp.empty(buffer.shape, buffer.dtype)
@@ -156,8 +158,9 @@ def read_sigmf(
     if meta_file is None:
         meta_ext = ".sigmf-meta"
 
-        split_string = data_file.split(".")
-        meta_file = split_string[0] + meta_ext
+        pat = re.compile(r"(.+)(\.)(.+)")
+        split_string = pat.split(data_file)
+        meta_file = split_string[1] + meta_ext
 
     with open(meta_file, "r") as f:
         header = json.loads(f.read())

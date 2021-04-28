@@ -8,11 +8,13 @@ LIBCUDF_KERNEL_CACHE_PATH=${WORKSPACE}/.jitcache
 # Add notebooks that should be skipped here
 # (space-separated list of filenames without paths)
 
-SKIPNBS="sdr_wfm_demod.ipynb sdr_integration.ipynb io_examples.ipynb estimation_examples.ipynb E2E_Example.ipynb" 
+SKIPNBS="sdr_wfm_demod.ipynb sdr_integration.ipynb io_examples.ipynb estimation_examples.ipynb E2E_Example.ipynb online_signal_processing_tools.ipynb" 
 
 ## Check env
 env
-conda list
+conda info
+conda config --show-sources
+conda list --show-channel-urls
 
 EXITCODE=0
 

@@ -13,7 +13,7 @@ The [RAPIDS](https://rapids.ai) **cuSignal** project leverages [CuPy](https://gi
     * [Conda: Linux OS](#conda-linux-os)
     * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
     * [Source: Linux OS](#source-linux-os)
-    * [Source: Windows OS (Experimental)](#source-windows-os-experimental)
+    * [Source: Windows OS (with CUDA on WSL)](#source-windows-os)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
 * [Software Defined Radio (SDR) Integration](#sdr-integration)
 * [Benchmarking](#benchmarking)
@@ -112,7 +112,7 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Documentation
 The complete cuSignal API documentation including a complete list of functionality and examples can be found for both the Stable and Nightly (Experimental) releases.
 
-[cuSignal 0.16 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.17 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
+[cuSignal 0.17 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.18 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
 ### Installation
 cuSignal has been tested on and supports all modern GPUs - from Maxwell to Ampere. While Anaconda is the preferred installation mechanism for cuSignal, developers and Jetson users should follow the source build instructions below. As of cuSignal 0.16, there isn't a cuSignal conda package for aarch64.
@@ -120,36 +120,36 @@ cuSignal has been tested on and supports all modern GPUs - from Maxwell to Amper
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
-For `cusignal version == 0.16`:
+For `cusignal version == 0.17`:
 
 ```
 For CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.16 python=3.7 cudatoolkit=10.1
+    cusignal=0.17 python=3.8 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.16 python=3.7 cudatoolkit=10.2
+    cusignal=0.17 python=3.8 cudatoolkit=10.2
 
 # or, for CUDA 11.0
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.16 python=3.7 cudatoolkit=11.0
+    cusignal=0.17 python=3.8 cudatoolkit=11.0
 ```
 
-For the nightly verison of `cusignal`, currently 0.17a:
+For the nightly verison of `cusignal`, currently 0.18a:
 
 ```
 # For CUDA 10.1.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.7 cudatoolkit=10.1.2
+    cusignal python=3.8 cudatoolkit=10.1.2
 
 # or, for CUDA 10.2
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.7 cudatoolkit=10.2
+    cusignal python=3.8 cudatoolkit=10.2
 
 # or, for CUDA 11.0
 conda install -c rapidsai-nightly -c nvidia -c numba -c conda-forge \
-    cusignal python=3.7 cudatoolkit=11.0
+    cusignal python=3.8 cudatoolkit=11.0
 ```
 
 cuSignal has been tested and confirmed to work with Python 3.6, 3.7, and 3.8.
@@ -176,6 +176,10 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
     cd $CUSIGNAL_HOME
     conda env create -f conda/environments/cusignal_jetson_base.yml
     ```
+
+    Note: Compilation and installation of CuPy can be quite lengthy (~30+ mins), particularly on the Jetson Nano. Please consider setting this environment variable to decrease the CuPy dependency install time:
+
+    `export CUPY_NVCC_GENERATE_CODE="arch=compute_XX,code=sm_XX"` with `XX` being your GPU's [compute capability](https://developer.nvidia.com/cuda-gpus#compute). If you'd like to compile to multiple architectures (e.g Nano and Xavier), concatenate the `arch=...` string with semicolins.
 
 3. Activate conda environment
 
@@ -259,7 +263,9 @@ In cuSignal 0.15 and beyond, we are moving our supported aarch64 Anaconda enviro
     pytest -v -k <function name>  # for more select testing
     ```
 
-### Source, Windows OS [Experimental]
+### Source, Windows OS
+
+We have confirmed that cuSignal successfully builds and runs on Windows by using [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html). Please follow the instructions in the link to install WSL 2 and the associated CUDA drivers. You can then proceed to follow the cuSignal source build instructions, below. 
 
 1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
