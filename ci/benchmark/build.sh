@@ -57,7 +57,7 @@ gpuci_logger "Activate conda env"
 conda activate rapids
 
 gpuci_logger "Install required packages"
-gpuci_conda_retry install -c nvidia -c rapidsai -c rapidsai-nightly -c conda-forge -c defaults \
+gpuci_conda_retry install -c nvidia -c rapidsai -c rapidsai-nightly -c conda-forge \
 	"cudatoolkit=$CUDA_REL" \
 	"rapids-build-env=${MINOR_VERSION}" \
 	rapids-pytest-benchmark
