@@ -81,6 +81,7 @@ from cusignal.spectral_analysis.spectral import (
     csd,
     spectrogram,
     stft,
+    istft,
     vectorstrength,
     coherence,
 )
