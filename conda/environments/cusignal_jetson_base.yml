@@ -18,4 +18,4 @@ dependencies:
   - ipython
   - pip
   - pip:
-    - cupy>=8.0.0
+    - cupy>=9.0.0
