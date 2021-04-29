@@ -183,6 +183,12 @@ else
     RETURN_ALL
 fi
 
+if [ "$NVCC_MAJOR" -ge 11 ] && [ "$NVCC_MINOR" -ge 2 ] ; then
+    THREADS="-t 0"
+else
+    THREADS=
+fi
+
 # Must check GCC for Centos OS
 if [ "$GCC_V" -lt 7 ] || [ "$NVCC_MAJOR" -lt 11 ]; then
     FLAGS="-std=c++11"
@@ -201,30 +207,30 @@ fi
 echo "Building Convolution kernels..."
 FOLDER="convolution"
 mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_convolution.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_convolution.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building Filtering kernels..."
 FOLDER="filtering"
 mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_channelizer.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_upfirdn.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_sosfilt.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_channelizer.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building IO kernels..."
 FOLDER="io"
 mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_reader.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_writer.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building Peak Finding kernels..."
 FOLDER="peak_finding"
 mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_peak_finding.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_peak_finding.cu -odir ${FAT}/${FOLDER}/ &
 
 echo "Building Spectral kernels..."
 FOLDER="spectral_analysis"
 mkdir -p ${FAT}/${FOLDER}/
-nvcc --fatbin ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/ &
+nvcc --fatbin ${THREADS} ${FLAGS} ${GPU_ARCH} ${SRC}/${FOLDER}/_spectral.cu -odir ${FAT}/${FOLDER}/ &
 
 wait
 
