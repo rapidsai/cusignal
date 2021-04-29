@@ -26,7 +26,12 @@ from cusignal.filtering.resample import (
 )
 from cusignal.filtering.filtering import (
     wiener,
+    lfilter,
+    lfilter_zi,
     firfilter,
+    firfilter_zi,
+    firfilter2,
+    filtfilt,
     sosfilt,
     hilbert,
     hilbert2,
@@ -47,6 +52,7 @@ from cusignal.filter_design.fir_filter_design import (
     kaiser_beta,
     kaiser_atten,
     firwin,
+    firwin2,
     cmplx_sort,
 )
 from cusignal.windows.windows import (

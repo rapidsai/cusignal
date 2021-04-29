@@ -6,5 +6,6 @@ lib64
 *.pyo
 *.pyc
 *.egg-info
+*.fatbin
 docs/build
 *.ipynb_checkpoints
