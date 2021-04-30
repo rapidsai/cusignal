@@ -2,7 +2,6 @@ name: cusignal
 channels:
   - conda-forge
   - nvidia
-  - defaults
   - numba
 dependencies:
   - python=3.6.9

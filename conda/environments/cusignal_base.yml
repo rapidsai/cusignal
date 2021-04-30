@@ -2,7 +2,6 @@ name: cusignal-dev
 channels:
   - conda-forge
   - nvidia
-  - defaults
   - numba
 dependencies:
   - scipy>=1.5.0
