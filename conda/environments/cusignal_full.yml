@@ -4,7 +4,6 @@ channels:
   - nvidia
   - rapidsai
   - pytorch
-  - defaults
   - numba
 dependencies:
   - scipy>=1.5.0
