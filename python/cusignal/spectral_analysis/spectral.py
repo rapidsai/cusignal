@@ -1174,13 +1174,16 @@ def istft(
     >>> nperseg = 512
     >>> amp = 2 * np.sqrt(2)
     >>> noise_power = 0.001 * fs / 2
-    >>> time = np.arange(N) / float(fs)
-    >>> carrier = amp * np.sin(2*np.pi*50*time)
-    >>> noise = np.random.normal(scale=np.sqrt(noise_power),
+    >>> time = cp.arange(N) / float(fs)
+    >>> carrier = amp * cp.sin(2*cp.pi*50*time)
+    >>> noise = cp.random.normal(scale=cp.sqrt(noise_power),
     ...                          size=time.shape)
     >>> x = carrier + noise
     Compute the STFT, and plot its magnitude
-    >>> f, t, Zxx = signal.stft(x, fs=fs, nperseg=nperseg)
+    >>> f, t, Zxx = cusignal.stft(x, fs=fs, nperseg=nperseg)
+    >>> f = cp.asnumpy(f)
+    >>> t = cp.asnumpy(t)
+    >>> Zxx = cp.asnumpy(Zxx)
     >>> plt.figure()
     >>> plt.pcolormesh(t, f, np.abs(Zxx), vmin=0, vmax=amp, shading='gouraud')
     >>> plt.ylim([f[1], f[-1]])
@@ -1191,8 +1194,12 @@ def istft(
     >>> plt.show()
     Zero the components that are 10% or less of the carrier magnitude,
     then convert back to a time series via inverse STFT
-    >>> Zxx = np.where(np.abs(Zxx) >= amp/10, Zxx, 0)
-    >>> _, xrec = signal.istft(Zxx, fs)
+    >>> Zxx = cp.where(cp.abs(Zxx) >= amp/10, Zxx, 0)
+    >>> _, xrec = cusignal.istft(Zxx, fs)
+    >>> xrec = cp.asnumpy(xrec)
+    >>> x = cp.asnumpy(x)
+    >>> time = cp.asnumpy(time)
+    >>> carrier = cp.asnumpy(carrier)
     Compare the cleaned signal with the original and true carrier signals.
     >>> plt.figure()
     >>> plt.plot(time, x, time, xrec, time, carrier)
