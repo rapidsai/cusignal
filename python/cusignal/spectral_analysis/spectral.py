@@ -1040,8 +1040,37 @@ def stft(
     return freqs, time, Zxx
 
 
-def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
-          input_onesided=True, boundary=True, time_axis=-1, freq_axis=-2):
+_istft_kernel = cp.ElementwiseKernel(
+    "raw T xsubs, raw T win, int32 N, int32 half_N",
+    "T x, T norm",
+    """
+    int p = static_cast<int>( i / N ) * 2;
+    x = xsubs[(p * N) + (i % N)] * win[i % N];
+    norm = win[i % N] * win[i % N];
+
+    if ( ( i >= half_N ) && ( i < ( _ind.size() - half_N ) ) ) {
+        p = static_cast<int>( ( i-half_N ) / N ) * 2 + 1;
+        x += xsubs[(p * N) + ( (i - half_N) % N )] * win[(i - half_N) % N];
+        norm += win[(i - half_N) % N] * win[(i - half_N) % N];
+    }
+    """,
+    "_istft_kernel",
+    options=("-std=c++11",),
+)
+
+
+def istft(
+    Zxx,
+    fs=1.0,
+    window="hann",
+    nperseg=None,
+    noverlap=None,
+    nfft=None,
+    input_onesided=True,
+    boundary=True,
+    time_axis=-1,
+    freq_axis=-2,
+):
     r"""
     Perform the inverse Short Time Fourier transform (iSTFT).
     Parameters
@@ -1189,16 +1218,16 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     time_axis = int(time_axis)
 
     if Zxx.ndim < 2:
-        raise ValueError('Input stft must be at least 2d!')
+        raise ValueError("Input stft must be at least 2d!")
 
     if freq_axis == time_axis:
-        raise ValueError('Must specify differing time and frequency axes!')
+        raise ValueError("Must specify differing time and frequency axes!")
 
     nseg = Zxx.shape[time_axis]
 
     if input_onesided:
         # Assume even segment length
-        n_default = 2*(Zxx.shape[freq_axis] - 1)
+        n_default = 2 * (Zxx.shape[freq_axis] - 1)
     else:
         n_default = Zxx.shape[freq_axis]
 
@@ -1208,7 +1237,7 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     else:
         nperseg = int(nperseg)
         if nperseg < 1:
-            raise ValueError('nperseg must be a positive integer')
+            raise ValueError("nperseg must be a positive integer")
 
     if nfft is None:
         if (input_onesided) and (nperseg == n_default + 1):
@@ -1217,20 +1246,20 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
         else:
             nfft = n_default
     elif nfft < nperseg:
-        raise ValueError('nfft must be greater than or equal to nperseg.')
+        raise ValueError("nfft must be greater than or equal to nperseg.")
     else:
         nfft = int(nfft)
 
     if noverlap is None:
-        noverlap = nperseg//2
+        noverlap = nperseg // 2
     else:
         noverlap = int(noverlap)
     if noverlap >= nperseg:
-        raise ValueError('noverlap must be less than nperseg.')
+        raise ValueError("noverlap must be less than nperseg.")
     nstep = nperseg - noverlap
 
     # Rearrange axes if necessary
-    if time_axis != Zxx.ndim-1 or freq_axis != Zxx.ndim-2:
+    if time_axis != Zxx.ndim - 1 or freq_axis != Zxx.ndim - 2:
         # Turn negative indices to positive for the call to transpose
         if freq_axis < 0:
             freq_axis = Zxx.ndim + freq_axis
@@ -1239,7 +1268,7 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
         zouter = list(range(Zxx.ndim))
         for ax in sorted([time_axis, freq_axis], reverse=True):
             zouter.pop(ax)
-        Zxx = cp.transpose(Zxx, zouter+[freq_axis, time_axis])
+        Zxx = cp.transpose(Zxx, zouter + [freq_axis, time_axis])
 
     # Get window as array
     if isinstance(window, str) or type(window) is tuple:
@@ -1247,17 +1276,15 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     else:
         win = cp.asarray(window)
         if len(win.shape) != 1:
-            raise ValueError('window must be 1-D')
+            raise ValueError("window must be 1-D")
         if win.shape[0] != nperseg:
-            raise ValueError('window must have length of {0}'.format(nperseg))
+            raise ValueError("window must have length of {0}".format(nperseg))
 
     ifunc = cp.fft.irfft if input_onesided else cp.fft.ifft
     xsubs = ifunc(Zxx, axis=-2, n=nfft)[..., :nperseg, :]
 
     # Initialize output and normalization arrays
-    outputlength = nperseg + (nseg-1)*nstep
-    x = cp.zeros(list(Zxx.shape[:-2])+[outputlength], dtype=xsubs.dtype)
-    norm = cp.zeros(outputlength, dtype=xsubs.dtype)
+    outputlength = nperseg + (nseg - 1) * nstep
 
     if cp.result_type(win, xsubs) != xsubs.dtype:
         win = win.astype(xsubs.dtype)
@@ -1265,16 +1292,16 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
     xsubs *= win.sum()  # This takes care of the 'spectrum' scaling
 
     # Construct the output from the ifft segments
-    # This loop could perhaps be vectorized/strided somehow...
-    for ii in range(nseg):
-        # Window the ifft
-        x[..., ii*nstep:ii*nstep+nperseg] += xsubs[..., ii] * win
-        norm[..., ii*nstep:ii*nstep+nperseg] += win**2
+    # Transposing makes the indexing easier
+    xsubs = cp.transpose(xsubs)
+    x, norm = _istft_kernel(
+        xsubs, win, win.shape[0], win.shape[0] // 2, size=outputlength
+    )
 
     # Remove extension points
     if boundary:
-        x = x[..., nperseg//2:-(nperseg//2)]
-        norm = norm[..., nperseg//2:-(nperseg//2)]
+        x = x[..., nperseg // 2: -(nperseg // 2)]
+        norm = norm[..., nperseg // 2: -(nperseg // 2)]
 
     # Divide out normalization where non-tiny
     if cp.sum(norm > 1e-10) != len(norm):
@@ -1286,12 +1313,12 @@ def istft(Zxx, fs=1.0, window='hann', nperseg=None, noverlap=None, nfft=None,
 
     # Put axes back
     if x.ndim > 1:
-        if time_axis != Zxx.ndim-1:
+        if time_axis != Zxx.ndim - 1:
             if freq_axis < time_axis:
                 time_axis -= 1
             x = cp.rollaxis(x, -1, time_axis)
 
-    time = cp.arange(x.shape[0])/float(fs)
+    time = cp.arange(x.shape[0]) / float(fs)
     return time, x
 
 
