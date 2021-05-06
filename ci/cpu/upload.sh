@@ -39,5 +39,5 @@ gpuci_logger "Starting conda uploads"
 test -e ${CUSIGNAL_FILE}
 echo "Upload cusignal"
 echo ${CUSIGNAL_FILE}
-gpuci_retry anaconda -t ${MY_UPLOAD_KEY} upload -u ${CONDA_USERNAME:-rapidsai} ${LABEL_OPTION} --skip-existing ${CUSIGNAL_FILE}
+gpuci_retry anaconda -t ${MY_UPLOAD_KEY} upload -u ${CONDA_USERNAME:-rapidsai} ${LABEL_OPTION} --skip-existing ${CUSIGNAL_FILE} --no-progress
 
