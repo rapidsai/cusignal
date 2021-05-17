@@ -17,6 +17,9 @@ build:
   noarch: python
   script_env:
     - VERSION_SUFFIX
+    - CC
+    - CXX
+    - CUDAHOSTCXX
 
 requirements:
   build:
