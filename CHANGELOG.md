@@ -1,3 +1,7 @@
+# cuSignal 21.08.00 (Date TBD)
+
+Please see https://github.com/rapidsai/cusignal/releases/tag/v21.08.00a for the latest changes to this development branch.
+
 # cuSignal 0.20.0 (Date TBD)
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v0.20.0a for the latest changes to this development branch.
