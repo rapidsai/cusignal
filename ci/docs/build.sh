@@ -15,7 +15,6 @@ export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
 export HOME=$WORKSPACE
 export PROJECT_WORKSPACE=/rapids/cusignal
 export LIBCUDF_KERNEL_CACHE_PATH="$HOME/.jitify-cache"
-export NIGHTLY_VERSION=$(echo $BRANCH_VERSION | awk -F. '{print $2}')
 export PROJECTS=(cusignal)
 
 gpuci_logger "Check environment"
