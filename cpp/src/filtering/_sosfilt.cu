@@ -32,15 +32,18 @@ __device__ void _cupy_sosfilt( const int n_signals,
     T *s_sos { reinterpret_cast<T *>( &s_zi[n_sections * zi_width] ) };
 
     const int tx { static_cast<int>( threadIdx.x ) };
-    const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+    // const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+    const int bx { static_cast<int>( blockIdx.x ) };
 
     // Reset shared memory
     s_out[tx] = 0;
 
     // Load zi
-    for ( int i = 0; i < zi_width; i++ ) {
-        s_zi[tx * zi_width + i] = zi[ty * n_sections * zi_width + tx * zi_width + i];
-    }
+    // for ( int i = 0; i < zi_width; i++ ) {
+    //     s_zi[tx * zi_width + i] = zi[bx * n_sections * zi_width + tx * zi_width + i];
+    // }
+    T zi0 = zi[bx * n_sections * zi_width + tx * zi_width + 0];
+    T zi1 = zi[bx * n_sections * zi_width + tx * zi_width + 1];
 
     // Load SOS
     // b is in s_sos[tx * sos_width + [0-2]]
@@ -58,22 +61,26 @@ __device__ void _cupy_sosfilt( const int n_signals,
     T temp {};
     T x_n {};
 
-    if ( ty < n_signals ) {
+    if ( bx < n_signals ) {
         // Loading phase
         for ( int n = 0; n < load_size; n++ ) {
             if ( tx == 0 ) {
-                x_n = x_in[ty * n_samples + n];
+                x_n = x_in[bx * n_samples + n];
             } else {
                 x_n = s_out[tx - 1];
             }
 
             // Use direct II transposed structure
-            temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            // temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            temp = s_sos[tx * sos_width + 0] * x_n + zi0;
 
-            s_zi[tx * zi_width + 0] =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            // s_zi[tx * zi_width + 0] =
+                // s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            zi0 =
+                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
 
-            s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            // s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             s_out[tx] = temp;
 
@@ -83,23 +90,27 @@ __device__ void _cupy_sosfilt( const int n_signals,
         // Processing phase
         for ( int n = load_size; n < n_samples; n++ ) {
             if ( tx == 0 ) {
-                x_n = x_in[ty * n_samples + n];
+                x_n = x_in[bx * n_samples + n];
             } else {
                 x_n = s_out[tx - 1];
             }
 
             // Use direct II transposed structure
-            temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            // temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            temp = s_sos[tx * sos_width + 0] * x_n + z10;
 
-            s_zi[tx * zi_width + 0] =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            // s_zi[tx * zi_width + 0] =
+                // s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            zi0 =
+                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
 
-            s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            // s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             if ( tx < load_size ) {
                 s_out[tx] = temp;
             } else {
-                x_in[ty * n_samples + ( n - load_size )] = temp;
+                x_in[bx * n_samples + ( n - load_size )] = temp;
             }
 
             __syncthreads( );
@@ -112,17 +123,21 @@ __device__ void _cupy_sosfilt( const int n_signals,
                 x_n = s_out[tx - 1];
 
                 // Use direct II transposed structure
-                temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            // temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
+            temp = s_sos[tx * sos_width + 0] * x_n + z10;
 
-                s_zi[tx * zi_width + 0] =
-                    s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            // s_zi[tx * zi_width + 0] =
+                // s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
+            zi0 =
+                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
 
-                s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            // s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
                 if ( tx < load_size ) {
                     s_out[tx] = temp;
                 } else {
-                    x_in[ty * n_samples + ( n + unload_size )] = temp;
+                    x_in[bx * n_samples + ( n + unload_size )] = temp;
                 }
                 __syncthreads( );
             }
