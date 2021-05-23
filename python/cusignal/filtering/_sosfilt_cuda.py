@@ -85,10 +85,9 @@ def _sosfilt(sos, x, zi):
     _populate_kernel_cache(x.dtype, k_type)
 
     out_size = threadsperblock
-    z_size = zi.shape[1] * zi.shape[2]
     sos_size = sos.shape[0] * sos.shape[1]
 
-    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+    shared_mem = (out_size + sos_size) * x.dtype.itemsize
 
     kernel = _get_backend_kernel(
         x.dtype,

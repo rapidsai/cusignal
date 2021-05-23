@@ -704,9 +704,8 @@ def sosfilt(
 
     # Determine how much shared memory is needed
     out_size = sos.shape[0]
-    z_size = zi.shape[1] * zi.shape[2]
     sos_size = sos.shape[0] * sos.shape[1]
-    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+    shared_mem = (out_size + sos_size) * x.dtype.itemsize
 
     if shared_mem > max_smem:
         max_sections = (
