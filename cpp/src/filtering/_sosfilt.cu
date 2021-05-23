@@ -66,9 +66,8 @@ __device__ void _cupy_sosfilt( const int n_signals,
 
             // Use direct II transposed structure
             temp = s_sos[tx * sos_width + 0] * x_n + zi0;
-            zi0 =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
-            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+            zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             s_out[tx] = temp;
 
@@ -85,9 +84,8 @@ __device__ void _cupy_sosfilt( const int n_signals,
 
             // Use direct II transposed structure
             temp = s_sos[tx * sos_width + 0] * x_n + zi0;
-            zi0 =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
-            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+            zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             if ( tx < load_size ) {
                 s_out[tx] = temp;
@@ -105,10 +103,9 @@ __device__ void _cupy_sosfilt( const int n_signals,
                 x_n = s_out[tx - 1];
 
                 // Use direct II transposed structure
-            temp = s_sos[tx * sos_width + 0] * x_n + zi0;
-            zi0 =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
-            zi1 = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+                temp = s_sos[tx * sos_width + 0] * x_n + zi0;
+                zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+                zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
                 if ( tx < load_size ) {
                     s_out[tx] = temp;
