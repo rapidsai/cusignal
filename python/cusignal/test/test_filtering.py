@@ -404,14 +404,15 @@ class TestFilter:
     @pytest.mark.parametrize("down", [1])
     @pytest.mark.parametrize("axis", [-1, 0])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    @pytest.mark.parametrize("gpupath", [True, False])
     class TestResamplePoly:
         def cpu_version(self, sig, up, down, axis, window):
             return signal.resample_poly(sig, up, down, axis, window=window)
 
-        def gpu_version(self, sig, up, down, axis, window):
+        def gpu_version(self, sig, up, down, axis, window, gpupath):
             with cp.cuda.Stream.null:
                 out = cusignal.resample_poly(
-                    sig, up, down, axis, window=window
+                    sig, up, down, axis, window=window, gpupath=gpupath
                 )
             cp.cuda.Stream.null.synchronize()
             return out
@@ -427,6 +428,7 @@ class TestFilter:
             down,
             axis,
             window,
+            gpupath,
         ):
             if dim == 1:
                 cpu_sig, _ = linspace_data_gen(
@@ -453,6 +455,7 @@ class TestFilter:
             down,
             axis,
             window,
+            gpupath,
         ):
             if dim == 1:
                 cpu_sig, gpu_sig = linspace_data_gen(
@@ -469,6 +472,7 @@ class TestFilter:
                 down,
                 axis,
                 window,
+                gpupath,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis, window)
