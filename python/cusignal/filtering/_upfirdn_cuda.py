@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 
 from math import ceil
 
@@ -28,7 +29,7 @@ from ..utils.helper_tools import (
 _SUPPORTED_TYPES = ["float32", "float64", "complex64", "complex128"]
 
 
-def _pad_h(h, up):
+def _pad_h(h, pp, up):
     """Store coefficients in a transposed, flipped arrangement.
     For example, suppose upRate is 3, and the
     input number of coefficients is 10, represented as h[0], ..., h[9].
@@ -38,7 +39,7 @@ def _pad_h(h, up):
        0,    h[8], h[5], h[2],   // flipped phase 2 coefs (zero-padded)
     """
     h_padlen = len(h) + (-len(h) % up)
-    h_full = cp.zeros(h_padlen, h.dtype)
+    h_full = pp.zeros(h_padlen, h.dtype)
     h_full[: len(h)] = h
     h_full = h_full.reshape(-1, up).T[:, ::-1].ravel()
     return h_full
@@ -168,18 +169,25 @@ def _get_backend_kernel(
 class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
         """Helper for resampling"""
-        h = cp.asarray(h)
+
+        if(str(type(h)) == "<class 'cupy._core.core.ndarray'>"):
+            pp = cp
+        else:
+            pp = np
+
+        h = pp.asarray(h)
         if h.ndim != 1 or h.size == 0:
             raise ValueError("h must be 1D with non-zero length")
 
-        self._output_type = cp.result_type(h.dtype, x_dtype, cp.float32)
-        h = cp.asarray(h, self._output_type)
+        self._output_type = pp.result_type(h.dtype, x_dtype, pp.float32)
+        h = pp.asarray(h, self._output_type)
         self._up = int(up)
         self._down = int(down)
         if self._up < 1 or self._down < 1:
             raise ValueError("Both up and down must be >= 1")
         # This both transposes, and "flips" each phase for filtering
-        self._h_trans_flip = _pad_h(h, self._up)
+        self._h_trans_flip = _pad_h(h, pp, self._up)
+        self._h_trans_flip = cp.asarray(self._h_trans_flip)
         self._h_trans_flip = cp.ascontiguousarray(self._h_trans_flip)
         self._h_len_orig = len(h)
 
@@ -190,14 +198,14 @@ class _UpFIRDn(object):
     ):
         """Apply the prepared filter to the specified axis of a nD signal x"""
 
+        x = cp.asarray(x, self._output_type)
+
         output_len = _output_len(
             self._h_len_orig, x.shape[axis], self._up, self._down
         )
-        output_shape = cp.asarray(x.shape)
+        output_shape = list(x.shape)
         output_shape[axis] = output_len
-        out = cp.zeros(
-            cp.asnumpy(output_shape), dtype=self._output_type, order="C"
-        )
+        out = cp.empty(output_shape, dtype=self._output_type, order="C")
         axis = axis % x.ndim
 
         # Precompute variables on CPU
@@ -248,7 +256,7 @@ class _UpFIRDn(object):
             raise NotImplementedError("upfirdn() requires ndim <= 2")
 
         kernel(
-            cp.asarray(x, self._output_type),
+            x,
             self._h_trans_flip,
             self._up,
             self._down,

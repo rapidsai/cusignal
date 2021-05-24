@@ -513,7 +513,6 @@ def upfirdn(
            [ 6.,  7.]])
     """
 
-    x = cp.asarray(x)
     ufd = _UpFIRDn(h, x.dtype, up, down)
     # This is equivalent to (but faster than) using cp.apply_along_axis
     return ufd.apply_filter(x, axis)
