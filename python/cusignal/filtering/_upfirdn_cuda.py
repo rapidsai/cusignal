@@ -170,7 +170,7 @@ class _UpFIRDn(object):
     def __init__(self, h, x_dtype, up, down):
         """Helper for resampling"""
 
-        if(str(type(h)) == "<class 'cupy._core.core.ndarray'>"):
+        if str(type(h)) == "<class 'cupy._core.core.ndarray'>":
             pp = cp
         else:
             pp = np
