@@ -77,8 +77,8 @@ def _get_backend_kernel(dtype, grid, block, smem, k_type):
 
 def _sosfilt(sos, x, zi):
 
-    threadsperblock = (sos.shape[0])  # Up-to (1024, 1) = 1024 max per block
-    blockspergrid = (x.shape[0])
+    threadsperblock = sos.shape[0]  # Up-to (1024, 1) = 1024 max per block
+    blockspergrid = x.shape[0]
 
     k_type = "sosfilt"
 

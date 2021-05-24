@@ -71,8 +71,6 @@ __device__ void _cupy_sosfilt( const int n_signals,
             zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             s_out[tx] = temp;
-
-            
         }
 
         // Processing phase
@@ -94,8 +92,6 @@ __device__ void _cupy_sosfilt( const int n_signals,
             } else {
                 x_in[bx * n_samples + ( n - load_size )] = temp;
             }
-
-            
         }
 
         // Unloading phase
@@ -115,7 +111,6 @@ __device__ void _cupy_sosfilt( const int n_signals,
                 } else {
                     x_in[bx * n_samples + ( n + unload_size )] = temp;
                 }
-                
             }
         }
     }
