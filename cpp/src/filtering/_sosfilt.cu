@@ -44,7 +44,7 @@ __device__ void _cupy_sosfilt( const int n_signals,
         s_sos[tx * sos_width + i] = sos[tx * sos_width + i];
     }
 
-    __syncthreads( );
+    // __syncthreads( );
 
     T zi0 = zi[bx * n_sections * zi_width + tx * zi_width + 0];
     T zi1 = zi[bx * n_sections * zi_width + tx * zi_width + 1];
@@ -58,6 +58,7 @@ __device__ void _cupy_sosfilt( const int n_signals,
     if ( bx < n_signals ) {
         // Loading phase
         for ( int n = 0; n < load_size; n++ ) {
+            __syncthreads( );
             if ( tx == 0 ) {
                 x_n = x_in[bx * n_samples + n];
             } else {
@@ -71,11 +72,12 @@ __device__ void _cupy_sosfilt( const int n_signals,
 
             s_out[tx] = temp;
 
-            __syncthreads( );
+            
         }
 
         // Processing phase
         for ( int n = load_size; n < n_samples; n++ ) {
+            __syncthreads( );
             if ( tx == 0 ) {
                 x_n = x_in[bx * n_samples + n];
             } else {
@@ -93,11 +95,12 @@ __device__ void _cupy_sosfilt( const int n_signals,
                 x_in[bx * n_samples + ( n - load_size )] = temp;
             }
 
-            __syncthreads( );
+            
         }
 
         // Unloading phase
         for ( int n = 0; n < n_sections; n++ ) {
+            __syncthreads( );
             // retire threads that are less than n
             if ( tx > n ) {
                 x_n = s_out[tx - 1];
@@ -112,7 +115,7 @@ __device__ void _cupy_sosfilt( const int n_signals,
                 } else {
                     x_in[bx * n_samples + ( n + unload_size )] = temp;
                 }
-                __syncthreads( );
+                
             }
         }
     }
