@@ -142,10 +142,10 @@ def firfilter(b, x, axis=-1, zi=None):
     """
     b = cp.asarray(b)
     if b.ndim != 1:
-        raise ValueError('object of too small depth for desired array')
+        raise ValueError("object of too small depth for desired array")
 
     if x.ndim == 0:
-        raise ValueError('x must be at least 1-D')
+        raise ValueError("x must be at least 1-D")
 
     inputs = [b, x]
     if zi is not None:
@@ -153,7 +153,7 @@ def firfilter(b, x, axis=-1, zi=None):
         # singleton dims.
         zi = cp.asarray(zi)
         if zi.ndim != x.ndim:
-            raise ValueError('object of too small depth for desired array')
+            raise ValueError("object of too small depth for desired array")
         expected_shape = list(x.shape)
         expected_shape[axis] = b.shape[0] - 1
         expected_shape = tuple(expected_shape)
@@ -170,15 +170,15 @@ def firfilter(b, x, axis=-1, zi=None):
                 elif k != axis and zi.shape[k] == 1:
                     strides[k] = 0
                 else:
-                    raise ValueError('Unexpected shape for zi: expected '
-                                     '%s, found %s.' %
-                                     (expected_shape, zi.shape))
-            zi = cp.lib.stride_tricks.as_strided(zi, expected_shape,
-                                                 strides)
+                    raise ValueError(
+                        "Unexpected shape for zi: expected "
+                        "%s, found %s." % (expected_shape, zi.shape)
+                    )
+            zi = cp.lib.stride_tricks.as_strided(zi, expected_shape, strides)
         inputs.append(zi)
     dtype = cp.result_type(*inputs)
 
-    if dtype.char not in 'fdgFDGO':
+    if dtype.char not in "fdgFDGO":
         raise NotImplementedError("input type '%s' not supported" % dtype)
 
     b = cp.array(b, dtype=dtype)
@@ -363,10 +363,14 @@ def firfilter_zi(b):
 
 def _validate_pad(padtype, padlen, x, axis, ntaps):
     """Helper to validate padding for filtfilt"""
-    if padtype not in ['even', 'odd', 'constant', None]:
-        raise ValueError(("Unknown value '%s' given to padtype.  padtype "
-                          "must be 'even', 'odd', 'constant', or None.") %
-                         padtype)
+    if padtype not in ["even", "odd", "constant", None]:
+        raise ValueError(
+            (
+                "Unknown value '%s' given to padtype.  padtype "
+                "must be 'even', 'odd', 'constant', or None."
+            )
+            % padtype
+        )
 
     if padtype is None:
         padlen = 0
@@ -379,15 +383,17 @@ def _validate_pad(padtype, padlen, x, axis, ntaps):
 
     # x's 'axis' dimension must be bigger than edge.
     if x.shape[axis] <= edge:
-        raise ValueError("The length of the input vector x must be greater "
-                         "than padlen, which is %d." % edge)
+        raise ValueError(
+            "The length of the input vector x must be greater "
+            "than padlen, which is %d." % edge
+        )
 
     if padtype is not None and edge > 0:
         # Make an extension of length `edge` at each
         # end of the input array.
-        if padtype == 'even':
+        if padtype == "even":
             ext = _even_ext(x, edge, axis=axis)
-        elif padtype == 'odd':
+        elif padtype == "odd":
             ext = _odd_ext(x, edge, axis=axis)
         else:
             ext = _const_ext(x, edge, axis=axis)
@@ -396,8 +402,9 @@ def _validate_pad(padtype, padlen, x, axis, ntaps):
     return edge, ext
 
 
-def firfilter2(b, x, axis=-1, padtype='odd', padlen=None, method='pad',
-               irlen=None):
+def firfilter2(
+    b, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None
+):
     """
     Apply a digital filter forward and backward to a signal.
     This function applies a linear digital filter twice, once forward and
@@ -502,8 +509,9 @@ def firfilter2(b, x, axis=-1, padtype='odd', padlen=None, method='pad',
     return cp.copy(y)
 
 
-def filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None, method='pad',
-             irlen=None):
+def filtfilt(
+    b, a, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None
+):
     """
     Apply a digital filter forward and backward to a signal.
     This function applies a linear digital filter twice, once forward and
@@ -572,8 +580,15 @@ def filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None, method='pad',
     """
     a = cp.atleast_1d(a)
     if len(a) == 1:
-        return firfilter2(b, x, axis=axis, padtype=padtype, padlen=padlen,
-                          method=method, irlen=irlen)
+        return firfilter2(
+            b,
+            x,
+            axis=axis,
+            padtype=padtype,
+            padlen=padlen,
+            method=method,
+            irlen=irlen,
+        )
     else:
         raise NotImplementedError("IIR support isn't supported yet")
 
