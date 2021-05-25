@@ -77,18 +77,17 @@ def _get_backend_kernel(dtype, grid, block, smem, k_type):
 
 def _sosfilt(sos, x, zi):
 
-    threadsperblock = (sos.shape[0], 1)  # Up-to (1024, 1) = 1024 max per block
-    blockspergrid = (1, x.shape[0])
+    threadsperblock = sos.shape[0]  # Up-to (1024, 1) = 1024 max per block
+    blockspergrid = x.shape[0]
 
     k_type = "sosfilt"
 
     _populate_kernel_cache(x.dtype, k_type)
 
-    out_size = threadsperblock[0]
-    z_size = zi.shape[1] * zi.shape[2]
+    out_size = threadsperblock
     sos_size = sos.shape[0] * sos.shape[1]
 
-    shared_mem = (out_size + z_size + sos_size) * x.dtype.itemsize
+    shared_mem = (out_size + sos_size) * x.dtype.itemsize
 
     kernel = _get_backend_kernel(
         x.dtype,
@@ -97,6 +96,7 @@ def _sosfilt(sos, x, zi):
         shared_mem,
         k_type,
     )
+    print(zi.shape)
 
     kernel(sos, x, zi)
 
