@@ -158,7 +158,12 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
         if ( mode == 0 ) {  // Valid
             if ( tid >= 0 && tid < inpW ) {
                 for ( int j = 0; j < kerW; j++ ) {
-                    temp += inp[tid + j] * kernel[j];
+                    if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                                   std::is_same_v<T, thrust::complex<double>> ) {
+                        temp += inp[tid + j] * thrust::conj( kernel[j] );
+                    } else {
+                        temp += inp[tid + j] * kernel[j];
+                    }
                 }
             }
         } else if ( mode == 1 ) {  // Same
@@ -171,7 +176,12 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
             }
             for ( int j = 0; j < kerW; j++ ) {
                 if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                    temp += inp[start + j] * kernel[j];
+                    if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                                   std::is_same_v<T, thrust::complex<double>> ) {
+                        temp += inp[start + j] * thrust::conj( kernel[j] );
+                    } else {
+                        temp += inp[start + j] * kernel[j];
+                    }
                 }
             }
         } else {  // Full
@@ -179,13 +189,22 @@ __device__ void _cupy_correlate( const T *__restrict__ inp,
             const int start { 0 - P1 + tid };
             for ( int j = 0; j < kerW; j++ ) {
                 if ( ( start + j >= 0 ) && ( start + j < inpW ) ) {
-                    temp += inp[start + j] * kernel[j];
+                    if constexpr ( std::is_same_v<T, thrust::complex<float>> ||
+                                   std::is_same_v<T, thrust::complex<double>> ) {
+                        temp += inp[start + j] * thrust::conj( kernel[j] );
+                    } else {
+                        temp += inp[start + j] * kernel[j];
+                    }
                 }
             }
         }
 
         if ( swapped_inputs ) {
-            out[outW - tid - 1] = temp;  // TODO: Move to shared memory
+            if constexpr ( std::is_same_v<T, thrust::complex<float>> || std::is_same_v<T, thrust::complex<double>> ) {
+                out[outW - tid - 1] = thrust::conj( temp );
+            } else {
+                out[outW - tid - 1] = temp;
+            }
         } else {
             out[tid] = temp;
         }
