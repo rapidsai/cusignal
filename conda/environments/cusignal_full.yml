@@ -4,18 +4,17 @@ channels:
   - nvidia
   - rapidsai
   - pytorch
-  - defaults
   - numba
 dependencies:
   - scipy>=1.5.0
   - numpy
-  - cudatoolkit>=9.2,<=10.2
+  - cudatoolkit>=9.2,<=11.2
   - boost
   - matplotlib
   - numba>=0.49
   - pytest
   - pytest-benchmark
-  - cupy>=8.0.0
+  - cupy>=9.0.0
   - pytorch
   - cudf
   - cuml

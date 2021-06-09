@@ -20,4 +20,5 @@ from cusignal.spectral_analysis.spectral import (
     lombscargle,
     vectorstrength,
     stft,
+    istft,
 )

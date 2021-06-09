@@ -257,6 +257,41 @@ class TestSpectral:
             key = self.cpu_version(cpu_sig, fs, nperseg)
             array_equal(output, key)
 
+    @pytest.mark.benchmark(group="ISTFT")
+    @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
+    @pytest.mark.parametrize("num_samps", [2 ** 16])
+    @pytest.mark.parametrize("fs", [1.0, 1e6])
+    @pytest.mark.parametrize("nperseg", [1024, 2048])
+    class TestISTFT:
+        def cpu_version(self, sig, fs, nperseg):
+            return signal.istft(sig, fs, nperseg=nperseg)
+
+        def gpu_version(self, sig, fs, nperseg):
+            with cp.cuda.Stream.null:
+                out = cusignal.istft(sig, fs, nperseg=nperseg)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_istft_cpu(
+            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
+            _, _, cpu_sig = signal.stft(cpu_sig, fs, nperseg=nperseg)
+            benchmark(self.cpu_version, cpu_sig, fs, nperseg)
+
+        def test_istft_gpu(
+            self, rand_data_gen, gpubenchmark, dtype, num_samps, fs, nperseg
+        ):
+
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
+            _, _, cpu_sig = signal.stft(cpu_sig, fs, nperseg=nperseg)
+            _, _, gpu_sig = cusignal.stft(gpu_sig, fs, nperseg=nperseg)
+            output = gpubenchmark(self.gpu_version, gpu_sig, fs, nperseg)
+
+            key = self.cpu_version(cpu_sig, fs, nperseg)
+            array_equal(output, key)
+
     @pytest.mark.benchmark(group="Coherence")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
     @pytest.mark.parametrize("num_samps", [2 ** 14])

@@ -2,7 +2,6 @@ name: cusignal-dev
 channels:
   - conda-forge
   - nvidia
-  - defaults
   - numba
   - c4aarch64
 dependencies:
@@ -18,4 +17,4 @@ dependencies:
   - ipython
   - pip
   - pip:
-    - cupy>=8.0.0
+    - cupy>=9.0.0

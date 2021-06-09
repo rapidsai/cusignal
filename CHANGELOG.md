@@ -1,3 +1,14 @@
+# cuSignal 21.06.00 (9 Jun 2021)
+
+## 🛠️ Impovements
+
+- Pef Impovements fo UPFIRDN ([#378](https://github.com/rapidsai/cusignal/pull/378)) [@mnicely](https://github.com/mnicely)
+- Pef Impovements to SOS Filte ([#377](https://github.com/rapidsai/cusignal/pull/377)) [@mnicely](https://github.com/mnicely)
+- Update envionment vaiable used to detemine `cuda_vesion` ([#376](https://github.com/rapidsai/cusignal/pull/376)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update `CHANGELOG.md` links fo calve ([#373](https://github.com/rapidsai/cusignal/pull/373)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Mege `banch-0.19` into `banch-21.06` ([#372](https://github.com/rapidsai/cusignal/pull/372)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update docs build scipt ([#369](https://github.com/rapidsai/cusignal/pull/369)) [@ajschmidt8](https://github.com/ajschmidt8)
+
 # cuSignal 0.19.0 (21 Apr 2021)
 
 ## 🐛 Bug Fixes
@@ -22,7 +33,6 @@
 - Prepare Changelog for Automation ([#331](https://github.com/rapidsai/cusignal/pull/331)) [@ajschmidt8](https://github.com/ajschmidt8)
 - Update 0.18 changelog entry ([#330](https://github.com/rapidsai/cusignal/pull/330)) [@ajschmidt8](https://github.com/ajschmidt8)
 - Fix merge conflicts in #315 ([#316](https://github.com/rapidsai/cusignal/pull/316)) [@ajschmidt8](https://github.com/ajschmidt8)
-
 
 # cuSignal 0.18.0 (24 Feb 2021)
 
