@@ -1,13 +1,13 @@
 # cuSignal 21.06.00 (9 Jun 2021)
 
-## 🛠️ Impovements
+## 🛠️ Improvements
 
-- Pef Impovements fo UPFIRDN ([#378](https://github.com/rapidsai/cusignal/pull/378)) [@mnicely](https://github.com/mnicely)
-- Pef Impovements to SOS Filte ([#377](https://github.com/rapidsai/cusignal/pull/377)) [@mnicely](https://github.com/mnicely)
-- Update envionment vaiable used to detemine `cuda_vesion` ([#376](https://github.com/rapidsai/cusignal/pull/376)) [@ajschmidt8](https://github.com/ajschmidt8)
-- Update `CHANGELOG.md` links fo calve ([#373](https://github.com/rapidsai/cusignal/pull/373)) [@ajschmidt8](https://github.com/ajschmidt8)
-- Mege `banch-0.19` into `banch-21.06` ([#372](https://github.com/rapidsai/cusignal/pull/372)) [@ajschmidt8](https://github.com/ajschmidt8)
-- Update docs build scipt ([#369](https://github.com/rapidsai/cusignal/pull/369)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Perf Improvements for UPFIRDN ([#378](https://github.com/rapidsai/cusignal/pull/378)) [@mnicely](https://github.com/mnicely)
+- Perf Improvements to SOS Filter ([#377](https://github.com/rapidsai/cusignal/pull/377)) [@mnicely](https://github.com/mnicely)
+- Update environment variable used to determine `cuda_version` ([#376](https://github.com/rapidsai/cusignal/pull/376)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update `CHANGELOG.md` links for calver ([#373](https://github.com/rapidsai/cusignal/pull/373)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Merge `branch-0.19` into `branch-21.06` ([#372](https://github.com/rapidsai/cusignal/pull/372)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update docs build script ([#369](https://github.com/rapidsai/cusignal/pull/369)) [@ajschmidt8](https://github.com/ajschmidt8)
 
 # cuSignal 0.19.0 (21 Apr 2021)
 
