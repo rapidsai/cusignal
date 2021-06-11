@@ -145,12 +145,12 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
         Normalized magnitude of the ambiguity function
     """
     x = cp.asarray(x)
-    xnorm = x/cp.linalg.norm(x)
+    xnorm = x / cp.linalg.norm(x)
     if y is None:
         y = x
         ynorm = xnorm
     else:
-        ynorm = y/cp.linalg.norm(y)
+        ynorm = y / cp.linalg.norm(y)
 
     len_seq = len(xnorm) + len(ynorm)
     nfreq = 2**ceil(log2(abs(len_seq - 1)))
@@ -172,7 +172,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
         for col in range(v.shape[1]):
             v_shift[:, col] = cp.roll(v[:, col], -col, axis=0)
         ynorm = cp.tile(ynorm, (len_seq - 1, 1))
-        amf = nfreq*cp.abs(cp.fft.fftshift(
+        amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(ynorm * cp.conj(v_shift), nfreq, axis=1), axes=1))
 
     return amf
