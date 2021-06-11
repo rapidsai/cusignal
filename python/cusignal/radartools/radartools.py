@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+from math import log2, ceil
 from ..windows.windows import get_window
 
 
@@ -121,3 +122,57 @@ def pulse_doppler(x, window=None, nfft=None):
         pd_dataMatrix = cp.fft.fft(x, nfft, axis=0)
 
     return pd_dataMatrix
+
+
+def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
+    """
+    Calculates the normalized ambiguity function for the vector x
+
+    Parameters
+    ----------
+    x : ndarray
+        Input pulse waveform
+
+    fs: int, float
+        Sampling rate in Hz
+
+    prf: int, float
+        Pulse repetition frequency in Hz
+
+    Returns
+    -------
+    amfun : ndarray
+        Normalized magnitude of the ambiguity function
+    """
+    x = cp.asarray(x)
+    xnorm = x/cp.linalg.norm(x)
+    if y is None:
+        y = x
+        ynorm = xnorm
+    else:
+        ynorm = y/cp.linalg.norm(y)
+
+    len_seq = len(xnorm) + len(ynorm)
+    nfreq = 2**ceil(log2(abs(len_seq - 1)))
+
+    if len(xnorm) < len(ynorm):
+        len_diff = len(ynorm) - len(xnorm)
+        ynorm = cp.concatenate(ynorm, cp.zeros(len_diff))
+    elif len(xnorm) > len(ynorm):
+        len_diff = len(xnorm) - len(ynorm)
+        xnorm = cp.concatenate(xnorm, cp.zeros(len_diff))
+
+    xlen = len(xnorm)
+
+    if cut == '2d':
+        amf = cp.zeros((nfreq, len_seq - 1))
+        v_shift = cp.zeros((len_seq - 1, xlen))
+        v = cp.concatenate((cp.zeros(len_seq - 1 - xlen), xnorm))[..., None]
+        v = cp.tile(v, (1, xlen))
+        for col in range(v.shape[1]):
+            v_shift[:, col] = cp.roll(v[:, col], -col, axis=0)
+        ynorm = cp.tile(ynorm, (len_seq - 1, 1))
+        amf = nfreq*cp.abs(cp.fft.fftshift(
+            cp.fft.ifft(ynorm * cp.conj(v_shift), nfreq, axis=1), axes=1))
+
+    return amf

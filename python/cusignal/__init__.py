@@ -129,6 +129,7 @@ from cusignal.io.writer import (
 from cusignal.radartools.radartools import (
     pulse_compression,
     pulse_doppler,
+    ambgfun,
 )
 
 # Versioneer
