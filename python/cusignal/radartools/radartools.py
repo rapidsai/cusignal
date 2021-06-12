@@ -189,10 +189,13 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     amfun : ndarray
         Normalized magnitude of the ambiguity function
     """
-    if 'complex' not in x.dtype.name:
-        x = cp.asarray(x, dtype=cp.complex)
+    if 'float64' in x.dtype.name:
+        x = cp.asarray(x, dtype=cp.complex128)
+    elif 'float32' in x.dtype.name:
+        x = cp.asarray(x, dtype=cp.complex64)
     else:
         x = cp.asarray(x)
+
     xnorm = x / cp.linalg.norm(x)
     if y is None:
         y = x
