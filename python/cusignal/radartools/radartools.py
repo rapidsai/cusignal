@@ -150,8 +150,7 @@ _new_ynorm_kernel = cp.ElementwiseKernel(
     int x_col = col - ( xlen - 1 ) + row;
 
     if ( ( x_col >= 0 ) && ( x_col < xlen ) ) {
-        //out = ynorm[col] * thrust::conj( xnorm[x_col] );
-        out = ynorm[col] * xnorm[x_col].real();
+        out = ynorm[col] * thrust::conj( xnorm[x_col] );
     } else {
         out = T(0,0);
     }
