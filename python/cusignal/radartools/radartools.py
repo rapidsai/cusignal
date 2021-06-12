@@ -174,12 +174,25 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     prf: int, float
         Pulse repetition frequency in Hz
 
+    y : ndarray
+        Second input pulse waveform. If not given, y = x
+
+    cut : string
+        Direction of one-dimensional cut through ambiguity function
+
+    cutValue : int, float
+        Time delay or doppler shift at which one-dimensional cut
+        through ambiguity function is taken
+
     Returns
     -------
     amfun : ndarray
         Normalized magnitude of the ambiguity function
     """
-    x = cp.asarray(x)
+    if 'complex' not in x.dtype.name:
+        x = cp.asarray(x, dtype=cp.complex)
+    else:
+        x = cp.asarray(x)
     xnorm = x / cp.linalg.norm(x)
     if y is None:
         y = x
