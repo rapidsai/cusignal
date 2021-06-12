@@ -159,6 +159,7 @@ _new_ynorm_kernel = cp.ElementwiseKernel(
     options=("-std=c++11",),
 )
 
+
 def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     """
     Calculates the normalized ambiguity function for the vector x
@@ -217,7 +218,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
     if cut == '2d':
         new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
-        _new_ynorm_kernel(xlen, xnorm, ynorm,  new_ynorm)
+        _new_ynorm_kernel(xlen, xnorm, ynorm, new_ynorm)
 
         amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
