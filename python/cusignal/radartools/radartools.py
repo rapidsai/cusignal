@@ -124,6 +124,42 @@ def pulse_doppler(x, window=None, nfft=None):
     return pd_dataMatrix
 
 
+# v
+#  [[0.         0.         0.         0.        ]
+#  [0.         0.         0.         0.        ]
+#  [0.         0.         0.         0.        ]
+#  [0.66253751 0.66253751 0.66253751 0.66253751]
+#  [0.32884939 0.32884939 0.32884939 0.32884939]
+#  [0.18639329 0.18639329 0.18639329 0.18639329]
+#  [0.64665267 0.64665267 0.64665267 0.64665267]]
+# v_shift
+#  [[0.         0.         0.         0.66253751]
+#  [0.         0.         0.66253751 0.32884939]
+#  [0.         0.66253751 0.32884939 0.18639329]
+#  [0.66253751 0.32884939 0.18639329 0.64665267]
+#  [0.32884939 0.18639329 0.64665267 0.        ]
+#  [0.18639329 0.64665267 0.         0.        ]
+#  [0.64665267 0.         0.         0.        ]]
+
+_new_ynorm_kernel = cp.ElementwiseKernel(
+    "int32 xlen, raw T xnorm, raw T ynorm",
+    "T out",
+    """
+    int row = i / xlen;
+    int col = i % xlen;
+    int x_col = col - ( xlen - 1 ) + row;
+    
+    if ( ( x_col >= 0 ) && ( x_col < xlen ) ) {
+        //out = ynorm[col] * thrust::conj( xnorm[x_col] );
+        out = ynorm[col] * xnorm[x_col].real();
+    } else {
+        out = T(0,0);
+    }
+    """,
+    "_new_ynorm_kernel",
+    options=("-std=c++11",),
+)
+
 def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     """
     Calculates the normalized ambiguity function for the vector x
@@ -165,14 +201,11 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     xlen = len(xnorm)
 
     if cut == '2d':
-        amf = cp.zeros((nfreq, len_seq - 1))
-        v_shift = cp.zeros((len_seq - 1, xlen))
-        v = cp.concatenate((cp.zeros(len_seq - 1 - xlen), xnorm))[..., None]
-        v = cp.tile(v, (1, xlen))
-        for col in range(v.shape[1]):
-            v_shift[:, col] = cp.roll(v[:, col], -col, axis=0)
-        ynorm = cp.tile(ynorm, (len_seq - 1, 1))
+        new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
+        _new_ynorm_kernel(xlen, xnorm, ynorm,  new_ynorm)        
+  
         amf = nfreq * cp.abs(cp.fft.fftshift(
-            cp.fft.ifft(ynorm * cp.conj(v_shift), nfreq, axis=1), axes=1))
+            cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
+
 
     return amf
