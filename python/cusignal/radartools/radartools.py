@@ -148,7 +148,7 @@ _new_ynorm_kernel = cp.ElementwiseKernel(
     int row = i / xlen;
     int col = i % xlen;
     int x_col = col - ( xlen - 1 ) + row;
-    
+
     if ( ( x_col >= 0 ) && ( x_col < xlen ) ) {
         //out = ynorm[col] * thrust::conj( xnorm[x_col] );
         out = ynorm[col] * xnorm[x_col].real();
@@ -202,10 +202,9 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
     if cut == '2d':
         new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
-        _new_ynorm_kernel(xlen, xnorm, ynorm,  new_ynorm)        
-  
+        _new_ynorm_kernel(xlen, xnorm, ynorm,  new_ynorm)
+
         amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
-
 
     return amf
