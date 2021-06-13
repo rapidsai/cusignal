@@ -124,23 +124,6 @@ def pulse_doppler(x, window=None, nfft=None):
     return pd_dataMatrix
 
 
-# v
-#  [[0.         0.         0.         0.        ]
-#  [0.         0.         0.         0.        ]
-#  [0.         0.         0.         0.        ]
-#  [0.66253751 0.66253751 0.66253751 0.66253751]
-#  [0.32884939 0.32884939 0.32884939 0.32884939]
-#  [0.18639329 0.18639329 0.18639329 0.18639329]
-#  [0.64665267 0.64665267 0.64665267 0.64665267]]
-# v_shift
-#  [[0.         0.         0.         0.66253751]
-#  [0.         0.         0.66253751 0.32884939]
-#  [0.         0.66253751 0.32884939 0.18639329]
-#  [0.66253751 0.32884939 0.18639329 0.64665267]
-#  [0.32884939 0.18639329 0.64665267 0.        ]
-#  [0.18639329 0.64665267 0.         0.        ]
-#  [0.64665267 0.         0.         0.        ]]
-
 _new_ynorm_kernel = cp.ElementwiseKernel(
     "int32 xlen, raw T xnorm, raw T ynorm",
     "T out",
@@ -218,7 +201,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
     if cut == '2d':
         new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
-        _new_ynorm_kernel(xlen, xnorm, ynorm, new_ynorm)
+        _new_ynorm_kernel(xlen, xnorm, ynorm, anew_ynorm)
 
         amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
