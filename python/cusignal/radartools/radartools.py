@@ -188,14 +188,17 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
         ynorm = y / cp.linalg.norm(y)
 
     len_seq = len(xnorm) + len(ynorm)
-    nfreq = 2**ceil(log2(abs(len_seq - 1)))
+    nfreq = 2**ceil(log2(len_seq - 1))
 
+    # Consider for deletion as we add different cut values
+    """
     if len(xnorm) < len(ynorm):
         len_diff = len(ynorm) - len(xnorm)
         ynorm = cp.concatenate(ynorm, cp.zeros(len_diff))
     elif len(xnorm) > len(ynorm):
         len_diff = len(xnorm) - len(ynorm)
         xnorm = cp.concatenate(xnorm, cp.zeros(len_diff))
+    """
 
     xlen = len(xnorm)
 
