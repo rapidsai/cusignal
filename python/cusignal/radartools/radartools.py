@@ -173,6 +173,8 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     amfun : ndarray
         Normalized magnitude of the ambiguity function
     """
+    cut = cut.lower()
+
     if 'float64' in x.dtype.name:
         x = cp.asarray(x, dtype=cp.complex128)
     elif 'float32' in x.dtype.name:
@@ -208,5 +210,16 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
         amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
+    elif cut == 'delay':
+        Fd = cp.arange(-fs / 2, fs / 2, fs / nfreq)
+        fftx = cp.fft.fft(xnorm, nfreq) * \
+            cp.exp(1j * 2 * cp.pi * Fd * cutValue)
+        xshift = cp.fft.ifft(fftx)
+
+        ynorm_pad = cp.zeros(nfreq)
+        ynorm_pad[:ynorm.shape[0]] = ynorm
+
+        amf = nfreq * cp.abs(cp.fft.ifftshift(
+            cp.fft.ifft(ynorm_pad * cp.conj(xshift), nfreq)))
 
     return amf
