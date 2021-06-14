@@ -2,9 +2,16 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v21.08.00a for the latest changes to this development branch.
 
-# cuSignal 21.06.00 (Date TBD)
+# cuSignal 21.06.00 (9 Jun 2021)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v21.06.00a for the latest changes to this development branch.
+## 🛠️ Improvements
+
+- Perf Improvements for UPFIRDN ([#378](https://github.com/rapidsai/cusignal/pull/378)) [@mnicely](https://github.com/mnicely)
+- Perf Improvements to SOS Filter ([#377](https://github.com/rapidsai/cusignal/pull/377)) [@mnicely](https://github.com/mnicely)
+- Update environment variable used to determine `cuda_version` ([#376](https://github.com/rapidsai/cusignal/pull/376)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update `CHANGELOG.md` links for calver ([#373](https://github.com/rapidsai/cusignal/pull/373)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Merge `branch-0.19` into `branch-21.06` ([#372](https://github.com/rapidsai/cusignal/pull/372)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update docs build script ([#369](https://github.com/rapidsai/cusignal/pull/369)) [@ajschmidt8](https://github.com/ajschmidt8)
 
 # cuSignal 0.19.0 (21 Apr 2021)
 
