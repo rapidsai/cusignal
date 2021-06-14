@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+from math import log2, ceil
 from ..windows.windows import get_window
 
 
@@ -121,3 +122,117 @@ def pulse_doppler(x, window=None, nfft=None):
         pd_dataMatrix = cp.fft.fft(x, nfft, axis=0)
 
     return pd_dataMatrix
+
+
+_new_ynorm_kernel = cp.ElementwiseKernel(
+    "int32 xlen, raw T xnorm, raw T ynorm",
+    "T out",
+    """
+    int row = i / xlen;
+    int col = i % xlen;
+    int x_col = col - ( xlen - 1 ) + row;
+
+    if ( ( x_col >= 0 ) && ( x_col < xlen ) ) {
+        out = ynorm[col] * thrust::conj( xnorm[x_col] );
+    } else {
+        out = T(0,0);
+    }
+    """,
+    "_new_ynorm_kernel",
+    options=("-std=c++11",),
+)
+
+
+def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
+    """
+    Calculates the normalized ambiguity function for the vector x
+
+    Parameters
+    ----------
+    x : ndarray
+        Input pulse waveform
+
+    fs: int, float
+        Sampling rate in Hz
+
+    prf: int, float
+        Pulse repetition frequency in Hz
+
+    y : ndarray
+        Second input pulse waveform. If not given, y = x
+
+    cut : string
+        Direction of one-dimensional cut through ambiguity function
+
+    cutValue : int, float
+        Time delay or doppler shift at which one-dimensional cut
+        through ambiguity function is taken
+
+    Returns
+    -------
+    amfun : ndarray
+        Normalized magnitude of the ambiguity function
+    """
+    cut = cut.lower()
+
+    if 'float64' in x.dtype.name:
+        x = cp.asarray(x, dtype=cp.complex128)
+    elif 'float32' in x.dtype.name:
+        x = cp.asarray(x, dtype=cp.complex64)
+    else:
+        x = cp.asarray(x)
+
+    xnorm = x / cp.linalg.norm(x)
+    if y is None:
+        y = x
+        ynorm = xnorm
+    else:
+        ynorm = y / cp.linalg.norm(y)
+
+    len_seq = len(xnorm) + len(ynorm)
+    nfreq = 2**ceil(log2(len_seq - 1))
+
+    # Consider for deletion as we add different cut values
+    """
+    if len(xnorm) < len(ynorm):
+        len_diff = len(ynorm) - len(xnorm)
+        ynorm = cp.concatenate(ynorm, cp.zeros(len_diff))
+    elif len(xnorm) > len(ynorm):
+        len_diff = len(xnorm) - len(ynorm)
+        xnorm = cp.concatenate(xnorm, cp.zeros(len_diff))
+    """
+
+    xlen = len(xnorm)
+
+    if cut == '2d':
+        new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
+        _new_ynorm_kernel(xlen, xnorm, ynorm, new_ynorm)
+
+        amf = nfreq * cp.abs(cp.fft.fftshift(
+            cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
+
+    elif cut == 'delay':
+        Fd = cp.arange(-fs / 2, fs / 2, fs / nfreq)
+        fftx = cp.fft.fft(xnorm, nfreq) * \
+            cp.exp(1j * 2 * cp.pi * Fd * cutValue)
+        xshift = cp.fft.ifft(fftx)
+
+        ynorm_pad = cp.zeros(nfreq)
+        ynorm_pad[:ynorm.shape[0]] = ynorm
+
+        amf = nfreq * cp.abs(cp.fft.ifftshift(
+            cp.fft.ifft(ynorm_pad * cp.conj(xshift), nfreq)))
+
+    elif cut == 'doppler':
+        t = cp.arange(0, xlen) / fs
+        ffty = cp.fft.fft(ynorm, len_seq - 1)
+        fftx = cp.fft.fft(xnorm * cp.exp(1j * 2 * cp.pi * cutValue * t),
+                          len_seq - 1)
+
+        amf = cp.abs(cp.fft.fftshift(cp.fft.ifft(ffty * cp.conj(fftx))))
+
+    else:
+        raise ValueError('2d, delay, and doppler are the only\
+            cut values allowed')
+
+    return amf
