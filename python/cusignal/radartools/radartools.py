@@ -210,6 +210,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
         amf = nfreq * cp.abs(cp.fft.fftshift(
             cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
+
     elif cut == 'delay':
         Fd = cp.arange(-fs / 2, fs / 2, fs / nfreq)
         fftx = cp.fft.fft(xnorm, nfreq) * \
@@ -221,5 +222,17 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
         amf = nfreq * cp.abs(cp.fft.ifftshift(
             cp.fft.ifft(ynorm_pad * cp.conj(xshift), nfreq)))
+
+    elif cut == 'doppler':
+        t = cp.arange(0, xlen) / fs
+        ffty = cp.fft.fft(ynorm, len_seq - 1)
+        fftx = cp.fft.fft(xnorm * cp.exp(1j * 2 * cp.pi * cutValue * t),
+                          len_seq - 1)
+
+        amf = cp.abs(cp.fft.fftshift(cp.fft.ifft(ffty * cp.conj(fftx))))
+
+    else:
+        raise ValueError('2d, delay, and doppler are the only\
+            cut values allowed')
 
     return amf
