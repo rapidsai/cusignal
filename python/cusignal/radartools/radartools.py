@@ -217,7 +217,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
             cp.exp(1j * 2 * cp.pi * Fd * cutValue)
         xshift = cp.fft.ifft(fftx)
 
-        ynorm_pad = cp.zeros(nfreq)
+        ynorm_pad = cp.zeros(nfreq) + cp.zeros(nfreq)*1j
         ynorm_pad[:ynorm.shape[0]] = ynorm
 
         amf = nfreq * cp.abs(cp.fft.ifftshift(
