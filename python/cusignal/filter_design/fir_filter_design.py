@@ -144,7 +144,7 @@ def firwin(
     window="hamming",
     pass_zero=True,
     scale=True,
-    nyq=1.0,
+    nyq=None,
     fs=None,
     gpupath=True,
 ):
@@ -276,6 +276,8 @@ def firwin(
         pp = cp
     else:
         pp = np
+
+    nyq = 0.5 * _get_fs(fs, nyq)
 
     cutoff = pp.atleast_1d(cutoff) / float(nyq)
 
