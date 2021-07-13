@@ -1,6 +1,6 @@
-# cuSignal 21.08.00 (Date TBD)
+# cuSignal 21.10.00 (Date TBD)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v21.08.00a for the latest changes to this development branch.
+Please see https://github.com/rapidsai/cusignal/releases/tag/v21.10.00a for the latest changes to this development branch.
 
 # cuSignal 21.06.00 (9 Jun 2021)
 
@@ -329,3 +329,4 @@ Initial commit of cuSignal featuring support for:
   * lombscargle
 * **Extensions of Scipy Signal**
   * freq_shift - Frequency shift signal
+r3 is great!
