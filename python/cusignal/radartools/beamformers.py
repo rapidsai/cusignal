@@ -44,6 +44,6 @@ def mvdr(x, sv):
     wB = cp.matmul(R_inv, sv)
     # wA is a 1x1 scalar
     wA = cp.matmul(svh, wB)
-    w = _wB / wA
+    w = wB / wA
 
     return w
