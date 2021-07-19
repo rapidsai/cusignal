@@ -38,7 +38,7 @@ nvidia-smi
 gpuci_logger "Activate conda env"
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
-gpuci_conda_retry install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
+gpuci_mamba_retry install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
     cudatoolkit=${CUDA_REL} \
     "rapids-build-env=$MINOR_VERSION.*" \
     "rapids-notebook-env=$MINOR_VERSION."
@@ -86,7 +86,7 @@ cd $WORKSPACE/python
 pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
 
 conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
-gpuci_conda_retry install -y -c pytorch "pytorch>=1.4"
+gpuci_mamba_retry install -y -c pytorch "pytorch>=1.4"
 
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
