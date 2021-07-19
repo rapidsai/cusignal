@@ -14,6 +14,14 @@
 import cupy as cp
 
 
+_elementwise_divide = cp.ElementwiseKernel(
+    'T wB, T wA',
+    'T w',
+    'w = wB / wA',
+    '_elementwise_divide',
+    options=("-std=c++11",)
+)
+
 def mvdr(x, sv):
     """
     Minimum variance distortionless response (MVDR) beamformer weights
@@ -42,7 +50,8 @@ def mvdr(x, sv):
     svh = cp.transpose(cp.conj(sv))
 
     wB = cp.matmul(R_inv, sv)
+    # wA is a 1x1 scalar
     wA = cp.matmul(svh, wB)
-    w = cp.matmul(wB, cp.linalg.inv(wA))
+    w = _elementwise_divide(wB, wA)
 
     return w
