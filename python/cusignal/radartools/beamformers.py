@@ -22,6 +22,7 @@ _elementwise_divide = cp.ElementwiseKernel(
     options=("-std=c++11",)
 )
 
+
 def mvdr(x, sv):
     """
     Minimum variance distortionless response (MVDR) beamformer weights
