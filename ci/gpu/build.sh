@@ -85,9 +85,6 @@ cd $WORKSPACE/python
 
 pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
 
-conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
-gpuci_conda_retry install -y -c pytorch "pytorch>=1.4"
-
 ${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
 
