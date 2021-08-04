@@ -1,3 +1,20 @@
+# cuSignal 21.08.00 (4 Aug 2021)
+
+## 🐛 Bug Fixes
+
+- Remove pytorch from cusignal CI/CD ([#404](https://github.com/rapidsai/cusignal/pull/404)) [@awthomp](https://github.com/awthomp)
+- fix firwin bug where fs is ignored if nyq provided ([#400](https://github.com/rapidsai/cusignal/pull/400)) [@awthomp](https://github.com/awthomp)
+- Fixed imaginary part being removed in delay mode of ambgfun ([#397](https://github.com/rapidsai/cusignal/pull/397)) [@cliffburdick](https://github.com/cliffburdick)
+
+## 🛠️ Improvements
+
+- mvdr perf optimizations and addition of elementwise divide kernel ([#403](https://github.com/rapidsai/cusignal/pull/403)) [@awthomp](https://github.com/awthomp)
+- Update sphinx config ([#395](https://github.com/rapidsai/cusignal/pull/395)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add Ambiguity Function (ambgfun) ([#393](https://github.com/rapidsai/cusignal/pull/393)) [@awthomp](https://github.com/awthomp)
+- Fix `21.08` forward-merge conflicts ([#392](https://github.com/rapidsai/cusignal/pull/392)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Adding MVDR (Capon) Beamformer ([#383](https://github.com/rapidsai/cusignal/pull/383)) [@awthomp](https://github.com/awthomp)
+- Fix merge conflicts ([#379](https://github.com/rapidsai/cusignal/pull/379)) [@ajschmidt8](https://github.com/ajschmidt8)
+
 # cuSignal 21.06.00 (9 Jun 2021)
 
 ## 🛠️ Improvements
