@@ -256,12 +256,12 @@ def cfar_alpha(pfa, N):
     alpha : float
         Alpha value.
     """
-    return(N*(pfa**(-1.0/N)-1))
+    return(N * (pfa**(-1.0 / N) - 1))
 
 
 def ca_cfar(array, guard_cells, reference_cells, pfa=1e-3):
     """
-    Computes the cell-averaged constant false alarm rate (CA CFAR) detector 
+    Computes the cell-averaged constant false alarm rate (CA CFAR) detector
     threshold and returns for a given array.
 
     Parameters
@@ -297,13 +297,14 @@ def ca_cfar(array, guard_cells, reference_cells, pfa=1e-3):
     mask = cp.zeros(shape, dtype=cp.float32)
 
     if len(shape) == 1:
-        if len(array) <= 2*guard_cells+2*reference_cells:
+        if len(array) <= 2 * guard_cells + 2 * reference_cells:
             raise ValueError('Array too small for given parameters')
         intermediate = cp.cumsum(array, axis=0, dtype=cp.float32)
-        N = 2*reference_cells
+        N = 2 * reference_cells
         alpha = cfar_alpha(pfa, N)
         tpb = (32,)
-        bpg = ((len(array)-2*reference_cells-2*guard_cells+tpb[0]-1)//tpb[0],)
+        bpg = ((len(array) - 2 * reference_cells - 2 * guard_cells +
+               tpb[0] - 1) // tpb[0],)
         _ca_cfar_1d_kernel(bpg, tpb, (array, intermediate, mask,
                                       len(array), N, cp.float32(alpha),
                                       guard_cells, reference_cells))
@@ -313,26 +314,29 @@ def ca_cfar(array, guard_cells, reference_cells, pfa=1e-3):
                             'dimensional.')
         guard_cells_x, guard_cells_y = guard_cells
         reference_cells_x, reference_cells_y = reference_cells
-        if shape[0]-2*guard_cells_x-2*reference_cells_x <= 0:
+        if shape[0] - 2 * guard_cells_x - 2 * reference_cells_x <= 0:
             raise ValueError('Array first dimension too small for given '
                              'parameters.')
-        if shape[1]-2*guard_cells_y-2*reference_cells_y <= 0:
+        if shape[1] - 2 * guard_cells_y - 2 * reference_cells_y <= 0:
             raise ValueError('Array second dimension too small for given '
                              'parameters.')
         intermediate = cp.cumsum(array, axis=0, dtype=cp.float32)
         intermediate = cp.cumsum(intermediate, axis=1, dtype=cp.float32)
-        N = 2*reference_cells_x*(2*reference_cells_y+2*guard_cells_y+1)
-        N += 2*(2*guard_cells_x+1)*reference_cells_y
+        N = 2 * reference_cells_x * (2 * reference_cells_y +
+                                     2 * guard_cells_y + 1)
+        N += 2 * (2 * guard_cells_x + 1) * reference_cells_y
         alpha = cfar_alpha(pfa, N)
-        tpb = (8,8)
-        bpg_x = (shape[0]-2*(reference_cells_x+guard_cells_x)+tpb[0]-1)//tpb[0]
-        bpg_y = (shape[1]-2*(reference_cells_y+guard_cells_y)+tpb[1]-1)//tpb[1]
+        tpb = (8, 8)
+        bpg_x = (shape[0] - 2 * (reference_cells_x + guard_cells_x) + tpb[0] -
+                 1) // tpb[0]
+        bpg_y = (shape[1] - 2 * (reference_cells_y + guard_cells_y) + tpb[1] -
+                 1) // tpb[1]
         bpg = (bpg_x, bpg_y)
         _ca_cfar_2d_kernel(bpg, tpb, (array, intermediate, mask,
                            shape[0], shape[1], N, cp.float32(alpha),
                            guard_cells_x, guard_cells_y, reference_cells_x,
                            reference_cells_y))
-    return(mask, array-mask>0)
+    return(mask, array - mask > 0)
 
 
 _ca_cfar_2d_kernel = cp.RawKernel(r'''
