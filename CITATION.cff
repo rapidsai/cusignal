@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "Thank you for using cuSignal. Please cite it in your work as described below."
+authors:
+- family-names: "Adam"
+  given-names: "Thompson"
+  orcid: "https://orcid.org/0000-0001-9690-6357"
+- family-names: "Matthew"
+  given-names: "Nicely"
+  orcid: "https://orcid.org/0000-0000-0000-0000"
+title: "cuSignal: The GPU-Accelerated Signal Processing Library"
+version: 21.08
+date-released: 2021-08-06
+url: "https://github.com/rapidsai/cusignal"
