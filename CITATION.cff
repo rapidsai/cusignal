@@ -1,11 +1,11 @@
 cff-version: 1.2.0
 message: "Thank you for using cuSignal. Please cite it in your work as described below."
 authors:
-- family-names: "Adam"
-  given-names: "Thompson"
+- family-names: "Thompson"
+  given-names: "Adam"
   orcid: "https://orcid.org/0000-0001-9690-6357"
-- family-names: "Matthew"
-  given-names: "Nicely"
+- family-names: "Nicely"
+  given-names: "Matthew"
   orcid: "https://orcid.org/0000-0003-3702-1684"
 title: "cuSignal: The GPU-Accelerated Signal Processing Library"
 version: 21.08
