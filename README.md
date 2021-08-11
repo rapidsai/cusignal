@@ -301,7 +301,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
     ```
     pip install pytest
     pytest
-    ``
+    ```
     
 
 ### Docker - All RAPIDS Libraries, including cuSignal
