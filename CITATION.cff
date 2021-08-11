@@ -6,7 +6,7 @@ authors:
   orcid: "https://orcid.org/0000-0001-9690-6357"
 - family-names: "Matthew"
   given-names: "Nicely"
-  orcid: "https://orcid.org/0000-0000-0000-0000"
+  orcid: "https://orcid.org/0000-0003-3702-1684"
 title: "cuSignal: The GPU-Accelerated Signal Processing Library"
 version: 21.08
 date-released: 2021-08-06
