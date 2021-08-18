@@ -1,10 +1,55 @@
-# cuSignal 0.20.0 (Date TBD)
+# cuSignal 21.08.00 (4 Aug 2021)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v0.20.0a for the latest changes to this development branch.
+## 🐛 Bug Fixes
 
-# cuSignal 0.19.0 (Date TBD)
+- Remove pytorch from cusignal CI/CD ([#404](https://github.com/rapidsai/cusignal/pull/404)) [@awthomp](https://github.com/awthomp)
+- fix firwin bug where fs is ignored if nyq provided ([#400](https://github.com/rapidsai/cusignal/pull/400)) [@awthomp](https://github.com/awthomp)
+- Fixed imaginary part being removed in delay mode of ambgfun ([#397](https://github.com/rapidsai/cusignal/pull/397)) [@cliffburdick](https://github.com/cliffburdick)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v0.19.0a for the latest changes to this development branch.
+## 🛠️ Improvements
+
+- mvdr perf optimizations and addition of elementwise divide kernel ([#403](https://github.com/rapidsai/cusignal/pull/403)) [@awthomp](https://github.com/awthomp)
+- Update sphinx config ([#395](https://github.com/rapidsai/cusignal/pull/395)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add Ambiguity Function (ambgfun) ([#393](https://github.com/rapidsai/cusignal/pull/393)) [@awthomp](https://github.com/awthomp)
+- Fix `21.08` forward-merge conflicts ([#392](https://github.com/rapidsai/cusignal/pull/392)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Adding MVDR (Capon) Beamformer ([#383](https://github.com/rapidsai/cusignal/pull/383)) [@awthomp](https://github.com/awthomp)
+- Fix merge conflicts ([#379](https://github.com/rapidsai/cusignal/pull/379)) [@ajschmidt8](https://github.com/ajschmidt8)
+
+# cuSignal 21.06.00 (9 Jun 2021)
+
+## 🛠️ Improvements
+
+- Perf Improvements for UPFIRDN ([#378](https://github.com/rapidsai/cusignal/pull/378)) [@mnicely](https://github.com/mnicely)
+- Perf Improvements to SOS Filter ([#377](https://github.com/rapidsai/cusignal/pull/377)) [@mnicely](https://github.com/mnicely)
+- Update environment variable used to determine `cuda_version` ([#376](https://github.com/rapidsai/cusignal/pull/376)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update `CHANGELOG.md` links for calver ([#373](https://github.com/rapidsai/cusignal/pull/373)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Merge `branch-0.19` into `branch-21.06` ([#372](https://github.com/rapidsai/cusignal/pull/372)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update docs build script ([#369](https://github.com/rapidsai/cusignal/pull/369)) [@ajschmidt8](https://github.com/ajschmidt8)
+
+# cuSignal 0.19.0 (21 Apr 2021)
+
+## 🐛 Bug Fixes
+
+- Fix bug in casting array to cupy ([#340](https://github.com/rapidsai/cusignal/pull/340)) [@awthomp](https://github.com/awthomp)
+
+## 🚀 New Features
+
+- Add morlet2 ([#336](https://github.com/rapidsai/cusignal/pull/336)) [@mnicely](https://github.com/mnicely)
+- Increment Max CuPy Version in CI ([#328](https://github.com/rapidsai/cusignal/pull/328)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Add cusignal source dockerfile ([#343](https://github.com/rapidsai/cusignal/pull/343)) [@awthomp](https://github.com/awthomp)
+- Update min scipy and cupy versions ([#339](https://github.com/rapidsai/cusignal/pull/339)) [@awthomp](https://github.com/awthomp)
+- Add Taylor window ([#338](https://github.com/rapidsai/cusignal/pull/338)) [@mnicely](https://github.com/mnicely)
+- Skip online signal processing tools testing ([#337](https://github.com/rapidsai/cusignal/pull/337)) [@awthomp](https://github.com/awthomp)
+- Add 2D grid-stride loop to fix BUG 295 ([#335](https://github.com/rapidsai/cusignal/pull/335)) [@mnicely](https://github.com/mnicely)
+- Update Changelog Link ([#334](https://github.com/rapidsai/cusignal/pull/334)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Fix bug in bin_reader that ignored dtype ([#333](https://github.com/rapidsai/cusignal/pull/333)) [@awthomp](https://github.com/awthomp)
+- Remove six dependency ([#332](https://github.com/rapidsai/cusignal/pull/332)) [@awthomp](https://github.com/awthomp)
+- Prepare Changelog for Automation ([#331](https://github.com/rapidsai/cusignal/pull/331)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update 0.18 changelog entry ([#330](https://github.com/rapidsai/cusignal/pull/330)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Fix merge conflicts in #315 ([#316](https://github.com/rapidsai/cusignal/pull/316)) [@ajschmidt8](https://github.com/ajschmidt8)
 
 # cuSignal 0.18.0 (24 Feb 2021)
 

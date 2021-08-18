@@ -28,19 +28,13 @@ __device__ void _cupy_sosfilt( const int n_signals,
                                T *s_buffer ) {
 
     T *s_out { s_buffer };
-    T *s_zi { reinterpret_cast<T *>( &s_out[n_sections] ) };
-    T *s_sos { reinterpret_cast<T *>( &s_zi[n_sections * zi_width] ) };
+    T *s_sos { reinterpret_cast<T *>( &s_out[n_sections] ) };
 
     const int tx { static_cast<int>( threadIdx.x ) };
-    const int ty { static_cast<int>( blockIdx.y * blockDim.y + threadIdx.y ) };
+    const int bx { static_cast<int>( blockIdx.x ) };
 
     // Reset shared memory
     s_out[tx] = 0;
-
-    // Load zi
-    for ( int i = 0; i < zi_width; i++ ) {
-        s_zi[tx * zi_width + i] = zi[ty * n_sections * zi_width + tx * zi_width + i];
-    }
 
     // Load SOS
     // b is in s_sos[tx * sos_width + [0-2]]
@@ -50,7 +44,10 @@ __device__ void _cupy_sosfilt( const int n_signals,
         s_sos[tx * sos_width + i] = sos[tx * sos_width + i];
     }
 
-    __syncthreads( );
+    // __syncthreads( );
+
+    T zi0 = zi[bx * n_sections * zi_width + tx * zi_width + 0];
+    T zi1 = zi[bx * n_sections * zi_width + tx * zi_width + 1];
 
     const int load_size { n_sections - 1 };
     const int unload_size { n_samples - load_size };
@@ -58,73 +55,62 @@ __device__ void _cupy_sosfilt( const int n_signals,
     T temp {};
     T x_n {};
 
-    if ( ty < n_signals ) {
+    if ( bx < n_signals ) {
         // Loading phase
         for ( int n = 0; n < load_size; n++ ) {
+            __syncthreads( );
             if ( tx == 0 ) {
-                x_n = x_in[ty * n_samples + n];
+                x_n = x_in[bx * n_samples + n];
             } else {
                 x_n = s_out[tx - 1];
             }
 
             // Use direct II transposed structure
-            temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
-
-            s_zi[tx * zi_width + 0] =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
-
-            s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            temp = s_sos[tx * sos_width + 0] * x_n + zi0;
+            zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+            zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             s_out[tx] = temp;
-
-            __syncthreads( );
         }
 
         // Processing phase
         for ( int n = load_size; n < n_samples; n++ ) {
+            __syncthreads( );
             if ( tx == 0 ) {
-                x_n = x_in[ty * n_samples + n];
+                x_n = x_in[bx * n_samples + n];
             } else {
                 x_n = s_out[tx - 1];
             }
 
             // Use direct II transposed structure
-            temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
-
-            s_zi[tx * zi_width + 0] =
-                s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
-
-            s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+            temp = s_sos[tx * sos_width + 0] * x_n + zi0;
+            zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+            zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
             if ( tx < load_size ) {
                 s_out[tx] = temp;
             } else {
-                x_in[ty * n_samples + ( n - load_size )] = temp;
+                x_in[bx * n_samples + ( n - load_size )] = temp;
             }
-
-            __syncthreads( );
         }
 
         // Unloading phase
         for ( int n = 0; n < n_sections; n++ ) {
+            __syncthreads( );
             // retire threads that are less than n
             if ( tx > n ) {
                 x_n = s_out[tx - 1];
 
                 // Use direct II transposed structure
-                temp = s_sos[tx * sos_width + 0] * x_n + s_zi[tx * zi_width + 0];
-
-                s_zi[tx * zi_width + 0] =
-                    s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + s_zi[tx * zi_width + 1];
-
-                s_zi[tx * zi_width + 1] = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
+                temp = s_sos[tx * sos_width + 0] * x_n + zi0;
+                zi0  = s_sos[tx * sos_width + 1] * x_n - s_sos[tx * sos_width + 4] * temp + zi1;
+                zi1  = s_sos[tx * sos_width + 2] * x_n - s_sos[tx * sos_width + 5] * temp;
 
                 if ( tx < load_size ) {
                     s_out[tx] = temp;
                 } else {
-                    x_in[ty * n_samples + ( n + unload_size )] = temp;
+                    x_in[bx * n_samples + ( n + unload_size )] = temp;
                 }
-                __syncthreads( );
             }
         }
     }

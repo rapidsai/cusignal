@@ -112,7 +112,7 @@ This code executes on an NVIDIA V100 in 637 ms.
 ## Documentation
 The complete cuSignal API documentation including a complete list of functionality and examples can be found for both the Stable and Nightly (Experimental) releases.
 
-[cuSignal 0.17 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.18 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
+[cuSignal 0.19 API](https://docs.rapids.ai/api/cusignal/stable/) | [cuSignal 0.20 Nightly](https://docs.rapids.ai/api/cusignal/nightly/)
 
 ### Installation
 cuSignal has been tested on and supports all modern GPUs - from Maxwell to Ampere. While Anaconda is the preferred installation mechanism for cuSignal, developers and Jetson users should follow the source build instructions below. As of cuSignal 0.16, there isn't a cuSignal conda package for aarch64.
@@ -120,23 +120,23 @@ cuSignal has been tested on and supports all modern GPUs - from Maxwell to Amper
 ### Conda, Linux OS
 cuSignal can be installed with conda ([Miniconda](https://docs.conda.io/en/latest/miniconda.html), or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
-For `cusignal version == 0.17`:
+For `cusignal version == 0.19`:
 
 ```
 For CUDA 10.1.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.17 python=3.8 cudatoolkit=10.1
+    cusignal=0.19 python=3.8 cudatoolkit=10.1
 
 # or, for CUDA 10.2
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.17 python=3.8 cudatoolkit=10.2
+    cusignal=0.19 python=3.8 cudatoolkit=10.2
 
 # or, for CUDA 11.0
 conda install -c rapidsai -c nvidia -c numba -c conda-forge \
-    cusignal=0.17 python=3.8 cudatoolkit=11.0
+    cusignal=0.19 python=3.8 cudatoolkit=11.0
 ```
 
-For the nightly verison of `cusignal`, currently 0.18a:
+For the nightly verison of `cusignal`, currently 0.20a:
 
 ```
 # For CUDA 10.1.2
@@ -301,7 +301,15 @@ In the cuSignal top level directory:
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-For `cusignal version == 0.16`:
+cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-0.19 docker/.`.
+
+```
+docker build -t <image>:<tag> docker/.
+docker run --gpus all --rm -it <image>:<tag> /bin/bash
+```
+
+To 
+For `cusignal version == 0.19`:
 
 ```
 # For CUDA 11.0

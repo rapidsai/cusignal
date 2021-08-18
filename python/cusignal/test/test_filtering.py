@@ -404,14 +404,15 @@ class TestFilter:
     @pytest.mark.parametrize("down", [1])
     @pytest.mark.parametrize("axis", [-1, 0])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
+    @pytest.mark.parametrize("gpupath", [True, False])
     class TestResamplePoly:
         def cpu_version(self, sig, up, down, axis, window):
             return signal.resample_poly(sig, up, down, axis, window=window)
 
-        def gpu_version(self, sig, up, down, axis, window):
+        def gpu_version(self, sig, up, down, axis, window, gpupath):
             with cp.cuda.Stream.null:
                 out = cusignal.resample_poly(
-                    sig, up, down, axis, window=window
+                    sig, up, down, axis, window=window, gpupath=gpupath
                 )
             cp.cuda.Stream.null.synchronize()
             return out
@@ -427,6 +428,7 @@ class TestFilter:
             down,
             axis,
             window,
+            gpupath,
         ):
             if dim == 1:
                 cpu_sig, _ = linspace_data_gen(
@@ -453,6 +455,7 @@ class TestFilter:
             down,
             axis,
             window,
+            gpupath,
         ):
             if dim == 1:
                 cpu_sig, gpu_sig = linspace_data_gen(
@@ -469,6 +472,7 @@ class TestFilter:
                 down,
                 axis,
                 window,
+                gpupath,
             )
 
             key = self.cpu_version(cpu_sig, up, down, axis, window)
@@ -569,6 +573,128 @@ class TestFilter:
             )
 
             key = self.cpu_version(cpu_sig, cpu_filter)
+            array_equal(output, key)
+
+    @pytest.mark.benchmark(group="FirfilterZi")
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("filter_len", [8, 32, 128])
+    class TestFirfilterZi:
+        def cpu_version(self, sig, filt, zi):
+            return signal.lfilter(filt, 1, sig, zi=zi)
+
+        def gpu_version(self, sig, filt, zi):
+            with cp.cuda.Stream.null:
+                out = cusignal.firfilter(filt, sig, zi=zi)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_firfilter_cpu(
+            self,
+            benchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            cpu_zi = signal.lfilter_zi(cpu_filter, 1.0)
+            benchmark(self.cpu_version, cpu_sig, cpu_filter, cpu_zi)
+
+        def test_firfilter_gpu(
+            self,
+            gpubenchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            cpu_zi = signal.lfilter_zi(cpu_filter, 1.0)
+            gpu_filter = cp.asarray(cpu_filter)
+            gpu_zi = cp.asarray(cpu_zi)
+            output = gpubenchmark(
+                self.gpu_version,
+                gpu_sig,
+                gpu_filter,
+                gpu_zi,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filter, cpu_zi)
+            array_equal(output, key)
+
+    @pytest.mark.benchmark(group="Firfilter2")
+    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("filter_len", [8, 32, 128])
+    class TestFirfilter2:
+        def cpu_version(self, sig, filt):
+            return signal.filtfilt(filt, 1, sig)
+
+        def gpu_version(self, sig, filt):
+            with cp.cuda.Stream.null:
+                out = cusignal.firfilter2(filt, sig)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_firfilter2_cpu(
+            self,
+            benchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            benchmark(self.cpu_version, cpu_sig, cpu_filter)
+
+        def test_firfilter2_gpu(
+            self,
+            gpubenchmark,
+            linspace_data_gen,
+            num_samps,
+            filter_len,
+        ):
+            cpu_sig, gpu_sig = linspace_data_gen(
+                0, 10, num_samps, endpoint=False
+            )
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            gpu_filter = cp.asarray(cpu_filter)
+            output = gpubenchmark(
+                self.gpu_version,
+                gpu_sig,
+                gpu_filter,
+            )
+
+            key = self.cpu_version(cpu_sig, cpu_filter)
+            array_equal(output, key)
+
+    @pytest.mark.benchmark(group="FilterZi")
+    @pytest.mark.parametrize("filter_len", [8, 32, 128])
+    class TestFilterZi:
+        def cpu_version(self, a):
+            return signal.lfilter_zi(a, 1.0)
+
+        def gpu_version(self, a):
+            with cp.cuda.Stream.null:
+                out = cusignal.firfilter_zi(a)
+            cp.cuda.Stream.null.synchronize()
+            return out
+
+        @pytest.mark.cpu
+        def test_filter_zi_cpu(self, benchmark, filter_len):
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            benchmark(self.cpu_version, cpu_filter)
+
+        def test_filter_zi_gpu(self, gpubenchmark, filter_len):
+            cpu_filter, _ = signal.butter(filter_len, 0.5)
+            gpu_filter = cp.asarray(cpu_filter)
+
+            output = gpubenchmark(self.gpu_version, gpu_filter)
+
+            key = self.cpu_version(cpu_filter)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="ChannelizePoly")
