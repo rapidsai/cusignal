@@ -2,7 +2,7 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v21.10.00a for the latest changes to this development branch.
 
-# cuSignal 21.08.00 (Date TBD)
+# cuSignal 21.08.00 (4 Aug 2021)
 
 ## 🐛 Bug Fixes
 
