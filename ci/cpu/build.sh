@@ -61,7 +61,7 @@ export GPUCI_CONDA_RETRY_MAX=1
 export GPUCI_CONDA_RETRY_SLEEP=30
 
 gpuci_logger "Build conda pkg for cuSignal"
-gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON}
+gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON_VER}
 
 ################################################################################
 # UPLOAD - Conda packages
