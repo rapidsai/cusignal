@@ -21,13 +21,13 @@ if [ ! -z "$JENKINS_HOME" ] ; then
 fi
 
 # Set path, build parallel level, and CUDA version
-cd $WORKSPACE
+cd "$WORKSPACE"
 export PATH=/opt/conda/bin:/usr/local/cuda/bin:$PATH
 export PARALLEL_LEVEL=${PARALLEL_LEVEL:-4}
 export CUDA_REL=${CUDA_VERSION%.*}
 
 # Set home
-export HOME=$WORKSPACE
+export HOME="$WORKSPACE"
 
 # Parse git describe
 export GIT_DESCRIBE_TAG=`git describe --tags`
@@ -38,7 +38,7 @@ export GPUCI_CONDA_RETRY_MAX=1
 export GPUCI_CONDA_RETRY_SLEEP=30
 
 # Set Benchmark Vars
-export BENCHMARKS_DIR=${WORKSPACE}/benchmarks
+export BENCHMARKS_DIR="$WORKSPACE/benchmarks"
 
 ##########################################
 # Environment Setup                      #
@@ -77,7 +77,7 @@ conda list --show-channel-urls
 ##########################################
 
 gpuci_logger "Build cuSignal"
-$WORKSPACE/build.sh
+"$WORKSPACE/build.sh"
 
 ##########################################
 # Run Benchmarks                         #

@@ -42,7 +42,8 @@ def mvdr(x, sv):
     svh = cp.transpose(cp.conj(sv))
 
     wB = cp.matmul(R_inv, sv)
+    # wA is a 1x1 scalar
     wA = cp.matmul(svh, wB)
-    w = cp.matmul(wB, cp.linalg.inv(wA))
+    w = wB / wA
 
     return w

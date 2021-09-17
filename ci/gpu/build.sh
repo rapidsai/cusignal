@@ -18,10 +18,10 @@ export PARALLEL_LEVEL=${PARALLEL_LEVEL:-4}
 export CUDA_REL=${CUDA_VERSION%.*}
 
 # Set home to the job's workspace
-export HOME=$WORKSPACE
+export HOME="$WORKSPACE"
 
 # Parse git describei
-cd $WORKSPACE
+cd "$WORKSPACE"
 export GIT_DESCRIBE_TAG=`git describe --tags`
 export MINOR_VERSION=`echo $GIT_DESCRIBE_TAG | grep -o -E '([0-9]+\.[0-9]+)'`
 
@@ -62,7 +62,7 @@ conda list --show-channel-urls
 ################################################################################
 
 gpuci_logger "Build cusignal"
-$WORKSPACE/build.sh clean cusignal
+"$WORKSPACE/build.sh" clean cusignal
 
 ################################################################################
 # TEST - Run GoogleTest and py.tests for cusignal
@@ -81,14 +81,14 @@ gpuci_logger "Check GPU usage"
 nvidia-smi
 
 gpuci_logger "Python pytest for cusignal"
-cd $WORKSPACE/python
+cd "$WORKSPACE/python"
 
-pytest --cache-clear --junitxml=${WORKSPACE}/junit-cusignal.xml -v -s -m "not cpu"
+pytest --cache-clear --junitxml="$WORKSPACE/junit-cusignal.xml" -v -s -m "not cpu"
 
 conda remove -y --force blas nomkl rapids-build-env rapids-notebook-env
 gpuci_mamba_retry install -y -c pytorch "pytorch>=1.4"
 
-${WORKSPACE}/ci/gpu/test-notebooks.sh 2>&1 | tee nbtest.log
+"${WORKSPACE}/ci/gpu/test-notebooks.sh" 2>&1 | tee nbtest.log
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
 
 return ${EXITCODE}
