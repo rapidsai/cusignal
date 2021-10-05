@@ -48,7 +48,7 @@ FIR Filters
     :members:
     :undoc-members:
 
-.. automodule:: cusignal.filtering.fir_filter_design
+.. automodule:: cusignal.filtering.filtering.fir_filter_design
     :members:
     :undoc-members:
 
@@ -186,5 +186,9 @@ Radar Tools
 ------------
 
 .. automodule:: cusignal.radartools.radartools
+    :members:
+    :undoc-members:
+
+.. automodule:: cusignal.radartools.beamformers
     :members:
     :undoc-members:
