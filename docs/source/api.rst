@@ -44,7 +44,7 @@ Resample
 FIR Filters
 ------------
 
-.. automodule:: cusignal.filtering.firfilter
+.. automodule:: cusignal.filtering.filtering.firfilter
     :members:
     :undoc-members:
 
