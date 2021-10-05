@@ -48,7 +48,7 @@ FIR Filters
     :members:
     :undoc-members:
 
-.. automodule:: cusignal.filtering.filtering.fir_filter_design
+.. automodule:: cusignal.filter_design.fir_filter_design
     :members:
     :undoc-members:
 
