@@ -307,6 +307,6 @@ def cwt(data, wavelet, widths):
     """
     output = cp.empty([len(widths), len(data)])
     for ind, width in enumerate(widths):
-        wavelet_data = wavelet(min(10 * width, len(data)), width)
+        wavelet_data = wavelet(min(10 * int(width), len(data)), int(width))
         output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output
