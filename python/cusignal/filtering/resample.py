@@ -466,11 +466,6 @@ def upfirdn(
     O(N*Q) per output sample. The polyphase implementation used here is
     O(N/P).
 
-    References
-    ----------
-    .. [1] P. P. Vaidyanathan, Multirate Systems and Filter Banks,
-       Prentice Hall, 1993.
-
     Examples
     --------
     Simple operations:
@@ -511,6 +506,11 @@ def upfirdn(
            [ 4.,  5.],
            [ 6.,  7.],
            [ 6.,  7.]])
+
+    References
+    ----------
+    .. [1] P. P. Vaidyanathan, Multirate Systems and Filter Banks,
+       Prentice Hall, 1993.
     """
 
     ufd = _UpFIRDn(h, x.dtype, up, down)
