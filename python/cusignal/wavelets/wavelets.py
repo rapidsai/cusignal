@@ -299,13 +299,13 @@ def cwt(data, wavelet, widths):
     >>> sig  = cp.cos(2 * cp.pi * 7 * t) + cusignal.gausspulse(t - 0.4, fc=2)
     >>> widths = cp.arange(1, 31)
     >>> cwtmatr = cusignal.cwt(sig, cusignal.ricker, widths)
-    >>> plt.imshow(cp.asnumpy(cwtmatr), extent=[-1, 1, 31, 1], cmap='PRGn',
+    >>> plt.imshow(abs(cp.asnumpy(cwtmatr)), extent=[-1, 1, 31, 1], cmap='PRGn',
                    aspect='auto', vmax=abs(cwtmatr).max(),
                    vmin=-abs(cwtmatr).max())
     >>> plt.show()
 
     """
-    output = cp.empty([len(widths), len(data)])
+    output = cp.empty([len(widths), len(data)], dtype = "complex128")
     for ind, width in enumerate(widths):
         wavelet_data = wavelet(min(10 * int(width), len(data)), int(width))
         output[ind, :] = convolve(data, wavelet_data, mode="same")
