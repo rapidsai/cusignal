@@ -15,6 +15,8 @@ from cusignal.radartools.radartools import (
     pulse_compression,
     pulse_doppler,
     ambgfun,
+    ca_cfar,
+    cfar_alpha,
 )
 
 from cusignal.radartools.beamformers import (
