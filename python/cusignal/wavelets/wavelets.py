@@ -306,7 +306,7 @@ def cwt(data, wavelet, widths):
     >>> plt.show()
 
     """
-    if cp.asarray(wavelet(1, widths[0])).dtype.char in 'FDG':
+    if cp.asarray(wavelet(1, 1)).dtype.char in 'FDG':
         dtype = cp.complex128
     else:
         dtype = cp.float64
@@ -314,7 +314,7 @@ def cwt(data, wavelet, widths):
     output = cp.empty([len(widths), len(data)], dtype=dtype)
 
     for ind, width in enumerate(widths):
-        N = np.min([10 * width, len(data)])
-        wavelet_data = cp.conj(wavelet(N, width))[::-1]
+        N = np.min([10 * int(width), len(data)])
+        wavelet_data = cp.conj(wavelet(N, int(width)))[::-1]
         output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output
