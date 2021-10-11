@@ -13,6 +13,7 @@
 
 import cupy as cp
 from ..convolution.convolve import convolve
+import numpy as np
 
 _qmf_kernel = cp.ElementwiseKernel(
     "",
@@ -309,11 +310,11 @@ def cwt(data, wavelet, widths):
         dtype = cp.complex128
     else:
         dtype = cp.float64
-    
+
     output = cp.empty([len(widths), len(data)], dtype=dtype)
-    
+
     for ind, width in enumerate(widths):
-        N = np.min([10 * width, len(data)])
+        N = cp.min([10 * width, len(data)])
         wavelet_data = cp.conj(wavelet(N, width))[::-1]
         output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output
