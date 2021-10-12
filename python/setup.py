@@ -15,8 +15,6 @@ import versioneer
 from setuptools import setup, find_packages
 
 
-INSTALL_REQUIRES = ['numba', 'scipy', 'numpy']
-
 setup(
     name='cusignal',
     version=versioneer.get_version(),
@@ -26,7 +24,9 @@ setup(
     license="Apache 2.0",
     packages=find_packages(include=["cusignal", "cusignal.*"]),
     cmdclass=versioneer.get_cmdclass(),
-    install_requires=INSTALL_REQUIRES,
+    install_requires=[
+        'numpy', 'numba', 'scipy',
+    ],
     zip_safe=False,
     package_data={"": ["*.fatbin"]}
 )
