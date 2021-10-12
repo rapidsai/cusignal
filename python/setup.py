@@ -15,8 +15,7 @@ import versioneer
 from setuptools import setup, find_packages
 
 
-INSTALL_REQUIRES = ['numba==0.54.1', 'scipy==1.7.1', 'numpy==1.20.3',
-                    'cupy-cuda114']
+INSTALL_REQUIRES = ['numba', 'scipy', 'numpy', 'cupy-cuda114']
 
 setup(
     name='cusignal',
