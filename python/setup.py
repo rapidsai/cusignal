@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 
 INSTALL_REQUIRES = ['numba>=0.49.0', 'scipy>=1.6.0', 'numpy>=1.17.4',
-                    'cupy>=8.3.0,<10.0.0a0']
+                    'cupy-cuda114']
 
 setup(
     name='cusignal',
