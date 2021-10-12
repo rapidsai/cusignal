@@ -15,7 +15,7 @@ import versioneer
 from setuptools import setup, find_packages
 
 
-INSTALL_REQUIRES = ['numba>=0.49.0', 'scipy>=1.6.0', 'numpy>=1.17.4',
+INSTALL_REQUIRES = ['numba==0.54.1', 'scipy==1.7.1', 'numpy==1.20.3',
                     'cupy-cuda114']
 
 setup(
