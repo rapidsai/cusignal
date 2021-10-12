@@ -11,22 +11,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import versioneer
 from setuptools import setup, find_packages
+import sys
+from os.path import dirname, join
 
 
-INSTALL_REQUIRES = ["numba"]
+SETUP_REQUIRES = ['setuptools >= 24.2.0']
+SETUP_REQUIRES += ['wheel'] if 'bdist_wheel' in sys.argv else []
 
-setup(
+
+def read(*names, **kwargs):
+    with io.open(
+        join(dirname(__file__), *names),
+        encoding=kwargs.get('encoding', 'utf8')
+    ) as fh:
+        return fh.read()
+
+
+opts = dict(
     name='cusignal',
     version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
+    license="Apache 2.0",
     description="cuSignal - GPU Signal Processing",
     url="https://github.com/rapidsai/cusignal",
     author="NVIDIA Corporation",
-    license="Apache 2.0",
     packages=find_packages(include=["cusignal", "cusignal.*"]),
-    cmdclass=versioneer.get_cmdclass(),
-    install_requires=INSTALL_REQUIRES,
+    package_data={"": ["*.fatbin"]},
+    include_package_data=True,
     zip_safe=False,
-    package_data={"": ["*.fatbin"]}
+    project_urls={
+        'Documentation': 'https://docs.rapids.ai/api/cusignal/stable/',
+        'Issue Tracker': 'https://github.com/rapidsai/cusignal/issues',
+    },
+    python_requires='>=3.6',
+    platforms=['manylinux2014_x86_64'],
+    setup_requires=SETUP_REQUIRES,
+    install_requires=[
+        'numpy', 'numba', 'scipy',
+    ],
 )
+
+if __name__ == '__main__':
+    setup(**opts)

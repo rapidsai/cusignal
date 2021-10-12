@@ -11,6 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+_is_cupy_available = False
+
+try:
+    import cupy
+    _is_cupy_available = True
+except ImportError:
+    pass
+
 from cusignal.acoustics.cepstrum import (
     real_cepstrum,
     complex_cepstrum,
