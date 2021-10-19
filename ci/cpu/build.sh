@@ -63,9 +63,15 @@ export GPUCI_CONDA_RETRY_SLEEP=30
 gpuci_logger "Build conda pkg for cuSignal"
 gpuci_conda_retry build conda/recipes/cusignal --python=${PYTHON}
 
+rm -rf dist/
+python setup.py sdist bdist_wheel
+
 ################################################################################
 # UPLOAD - Conda packages
 ################################################################################
 
 gpuci_logger "Upload conda pkgs for cuSignal"
 source ci/cpu/upload.sh
+
+gpuci_logger "Upload pypi pkgs for cuSignal"
+source ci/cpu/upload-pypi.sh
