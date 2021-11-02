@@ -116,7 +116,7 @@ if not on_rtd:
 #
 html_theme_options = {
      "external_links": [],
-     "github_url": "https://github.com/rapidsai/cudf",
+     "github_url": "https://github.com/rapidsai/cusignal",
      "twitter_url": "https://twitter.com/rapidsai",
      "show_toc_level": 1,
      "navbar_align": "right",
