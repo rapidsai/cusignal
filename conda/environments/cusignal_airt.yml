@@ -12,7 +12,7 @@ dependencies:
   - pytest
   - pytest-benchmark
   - sphinx
-  - sphinx_rtd_theme
+  - pydata-sphinx-theme
   - numpydoc
   - ipython
   - pip
