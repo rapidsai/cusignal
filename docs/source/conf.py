@@ -36,11 +36,13 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx_copybutton',
     'numpydoc',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
 ]
 
+copybutton_prompt_text = ">>> "
 autosummary_generate = True
 ipython_mplbackend = 'str'
 

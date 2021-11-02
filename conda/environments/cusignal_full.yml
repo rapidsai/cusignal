@@ -22,5 +22,6 @@ dependencies:
   - pandas
   - sphinx
   - pydata-sphinx-theme
+  - sphinx-copybutton
   - numpydoc
   - ipython

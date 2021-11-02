@@ -13,6 +13,7 @@ dependencies:
   - pytest-benchmark
   - sphinx
   - pydata-sphinx-theme
+  - sphinx-copybutton
   - numpydoc
   - ipython
   - pip
