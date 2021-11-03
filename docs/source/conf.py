@@ -36,11 +36,14 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx_copybutton',
     'numpydoc',
     'IPython.sphinxext.ipython_console_highlighting',
     'IPython.sphinxext.ipython_directive',
 ]
 
+copybutton_prompt_text = ">>> "
+autosummary_generate = True
 ipython_mplbackend = 'str'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,7 +97,8 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'pydata_sphinx_theme'
+html_logo = "_static/RAPIDS-logo-purple.png"
 
 # on_rtd is whether we are on readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
@@ -103,16 +107,22 @@ if not on_rtd:
     # only import and set the theme if we're building docs locally
     # otherwise, readthedocs.org uses their theme by default,
     # so no need to specify it
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    import pydata_sphinx_theme
+    html_theme = 'pydata_sphinx_theme'
+    html_theme_path = pydata_sphinx_theme.get_html_theme_path()
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+     "external_links": [],
+     "github_url": "https://github.com/rapidsai/cusignal",
+     "twitter_url": "https://twitter.com/rapidsai",
+     "show_toc_level": 1,
+     "navbar_align": "right",
+ }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -182,8 +192,9 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 
 
 # Config numpydoc
-numpydoc_show_inherited_class_members = False
+numpydoc_show_inherited_class_members = True
 numpydoc_class_members_toctree = False
+numpydoc_attributes_as_param_list = False
 
 
 def setup(app):

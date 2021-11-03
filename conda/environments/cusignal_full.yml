@@ -21,6 +21,7 @@ dependencies:
   - cugraph
   - pandas
   - sphinx
-  - sphinx_rtd_theme
+  - pydata-sphinx-theme
+  - sphinx-copybutton
   - numpydoc
   - ipython
