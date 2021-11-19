@@ -2,9 +2,23 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v21.12.00a for the latest changes to this development branch.
 
-# cuSignal 21.10.00 (Date TBD)
+# cuSignal 21.10.00 (7 Oct 2021)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v21.10.00a for the latest changes to this development branch.
+## 🐛 Bug Fixes
+
+- Change type check to use isinstance instead of str compare ([#415](https://github.com/rapidsai/cusignal/pull/415)) [@jrc-exp](https://github.com/jrc-exp)
+
+## 📖 Documentation
+
+- Fix typo in readme ([#413](https://github.com/rapidsai/cusignal/pull/413)) [@awthomp](https://github.com/awthomp)
+- Add citation file ([#412](https://github.com/rapidsai/cusignal/pull/412)) [@awthomp](https://github.com/awthomp)
+- README overhaul ([#411](https://github.com/rapidsai/cusignal/pull/411)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Fix Forward-Merge Conflicts ([#417](https://github.com/rapidsai/cusignal/pull/417)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Adding CFAR ([#409](https://github.com/rapidsai/cusignal/pull/409)) [@mbolding3](https://github.com/mbolding3)
+- support space in workspace ([#349](https://github.com/rapidsai/cusignal/pull/349)) [@jolorunyomi](https://github.com/jolorunyomi)
 
 # cuSignal 21.08.00 (4 Aug 2021)
 
