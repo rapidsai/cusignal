@@ -14,17 +14,23 @@
 import cupy as cp
 
 
-def mvdr(x, sv):
+def mvdr(x, sv, calc_cov=True):
     """
     Minimum variance distortionless response (MVDR) beamformer weights
 
     Parameters
     ----------
     x : ndarray
-        Received signal, assume 2D array with size [num_sensors, num_samples]
+        Received signal or input covariance matrix, assume 2D array with
+        size [num_sensors, num_samples]
 
     sv: ndarray
         Steering vector, assume 1D array with size [num_sensors, 1]
+
+    calc_cov : bool
+        Determine whether to calculate covariance matrix. Simply put, calc_cov
+        defines whether x input is made of sensor/observation data or is
+        a precalculated covariance matrix
 
     Note: Unlike MATLAB where input matrix x is of size MxN where N represents
     the number of array elements, we assume row-major formatted data where each
@@ -37,7 +43,11 @@ def mvdr(x, sv):
     if x.shape[0] != sv.shape[0]:
         raise ValueError('Steering Vector and input data do not align')
 
-    R = cp.cov(x)
+    if calc_cov:
+        R = cp.cov(x)
+    else:
+        R = cp.asarray(x)
+
     R_inv = cp.linalg.inv(R)
     svh = cp.transpose(cp.conj(sv))
 
