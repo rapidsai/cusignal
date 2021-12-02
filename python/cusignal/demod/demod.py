@@ -13,6 +13,7 @@
 
 import cupy as cp
 
+
 def fm_demod(x, axis=-1):
     """
     Demodulate Frequency Modulated Signal
