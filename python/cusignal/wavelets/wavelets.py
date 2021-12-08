@@ -13,6 +13,7 @@
 
 import cupy as cp
 from ..convolution.convolve import convolve
+import numpy as np
 
 _qmf_kernel = cp.ElementwiseKernel(
     "",
@@ -299,14 +300,21 @@ def cwt(data, wavelet, widths):
     >>> sig  = cp.cos(2 * cp.pi * 7 * t) + cusignal.gausspulse(t - 0.4, fc=2)
     >>> widths = cp.arange(1, 31)
     >>> cwtmatr = cusignal.cwt(sig, cusignal.ricker, widths)
-    >>> plt.imshow(cp.asnumpy(cwtmatr), extent=[-1, 1, 31, 1], cmap='PRGn',
-                   aspect='auto', vmax=abs(cwtmatr).max(),
+    >>> plt.imshow(abs(cp.asnumpy(cwtmatr)), extent=[-1, 1, 31, 1],
+                   cmap='PRGn', aspect='auto', vmax=abs(cwtmatr).max(),
                    vmin=-abs(cwtmatr).max())
     >>> plt.show()
 
     """
-    output = cp.empty([len(widths), len(data)])
+    if cp.asarray(wavelet(1, 1)).dtype.char in 'FDG':
+        dtype = cp.complex128
+    else:
+        dtype = cp.float64
+
+    output = cp.empty([len(widths), len(data)], dtype=dtype)
+
     for ind, width in enumerate(widths):
-        wavelet_data = wavelet(min(10 * width, len(data)), width)
+        N = np.min([10 * int(width), len(data)])
+        wavelet_data = cp.conj(wavelet(N, int(width)))[::-1]
         output[ind, :] = convolve(data, wavelet_data, mode="same")
     return output

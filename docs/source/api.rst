@@ -44,11 +44,11 @@ Resample
 FIR Filters
 ------------
 
-.. automodule:: cusignal.filtering.firfilter
+.. automodule:: cusignal.filtering.filtering.firfilter
     :members:
     :undoc-members:
 
-.. automodule:: cusignal.filtering.fir_filter_design
+.. automodule:: cusignal.filter_design.fir_filter_design
     :members:
     :undoc-members:
 
@@ -186,5 +186,9 @@ Radar Tools
 ------------
 
 .. automodule:: cusignal.radartools.radartools
+    :members:
+    :undoc-members:
+
+.. automodule:: cusignal.radartools.beamformers
     :members:
     :undoc-members:
