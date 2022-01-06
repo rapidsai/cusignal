@@ -256,12 +256,13 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
         newshape = [1] * x.ndim
         newshape[axis] = len(W)
         W.shape = newshape
-        X = X * W
+        X = X * cp.asarray(W, dtype=X.dtype)
+        
     sl = [slice(None)] * x.ndim
     newshape = list(x.shape)
     newshape[axis] = num
     N = int(np.minimum(num, Nx))
-    Y = cp.zeros(newshape, "D")
+    Y = cp.zeros(newshape, dtype=X.dtype)
     sl[axis] = slice(0, (N + 1) // 2)
     Y[sl] = X[sl]
     sl[axis] = slice(-(N - 1) // 2, None)
