@@ -760,10 +760,8 @@ def sosfilt(
     return out
 
 
-_hilbert_kernel = cp.ElementwiseKernel(
-    "",
-    "float64 h",
-    """
+_hilbert_kernel = {
+    "operation": """
     if ( !odd ) {
         if ( ( i == 0 ) || ( i == bend ) ) {
             h = 1.0;
@@ -782,12 +780,26 @@ _hilbert_kernel = cp.ElementwiseKernel(
         }
     }
     """,
-    "_hilbert_kernel",
-    options=("-std=c++11",),
-    loop_prep="const bool odd { _ind.size() & 1 }; \
-               const int bend = odd ? \
-                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
-                   static_cast<int>( 0.5 * _ind.size() );",
+    "name": "_hilbert_kernel",
+    "options": ("-std=c++11",),
+    "loop_prep": "const bool odd { _ind.size() & 1 }; \
+                  const int bend = odd ? \
+                      static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                      static_cast<int>( 0.5 * _ind.size() );",
+}
+
+
+_hilbert_kernel_float32 = cp.ElementwiseKernel(
+    "",
+    "float32 h",
+    **_hilbert_kernel,
+)
+
+
+_hilbert_kernel_float64 = cp.ElementwiseKernel(
+    "",
+    "float64 h",
+    **_hilbert_kernel,
 )
 
 
@@ -887,7 +899,11 @@ def hilbert(x, N=None, axis=-1):
         raise ValueError("N must be positive.")
 
     Xf = cp.fft.fft(x, N, axis=axis)
-    h = _hilbert_kernel(size=N)
+    
+    if Xf.dtype.char is "F":
+        h = _hilbert_kernel_float32(size=N)
+    else:
+        h = _hilbert_kernel_float64(size=N)
 
     if x.ndim > 1:
         ind = [cp.newaxis] * x.ndim
@@ -897,10 +913,8 @@ def hilbert(x, N=None, axis=-1):
     return x
 
 
-_hilbert2_kernel = cp.ElementwiseKernel(
-    "",
-    "float64 h1, float64 h2",
-    """
+_hilbert2_kernel = {
+    "operation": """
     if ( !odd ) {
         if ( ( i == 0 ) || ( i == bend ) ) {
             h1 = 1.0;
@@ -925,12 +939,26 @@ _hilbert2_kernel = cp.ElementwiseKernel(
         }
     }
     """,
-    "_hilbert2_kernel",
-    options=("-std=c++11",),
-    loop_prep="const bool odd { _ind.size() & 1 }; \
-               const int bend = odd ? \
-                   static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
-                   static_cast<int>( 0.5 * _ind.size() );",
+    "name": "_hilbert2_kernel",
+    "options": ("-std=c++11",),
+    "loop_prep": "const bool odd { _ind.size() & 1 }; \
+                  const int bend = odd ? \
+                      static_cast<int>( 0.5 * ( _ind.size()  + 1 ) ) : \
+                      static_cast<int>( 0.5 * _ind.size() );",
+}
+
+
+_hilbert2_kernel_float32 = cp.ElementwiseKernel(
+    "",
+    "float32 h1, float32 h2",
+    **_hilbert2_kernel,
+)
+
+
+_hilbert2_kernel_float64 = cp.ElementwiseKernel(
+    "",
+    "float64 h1, float64 h2",
+    **_hilbert2_kernel,
 )
 
 
@@ -973,8 +1001,11 @@ def hilbert2(x, N=None):
         )
 
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
-
-    h1, h2 = _hilbert2_kernel(size=N[1])
+    
+    if Xf.dtype.char is "F":
+        h1, h2 = _hilbert2_kernel_float32(size=N)
+    else:
+        h1, h2 = _hilbert2_kernel_float64(size=N)
 
     h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim
