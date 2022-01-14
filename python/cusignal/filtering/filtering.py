@@ -1003,9 +1003,9 @@ def hilbert2(x, N=None):
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
 
     if Xf.dtype.char == "F":
-        h1, h2 = _hilbert2_kernel_float32(size=N)
+        h1, h2 = _hilbert2_kernel_float32(size=N[1])
     else:
-        h1, h2 = _hilbert2_kernel_float64(size=N)
+        h1, h2 = _hilbert2_kernel_float64(size=N[1])
 
     h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim
