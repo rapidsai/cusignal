@@ -900,7 +900,7 @@ def hilbert(x, N=None, axis=-1):
 
     Xf = cp.fft.fft(x, N, axis=axis)
 
-    if Xf.dtype.char is "F":
+    if Xf.dtype.char == "F":
         h = _hilbert_kernel_float32(size=N)
     else:
         h = _hilbert_kernel_float64(size=N)
@@ -1002,7 +1002,7 @@ def hilbert2(x, N=None):
 
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
 
-    if Xf.dtype.char is "F":
+    if Xf.dtype.char == "F":
         h1, h2 = _hilbert2_kernel_float32(size=N)
     else:
         h1, h2 = _hilbert2_kernel_float64(size=N)

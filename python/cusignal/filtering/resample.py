@@ -257,7 +257,7 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
         newshape[axis] = len(W)
         W.shape = newshape
         X = X * cp.asarray(W, dtype=X.dtype)
-        
+
     sl = [slice(None)] * x.ndim
     newshape = list(x.shape)
     newshape[axis] = num
