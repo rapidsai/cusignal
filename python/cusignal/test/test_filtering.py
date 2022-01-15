@@ -192,7 +192,14 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert_cpu(self, rand_data_gen, benchmark, dtype, dim, num_samps):
+        def test_hilbert_cpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            dtype,
+            dim,
+            num_samps,
+        ):
             cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
@@ -221,7 +228,14 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert2_cpu(self, rand_data_gen, benchmark, dtype, dim, num_samps):
+        def test_hilbert2_cpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            dtype,
+            dim,
+            num_samps
+        ):
             cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
