@@ -22,6 +22,11 @@ def array_equal(a, b, rtol=1e-7, atol=1e-5):
             rtol = 1e-3
             atol = 1e-3
 
+        # Relaxed tolerances for single-precision arrays.
+        if a[0].dtype == cp.float32 or b[0].dtype == cp.float32:
+            rtol = 1e-1
+            atol = 1e-1
+
         for i in range(len(a)):
             cp.testing.assert_allclose(a[i], b[i], rtol=rtol, atol=atol)
 
@@ -29,6 +34,12 @@ def array_equal(a, b, rtol=1e-7, atol=1e-5):
         if a.dtype == cp.float32 or a.dtype == cp.complex64:
             rtol = 1e-3
             atol = 1e-3
+
+        # Relaxed tolerances for single-precision arrays.
+        if a.dtype == cp.float32 or b.dtype == cp.float32:
+            rtol = 1e-1
+            atol = 1e-1
+
         cp.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
 
 
