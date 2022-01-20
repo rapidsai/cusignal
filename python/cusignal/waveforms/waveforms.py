@@ -479,6 +479,7 @@ def chirp(
     >>> plt.show()
     """
 
+    t = cp.asarray(t)
     phase = cp.empty(t.shape, dtype=dtype)
 
     phi *= np.pi / 180
