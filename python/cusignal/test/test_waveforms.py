@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 import cusignal
 import pytest
 
@@ -64,7 +65,9 @@ class TestWaveforms:
             return out
 
         @pytest.mark.cpu
-        def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
+        def test_square_cpu(
+            self, time_data_gen, benchmark, num_samps, duty
+        ):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
 
@@ -85,7 +88,9 @@ class TestWaveforms:
     @pytest.mark.parametrize("retenv", [True, False])
     class TestGaussPulse:
         def cpu_version(self, sig, fc, retquad, retenv):
-            return signal.gausspulse(sig, fc, retquad=retquad, retenv=retenv)
+            return signal.gausspulse(
+                sig, fc, retquad=retquad, retenv=retenv
+            )
 
         def gpu_version(self, sig, fc, retquad, retenv):
             with cp.cuda.Stream.null:
@@ -103,7 +108,13 @@ class TestWaveforms:
             benchmark(self.cpu_version, cpu_sig, fc, retquad, retenv)
 
         def test_gausspulse_gpu(
-            self, time_data_gen, gpubenchmark, num_samps, fc, retquad, retenv
+            self,
+            time_data_gen,
+            gpubenchmark,
+            num_samps,
+            fc,
+            retquad,
+            retenv,
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
@@ -115,6 +126,24 @@ class TestWaveforms:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Chirp")
+    @pytest.mark.parametrize(
+        "dtype",
+        [
+            pytest.param(
+                cp.float32,
+                marks=pytest.mark.xfail(reason="no scipy equivalent"),
+            ),
+            cp.float64,
+            pytest.param(
+                cp.complex64,
+                marks=pytest.mark.xfail(reason="no scipy equivalent"),
+            ),
+            pytest.param(
+                cp.complex128,
+                marks=pytest.mark.xfail(reason="no scipy equivalent"),
+            ),
+        ],
+    )
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
@@ -124,26 +153,42 @@ class TestWaveforms:
         def cpu_version(self, sig, f0, t1, f1, method):
             return signal.chirp(sig, f0, t1, f1, method)
 
-        def gpu_version(self, sig, f0, t1, f1, method):
+        def gpu_version(self, sig, f0, t1, f1, method, dtype):
             with cp.cuda.Stream.null:
-                out = cusignal.chirp(sig, f0, t1, f1, method)
+                out = cusignal.chirp(sig, f0, t1, f1, method, dtype=dtype)
             cp.cuda.Stream.null.synchronize()
             return out
 
         @pytest.mark.cpu
         def test_chirp_cpu(
-            self, time_data_gen, benchmark, num_samps, f0, t1, f1, method
+            self,
+            time_data_gen,
+            benchmark,
+            dtype,
+            num_samps,
+            f0,
+            t1,
+            f1,
+            method,
         ):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, f0, t1, f1, method)
 
         def test_chirp_gpu(
-            self, time_data_gen, gpubenchmark, num_samps, f0, t1, f1, method
+            self,
+            time_data_gen,
+            gpubenchmark,
+            dtype,
+            num_samps,
+            f0,
+            t1,
+            f1,
+            method,
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
             output = gpubenchmark(
-                self.gpu_version, cpu_sig, f0, t1, f1, method
+                self.gpu_version, gpu_sig, f0, t1, f1, method, dtype
             )
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method)
