@@ -130,16 +130,16 @@ class TestWaveforms:
         "dtype",
         [
             pytest.param(
-                cp.float32,
+                np.float32,
                 marks=pytest.mark.xfail(reason="no scipy equivalent"),
             ),
-            cp.float64,
+            np.float64,
             pytest.param(
-                cp.complex64,
+                np.complex64,
                 marks=pytest.mark.xfail(reason="no scipy equivalent"),
             ),
             pytest.param(
-                cp.complex128,
+                np.complex128,
                 marks=pytest.mark.xfail(reason="no scipy equivalent"),
             ),
         ],
