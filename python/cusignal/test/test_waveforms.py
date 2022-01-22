@@ -41,9 +41,7 @@ class TestWaveforms:
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, w)
 
-        def test_sawtooth_gpu(
-            self, time_data_gen, gpubenchmark, num_samps, w
-        ):
+        def test_sawtooth_gpu(self, time_data_gen, gpubenchmark, num_samps, w):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, w)
@@ -65,9 +63,7 @@ class TestWaveforms:
             return out
 
         @pytest.mark.cpu
-        def test_square_cpu(
-            self, time_data_gen, benchmark, num_samps, duty
-        ):
+        def test_square_cpu(self, time_data_gen, benchmark, num_samps, duty):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
 
@@ -88,9 +84,7 @@ class TestWaveforms:
     @pytest.mark.parametrize("retenv", [True, False])
     class TestGaussPulse:
         def cpu_version(self, sig, fc, retquad, retenv):
-            return signal.gausspulse(
-                sig, fc, retquad=retquad, retenv=retenv
-            )
+            return signal.gausspulse(sig, fc, retquad=retquad, retenv=retenv)
 
         def gpu_version(self, sig, fc, retquad, retenv):
             with cp.cuda.Stream.null:
@@ -108,13 +102,7 @@ class TestWaveforms:
             benchmark(self.cpu_version, cpu_sig, fc, retquad, retenv)
 
         def test_gausspulse_gpu(
-            self,
-            time_data_gen,
-            gpubenchmark,
-            num_samps,
-            fc,
-            retquad,
-            retenv,
+            self, time_data_gen, gpubenchmark, num_samps, fc, retquad, retenv
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
@@ -127,13 +115,7 @@ class TestWaveforms:
 
     @pytest.mark.benchmark(group="Chirp")
     @pytest.mark.parametrize(
-        "dtype",
-        [
-            np.float32,
-            np.float64,
-            np.complex64,
-            np.complex128,
-        ],
+        "dtype", [np.float32, np.float64, np.complex64, np.complex128]
     )
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("f0", [6])
@@ -148,7 +130,7 @@ class TestWaveforms:
                 else:
                     beta = (f1 - f0) / t1
                     phase = 2 * np.pi * (f0 * sig + 0.5 * beta * sig * sig)
-                    return np.cos(phase) - 1j*np.cos(phase + np.pi/2)
+                    return np.cos(phase) - 1j * np.cos(phase + np.pi / 2)
             else:
                 return signal.chirp(sig, f0, t1, f1, method)
 
