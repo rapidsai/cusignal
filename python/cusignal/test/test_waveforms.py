@@ -129,19 +129,10 @@ class TestWaveforms:
     @pytest.mark.parametrize(
         "dtype",
         [
-            pytest.param(
-                np.float32,
-                marks=pytest.mark.xfail(reason="no scipy equivalent"),
-            ),
+            np.float32,
             np.float64,
-            pytest.param(
-                np.complex64,
-                marks=pytest.mark.xfail(reason="no scipy equivalent"),
-            ),
-            pytest.param(
-                np.complex128,
-                marks=pytest.mark.xfail(reason="no scipy equivalent"),
-            ),
+            np.complex64,
+            np.complex128,
         ],
     )
     @pytest.mark.parametrize("num_samps", [2 ** 14])
@@ -150,12 +141,20 @@ class TestWaveforms:
     @pytest.mark.parametrize("f1", [10])
     @pytest.mark.parametrize("method", ["lin", "quad", "log", "hyp"])
     class TestChirp:
-        def cpu_version(self, sig, f0, t1, f1, method):
-            return signal.chirp(sig, f0, t1, f1, method)
+        def cpu_version(self, sig, f0, t1, f1, method, dtype):
+            if method in ["linear", "lin", "li"]:
+                if np.issubclass_(dtype, (np.float32, np.float64)):
+                    return signal.chirp(sig, f0, t1, f1, method)
+                else:
+                    beta = (f1 - f0) / t1
+                    phase = 2 * np.pi * (f0 * sig + 0.5 * beta * sig * sig)
+                    return np.cos(phase) - 1j*np.cos(phase + np.pi/2)
+            else:
+                return signal.chirp(sig, f0, t1, f1, method)
 
         def gpu_version(self, sig, f0, t1, f1, method, dtype):
             with cp.cuda.Stream.null:
-                out = cusignal.chirp(sig, f0, t1, f1, method, dtype=dtype)
+                out = cusignal.chirp(sig, f0, t1, f1, method, type=dtype)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -172,7 +171,7 @@ class TestWaveforms:
             method,
         ):
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
-            benchmark(self.cpu_version, cpu_sig, f0, t1, f1, method)
+            benchmark(self.cpu_version, cpu_sig, f0, t1, f1, method, dtype)
 
         def test_chirp_gpu(
             self,
@@ -191,7 +190,7 @@ class TestWaveforms:
                 self.gpu_version, gpu_sig, f0, t1, f1, method, dtype
             )
 
-            key = self.cpu_version(cpu_sig, f0, t1, f1, method)
+            key = self.cpu_version(cpu_sig, f0, t1, f1, method, dtype)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="UnitImpulse")
