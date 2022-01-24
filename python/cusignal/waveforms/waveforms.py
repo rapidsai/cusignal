@@ -407,7 +407,7 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
 
 
 def chirp(
-    t, f0, t1, f1, method="linear", phi=0, vertex_zero=True, type=cp.float64
+    t, f0, t1, f1, method="linear", phi=0, vertex_zero=True, type="real"
 ):
     """Frequency-swept cosine generator.
 
@@ -435,6 +435,8 @@ def chirp(
         This parameter is only used when `method` is 'quadratic'.
         It determines whether the vertex of the parabola that is the graph
         of the frequency is at t=0 or t=t1.
+    type : {'real', 'complex'}, optional
+        Specify output chirp type, only applicable when `method` is 'linear'.
 
     Returns
     -------
@@ -490,10 +492,12 @@ def chirp(
     phi *= np.pi / 180
 
     if method in ["linear", "lin", "li"]:
-        if np.issubclass_(type, (np.float32, np.float64)):
+        if type == "real":
             return _chirp_phase_lin_kernel_real(t, f0, t1, f1, phi)
-        elif np.issubclass_(type, (np.complex64, np.complex128)):
-            phase = cp.empty(t.shape, dtype=type)
+        elif type == "complex":
+            phase = cp.empty(t.shape, dtype=cp.complex64)
+            if np.issubclass_(t.dtype, (np.float64)):
+                phase = cp.empty(t.shape, dtype=cp.complex128)
             _chirp_phase_lin_kernel_cplx(t, f0, t1, f1, phi, phase)
             return phase
         else:

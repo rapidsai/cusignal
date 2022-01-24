@@ -114,9 +114,7 @@ class TestWaveforms:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Chirp")
-    @pytest.mark.parametrize(
-        "dtype", [np.float32, np.float64, np.complex64, np.complex128]
-    )
+    @pytest.mark.parametrize("dtype", ["real", "complex"])
     @pytest.mark.parametrize("num_samps", [2 ** 14])
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
@@ -125,7 +123,7 @@ class TestWaveforms:
     class TestChirp:
         def cpu_version(self, sig, f0, t1, f1, method, dtype):
             if method in ["linear", "lin", "li"]:
-                if np.issubclass_(dtype, (np.float32, np.float64)):
+                if dtype == "real":
                     return signal.chirp(sig, f0, t1, f1, method)
                 else:
                     beta = (f1 - f0) / t1
