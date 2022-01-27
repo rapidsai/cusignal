@@ -2,9 +2,23 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v22.02.00a for the latest changes to this development branch.
 
-# cuSignal 21.12.00 (Date TBD)
+# cuSignal 21.12.00 (9 Dec 2021)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v21.12.00a for the latest changes to this development branch.
+## 🐛 Bug Fixes
+
+- Data type conversion for cwt. ([#429](https://github.com/rapidsai/cusignal/pull/429)) [@shevateng0](https://github.com/shevateng0)
+- Fix indexing error in CWT ([#425](https://github.com/rapidsai/cusignal/pull/425)) [@awthomp](https://github.com/awthomp)
+
+## 📖 Documentation
+
+- Use PyData Sphinx Theme for Generated Documentation ([#436](https://github.com/rapidsai/cusignal/pull/436)) [@cmpadden](https://github.com/cmpadden)
+- Doc fix for FIR Filters ([#426](https://github.com/rapidsai/cusignal/pull/426)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Fix Changelog Merge Conflicts for `branch-21.12` ([#439](https://github.com/rapidsai/cusignal/pull/439)) [@ajschmidt8](https://github.com/ajschmidt8)
+- remove use_numba from notebooks - deprecated ([#433](https://github.com/rapidsai/cusignal/pull/433)) [@awthomp](https://github.com/awthomp)
+- Allow complex wavelet output for morlet2 ([#428](https://github.com/rapidsai/cusignal/pull/428)) [@shevateng0](https://github.com/shevateng0)
 
 # cuSignal 21.10.00 (7 Oct 2021)
 
