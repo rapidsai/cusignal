@@ -323,15 +323,27 @@ def gausspulse(
         return _gausspulse_kernel_T_T(t, a, fc)
 
 
-_chirp_phase_lin_kernel = cp.ElementwiseKernel(
+_chirp_phase_lin_kernel_real = cp.ElementwiseKernel(
     "T t, T f0, T t1, T f1, T phi",
     "T phase",
     """
     const T beta { (f1 - f0) / t1 };
     const T temp { 2 * M_PI * (f0 * t + 0.5 * beta * t * t) };
-
     // Convert  phi to radians.
     phase = cos(temp + phi);
+    """,
+    "_chirp_phase_lin_kernel",
+    options=("-std=c++11",),
+)
+
+_chirp_phase_lin_kernel_cplx = cp.ElementwiseKernel(
+    "T t, T f0, T t1, T f1, T phi",
+    "Y phase",
+    """
+    const T beta { (f1 - f0) / t1 };
+    const T temp { 2 * M_PI * (f0 * t + 0.5 * beta * t * t) };
+    // Convert  phi to radians.
+    phase = Y(cos(temp + phi), cos(temp + phi + M_PI/2) * -1);
     """,
     "_chirp_phase_lin_kernel",
     options=("-std=c++11",),
@@ -343,7 +355,6 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
     """
     T temp {};
     const T beta { (f1 - f0) / (t1 * t1) };
-
     if ( vertex_zero ) {
         temp = 2 * M_PI * (f0 * t + beta * (t * t * t) / 3);
     } else {
@@ -351,7 +362,6 @@ _chirp_phase_quad_kernel = cp.ElementwiseKernel(
             ( f1 * t + beta *
             ( ( (t1 - t) * (t1 - t) * (t1 - t) ) - (t1 * t1 * t1)) / 3);
     }
-
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
@@ -364,14 +374,12 @@ _chirp_phase_log_kernel = cp.ElementwiseKernel(
     "T phase",
     """
     T temp {};
-
     if ( f0 == f1 ) {
         temp = 2 * M_PI * f0 * t;
     } else {
         T beta { t1 / log(f1 / f0) };
         temp = 2 * M_PI * beta * f0 * ( pow(f1 / f0, t / t1) - 1.0 );
     }
-
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
@@ -384,14 +392,12 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
     "T phase",
     """
     T temp {};
-
     if ( f0 == f1 ) {
         temp = 2 * M_PI * f0 * t;
     } else {
         T sing { -f1 * t1 / (f0 - f1) };
         temp = 2 * M_PI * ( -sing * f0 ) * log( abs( 1 - t / sing ) );
     }
-
     // Convert  phi to radians.
     phase = cos(temp + phi);
     """,
@@ -400,7 +406,9 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
 )
 
 
-def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
+def chirp(
+    t, f0, t1, f1, method="linear", phi=0, vertex_zero=True, type="real"
+):
     """Frequency-swept cosine generator.
 
     In the following, 'Hz' should be interpreted as 'cycles per unit';
@@ -427,6 +435,8 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
         This parameter is only used when `method` is 'quadratic'.
         It determines whether the vertex of the parabola that is the graph
         of the frequency is at t=0 or t=t1.
+    type : {'real', 'complex'}, optional
+        Specify output chirp type, only applicable when `method` is 'linear'.
 
     Returns
     -------
@@ -478,10 +488,20 @@ def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True):
     """
 
     t = cp.asarray(t)
+
     phi *= np.pi / 180
 
     if method in ["linear", "lin", "li"]:
-        return _chirp_phase_lin_kernel(t, f0, t1, f1, phi)
+        if type == "real":
+            return _chirp_phase_lin_kernel_real(t, f0, t1, f1, phi)
+        elif type == "complex":
+            phase = cp.empty(t.shape, dtype=cp.complex64)
+            if np.issubclass_(t.dtype, (np.float64)):
+                phase = cp.empty(t.shape, dtype=cp.complex128)
+            _chirp_phase_lin_kernel_cplx(t, f0, t1, f1, phi, phase)
+            return phase
+        else:
+            raise NotImplementedError("No kernel for type {}".format(type))
 
     elif method in ["quadratic", "quad", "q"]:
         return _chirp_phase_quad_kernel(t, f0, t1, f1, phi, vertex_zero)
