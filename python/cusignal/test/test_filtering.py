@@ -176,8 +176,10 @@ class TestFilter:
 
             key = self.cpu_version(cpu_sos, cpu_sig)
             array_equal(output, key)
+            assert output.dtype == dtype
 
     @pytest.mark.benchmark(group="Hilbert")
+    @pytest.mark.parametrize('dtype', [np.float32, np.float64])
     @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
     class TestHilbert:
         def cpu_version(self, sig):
@@ -190,21 +192,30 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert_cpu(self, rand_data_gen, benchmark, dim, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+        def test_hilbert_cpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            dtype,
+            dim,
+            num_samps,
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
         def test_hilbert_gpu(
-            self, rand_data_gen, gpubenchmark, dim, num_samps
+            self, rand_data_gen, gpubenchmark, dtype, dim, num_samps
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim, dtype)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             array_equal(output, key)
+            assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="Hilbert2")
+    @pytest.mark.parametrize('dtype', [np.float32, np.float64])
     @pytest.mark.parametrize("dim, num_samps", [(2, 2 ** 8)])
     class TestHilbert2:
         def cpu_version(self, sig):
@@ -217,19 +228,27 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert2_cpu(self, rand_data_gen, benchmark, dim, num_samps):
-            cpu_sig, _ = rand_data_gen(num_samps, dim)
+        def test_hilbert2_cpu(
+            self,
+            rand_data_gen,
+            benchmark,
+            dtype,
+            dim,
+            num_samps
+        ):
+            cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
         def test_hilbert2_gpu(
-            self, rand_data_gen, gpubenchmark, dim, num_samps
+            self, rand_data_gen, gpubenchmark, dtype, dim, num_samps
         ):
 
-            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim)
+            cpu_sig, gpu_sig = rand_data_gen(num_samps, dim, dtype)
             output = gpubenchmark(self.gpu_version, gpu_sig)
 
             key = self.cpu_version(cpu_sig)
             array_equal(output, key)
+            assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="Detrend")
     @pytest.mark.parametrize("num_samps", [2 ** 8])
@@ -626,6 +645,7 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Firfilter2")
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFirfilter2:
@@ -642,26 +662,30 @@ class TestFilter:
         def test_firfilter2_cpu(
             self,
             benchmark,
+            dtype,
             linspace_data_gen,
             num_samps,
             filter_len,
         ):
-            cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            cpu_sig, _ = linspace_data_gen(
+                0, 10, num_samps, endpoint=False, dtype=dtype
+            )
             cpu_filter, _ = signal.butter(filter_len, 0.5)
             benchmark(self.cpu_version, cpu_sig, cpu_filter)
 
         def test_firfilter2_gpu(
             self,
             gpubenchmark,
+            dtype,
             linspace_data_gen,
             num_samps,
             filter_len,
         ):
             cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
+                0, 10, num_samps, endpoint=False, dtype=dtype
             )
             cpu_filter, _ = signal.butter(filter_len, 0.5)
-            gpu_filter = cp.asarray(cpu_filter)
+            gpu_filter = cp.asarray(cpu_filter, dtype=dtype)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -670,8 +694,10 @@ class TestFilter:
 
             key = self.cpu_version(cpu_sig, cpu_filter)
             array_equal(output, key)
+            assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="FilterZi")
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFilterZi:
         def cpu_version(self, a):
@@ -684,18 +710,19 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_filter_zi_cpu(self, benchmark, filter_len):
+        def test_filter_zi_cpu(self, benchmark, dtype, filter_len):
             cpu_filter, _ = signal.butter(filter_len, 0.5)
             benchmark(self.cpu_version, cpu_filter)
 
-        def test_filter_zi_gpu(self, gpubenchmark, filter_len):
+        def test_filter_zi_gpu(self, gpubenchmark, dtype, filter_len):
             cpu_filter, _ = signal.butter(filter_len, 0.5)
-            gpu_filter = cp.asarray(cpu_filter)
+            gpu_filter = cp.asarray(cpu_filter, dtype=dtype)
 
             output = gpubenchmark(self.gpu_version, gpu_filter)
 
             key = self.cpu_version(cpu_filter)
             array_equal(output, key)
+            assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="ChannelizePoly")
     @pytest.mark.parametrize(

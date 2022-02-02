@@ -306,11 +306,11 @@ def lfilter_zi(b, a):
 
     # Pad a or b with zeros so they are the same length.
     if len(a) < n:
-        a = cp.r_[a, cp.zeros(n - len(a))]
+        a = cp.r_[a, cp.zeros(n - len(a), dtype=a.dtype)]
     elif len(b) < n:
-        b = cp.r_[b, cp.zeros(n - len(b))]
+        b = cp.r_[b, cp.zeros(n - len(b), dtype=b.dtype)]
 
-    IminusA = cp.eye(n - 1) - linalg.companion(a).T
+    IminusA = cp.eye(n - 1, dtype=cp.result_type(a, b)) - linalg.companion(a).T
     B = b[1:] - a[1:] * b[0]
     # Solve zi = A*zi + B
     zi = cp.linalg.solve(IminusA, B)
@@ -358,7 +358,7 @@ def firfilter_zi(b):
     assuming `a[0]` is 1.0; if `a[0]` is not 1, `a` and `b` are first
     divided by a[0].
     """
-    return lfilter_zi(b, 1.0)
+    return lfilter_zi(b, np.float32(1.0))
 
 
 def _validate_pad(padtype, padlen, x, axis, ntaps):
@@ -762,7 +762,7 @@ def sosfilt(
 
 _hilbert_kernel = cp.ElementwiseKernel(
     "",
-    "float64 h",
+    "T h",
     """
     if ( !odd ) {
         if ( ( i == 0 ) || ( i == bend ) ) {
@@ -887,7 +887,9 @@ def hilbert(x, N=None, axis=-1):
         raise ValueError("N must be positive.")
 
     Xf = cp.fft.fft(x, N, axis=axis)
-    h = _hilbert_kernel(size=N)
+
+    h = cp.empty((N,), dtype=x.dtype)
+    _hilbert_kernel(h)
 
     if x.ndim > 1:
         ind = [cp.newaxis] * x.ndim
@@ -899,7 +901,7 @@ def hilbert(x, N=None, axis=-1):
 
 _hilbert2_kernel = cp.ElementwiseKernel(
     "",
-    "float64 h1, float64 h2",
+    "T h1, T h2",
     """
     if ( !odd ) {
         if ( ( i == 0 ) || ( i == bend ) ) {
@@ -974,7 +976,10 @@ def hilbert2(x, N=None):
 
     Xf = cp.fft.fft2(x, N, axes=(0, 1))
 
-    h1, h2 = _hilbert2_kernel(size=N[1])
+    elements_dtype = cp.result_type(x[0].dtype, x[1].dtype)
+    h1 = cp.empty((N[1],), dtype=elements_dtype)
+    h2 = cp.empty((N[1],), dtype=elements_dtype)
+    _hilbert2_kernel(h1, h2)
 
     h = h1[:, cp.newaxis] * h2[cp.newaxis, :]
     k = x.ndim

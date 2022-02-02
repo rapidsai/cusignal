@@ -1,6 +1,32 @@
-# cuSignal 21.12.00 (Date TBD)
+# cuSignal 22.02.00 (2 Feb 2022)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v21.12.00a for the latest changes to this development branch.
+## 🛠️ Impovements
+
+- Allow CuPy 10 ([#448](https://github.com/rapidsai/cusignal/pull/448)) [@jakikham](https://github.com/jakikham)
+- Speedup: Single-pecision hilbet, esample, and lfilte_zi. ([#447](https://github.com/rapidsai/cusignal/pull/447)) [@luigifcuz](https://github.com/luigifcuz)
+- Add Nemo Machine Tanslation to SDR Notebook ([#445](https://github.com/rapidsai/cusignal/pull/445)) [@awthomp](https://github.com/awthomp)
+- Add citinet and fm_demod cusignal function to notebook ([#444](https://github.com/rapidsai/cusignal/pull/444)) [@awthomp](https://github.com/awthomp)
+- Add FM Demodulation to cuSignal ([#443](https://github.com/rapidsai/cusignal/pull/443)) [@awthomp](https://github.com/awthomp)
+- Revamp Offline RTL-SDR Notebook - FM Demod and NeMo Speech to Text ([#442](https://github.com/rapidsai/cusignal/pull/442)) [@awthomp](https://github.com/awthomp)
+- Bypass Covaiance Matix Calculation if Supplied in MVDR Beamfome ([#437](https://github.com/rapidsai/cusignal/pull/437)) [@awthomp](https://github.com/awthomp)
+
+# cuSignal 21.12.00 (9 Dec 2021)
+
+## 🐛 Bug Fixes
+
+- Data type conversion for cwt. ([#429](https://github.com/rapidsai/cusignal/pull/429)) [@shevateng0](https://github.com/shevateng0)
+- Fix indexing error in CWT ([#425](https://github.com/rapidsai/cusignal/pull/425)) [@awthomp](https://github.com/awthomp)
+
+## 📖 Documentation
+
+- Use PyData Sphinx Theme for Generated Documentation ([#436](https://github.com/rapidsai/cusignal/pull/436)) [@cmpadden](https://github.com/cmpadden)
+- Doc fix for FIR Filters ([#426](https://github.com/rapidsai/cusignal/pull/426)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Fix Changelog Merge Conflicts for `branch-21.12` ([#439](https://github.com/rapidsai/cusignal/pull/439)) [@ajschmidt8](https://github.com/ajschmidt8)
+- remove use_numba from notebooks - deprecated ([#433](https://github.com/rapidsai/cusignal/pull/433)) [@awthomp](https://github.com/awthomp)
+- Allow complex wavelet output for morlet2 ([#428](https://github.com/rapidsai/cusignal/pull/428)) [@shevateng0](https://github.com/shevateng0)
 
 # cuSignal 21.10.00 (7 Oct 2021)
 

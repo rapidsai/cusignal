@@ -20,6 +20,16 @@ Correlate
     :undoc-members:
 
 
+Modulation/Demodulation
+============
+
+Demodulation
+------------
+
+.. automodule:: cusignal.demod.demod
+    :members:
+    :undoc-members:
+
 Estimation
 ============
 

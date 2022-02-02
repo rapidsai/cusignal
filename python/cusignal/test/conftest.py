@@ -40,9 +40,9 @@ def range_data_gen():
 # Generate data for using linspace
 @pytest.fixture(scope="session")
 def linspace_data_gen():
-    def _generate(start, stop, num_samps, endpoint=False):
+    def _generate(start, stop, num_samps, endpoint=False, dtype=np.float64):
 
-        cpu_time = np.linspace(start, stop, num_samps, endpoint)
+        cpu_time = np.linspace(start, stop, num_samps, endpoint, dtype=dtype)
         cpu_sig = np.cos(-(cpu_time ** 2) / 6.0)
         gpu_sig = cp.asarray(cpu_sig)
 
