@@ -219,7 +219,8 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     >>> fig, (ax_orig, ax_mag) = plt.subplots(2, 1)
     >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('White noise')
-    >>> ax_mag.plot(cp.asnumpy(cp.arange(-len(sig)+1,len(sig))), cp.asnumpy(autocorr))
+    >>> ax_mag.plot(cp.asnumpy(cp.arange(-len(sig)+1,len(sig))),
+            cp.asnumpy(autocorr))
     >>> ax_mag.set_title('Autocorrelation')
     >>> fig.tight_layout()
     >>> fig.show()
