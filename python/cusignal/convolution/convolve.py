@@ -219,7 +219,8 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     >>> fig, (ax_orig, ax_mag) = plt.subplots(2, 1)
     >>> ax_orig.plot(cp.asnumpy(sig))
     >>> ax_orig.set_title('White noise')
-    >>> ax_mag.plot(np.arange(-len(sig)+1,len(sig)), autocorr)
+    >>> ax_mag.plot(cp.asnumpy(cp.arange(-len(sig)+1,len(sig))),
+            cp.asnumpy(autocorr))
     >>> ax_mag.set_title('Autocorrelation')
     >>> fig.tight_layout()
     >>> fig.show()
@@ -232,7 +233,7 @@ def fftconvolve(in1, in2, mode="full", axes=None):
     >>> from scipy import misc
     >>> face = misc.face(gray=True)
     >>> kernel = cp.outer(cusignal.gaussian(70, 8), cusignal.gaussian(70, 8))
-    >>> blurred = cusignal.fftconvolve(face, kernel, mode='same')
+    >>> blurred = cusignal.convolve(face, kernel, mode='same')
 
     >>> fig, (ax_orig, ax_kernel, ax_blurred) = plt.subplots(3, 1,
     ...                                                      figsize=(6, 15))
@@ -394,7 +395,7 @@ def convolve2d(
     >>> ax_mag.imshow(cp.asnumpy(cp.absolute(grad)), cmap='gray')
     >>> ax_mag.set_title('Gradient magnitude')
     >>> ax_mag.set_axis_off()
-    >>> ax_ang.imshow(cp.asarray(cp.angle(grad)), cmap='hsv')
+    >>> ax_ang.imshow(cp.asnumpy(cp.angle(grad)), cmap='hsv')
     >>> ax_ang.set_title('Gradient orientation')
     >>> ax_ang.set_axis_off()
     >>> fig.show()
@@ -594,7 +595,7 @@ def convolve1d2o(
     >>> d = 50
     >>> a = np.random.uniform(-1,1,(200))
     >>> b = np.random.uniform(-1,1,(d,d))
-    >>> c = cs.convolve1d3o(a,b)
+    >>> c = cs.convolve1d2o(a,b)
 
     """
 

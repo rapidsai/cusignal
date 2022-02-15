@@ -142,7 +142,7 @@ def square(t, duty=0.5):
     >>> import cupy as cp
     >>> import matplotlib.pyplot as plt
     >>> t = cp.linspace(0, 1, 500, endpoint=False)
-    >>> plt.plot(t, cp.asnumpy(cusignal.square(2 * cp.pi * 5 * t)))
+    >>> plt.plot(cp.asnumpy(t), cp.asnumpy(cusignal.square(2 * cp.pi * 5 * t)))
     >>> plt.ylim(-2, 2)
 
     A pulse-width modulated sine wave:
