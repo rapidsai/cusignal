@@ -19,4 +19,4 @@ from cusignal.convolution.convolve import (
     convolve1d2o,
     convolve1d3o,
 )
-from cusignal.convolution.correlate import correlate, correlate2d
+from cusignal.convolution.correlate import correlate, correlate2d, correlation_lags
