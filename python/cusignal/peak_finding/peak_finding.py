@@ -104,7 +104,7 @@ def argrelmin(data, axis=0, order=1, mode="clip"):
 
     Notes
     -----
-    This function uses `argrelextrema` with np.less as comparator. Therefore it
+    This function uses `argrelextrema` with cp.less as comparator. Therefore it
     requires a strict inequality on both sides of a value to consider it a
     minimum. This means flat minima (more than one sample wide) are not
     detected. In case of one-dimensional `data` `find_peaks` can be used to
@@ -117,13 +117,13 @@ def argrelmin(data, axis=0, order=1, mode="clip"):
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmin(x)
-    (array([1, 5, 7]),)
+    (array([1, 5]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelmin(y, axis=1)
-    (array([0, 0, 2]), array([0, 2, 1]))
+    (array([0, 2]), array([2, 1]))
 
     """
     data = cp.asarray(data)
@@ -157,7 +157,7 @@ def argrelmax(data, axis=0, order=1, mode="clip"):
 
     Notes
     -----
-    This function uses `argrelextrema` with np.greater as comparator. Therefore
+    This function uses `argrelextrema` with cp.greater as comparator. Therefore
     it  requires a strict inequality on both sides of a value to consider it a
     maximum. This means flat maxima (more than one sample wide) are not
     detected. In case of one-dimensional `data` `find_peaks` can be used to
@@ -169,13 +169,13 @@ def argrelmax(data, axis=0, order=1, mode="clip"):
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelmax(x)
-    (array([0, 3, 6]),)
+    (array([3, 6]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelmax(y, axis=1)
-    (array([0, 0, 2]), array([1 ,3, 0]))
+    (array([0]), array([1]))
     """
     data = cp.asarray(data)
     return argrelextrema(data, cp.greater, axis, order, mode)
@@ -215,13 +215,13 @@ def argrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     >>> import cupy as cp
     >>> x = cp.array([2, 1, 2, 3, 2, 0, 1, 0])
     >>> argrelextrema(x, cp.greater)
-    (array([0, 3, 6]),)
+    (array([3, 6]),)
     >>> y = cp.array([[1, 2, 1, 2],
     ...               [2, 2, 0, 0],
     ...               [5, 3, 4, 4]])
     ...
     >>> argrelextrema(y, cp.less, axis=1)
-    (array([0, 0, 2]), array([0, 2, 1]))
+    (array([0, 2]), array([2, 1]))
 
     """
     data = cp.asarray(data)

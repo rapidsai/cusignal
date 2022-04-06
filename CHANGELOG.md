@@ -1,14 +1,34 @@
+# cuSignal 22.04.00 (6 Apr 2022)
+
+## 🐛 Bug Fixes
+
+- Fix docs builds ([#455](https://github.com/rapidsai/cusignal/pull/455)) [@ajschmidt8](https://github.com/ajschmidt8)
+
+## 📖 Documentation
+
+- Fixes a list of minor errors in the example codes #457 ([#458](https://github.com/rapidsai/cusignal/pull/458)) [@sosae0](https://github.com/sosae0)
+
+## 🚀 New Features
+
+- adding complex parameter to chirp and additional tests ([#450](https://github.com/rapidsai/cusignal/pull/450)) [@mnicely](https://github.com/mnicely)
+
+## 🛠️ Improvements
+
+- Temporarily disable new `ops-bot` functionality ([#465](https://github.com/rapidsai/cusignal/pull/465)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add `.github/ops-bot.yaml` config file ([#463](https://github.com/rapidsai/cusignal/pull/463)) [@ajschmidt8](https://github.com/ajschmidt8)
+- correlation lags function ([#459](https://github.com/rapidsai/cusignal/pull/459)) [@sosae0](https://github.com/sosae0)
+
 # cuSignal 22.02.00 (2 Feb 2022)
 
-## 🛠️ Impovements
+## 🛠️ Improvements
 
-- Allow CuPy 10 ([#448](https://github.com/rapidsai/cusignal/pull/448)) [@jakikham](https://github.com/jakikham)
-- Speedup: Single-pecision hilbet, esample, and lfilte_zi. ([#447](https://github.com/rapidsai/cusignal/pull/447)) [@luigifcuz](https://github.com/luigifcuz)
-- Add Nemo Machine Tanslation to SDR Notebook ([#445](https://github.com/rapidsai/cusignal/pull/445)) [@awthomp](https://github.com/awthomp)
-- Add citinet and fm_demod cusignal function to notebook ([#444](https://github.com/rapidsai/cusignal/pull/444)) [@awthomp](https://github.com/awthomp)
+- Allow CuPy 10 ([#448](https://github.com/rapidsai/cusignal/pull/448)) [@jakirkham](https://github.com/jakirkham)
+- Speedup: Single-precision hilbert, resample, and lfilter_zi. ([#447](https://github.com/rapidsai/cusignal/pull/447)) [@luigifcruz](https://github.com/luigifcruz)
+- Add Nemo Machine Translation to SDR Notebook ([#445](https://github.com/rapidsai/cusignal/pull/445)) [@awthomp](https://github.com/awthomp)
+- Add citrinet and fm_demod cusignal function to notebook ([#444](https://github.com/rapidsai/cusignal/pull/444)) [@awthomp](https://github.com/awthomp)
 - Add FM Demodulation to cuSignal ([#443](https://github.com/rapidsai/cusignal/pull/443)) [@awthomp](https://github.com/awthomp)
 - Revamp Offline RTL-SDR Notebook - FM Demod and NeMo Speech to Text ([#442](https://github.com/rapidsai/cusignal/pull/442)) [@awthomp](https://github.com/awthomp)
-- Bypass Covaiance Matix Calculation if Supplied in MVDR Beamfome ([#437](https://github.com/rapidsai/cusignal/pull/437)) [@awthomp](https://github.com/awthomp)
+- Bypass Covariance Matrix Calculation if Supplied in MVDR Beamformer ([#437](https://github.com/rapidsai/cusignal/pull/437)) [@awthomp](https://github.com/awthomp)
 
 # cuSignal 21.12.00 (9 Dec 2021)
 
