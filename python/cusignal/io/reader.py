@@ -73,6 +73,10 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     # Get current stream, default or not.
     stream = cp.cuda.get_current_stream()
 
+    # prioritize dtype of buffer if provided
+    if buffer is not None:
+        dtype = buffer.dtype
+
     # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
@@ -80,13 +84,11 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
                    dtype=dtype)
 
     if buffer is not None:
-        out = cp.empty(buffer.shape, buffer.dtype)
-
-    if buffer is None:
-        out = cp.asarray(fp)
-    else:
         buffer[:] = fp[:]
+        out = cp.empty(buffer.shape, buffer.dtype)
         out.set(buffer)
+    else:
+        out = cp.asarray(fp)
 
     stream.synchronize()
 
