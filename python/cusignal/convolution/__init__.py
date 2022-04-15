@@ -12,11 +12,11 @@
 # limitations under the License.
 
 from cusignal.convolution.convolve import (
-    convolve,
-    fftconvolve,
-    convolve2d,
     choose_conv_method,
+    convolve,
     convolve1d2o,
     convolve1d3o,
+    convolve2d,
+    fftconvolve,
 )
 from cusignal.convolution.correlate import correlate, correlate2d, correlation_lags

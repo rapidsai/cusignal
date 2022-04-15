@@ -12,22 +12,21 @@
 # limitations under the License.
 
 import cupy as cp
+import numpy as np
 from cupyx.scipy import linalg
 
-import numpy as np
-
-from ._channelizer_cuda import _channelizer
 from ..convolution.correlate import correlate
 from ..filter_design.filter_design_utils import _validate_sos
-from ._sosfilt_cuda import _sosfilt
-from ..utils.helper_tools import _get_max_smem, _get_max_tpb
 from ..utils.arraytools import (
     _axis_reverse,
     _axis_slice,
+    _const_ext,
     _even_ext,
     _odd_ext,
-    _const_ext,
 )
+from ..utils.helper_tools import _get_max_smem, _get_max_tpb
+from ._channelizer_cuda import _channelizer
+from ._sosfilt_cuda import _sosfilt
 
 _wiener_prep_kernel = cp.ElementwiseKernel(
     "T iMean, T iVar, T prod",
@@ -96,7 +95,7 @@ def wiener(im, mysize=None, noise=None):
 
     lprod = cp.prod(mysize, axis=0)
     lMean = correlate(im, cp.ones(mysize), "same")
-    lVar = correlate(im ** 2, cp.ones(mysize), "same")
+    lVar = correlate(im**2, cp.ones(mysize), "same")
 
     lMean, lVar = _wiener_prep_kernel(lMean, lVar, lprod)
 
@@ -402,9 +401,7 @@ def _validate_pad(padtype, padlen, x, axis, ntaps):
     return edge, ext
 
 
-def firfilter2(
-    b, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None
-):
+def firfilter2(b, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None):
     """
     Apply a digital filter forward and backward to a signal.
     This function applies a linear digital filter twice, once forward and
@@ -509,9 +506,7 @@ def firfilter2(
     return cp.copy(y)
 
 
-def filtfilt(
-    b, a, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None
-):
+def filtfilt(b, a, x, axis=-1, padtype="odd", padlen=None, method="pad", irlen=None):
     """
     Apply a digital filter forward and backward to a signal.
     This function applies a linear digital filter twice, once forward and
@@ -723,9 +718,7 @@ def sosfilt(
     shared_mem = (out_size + sos_size) * x.dtype.itemsize
 
     if shared_mem > max_smem:
-        max_sections = (
-            max_smem // (1 + zi.shape[2] + sos.shape[1]) // x.dtype.itemsize
-        )
+        max_sections = max_smem // (1 + zi.shape[2] + sos.shape[1]) // x.dtype.itemsize
         raise ValueError(
             "The number of sections ({}), requires too much "
             "shared memory ({}B) > ({}B). \n"
@@ -1181,9 +1174,7 @@ def channelize_poly(x, h, n_chans):
     elif x.dtype == np.float64 or x.dtype == np.complex128:
         y = cp.empty((n_pts, n_chans), dtype=cp.complex128)
     else:
-        raise NotImplementedError(
-            "Data type ({}) not allowed.".format(x.dtype)
-        )
+        raise NotImplementedError("Data type ({}) not allowed.".format(x.dtype))
 
     _channelizer(x, h, y, n_chans, n_taps, n_pts)
 

@@ -12,9 +12,9 @@
 # limitations under the License.
 
 from cusignal.utils.arraytools import (
-    get_shared_array,
-    get_shared_mem,
+    from_pycuda,
     get_pinned_array,
     get_pinned_mem,
-    from_pycuda,
+    get_shared_array,
+    get_shared_mem,
 )

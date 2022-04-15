@@ -12,14 +12,5 @@
 # limitations under the License.
 
 
-from cusignal.io.reader import (
-    read_bin,
-    unpack_bin,
-    read_sigmf,
-)
-
-from cusignal.io.writer import (
-    write_bin,
-    pack_bin,
-    write_sigmf,
-)
+from cusignal.io.reader import read_bin, read_sigmf, unpack_bin
+from cusignal.io.writer import pack_bin, write_bin, write_sigmf

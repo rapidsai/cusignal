@@ -12,9 +12,9 @@
 # limitations under the License.
 
 from cusignal.filter_design.fir_filter_design import (
-    kaiser_beta,
-    kaiser_atten,
+    cmplx_sort,
     firwin,
     firwin2,
-    cmplx_sort,
+    kaiser_atten,
+    kaiser_beta,
 )

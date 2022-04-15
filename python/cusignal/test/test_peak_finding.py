@@ -12,21 +12,19 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import numpy as np
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestPeakFinding:
     @pytest.mark.benchmark(group="Argrelmin")
-    @pytest.mark.parametrize(
-        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
-    )
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**15), (2, 2**8), (3, 2**5)])
     @pytest.mark.parametrize("axis", [-1])
     @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])
@@ -63,9 +61,7 @@ class TestPeakFinding:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="TestArgrelmax")
-    @pytest.mark.parametrize(
-        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
-    )
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**15), (2, 2**8), (3, 2**5)])
     @pytest.mark.parametrize("axis", [-1])
     @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])
@@ -102,9 +98,7 @@ class TestPeakFinding:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Argrelextrema")
-    @pytest.mark.parametrize(
-        "dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8), (3, 2 ** 5)]
-    )
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**15), (2, 2**8), (3, 2**5)])
     @pytest.mark.parametrize("axis", [-1])
     @pytest.mark.parametrize("order", [1, 2])
     @pytest.mark.parametrize("mode", ["clip", "wrap"])

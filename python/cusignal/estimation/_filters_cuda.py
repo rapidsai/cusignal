@@ -15,7 +15,6 @@ import cupy as cp
 
 from ..utils._caches import _cupy_kernel_cache
 
-
 _SUPPORTED_TYPES = ["float32", "float64"]
 
 cuda_code_kalman = """
@@ -440,9 +439,7 @@ def _populate_kernel_cache(np_type, blocks, dim_x, dim_z, dim_u, max_tpb):
 
     # Check in np_type is a supported option
     if np_type not in _SUPPORTED_TYPES:
-        raise ValueError(
-            "Datatype {} not found for Kalman Filter".format(np_type)
-        )
+        raise ValueError("Datatype {} not found for Kalman Filter".format(np_type))
 
     if np_type == "float32":
         c_type = "float"
@@ -488,11 +485,7 @@ def _get_backend_kernel(dtype, grid, block, k_type):
             return _cupy_update_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
-                "No CuPY kernel found for k_type {}, datatype {}".format(
-                    k_type, dtype
-                )
+                "No CuPY kernel found for k_type {}, datatype {}".format(k_type, dtype)
             )
     else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
+        raise ValueError("Kernel {} not found in _cupy_kernel_cache".format(k_type))

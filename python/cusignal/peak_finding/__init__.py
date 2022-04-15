@@ -11,8 +11,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.peak_finding.peak_finding import (
-    argrelmin,
-    argrelmax,
-    argrelextrema,
-)
+from cusignal.peak_finding.peak_finding import argrelextrema, argrelmax, argrelmin

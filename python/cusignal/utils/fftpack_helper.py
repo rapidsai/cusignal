@@ -11,8 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 from bisect import bisect_left
+
+import numpy as np
 
 
 def next_fast_len(target):
@@ -346,16 +347,13 @@ def _init_nd_shape_and_axes(x, shape, axes):
         raise ValueError("when given, shape values must be integers")
     if axes.shape != shape.shape:
         raise ValueError(
-            "when given, axes and shape arguments"
-            " have to be of the same length"
+            "when given, axes and shape arguments" " have to be of the same length"
         )
 
     shape = np.where(shape == -1, np.array(x.shape)[axes], shape)
 
     if shape.size != 0 and (shape < 1).any():
-        raise ValueError(
-            "invalid number of data points ({0}) specified".format(shape)
-        )
+        raise ValueError("invalid number of data points ({0}) specified".format(shape))
 
     return shape, axes
 

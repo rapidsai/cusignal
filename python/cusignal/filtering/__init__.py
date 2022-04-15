@@ -11,24 +11,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.filtering.resample import (
-    decimate,
-    resample,
-    resample_poly,
-    upfirdn,
-)
 from cusignal.filtering.filtering import (
-    wiener,
-    lfilter,
-    lfilter_zi,
-    firfilter,
-    firfilter_zi,
-    firfilter2,
+    channelize_poly,
+    detrend,
     filtfilt,
-    sosfilt,
+    firfilter,
+    firfilter2,
+    firfilter_zi,
+    freq_shift,
     hilbert,
     hilbert2,
-    detrend,
-    channelize_poly,
-    freq_shift,
+    lfilter,
+    lfilter_zi,
+    sosfilt,
+    wiener,
 )
+from cusignal.filtering.resample import decimate, resample, resample_poly, upfirdn

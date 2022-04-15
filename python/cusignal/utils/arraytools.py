@@ -12,13 +12,11 @@
 # limitations under the License.
 
 import cupy as cp
-from numba import cuda
 import numpy as np
+from numba import cuda
 
 
-def get_shared_array(
-    data, strides=None, order="C", stream=0, portable=False, wc=True
-):
+def get_shared_array(data, strides=None, order="C", stream=0, portable=False, wc=True):
     """Return populated shared memory between GPU and CPU.
 
     Parameters
@@ -152,9 +150,7 @@ def from_pycuda(pycuda_arr, device=0):
         pycuda_arr.shape,
         cp.dtype(pycuda_arr.dtype),
         cp.cuda.MemoryPointer(
-            cp.cuda.UnownedMemory(
-                pycuda_arr.ptr, pycuda_arr.size, pycuda_arr, device
-            ),
+            cp.cuda.UnownedMemory(pycuda_arr.ptr, pycuda_arr.size, pycuda_arr, device),
             0,
         ),
         strides=pycuda_arr.strides,
@@ -440,6 +436,4 @@ def _as_strided(x, shape=None, strides=None):
     shape = x.shape if shape is None else tuple(shape)
     strides = x.strides if strides is None else tuple(strides)
 
-    return cp.ndarray(
-        shape=shape, dtype=x.dtype, memptr=x.data, strides=strides
-    )
+    return cp.ndarray(shape=shape, dtype=x.dtype, memptr=x.data, strides=strides)

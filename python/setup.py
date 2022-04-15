@@ -11,14 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import versioneer
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
+import versioneer
 
 INSTALL_REQUIRES = ["numba"]
 
 setup(
-    name='cusignal',
+    name="cusignal",
     version=versioneer.get_version(),
     description="cuSignal - GPU Signal Processing",
     url="https://github.com/rapidsai/cusignal",
@@ -28,5 +28,5 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     install_requires=INSTALL_REQUIRES,
     zip_safe=False,
-    package_data={"": ["*.fatbin"]}
+    package_data={"": ["*.fatbin"]},
 )

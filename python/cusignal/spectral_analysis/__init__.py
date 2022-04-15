@@ -12,13 +12,13 @@
 # limitations under the License.
 
 from cusignal.spectral_analysis.spectral import (
-    periodogram,
-    welch,
-    csd,
     coherence,
-    spectrogram,
-    lombscargle,
-    vectorstrength,
-    stft,
+    csd,
     istft,
+    lombscargle,
+    periodogram,
+    spectrogram,
+    stft,
+    vectorstrength,
+    welch,
 )

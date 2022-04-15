@@ -11,14 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from math import gcd
+
 import cupy as cp
 import numpy as np
 
-from math import gcd
-
-from ..windows.windows import get_window
-from ._upfirdn_cuda import _UpFIRDn, _output_len
 from ..filter_design.fir_filter_design import firwin
+from ..windows.windows import get_window
+from ._upfirdn_cuda import _output_len, _UpFIRDn
 
 
 def _design_resample_poly(up, down, window, gpupath=True):
@@ -412,9 +412,7 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     ):
         n_post_pad += 1
 
-    h = pp.concatenate(
-        (pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype))
-    )
+    h = pp.concatenate((pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype)))
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess

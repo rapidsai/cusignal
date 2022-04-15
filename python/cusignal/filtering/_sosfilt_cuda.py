@@ -12,8 +12,7 @@
 # limitations under the License.
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.helper_tools import _print_atts, _get_function
-
+from ..utils.helper_tools import _get_function, _print_atts
 
 _SUPPORTED_TYPES = ["float32", "float64"]
 
@@ -48,9 +47,7 @@ class _cupy_sosfilt_wrapper(object):
 def _populate_kernel_cache(np_type, k_type):
 
     if np_type not in _SUPPORTED_TYPES:
-        raise ValueError(
-            "Datatype {} not found for '{}'".format(np_type, k_type)
-        )
+        raise ValueError("Datatype {} not found for '{}'".format(np_type, k_type))
 
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
@@ -66,13 +63,9 @@ def _get_backend_kernel(dtype, grid, block, smem, k_type):
     if kernel:
         return _cupy_sosfilt_wrapper(grid, block, smem, kernel)
     else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
+        raise ValueError("Kernel {} not found in _cupy_kernel_cache".format(k_type))
 
-    raise NotImplementedError(
-        "No kernel found for datatype {}".format(dtype.name)
-    )
+    raise NotImplementedError("No kernel found for datatype {}".format(dtype.name))
 
 
 def _sosfilt(sos, x, zi):
