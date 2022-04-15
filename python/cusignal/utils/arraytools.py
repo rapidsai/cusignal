@@ -132,7 +132,6 @@ def get_pinned_mem(shape, dtype):
     mem = cp.cuda.alloc_pinned_memory(count * cp.dtype(dtype).itemsize)
     ret = np.frombuffer(mem, dtype, count).reshape(shape)
 
-
     return ret
 
 

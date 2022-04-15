@@ -16,6 +16,7 @@ import pytest
 import cusignal
 import cupy as cp
 
+
 @pytest.mark.parametrize("dtype", [cp.ubyte, cp.complex64])
 @pytest.mark.parametrize("shape", [1024, (32, 32)])
 def test_get_pinned_mem(dtype, shape):
@@ -23,6 +24,6 @@ def test_get_pinned_mem(dtype, shape):
 
     if isinstance(shape, int):
         shape = (shape, )
-    
+
     assert arr.shape == shape
     assert arr.dtype == dtype
