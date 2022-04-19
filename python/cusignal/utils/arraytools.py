@@ -114,21 +114,23 @@ def get_pinned_mem(shape, dtype):
 
     Parameters
     ----------
-    size : int or tuple of ints
+    shape : int or tuple of ints
         Output shape.
     dtype : data-type
         Output data type.
 
     Returns
     -------
-    out : ndarray
+    ret : ndarray
         Pinned memory numpy array.
 
     """
 
-    size = shape[0] * cp.dtype(dtype).itemsize
-    mem = cp.cuda.alloc_pinned_memory(size)
-    ret = np.frombuffer(mem, dtype, size)
+    from math import prod
+
+    count = prod(shape) if isinstance(shape, tuple) else shape
+    mem = cp.cuda.alloc_pinned_memory(count * cp.dtype(dtype).itemsize)
+    ret = np.frombuffer(mem, dtype, count).reshape(shape)
 
     return ret
 
