@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import cupy as cp
 
 import cusignal
@@ -40,7 +39,7 @@ def test_read_pinned_buffer(tmpdir):
     expect = cusignal.read_bin(str(data_fname), buffer, dtype=cp.complex64)
 
     cp.testing.assert_array_equal(actual, expect)
-    
+
 
 def test_read_shared_buffer(tmpdir):
     data_fname = tmpdir.join("test_read.sigmf-data")

@@ -48,7 +48,7 @@ def test_read_pinned_buffer(tmpdir):
     expect = cusignal.read_sigmf(str(data_fname), str(meta_fname), buffer)
 
     cp.testing.assert_array_equal(actual, expect)
-    
+
 
 def test_read_shared_buffer(tmpdir):
     data_fname = tmpdir.join("test_read.sigmf-data")
