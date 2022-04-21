@@ -11,10 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import cupy as cp
 import pytest
 
 import cusignal
-import cupy as cp
 
 
 @pytest.mark.parametrize("dtype", [cp.ubyte, cp.complex64])
@@ -23,7 +23,7 @@ def test_get_pinned_mem(dtype, shape):
     arr = cusignal.get_pinned_mem(shape=shape, dtype=dtype)
 
     if isinstance(shape, int):
-        shape = (shape, )
+        shape = (shape,)
 
     assert arr.shape == shape
     assert arr.dtype == dtype
