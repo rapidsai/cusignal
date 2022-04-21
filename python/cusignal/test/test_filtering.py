@@ -18,7 +18,7 @@ import scipy
 from scipy import signal
 
 import cusignal
-from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
