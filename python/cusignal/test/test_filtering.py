@@ -12,13 +12,13 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import numpy as np
 import pytest
 import scipy
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
@@ -96,7 +96,7 @@ def channelize_poly_cpu(x, h, n_chans):
 
 class TestFilter:
     @pytest.mark.benchmark(group="Wiener")
-    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**15), (2, 2**8)])
     class TestWiener:
         def cpu_version(self, sig):
             return signal.wiener(sig)
@@ -122,7 +122,7 @@ class TestFilter:
 
     @pytest.mark.benchmark(group="SOSFilt")
     @pytest.mark.parametrize("order", [32, 64])
-    @pytest.mark.parametrize("num_samps", [2 ** 15, 2 ** 20])
+    @pytest.mark.parametrize("num_samps", [2**15, 2**20])
     @pytest.mark.parametrize("num_signals", [1, 2, 10])
     @pytest.mark.parametrize("dtype", [np.float64])
     class TestSOSFilt:
@@ -179,8 +179,8 @@ class TestFilter:
             assert output.dtype == dtype
 
     @pytest.mark.benchmark(group="Hilbert")
-    @pytest.mark.parametrize('dtype', [np.float32, np.float64])
-    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 15), (2, 2 ** 8)])
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**15), (2, 2**8)])
     class TestHilbert:
         def cpu_version(self, sig):
             return signal.hilbert(sig)
@@ -203,9 +203,7 @@ class TestFilter:
             cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert_gpu(
-            self, rand_data_gen, gpubenchmark, dtype, dim, num_samps
-        ):
+        def test_hilbert_gpu(self, rand_data_gen, gpubenchmark, dtype, dim, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, dim, dtype)
             output = gpubenchmark(self.gpu_version, gpu_sig)
@@ -215,8 +213,8 @@ class TestFilter:
             assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="Hilbert2")
-    @pytest.mark.parametrize('dtype', [np.float32, np.float64])
-    @pytest.mark.parametrize("dim, num_samps", [(2, 2 ** 8)])
+    @pytest.mark.parametrize("dtype", [np.float32, np.float64])
+    @pytest.mark.parametrize("dim, num_samps", [(2, 2**8)])
     class TestHilbert2:
         def cpu_version(self, sig):
             return signal.hilbert2(sig)
@@ -228,20 +226,11 @@ class TestFilter:
             return out
 
         @pytest.mark.cpu
-        def test_hilbert2_cpu(
-            self,
-            rand_data_gen,
-            benchmark,
-            dtype,
-            dim,
-            num_samps
-        ):
+        def test_hilbert2_cpu(self, rand_data_gen, benchmark, dtype, dim, num_samps):
             cpu_sig, _ = rand_data_gen(num_samps, dim, dtype)
             benchmark(self.cpu_version, cpu_sig)
 
-        def test_hilbert2_gpu(
-            self, rand_data_gen, gpubenchmark, dtype, dim, num_samps
-        ):
+        def test_hilbert2_gpu(self, rand_data_gen, gpubenchmark, dtype, dim, num_samps):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, dim, dtype)
             output = gpubenchmark(self.gpu_version, gpu_sig)
@@ -251,7 +240,7 @@ class TestFilter:
             assert cp.real(output).dtype == dtype
 
     @pytest.mark.benchmark(group="Detrend")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("num_samps", [2**8])
     class TestDetrend:
         def cpu_version(self, sig):
             return signal.detrend(sig)
@@ -277,7 +266,7 @@ class TestFilter:
 
     @pytest.mark.benchmark(group="FreqShift")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("num_samps", [2**8])
     @pytest.mark.parametrize("freq", np.fft.fftfreq(10, 0.1))
     @pytest.mark.parametrize("fs", [0.3])
     class TestFreqShift:
@@ -307,7 +296,7 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Decimate")
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("num_samps", [2**14, 2**18])
     @pytest.mark.parametrize("downsample_factor", [2, 3, 4, 8, 64])
     @pytest.mark.parametrize("zero_phase", [True, False])
     @pytest.mark.parametrize("gpupath", [True, False])
@@ -350,9 +339,7 @@ class TestFilter:
             zero_phase,
             gpupath,
         ):
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
             output = gpubenchmark(
                 self.gpu_version,
                 gpu_sig,
@@ -365,8 +352,8 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Resample")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
-    @pytest.mark.parametrize("resample_num_samps", [2 ** 12, 2 ** 16])
+    @pytest.mark.parametrize("num_samps", [2**14])
+    @pytest.mark.parametrize("resample_num_samps", [2**12, 2**16])
     @pytest.mark.parametrize("window", [("kaiser", 0.5)])
     class TestResample:
         def cpu_version(self, sig, resample_num_samps, window):
@@ -404,12 +391,8 @@ class TestFilter:
             window,
         ):
 
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, resample_num_samps, window
-            )
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
+            output = gpubenchmark(self.gpu_version, gpu_sig, resample_num_samps, window)
 
             key = self.cpu_version(cpu_sig, resample_num_samps, window)
             array_equal(cp.asnumpy(output), key, atol=1e-4)
@@ -417,7 +400,7 @@ class TestFilter:
     @pytest.mark.benchmark(group="ResamplePoly")
     @pytest.mark.parametrize(
         "dim, num_samps",
-        [(1, 2 ** 14), (1, 2 ** 18), (2, 2 ** 14), (2, 2 ** 18)],
+        [(1, 2**14), (1, 2**18), (2, 2**14), (2, 2**18)],
     )
     @pytest.mark.parametrize("up", [8])
     @pytest.mark.parametrize("down", [1])
@@ -450,9 +433,7 @@ class TestFilter:
             gpupath,
         ):
             if dim == 1:
-                cpu_sig, _ = linspace_data_gen(
-                    0, 10, num_samps, endpoint=False
-                )
+                cpu_sig, _ = linspace_data_gen(0, 10, num_samps, endpoint=False)
             else:
                 cpu_sig = np.random.rand(dim, num_samps)
             benchmark(
@@ -477,9 +458,7 @@ class TestFilter:
             gpupath,
         ):
             if dim == 1:
-                cpu_sig, gpu_sig = linspace_data_gen(
-                    0, 10, num_samps, endpoint=False
-                )
+                cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
             else:
                 cpu_sig = np.random.rand(dim, num_samps)
                 gpu_sig = cp.array(cpu_sig)
@@ -498,7 +477,7 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="UpFirDn")
-    @pytest.mark.parametrize("dim, num_samps", [(1, 2 ** 14), (2, 2 ** 8)])
+    @pytest.mark.parametrize("dim, num_samps", [(1, 2**14), (2, 2**8)])
     @pytest.mark.parametrize("up", [2, 3, 7])
     @pytest.mark.parametrize("down", [1, 2, 9])
     @pytest.mark.parametrize("axis", [-1, 0])
@@ -549,7 +528,7 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Firfilter")
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("num_samps", [2**14, 2**18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFirfilter:
         def cpu_version(self, sig, filt):
@@ -580,9 +559,7 @@ class TestFilter:
             num_samps,
             filter_len,
         ):
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
             cpu_filter, _ = signal.butter(filter_len, 0.5)
             gpu_filter = cp.asarray(cpu_filter)
             output = gpubenchmark(
@@ -595,7 +572,7 @@ class TestFilter:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="FirfilterZi")
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("num_samps", [2**14, 2**18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFirfilterZi:
         def cpu_version(self, sig, filt, zi):
@@ -627,9 +604,7 @@ class TestFilter:
             num_samps,
             filter_len,
         ):
-            cpu_sig, gpu_sig = linspace_data_gen(
-                0, 10, num_samps, endpoint=False
-            )
+            cpu_sig, gpu_sig = linspace_data_gen(0, 10, num_samps, endpoint=False)
             cpu_filter, _ = signal.butter(filter_len, 0.5)
             cpu_zi = signal.lfilter_zi(cpu_filter, 1.0)
             gpu_filter = cp.asarray(cpu_filter)
@@ -646,7 +621,7 @@ class TestFilter:
 
     @pytest.mark.benchmark(group="Firfilter2")
     @pytest.mark.parametrize("dtype", [np.float32, np.float64])
-    @pytest.mark.parametrize("num_samps", [2 ** 14, 2 ** 18])
+    @pytest.mark.parametrize("num_samps", [2**14, 2**18])
     @pytest.mark.parametrize("filter_len", [8, 32, 128])
     class TestFirfilter2:
         def cpu_version(self, sig, filt):
@@ -728,7 +703,7 @@ class TestFilter:
     @pytest.mark.parametrize(
         "dtype", [np.float32, np.float64, np.complex64, np.complex128]
     )
-    @pytest.mark.parametrize("num_samps", [2 ** 12])
+    @pytest.mark.parametrize("num_samps", [2**12])
     @pytest.mark.parametrize("filt_samps", [2048])
     @pytest.mark.parametrize("n_chan", [64, 128, 256])
     class TestChannelizePoly:

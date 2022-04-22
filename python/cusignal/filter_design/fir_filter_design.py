@@ -11,11 +11,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-import numpy as np
 from math import ceil, log
 
+import cupy as cp
+import numpy as np
 from scipy import signal
+
 from ..windows.windows import get_window
 
 
@@ -285,9 +286,7 @@ def firwin(
 
     # Check for invalid input.
     if cutoff.ndim > 1:
-        raise ValueError(
-            "The cutoff argument must be at most " "one-dimensional."
-        )
+        raise ValueError("The cutoff argument must be at most " "one-dimensional.")
     if cutoff.size == 0:
         raise ValueError("At least one cutoff frequency must be given.")
     if cutoff.min() <= 0 or cutoff.max() >= 1:
@@ -362,8 +361,17 @@ def firwin(
     return h
 
 
-def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
-            antisymmetric=False, fs=None, gpupath=True):
+def firwin2(
+    numtaps,
+    freq,
+    gain,
+    nfreqs=None,
+    window="hamming",
+    nyq=None,
+    antisymmetric=False,
+    fs=None,
+    gpupath=True,
+):
     """
     FIR filter design using the window method.
     From the given frequencies `freq` and corresponding gains `gain`,
@@ -452,25 +460,29 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
     nyq = 0.5 * _get_fs(fs, nyq)
 
     if len(freq) != len(gain):
-        raise ValueError('freq and gain must be of same length.')
+        raise ValueError("freq and gain must be of same length.")
 
     if nfreqs is not None and numtaps >= nfreqs:
-        raise ValueError(('ntaps must be less than nfreqs, but firwin2 was '
-                          'called with ntaps=%d and nfreqs=%s') %
-                         (numtaps, nfreqs))
+        raise ValueError(
+            (
+                "ntaps must be less than nfreqs, but firwin2 was "
+                "called with ntaps=%d and nfreqs=%s"
+            )
+            % (numtaps, nfreqs)
+        )
 
     if freq[0] != 0 or freq[-1] != nyq:
-        raise ValueError('freq must start with 0 and end with fs/2.')
+        raise ValueError("freq must start with 0 and end with fs/2.")
     d = pp.diff(freq)
     if (d < 0).any():
-        raise ValueError('The values in freq must be nondecreasing.')
+        raise ValueError("The values in freq must be nondecreasing.")
     d2 = d[:-1] + d[1:]
     if (d2 == 0).any():
-        raise ValueError('A value in freq must not occur more than twice.')
+        raise ValueError("A value in freq must not occur more than twice.")
     if freq[1] == 0:
-        raise ValueError('Value 0 must not be repeated in freq')
+        raise ValueError("Value 0 must not be repeated in freq")
     if freq[-2] == nyq:
-        raise ValueError('Value fs/2 must not be repeated in freq')
+        raise ValueError("Value fs/2 must not be repeated in freq")
 
     if antisymmetric:
         if numtaps % 2 == 0:
@@ -484,14 +496,15 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
             ftype = 1
 
     if ftype == 2 and gain[-1] != 0.0:
-        raise ValueError("A Type II filter must have zero gain at the "
-                         "Nyquist frequency.")
+        raise ValueError(
+            "A Type II filter must have zero gain at the " "Nyquist frequency."
+        )
     elif ftype == 3 and (gain[0] != 0.0 or gain[-1] != 0.0):
-        raise ValueError("A Type III filter must have zero gain at zero "
-                         "and Nyquist frequencies.")
+        raise ValueError(
+            "A Type III filter must have zero gain at zero " "and Nyquist frequencies."
+        )
     elif ftype == 4 and gain[0] != 0.0:
-        raise ValueError("A Type IV filter must have zero gain at zero "
-                         "frequency.")
+        raise ValueError("A Type IV filter must have zero gain at zero " "frequency.")
 
     if nfreqs is None:
         nfreqs = 1 + 2 ** int(ceil(log(numtaps, 2)))
@@ -507,9 +520,11 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
         # Check if freq is strictly increasing after tweak
         d = pp.diff(freq)
         if (d <= 0).any():
-            raise ValueError("freq cannot contain numbers that are too close "
-                             "(within eps * (fs/2): "
-                             "{}) to a repeated value".format(eps))
+            raise ValueError(
+                "freq cannot contain numbers that are too close "
+                "(within eps * (fs/2): "
+                "{}) to a repeated value".format(eps)
+            )
 
     # Linearly interpolate the desired response on a uniform mesh `x`.
     x = pp.linspace(0.0, nyq, nfreqs)
@@ -520,7 +535,7 @@ def firwin2(numtaps, freq, gain, nfreqs=None, window='hamming', nyq=None,
 
     # Adjust the phases of the coefficients so that the first `ntaps` of the
     # inverse FFT are the desired filter coefficients.
-    shift = pp.exp(-(numtaps - 1) / 2. * 1.j * pp.pi * x / nyq)
+    shift = pp.exp(-(numtaps - 1) / 2.0 * 1.0j * pp.pi * x / nyq)
     if ftype > 2:
         shift *= 1j
 

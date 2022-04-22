@@ -11,20 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+
 import cupy as cp
 
-from ..windows.windows import get_window
-from ..utils.arraytools import (
-    _even_ext,
-    _odd_ext,
-    _const_ext,
-    _zero_ext,
-    _as_strided,
-)
 from ..filtering import filtering
+from ..utils.arraytools import _as_strided, _const_ext, _even_ext, _odd_ext, _zero_ext
+from ..windows.windows import get_window
 from ._spectral_cuda import _lombscargle
-
-import warnings
 
 
 def lombscargle(
@@ -806,15 +800,11 @@ def spectrogram(
     modelist = ["psd", "complex", "magnitude", "angle", "phase"]
     if mode not in modelist:
         raise ValueError(
-            "unknown value for mode {}, must be one of {}".format(
-                mode, modelist
-            )
+            "unknown value for mode {}, must be one of {}".format(mode, modelist)
         )
 
     # need to set default for nperseg before setting default for noverlap below
-    window, nperseg = _triage_segments(
-        window, nperseg, input_length=x.shape[axis]
-    )
+    window, nperseg = _triage_segments(window, nperseg, input_length=x.shape[axis])
 
     # Less overlap than welch, so samples are more statisically independent
     if noverlap is None:
@@ -1307,8 +1297,8 @@ def istft(
 
     # Remove extension points
     if boundary:
-        x = x[..., nperseg // 2: -(nperseg // 2)]
-        norm = norm[..., nperseg // 2: -(nperseg // 2)]
+        x = x[..., nperseg // 2 : -(nperseg // 2)]
+        norm = norm[..., nperseg // 2 : -(nperseg // 2)]
 
     # Divide out normalization where non-tiny
     if cp.sum(norm > 1e-10) != len(norm):
@@ -1664,8 +1654,7 @@ def _spectral_helper(
     """
     if mode not in ["psd", "stft"]:
         raise ValueError(
-            "Unknown value for mode %s, must be one of: "
-            "{'psd', 'stft'}" % mode
+            "Unknown value for mode %s, must be one of: " "{'psd', 'stft'}" % mode
         )
 
     boundary_funcs = {
@@ -1829,8 +1818,7 @@ def _spectral_helper(
                 if cp.iscomplexobj(y):
                     sides = "twosided"
                     warnings.warn(
-                        "Input data is complex, switching to "
-                        "return_onesided=False"
+                        "Input data is complex, switching to " "return_onesided=False"
                     )
     else:
         sides = "twosided"
@@ -1845,9 +1833,7 @@ def _spectral_helper(
 
     if not same_data:
         # All the same operations on the y data
-        result_y = _fft_helper(
-            y, win, detrend_func, nperseg, noverlap, nfft, sides
-        )
+        result_y = _fft_helper(y, win, detrend_func, nperseg, noverlap, nfft, sides)
         result = cp.conj(result) * result_y
     elif mode == "psd":
         result = cp.conj(result) * result
@@ -1990,8 +1976,7 @@ def _triage_segments(window, nperseg, input_length):
         elif nperseg is not None:
             if nperseg != win.shape[0]:
                 raise ValueError(
-                    "value specified for nperseg is different"
-                    " from length of window"
+                    "value specified for nperseg is different" " from length of window"
                 )
     return win, nperseg
 

@@ -12,8 +12,9 @@
 # limitations under the License.
 
 import cupy as cp
-from ..convolution.convolve import convolve
 import numpy as np
+
+from ..convolution.convolve import convolve
 
 _qmf_kernel = cp.ElementwiseKernel(
     "",
@@ -306,7 +307,7 @@ def cwt(data, wavelet, widths):
     >>> plt.show()
 
     """
-    if cp.asarray(wavelet(1, 1)).dtype.char in 'FDG':
+    if cp.asarray(wavelet(1, 1)).dtype.char in "FDG":
         dtype = cp.complex128
     else:
         dtype = cp.float64

@@ -13,9 +13,9 @@
 
 import cupy as cp
 
-from ..utils._caches import _cupy_kernel_cache
-from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
 from ..convolution.convolution_utils import _iDivUp
+from ..utils._caches import _cupy_kernel_cache
+from ..utils.helper_tools import _get_function, _get_tpb_bpg, _print_atts
 
 _modedict = {
     cp.less: 0,
@@ -98,9 +98,7 @@ class _cupy_boolrelextrema_2d_wrapper(object):
 def _populate_kernel_cache(np_type, k_type):
 
     if np_type not in _SUPPORTED_TYPES:
-        raise ValueError(
-            "Datatype {} not found for '{}'".format(np_type, k_type)
-        )
+        raise ValueError("Datatype {} not found for '{}'".format(np_type, k_type))
 
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
@@ -120,9 +118,7 @@ def _get_backend_kernel(dtype, grid, block, k_type):
         else:
             return _cupy_boolrelextrema_2d_wrapper(grid, block, kernel)
     else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
+        raise ValueError("Kernel {} not found in _cupy_kernel_cache".format(k_type))
 
 
 def _peak_finding(data, comparator, axis, order, mode, results):

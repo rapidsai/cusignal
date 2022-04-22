@@ -12,128 +12,101 @@
 # limitations under the License.
 
 from cusignal.acoustics.cepstrum import (
-    real_cepstrum,
     complex_cepstrum,
     inverse_complex_cepstrum,
     minimum_phase,
+    real_cepstrum,
 )
-from cusignal.demod.demod import fm_demod
-from cusignal.estimation.filters import KalmanFilter
-from cusignal.filtering.resample import (
-    decimate,
-    resample,
-    resample_poly,
-    upfirdn,
-)
-from cusignal.filtering.filtering import (
-    wiener,
-    lfilter,
-    lfilter_zi,
-    firfilter,
-    firfilter_zi,
-    firfilter2,
-    filtfilt,
-    sosfilt,
-    hilbert,
-    hilbert2,
-    detrend,
-    channelize_poly,
-    freq_shift,
-)
-from cusignal.convolution.correlate import correlate, correlate2d
+from cusignal.bsplines.bsplines import cubic, gauss_spline, quadratic
 from cusignal.convolution.convolve import (
-    fftconvolve,
     choose_conv_method,
     convolve,
-    convolve2d,
     convolve1d2o,
     convolve1d3o,
+    convolve2d,
+    fftconvolve,
 )
+from cusignal.convolution.correlate import correlate, correlate2d
+from cusignal.demod.demod import fm_demod
+from cusignal.estimation.filters import KalmanFilter
 from cusignal.filter_design.fir_filter_design import (
-    kaiser_beta,
-    kaiser_atten,
+    cmplx_sort,
     firwin,
     firwin2,
-    cmplx_sort,
+    kaiser_atten,
+    kaiser_beta,
 )
+from cusignal.filtering.filtering import (
+    channelize_poly,
+    detrend,
+    filtfilt,
+    firfilter,
+    firfilter2,
+    firfilter_zi,
+    freq_shift,
+    hilbert,
+    hilbert2,
+    lfilter,
+    lfilter_zi,
+    sosfilt,
+    wiener,
+)
+from cusignal.filtering.resample import decimate, resample, resample_poly, upfirdn
+from cusignal.io.reader import read_bin, read_sigmf, unpack_bin
+from cusignal.io.writer import pack_bin, write_bin, write_sigmf
+from cusignal.peak_finding.peak_finding import argrelextrema, argrelmax, argrelmin
+from cusignal.radartools.beamformers import mvdr
+from cusignal.radartools.radartools import ambgfun, pulse_compression, pulse_doppler
+from cusignal.spectral_analysis.spectral import (
+    coherence,
+    csd,
+    istft,
+    lombscargle,
+    periodogram,
+    spectrogram,
+    stft,
+    vectorstrength,
+    welch,
+)
+from cusignal.utils.arraytools import (
+    from_pycuda,
+    get_pinned_array,
+    get_pinned_mem,
+    get_shared_array,
+    get_shared_mem,
+)
+from cusignal.waveforms.waveforms import (
+    chirp,
+    gausspulse,
+    sawtooth,
+    square,
+    unit_impulse,
+)
+from cusignal.wavelets.wavelets import cwt, morlet, morlet2, qmf, ricker
 from cusignal.windows.windows import (
-    general_cosine,
-    boxcar,
-    triang,
-    parzen,
-    bohman,
-    blackman,
-    nuttall,
-    blackmanharris,
-    flattop,
-    bartlett,
-    hann,
-    tukey,
     barthann,
-    general_hamming,
-    hamming,
-    kaiser,
-    gaussian,
-    general_gaussian,
+    bartlett,
+    blackman,
+    blackmanharris,
+    bohman,
+    boxcar,
     chebwin,
     cosine,
     exponential,
-    taylor,
+    flattop,
+    gaussian,
+    general_cosine,
+    general_gaussian,
+    general_hamming,
     get_window,
-)
-from cusignal.spectral_analysis.spectral import (
-    lombscargle,
-    periodogram,
-    welch,
-    csd,
-    spectrogram,
-    stft,
-    istft,
-    vectorstrength,
-    coherence,
-)
-from cusignal.bsplines.bsplines import (
-    gauss_spline,
-    cubic,
-    quadratic,
-)
-from cusignal.waveforms.waveforms import (
-    sawtooth,
-    square,
-    gausspulse,
-    chirp,
-    unit_impulse,
-)
-from cusignal.wavelets.wavelets import qmf, morlet, ricker, morlet2, cwt
-from cusignal.peak_finding.peak_finding import (
-    argrelmin,
-    argrelmax,
-    argrelextrema,
-)
-from cusignal.utils.arraytools import (
-    get_shared_array,
-    get_shared_mem,
-    get_pinned_array,
-    get_pinned_mem,
-    from_pycuda,
-)
-from cusignal.io.reader import (
-    read_bin,
-    unpack_bin,
-    read_sigmf,
-)
-from cusignal.io.writer import (
-    write_bin,
-    pack_bin,
-    write_sigmf,
-)
-from cusignal.radartools.radartools import (
-    pulse_compression,
-    pulse_doppler,
-    ambgfun,
-)
-from cusignal.radartools.beamformers import (
-    mvdr,
+    hamming,
+    hann,
+    kaiser,
+    nuttall,
+    parzen,
+    taylor,
+    triang,
+    tukey,
 )
 
 # Versioneer

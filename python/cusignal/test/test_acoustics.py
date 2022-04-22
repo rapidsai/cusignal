@@ -12,10 +12,10 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import numpy as np
 import pytest
 
+import cusignal
 from cusignal.test.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
@@ -100,15 +100,11 @@ def inverse_complex_cepstrum(ceps, ndelay):
         ndelay = np.array(ndelay)
         samples = phase.shape[-1]
         center = (samples + 1) // 2
-        wrapped = (
-            phase + np.pi * ndelay[..., None] * np.arange(samples) / center
-        )
+        wrapped = phase + np.pi * ndelay[..., None] * np.arange(samples) / center
         return wrapped
 
     log_spectrum = np.fft.fft(ceps)
-    spectrum = np.exp(
-        log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay)
-    )
+    spectrum = np.exp(log_spectrum.real + 1j * _wrap(log_spectrum.imag, ndelay))
     x = np.fft.ifft(spectrum).real
 
     return x
@@ -147,7 +143,7 @@ def minimum_phase(x, n=None):
 
 class TestAcoustics:
     @pytest.mark.benchmark(group="ComplexCepstrum")
-    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**8, 2**14])
     @pytest.mark.parametrize("n", [123, 256])
     class TestComplexCepstrum:
         def cpu_version(self, sig, n):
@@ -160,15 +156,11 @@ class TestAcoustics:
             return out
 
         @pytest.mark.cpu
-        def test_complex_cepstrum_cpu(
-            self, rand_data_gen, benchmark, num_samps, n
-        ):
+        def test_complex_cepstrum_cpu(self, rand_data_gen, benchmark, num_samps, n):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, n)
 
-        def test_complex_cepstrum_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, n
-        ):
+        def test_complex_cepstrum_gpu(self, rand_data_gen, gpubenchmark, num_samps, n):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
@@ -177,7 +169,7 @@ class TestAcoustics:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="RealCepstrum")
-    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**8, 2**14])
     @pytest.mark.parametrize("n", [123, 256])
     class TestRealCepstrum:
         def cpu_version(self, sig, n):
@@ -190,15 +182,11 @@ class TestAcoustics:
             return out
 
         @pytest.mark.cpu
-        def test_real_cepstrum_cpu(
-            self, rand_data_gen, benchmark, num_samps, n
-        ):
+        def test_real_cepstrum_cpu(self, rand_data_gen, benchmark, num_samps, n):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, n)
 
-        def test_real_cepstrum_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, n
-        ):
+        def test_real_cepstrum_gpu(self, rand_data_gen, gpubenchmark, num_samps, n):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, n)
@@ -207,7 +195,7 @@ class TestAcoustics:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="InverseComplexCepstrum")
-    @pytest.mark.parametrize("num_samps", [2 ** 10])
+    @pytest.mark.parametrize("num_samps", [2**10])
     @pytest.mark.parametrize("n", [123, 256])
     class TestInverseComplexCepstrum:
         def cpu_version(self, sig, n):
@@ -237,7 +225,7 @@ class TestAcoustics:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="MinimumPhase")
-    @pytest.mark.parametrize("num_samps", [2 ** 8, 2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**8, 2**14])
     @pytest.mark.parametrize("n", [123, 256])
     class TestMinimumPhase:
         def cpu_version(self, sig, n):
@@ -250,15 +238,11 @@ class TestAcoustics:
             return out
 
         @pytest.mark.cpu
-        def test_minimum_phase_cpu(
-            self, rand_data_gen, benchmark, num_samps, n
-        ):
+        def test_minimum_phase_cpu(self, rand_data_gen, benchmark, num_samps, n):
             cpu_sig, _ = rand_data_gen(num_samps)
             benchmark(self.cpu_version, cpu_sig, n)
 
-        def test_minimum_phase_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, n
-        ):
+        def test_minimum_phase_gpu(self, rand_data_gen, gpubenchmark, num_samps, n):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, n)

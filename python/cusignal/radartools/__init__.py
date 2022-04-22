@@ -11,14 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from cusignal.radartools.beamformers import mvdr
 from cusignal.radartools.radartools import (
-    pulse_compression,
-    pulse_doppler,
     ambgfun,
     ca_cfar,
     cfar_alpha,
-)
-
-from cusignal.radartools.beamformers import (
-    mvdr,
+    pulse_compression,
+    pulse_doppler,
 )

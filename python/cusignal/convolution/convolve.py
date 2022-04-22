@@ -11,20 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-import numpy as np
 import sys
 
-from ..utils.fftpack_helper import (
-    _init_nd_shape_and_axes_sorted,
-    next_fast_len,
-)
+import cupy as cp
+import numpy as np
+
+from ..utils.fftpack_helper import _init_nd_shape_and_axes_sorted, next_fast_len
 from . import _convolution_cuda
 from .convolution_utils import (
-    _inputs_swap_needed,
-    _numeric_arrays,
     _centered,
     _fftconv_faster,
+    _inputs_swap_needed,
+    _numeric_arrays,
     _timeit_fast,
 )
 
@@ -152,14 +150,10 @@ def convolve(
         if swapped_inputs:
             volume, kernel = kernel, volume
 
-        return _convolution_cuda._convolve(
-            volume, kernel, True, swapped_inputs, mode
-        )
+        return _convolution_cuda._convolve(volume, kernel, True, swapped_inputs, mode)
 
     else:
-        raise ValueError(
-            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
-        )
+        raise ValueError("Acceptable method flags are 'auto'," " 'direct', or 'fft'.")
 
 
 def fftconvolve(in1, in2, mode="full", axes=None):
@@ -285,9 +279,9 @@ def fftconvolve(in1, in2, mode="full", axes=None):
             " {0} and {1}".format(in1.shape, in2.shape)
         )
 
-    complex_result = np.issubdtype(
-        in1.dtype, np.complexfloating
-    ) or np.issubdtype(in2.dtype, cp.complexfloating)
+    complex_result = np.issubdtype(in1.dtype, np.complexfloating) or np.issubdtype(
+        in2.dtype, cp.complexfloating
+    )
     shape = np.maximum(s1, s2)
     shape[axes] = s1[axes] + s2[axes] - 1
 
@@ -505,7 +499,7 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
         return chosen_method, times
 
     # fftconvolve doesn't support complex256
-    fftconv_unsup = "complex256" if sys.maxsize > 2 ** 32 else "complex192"
+    fftconv_unsup = "complex256" if sys.maxsize > 2**32 else "complex192"
     if hasattr(cp, fftconv_unsup):
         if volume.dtype == fftconv_unsup or kernel.dtype == fftconv_unsup:
             return "direct"
@@ -608,16 +602,10 @@ def convolve1d2o(
         signal, kernel = kernel, signal
 
     if mode in ["same", "full"]:
-        raise NotImplementedError(
-            "Mode == {} not implemented".format(
-                mode
-            )
-        )
+        raise NotImplementedError("Mode == {} not implemented".format(mode))
 
     if method == "direct":
-        return _convolution_cuda._convolve1d2o(
-            signal, kernel, mode
-        )
+        return _convolution_cuda._convolve1d2o(signal, kernel, mode)
     else:
         raise NotImplementedError("Only Direct method implemented")
 
@@ -701,15 +689,9 @@ def convolve1d3o(
         signal, kernel = kernel, signal
 
     if mode in ["same", "full"]:
-        raise NotImplementedError(
-            "Mode == {} not implemented".format(
-                mode
-            )
-        )
+        raise NotImplementedError("Mode == {} not implemented".format(mode))
 
     if method == "direct":
-        return _convolution_cuda._convolve1d3o(
-            signal, kernel, mode
-        )
+        return _convolution_cuda._convolve1d3o(signal, kernel, mode)
     else:
         raise NotImplementedError("Only Direct method implemented")

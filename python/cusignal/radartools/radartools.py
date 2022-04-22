@@ -11,8 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from math import ceil, log2
+
 import cupy as cp
-from math import log2, ceil
+
 from ..windows.windows import get_window
 
 
@@ -67,8 +69,7 @@ def pulse_compression(x, template, normalize=False, window=None, nfft=None):
         template = cp.divide(template, cp.linalg.norm(template))
 
     fft_x = cp.fft.fft(x, nfft)
-    fft_template = cp.conj(cp.tile(cp.fft.fft(template, nfft),
-                                   (num_pulses, 1)))
+    fft_template = cp.conj(cp.tile(cp.fft.fft(template, nfft), (num_pulses, 1)))
     compressedIQ = cp.fft.ifft(cp.multiply(fft_x, fft_template), nfft)
 
     return compressedIQ
@@ -114,10 +115,9 @@ def pulse_doppler(x, window=None, nfft=None):
         else:
             W = get_window(window, Nx, False)[cp.newaxis]
 
-        pd_dataMatrix = \
-            cp.fft.fft(cp.multiply(x,
-                                   cp.tile(W.T, (1, samples_per_pulse)),
-                                   nfft, axis=0))
+        pd_dataMatrix = cp.fft.fft(
+            cp.multiply(x, cp.tile(W.T, (1, samples_per_pulse)), nfft, axis=0)
+        )
     else:
         pd_dataMatrix = cp.fft.fft(x, nfft, axis=0)
 
@@ -143,7 +143,7 @@ _new_ynorm_kernel = cp.ElementwiseKernel(
 )
 
 
-def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
+def ambgfun(x, fs, prf, y=None, cut="2d", cutValue=0):
     """
     Calculates the normalized ambiguity function for the vector x
 
@@ -175,9 +175,9 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
     """
     cut = cut.lower()
 
-    if 'float64' in x.dtype.name:
+    if "float64" in x.dtype.name:
         x = cp.asarray(x, dtype=cp.complex128)
-    elif 'float32' in x.dtype.name:
+    elif "float32" in x.dtype.name:
         x = cp.asarray(x, dtype=cp.complex64)
     else:
         x = cp.asarray(x)
@@ -190,7 +190,7 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
         ynorm = y / cp.linalg.norm(y)
 
     len_seq = len(xnorm) + len(ynorm)
-    nfreq = 2**ceil(log2(len_seq - 1))
+    nfreq = 2 ** ceil(log2(len_seq - 1))
 
     # Consider for deletion as we add different cut values
     """
@@ -204,36 +204,38 @@ def ambgfun(x, fs, prf, y=None, cut='2d', cutValue=0):
 
     xlen = len(xnorm)
 
-    if cut == '2d':
+    if cut == "2d":
         new_ynorm = cp.empty((len_seq - 1, xlen), dtype=xnorm.dtype)
         _new_ynorm_kernel(xlen, xnorm, ynorm, new_ynorm)
 
-        amf = nfreq * cp.abs(cp.fft.fftshift(
-            cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1))
+        amf = nfreq * cp.abs(
+            cp.fft.fftshift(cp.fft.ifft(new_ynorm, nfreq, axis=1), axes=1)
+        )
 
-    elif cut == 'delay':
+    elif cut == "delay":
         Fd = cp.arange(-fs / 2, fs / 2, fs / nfreq)
-        fftx = cp.fft.fft(xnorm, nfreq) * \
-            cp.exp(1j * 2 * cp.pi * Fd * cutValue)
+        fftx = cp.fft.fft(xnorm, nfreq) * cp.exp(1j * 2 * cp.pi * Fd * cutValue)
         xshift = cp.fft.ifft(fftx)
 
         ynorm_pad = cp.zeros(nfreq) + cp.zeros(nfreq) * 1j
-        ynorm_pad[:ynorm.shape[0]] = ynorm
+        ynorm_pad[: ynorm.shape[0]] = ynorm
 
-        amf = nfreq * cp.abs(cp.fft.ifftshift(
-            cp.fft.ifft(ynorm_pad * cp.conj(xshift), nfreq)))
+        amf = nfreq * cp.abs(
+            cp.fft.ifftshift(cp.fft.ifft(ynorm_pad * cp.conj(xshift), nfreq))
+        )
 
-    elif cut == 'doppler':
+    elif cut == "doppler":
         t = cp.arange(0, xlen) / fs
         ffty = cp.fft.fft(ynorm, len_seq - 1)
-        fftx = cp.fft.fft(xnorm * cp.exp(1j * 2 * cp.pi * cutValue * t),
-                          len_seq - 1)
+        fftx = cp.fft.fft(xnorm * cp.exp(1j * 2 * cp.pi * cutValue * t), len_seq - 1)
 
         amf = cp.abs(cp.fft.fftshift(cp.fft.ifft(ffty * cp.conj(fftx))))
 
     else:
-        raise ValueError('2d, delay, and doppler are the only\
-            cut values allowed')
+        raise ValueError(
+            "2d, delay, and doppler are the only\
+            cut values allowed"
+        )
 
     return amf
 
@@ -256,7 +258,7 @@ def cfar_alpha(pfa, N):
     alpha : float
         Alpha value.
     """
-    return(N * (pfa**(-1.0 / N) - 1))
+    return N * (pfa ** (-1.0 / N) - 1)
 
 
 def ca_cfar(array, guard_cells, reference_cells, pfa=1e-3):
@@ -293,53 +295,79 @@ def ca_cfar(array, guard_cells, reference_cells, pfa=1e-3):
     """
     shape = array.shape
     if len(shape) > 2:
-        raise TypeError('Only 1D and 2D arrays are currently supported.')
+        raise TypeError("Only 1D and 2D arrays are currently supported.")
     mask = cp.zeros(shape, dtype=cp.float32)
 
     if len(shape) == 1:
         if len(array) <= 2 * guard_cells + 2 * reference_cells:
-            raise ValueError('Array too small for given parameters')
+            raise ValueError("Array too small for given parameters")
         intermediate = cp.cumsum(array, axis=0, dtype=cp.float32)
         N = 2 * reference_cells
         alpha = cfar_alpha(pfa, N)
         tpb = (32,)
-        bpg = ((len(array) - 2 * reference_cells - 2 * guard_cells +
-               tpb[0] - 1) // tpb[0],)
-        _ca_cfar_1d_kernel(bpg, tpb, (array, intermediate, mask,
-                                      len(array), N, cp.float32(alpha),
-                                      guard_cells, reference_cells))
+        bpg = (
+            (len(array) - 2 * reference_cells - 2 * guard_cells + tpb[0] - 1) // tpb[0],
+        )
+        _ca_cfar_1d_kernel(
+            bpg,
+            tpb,
+            (
+                array,
+                intermediate,
+                mask,
+                len(array),
+                N,
+                cp.float32(alpha),
+                guard_cells,
+                reference_cells,
+            ),
+        )
     elif len(shape) == 2:
         if len(guard_cells) != 2 or len(reference_cells) != 2:
-            raise TypeError('Guard and reference cells must be two '
-                            'dimensional.')
+            raise TypeError("Guard and reference cells must be two " "dimensional.")
         guard_cells_x, guard_cells_y = guard_cells
         reference_cells_x, reference_cells_y = reference_cells
         if shape[0] - 2 * guard_cells_x - 2 * reference_cells_x <= 0:
-            raise ValueError('Array first dimension too small for given '
-                             'parameters.')
+            raise ValueError("Array first dimension too small for given " "parameters.")
         if shape[1] - 2 * guard_cells_y - 2 * reference_cells_y <= 0:
-            raise ValueError('Array second dimension too small for given '
-                             'parameters.')
+            raise ValueError(
+                "Array second dimension too small for given " "parameters."
+            )
         intermediate = cp.cumsum(array, axis=0, dtype=cp.float32)
         intermediate = cp.cumsum(intermediate, axis=1, dtype=cp.float32)
-        N = 2 * reference_cells_x * (2 * reference_cells_y +
-                                     2 * guard_cells_y + 1)
+        N = 2 * reference_cells_x * (2 * reference_cells_y + 2 * guard_cells_y + 1)
         N += 2 * (2 * guard_cells_x + 1) * reference_cells_y
         alpha = cfar_alpha(pfa, N)
         tpb = (8, 8)
-        bpg_x = (shape[0] - 2 * (reference_cells_x + guard_cells_x) + tpb[0] -
-                 1) // tpb[0]
-        bpg_y = (shape[1] - 2 * (reference_cells_y + guard_cells_y) + tpb[1] -
-                 1) // tpb[1]
+        bpg_x = (
+            shape[0] - 2 * (reference_cells_x + guard_cells_x) + tpb[0] - 1
+        ) // tpb[0]
+        bpg_y = (
+            shape[1] - 2 * (reference_cells_y + guard_cells_y) + tpb[1] - 1
+        ) // tpb[1]
         bpg = (bpg_x, bpg_y)
-        _ca_cfar_2d_kernel(bpg, tpb, (array, intermediate, mask,
-                           shape[0], shape[1], N, cp.float32(alpha),
-                           guard_cells_x, guard_cells_y, reference_cells_x,
-                           reference_cells_y))
-    return(mask, array - mask > 0)
+        _ca_cfar_2d_kernel(
+            bpg,
+            tpb,
+            (
+                array,
+                intermediate,
+                mask,
+                shape[0],
+                shape[1],
+                N,
+                cp.float32(alpha),
+                guard_cells_x,
+                guard_cells_y,
+                reference_cells_x,
+                reference_cells_y,
+            ),
+        )
+    return (mask, array - mask > 0)
 
 
-_ca_cfar_2d_kernel = cp.RawKernel(r'''
+_ca_cfar_2d_kernel = cp.RawKernel(
+    r"""
 extern "C" __global__ void
 _ca_cfar_2d_kernel(float * array, float * intermediate, float * mask,
                    int width, int height, int N, float alpha,
@@ -403,10 +431,13 @@ _ca_cfar_2d_kernel(float * array, float * intermediate, float * mask,
         }
     }
 }
-''', '_ca_cfar_2d_kernel')
+""",
+    "_ca_cfar_2d_kernel",
+)
 
 
-_ca_cfar_1d_kernel = cp.RawKernel(r'''
+_ca_cfar_1d_kernel = cp.RawKernel(
+    r"""
 extern "C" __global__ void
 _ca_cfar_1d_kernel(float * array, float * intermediate, float * mask,
                    int width, int N, float alpha,
@@ -438,4 +469,6 @@ _ca_cfar_1d_kernel(float * array, float * intermediate, float * mask,
         mask[x] = T;
     }
 }
-''', '_ca_cfar_1d_kernel')
+""",
+    "_ca_cfar_1d_kernel",
+)

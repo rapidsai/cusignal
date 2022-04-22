@@ -14,9 +14,8 @@
 import cupy as cp
 
 from . import _convolution_cuda
-
+from .convolution_utils import _inputs_swap_needed, _reverse_and_conj
 from .convolve import convolve
-from .convolution_utils import _reverse_and_conj, _inputs_swap_needed
 
 _modedict = {"valid": 0, "same": 1, "full": 2}
 
@@ -150,14 +149,10 @@ def correlate(
         if swapped_inputs:
             in1, in2 = in2, in1
 
-        return _convolution_cuda._convolve(
-            in1, in2, False, swapped_inputs, mode
-        )
+        return _convolution_cuda._convolve(in1, in2, False, swapped_inputs, mode)
 
     else:
-        raise ValueError(
-            "Acceptable method flags are 'auto'," " 'direct', or 'fft'."
-        )
+        raise ValueError("Acceptable method flags are 'auto'," " 'direct', or 'fft'.")
 
 
 def correlate2d(
@@ -331,9 +326,9 @@ def correlation_lags(in1_len, in2_len, mode="full"):
         lag_bound = in1_len // 2
         # calculate lag ranges for even and odd scenarios
         if in1_len % 2 == 0:
-            lags = lags[(mid - lag_bound): (mid + lag_bound)]
+            lags = lags[(mid - lag_bound) : (mid + lag_bound)]
         else:
-            lags = lags[(mid - lag_bound): (mid + lag_bound) + 1]
+            lags = lags[(mid - lag_bound) : (mid + lag_bound) + 1]
     elif mode == "valid":
         # the output consists only of those elements that do not
         # rely on the zero-padding. In 'valid' mode, either `in1` or `in2`

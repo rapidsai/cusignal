@@ -11,8 +11,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.bsplines.bsplines import (
-    gauss_spline,
-    cubic,
-    quadratic,
-)
+from cusignal.bsplines.bsplines import cubic, gauss_spline, quadratic

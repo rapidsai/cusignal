@@ -14,7 +14,6 @@
 import cupy as cp
 import numpy as np
 
-
 _sawtooth_kernel = cp.ElementwiseKernel(
     "T t, T w",
     "float64 y",
@@ -219,9 +218,7 @@ _gausspulse_kernel_T_T = cp.ElementwiseKernel(
 )
 
 
-def gausspulse(
-    t, fc=1000, bw=0.5, bwr=-6, tpr=-60, retquad=False, retenv=False
-):
+def gausspulse(t, fc=1000, bw=0.5, bwr=-6, tpr=-60, retquad=False, retenv=False):
     """
     Return a Gaussian modulated sinusoid:
 
@@ -303,9 +300,7 @@ def gausspulse(
             #  Solve exp(-a tc**2) = tref  for tc
             #   tc = sqrt(-log(tref) / a) where tref = 10^(tpr/20)
             if tpr >= 0:
-                raise ValueError(
-                    "Reference level for time cutoff must " "be < 0 dB"
-                )
+                raise ValueError("Reference level for time cutoff must " "be < 0 dB")
             tref = pow(10.0, tpr / 20.0)
             return np.sqrt(-np.log(tref) / a)
         else:
@@ -406,9 +401,7 @@ _chirp_phase_hyp_kernel = cp.ElementwiseKernel(
 )
 
 
-def chirp(
-    t, f0, t1, f1, method="linear", phi=0, vertex_zero=True, type="real"
-):
+def chirp(t, f0, t1, f1, method="linear", phi=0, vertex_zero=True, type="real"):
     """Frequency-swept cosine generator.
 
     In the following, 'Hz' should be interpreted as 'cycles per unit';
@@ -516,9 +509,7 @@ def chirp(
 
     elif method in ["hyperbolic", "hyp"]:
         if f0 == 0 or f1 == 0:
-            raise ValueError(
-                "For a hyperbolic chirp, f0 and f1 must be " "nonzero."
-            )
+            raise ValueError("For a hyperbolic chirp, f0 and f1 must be " "nonzero.")
         return _chirp_phase_hyp_kernel(t, f0, t1, f1, phi)
 
     else:
