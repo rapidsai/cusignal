@@ -3,7 +3,7 @@ import pytest
 from numpy import vectorize
 
 from cusignal.radartools import ca_cfar, cfar_alpha
-from cusignal.test.utils import array_equal
+from cusignal.testing.utils import array_equal
 
 
 class TestCaCfar:
