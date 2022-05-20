@@ -2,9 +2,25 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v22.06.00a for the latest changes to this development branch.
 
-# cuSignal 22.04.00 (Date TBD)
+# cuSignal 22.04.00 (6 Apr 2022)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v22.04.00a for the latest changes to this development branch.
+## 🐛 Bug Fixes
+
+- Fix docs builds ([#455](https://github.com/rapidsai/cusignal/pull/455)) [@ajschmidt8](https://github.com/ajschmidt8)
+
+## 📖 Documentation
+
+- Fixes a list of minor errors in the example codes #457 ([#458](https://github.com/rapidsai/cusignal/pull/458)) [@sosae0](https://github.com/sosae0)
+
+## 🚀 New Features
+
+- adding complex parameter to chirp and additional tests ([#450](https://github.com/rapidsai/cusignal/pull/450)) [@mnicely](https://github.com/mnicely)
+
+## 🛠️ Improvements
+
+- Temporarily disable new `ops-bot` functionality ([#465](https://github.com/rapidsai/cusignal/pull/465)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add `.github/ops-bot.yaml` config file ([#463](https://github.com/rapidsai/cusignal/pull/463)) [@ajschmidt8](https://github.com/ajschmidt8)
+- correlation lags function ([#459](https://github.com/rapidsai/cusignal/pull/459)) [@sosae0](https://github.com/sosae0)
 
 # cuSignal 22.02.00 (2 Feb 2022)
 
