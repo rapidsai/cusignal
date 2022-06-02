@@ -65,7 +65,7 @@ gy = cp.cos(-gx**2/6.0)
 %%timeit
 gf = cusignal.resample_poly(gy, resample_up, resample_down, window=('kaiser', 0.5))
 ```
-This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Signal
+This code executes on an NVIDIA V100 in 13.8 ms, a 170x increase over SciPy Signal. On an A100, this same code completes in 4.69 ms; 500x faster than CPU.
 
 Next, we'll show that cuSignal can be used to access data that isn't explicitly generated on GPU. In this case, we use `cusignal.get_shared_mem` to allocate a buffer of memory that's been addressed by both the GPU and CPU. This process allows cuSignal to process data _online_.
 
@@ -125,36 +125,35 @@ cuSignal has been tested on and supports all modern GPUs - from Maxwell to Amper
 ### Conda, Linux OS (Preferred)
 cuSignal can be installed with ([Miniconda](https://docs.conda.io/en/latest/miniconda.html) or the full [Anaconda distribution](https://www.anaconda.com/distribution/)) from the `rapidsai` channel. If you're using a Jetson GPU, please follow the build instructions [below](https://github.com/rapidsai/cusignal#conda---jetson-nano-tk1-tx2-xavier-linux-os)
 
-For `cusignal version == 21.08`:
 
 ```
-For CUDA 11.0 and Python 3.8
+For CUDA 11.5 and Python 3.8
 conda install -c rapidsai -c nvidia -c conda-forge \
-    cusignal=21.08 python=3.8 cudatoolkit=11.0
+    cusignal python=3.8 cudatoolkit=11.5
 
 # or, for CUDA 11.2 and Python 3.8
 conda install -c rapidsai -c nvidia -c conda-forge \
-    cusignal=21.08 python=3.8 cudatoolkit=11.2
+    cusignal python=3.8 cudatoolkit=11.2
 ```
 
-For the nightly verison of `cusignal`, currently 21.10a:
+For the nightly verison of `cusignal`, which includes pre-release features:
 
 ```
-For CUDA 11.0 and Python 3.8
+For CUDA 11.5 and Python 3.8
 conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    cusignal=21.08 python=3.8 cudatoolkit=11.0
+    cusignal python=3.8 cudatoolkit=11.5
 
-For CUDA 11.0 and Python 3.8
+For CUDA 11.2 and Python 3.8
 conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    cusignal=21.08 python=3.8 cudatoolkit=11.2
+    cusignal python=3.8 cudatoolkit=11.2
 ```
 
-While only CUDA 11.0 and 11.2 are officially supported, cuSignal has been confirmed to work with CUDA version 10.2 and above. If you run into any issues with the conda install, please follow the source installation instructions, below.
+While only CUDA versions >= 11.2 are officially supported, cuSignal has been confirmed to work with CUDA version 10.2 and above. If you run into any issues with the conda install, please follow the source installation instructions, below.
 
 For more OS and version information, please visit the [RAPIDS version picker](https://rapids.ai/start.html).
 
 
-### Source, aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS
+### Source, aarch64 (Jetson Nano, TK1, TX2, Xavier, AGX Clara DevKit), Linux OS
 
 Since the Jetson platform is based on the arm chipset, we need to use an aarch64 supported Anaconda environment. While there are multiple options here, we recommend [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
 
@@ -288,7 +287,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
     pip install cupy-cudaXXX
     ```
 
-    Where XXX is the version of the CUDA toolkit you have installed. 10.1, for example is `cupy-cuda101`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
+    Where XXX is the version of the CUDA toolkit you have installed. 11.5, for example is `cupy-cuda115`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
 
 5. Install cuSignal module
 
@@ -306,31 +305,14 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-0.19 docker/.`.
+cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-22.06 docker/.`.
 
 ```
 docker build -t <image>:<tag> docker/.
 docker run --gpus all --rm -it <image>:<tag> /bin/bash
 ```
 
-To 
-For `cusignal version == 21.08`:
-
-```
-# For CUDA 11.2
-docker pull rapidsai/rapidsai-dev:21.08-cuda11.2-devel-ubuntu18.04-py3.8
-docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai-dev:21.08-cuda11.2-devel-ubuntu18.04-py3.8
-```
-
-For the nightly version of `cusignal`
-```
-docker pull rapidsai/rapidsai-dev-nightly:21.10-cuda11.2-devel-ubuntu18.04-py3.8
-docker run --gpus all --rm -it -p 8888:8888 -p 8787:8787 -p 8786:8786 \
-    rapidsai/rapidsai-dev-nightly:21.10-cuda11.2-devel-ubuntu18.04-py3.8
-```
-
-Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions.
+Please see the [RAPIDS Release Selector](https://rapids.ai/start.html) for more information on supported Python, Linux, and CUDA versions and for the specific command to pull the generic RAPIDS container.
 
 
 ## Documentation
@@ -342,7 +324,7 @@ The complete cuSignal API documentation including a complete list of functionali
 ## Notebooks and Examples
 cuSignal strives for 100% coverage between features and notebook examples. While we stress GPU performance, our guiding phisolophy is based on user productivity, and it's always such a bummer when you can't quickly figure out how to use exciting new features.
 
-Core API examples are shown in the `api_guide` of our [Notebooks folder](https://github.com/rapidsai/cusignal/blob/main/notebooks).
+Core API examples are shown in the `api_guide` of our [Notebooks folder](https://github.com/rapidsai/cusignal/blob/main/notebooks). We also provide some example online and offline streaming software-defined radio examples in the `srd` part of the [Notebooks](https://github.com/rapidsai/cusignal/blob/main/notebooks/sdr). See [SDR Integration](#sdr-integration) for more information, too.
 
 In addition to learning about how the API works, these notebooks provide rough benchmarking metrics for user-defined parameters like window length, signal size, and datatype.
 
