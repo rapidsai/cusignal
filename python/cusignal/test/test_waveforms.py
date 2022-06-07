@@ -13,18 +13,18 @@
 
 import cupy as cp
 import numpy as np
-import cusignal
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestWaveforms:
     @pytest.mark.benchmark(group="Sawtooth")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("w", [0.25, 0.5])
     class TestSawtooth:
         def cpu_version(self, sig, w):
@@ -50,7 +50,7 @@ class TestWaveforms:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Square")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("duty", [0.25, 0.5])
     class TestSquare:
         def cpu_version(self, sig, duty):
@@ -67,9 +67,7 @@ class TestWaveforms:
             cpu_sig, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, cpu_sig, duty)
 
-        def test_square_gpu(
-            self, time_data_gen, gpubenchmark, num_samps, duty
-        ):
+        def test_square_gpu(self, time_data_gen, gpubenchmark, num_samps, duty):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
             output = gpubenchmark(self.gpu_version, gpu_sig, duty)
@@ -78,7 +76,7 @@ class TestWaveforms:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="GaussPulse")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fc", [0.75, 5])
     @pytest.mark.parametrize("retquad", [True, False])
     @pytest.mark.parametrize("retenv", [True, False])
@@ -88,9 +86,7 @@ class TestWaveforms:
 
         def gpu_version(self, sig, fc, retquad, retenv):
             with cp.cuda.Stream.null:
-                out = cusignal.gausspulse(
-                    sig, fc, retquad=retquad, retenv=retenv
-                )
+                out = cusignal.gausspulse(sig, fc, retquad=retquad, retenv=retenv)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -106,16 +102,14 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, fc, retquad, retenv
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, fc, retquad, retenv)
 
             key = self.cpu_version(cpu_sig, fc, retquad, retenv)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Chirp")
     @pytest.mark.parametrize("dtype", ["real", "complex"])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("f0", [6])
     @pytest.mark.parametrize("t1", [1])
     @pytest.mark.parametrize("f1", [10])
@@ -166,15 +160,13 @@ class TestWaveforms:
         ):
 
             cpu_sig, gpu_sig = time_data_gen(0, 10, num_samps)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, f0, t1, f1, method, dtype
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, f0, t1, f1, method, dtype)
 
             key = self.cpu_version(cpu_sig, f0, t1, f1, method, dtype)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="UnitImpulse")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("idx", ["mid"])
     class TestUnitImpulse:
         def cpu_version(self, num_samps, idx):

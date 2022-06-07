@@ -11,11 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cupy as cp
-import numpy as np
-
 import json
 import re
+
+import cupy as cp
+import numpy as np
 
 from ._reader_cuda import _unpack
 
@@ -73,20 +73,21 @@ def read_bin(file, buffer=None, dtype=cp.uint8, num_samples=None, offset=0):
     # Get current stream, default or not.
     stream = cp.cuda.get_current_stream()
 
+    # prioritize dtype of buffer if provided
+    if buffer is not None:
+        dtype = buffer.dtype
+
     # offset is measured in bytes
     offset *= cp.dtype(dtype).itemsize
 
-    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples,
-                   dtype=dtype)
+    fp = np.memmap(file, mode="r", offset=offset, shape=num_samples, dtype=dtype)
 
     if buffer is not None:
-        out = cp.empty(buffer.shape, buffer.dtype)
-
-    if buffer is None:
-        out = cp.asarray(fp)
-    else:
         buffer[:] = fp[:]
+        out = cp.empty(buffer.shape, buffer.dtype)
         out.set(buffer)
+    else:
+        out = cp.asarray(fp)
 
     stream.synchronize()
 
@@ -125,9 +126,7 @@ def unpack_bin(binary, dtype, endianness="L"):
     return out
 
 
-def read_sigmf(
-    data_file, meta_file=None, buffer=None, num_samples=None, offset=0
-):
+def read_sigmf(data_file, meta_file=None, buffer=None, num_samples=None, offset=0):
     """
     Read and unpack binary file, with SigMF spec, to GPU memory.
 

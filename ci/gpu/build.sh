@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2018-2020, NVIDIA CORPORATION.
+# Copyright (c) 2018-2022, NVIDIA CORPORATION.
 #############################################
 # cuSignal GPU build and test script for CI #
 #############################################
@@ -24,6 +24,7 @@ export HOME="$WORKSPACE"
 cd "$WORKSPACE"
 export GIT_DESCRIBE_TAG=`git describe --tags`
 export MINOR_VERSION=`echo $GIT_DESCRIBE_TAG | grep -o -E '([0-9]+\.[0-9]+)'`
+unset GIT_DESCRIBE_TAG
 
 ################################################################################
 # SETUP - Check environment
@@ -38,14 +39,6 @@ nvidia-smi
 gpuci_logger "Activate conda env"
 . /opt/conda/etc/profile.d/conda.sh
 conda activate rapids
-gpuci_conda_retry install -c rapidsai -c rapidsai-nightly -c nvidia -c conda-forge \
-    cudatoolkit=${CUDA_REL} \
-    "rapids-build-env=$MINOR_VERSION.*" \
-    "rapids-notebook-env=$MINOR_VERSION."
-
-# https://docs.rapids.ai/maintainers/depmgmt/ 
-# conda remove -f rapids-build-env rapids-notebook-env
-# conda install "your-pkg=1.0.0"
 
 gpuci_logger "Check versions"
 python --version
@@ -61,8 +54,14 @@ conda list --show-channel-urls
 # BUILD - Build cusignal
 ################################################################################
 
-gpuci_logger "Build cusignal"
-"$WORKSPACE/build.sh" clean cusignal
+# TODO: Move boa install to gpuci/rapidsai
+gpuci_mamba_retry install boa
+
+gpuci_logger "Build and install cusignal"
+cd "${WORKSPACE}"
+CONDA_BLD_DIR="${WORKSPACE}/.conda-bld"
+gpuci_conda_retry mambabuild --croot "${CONDA_BLD_DIR}" conda/recipes/cusignal --python=${PYTHON}
+gpuci_mamba_retry install -c "${CONDA_BLD_DIR}" cusignal
 
 ################################################################################
 # TEST - Run GoogleTest and py.tests for cusignal
@@ -89,5 +88,3 @@ pytest --cache-clear --junitxml="$WORKSPACE/junit-cusignal.xml" -v -s -m "not cp
 python ${WORKSPACE}/ci/utils/nbtestlog2junitxml.py nbtest.log
 
 return ${EXITCODE}
-
-

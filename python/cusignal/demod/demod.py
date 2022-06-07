@@ -32,7 +32,7 @@ def fm_demod(x, axis=-1):
     x = cp.asarray(x)
 
     if cp.isrealobj(x):
-        raise AssertionError('Input signal must be complex-valued')
+        raise AssertionError("Input signal must be complex-valued")
     x_angle = cp.unwrap(cp.angle(x), axis=axis)
     y = cp.diff(x_angle, axis=axis)
     return y

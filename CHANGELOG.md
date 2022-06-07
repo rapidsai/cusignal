@@ -1,3 +1,16 @@
+# cuSignal 22.06.00 (7 Jun 2022)
+
+## 🛠️ Improvements
+
+- Simplify conda recipes ([#484](https://github.com/rapidsai/cusignal/pull/484)) [@Ethyling](https://github.com/Ethyling)
+- Use conda to build python packages during GPU tests ([#480](https://github.com/rapidsai/cusignal/pull/480)) [@Ethyling](https://github.com/Ethyling)
+- Fix pinned buffer IO issues ([#479](https://github.com/rapidsai/cusignal/pull/479)) [@charlesbluca](https://github.com/charlesbluca)
+- Use pre-commit to enforce Python style checks ([#478](https://github.com/rapidsai/cusignal/pull/478)) [@charlesbluca](https://github.com/charlesbluca)
+- Extend `get_pinned_mem` to work with more dtype / shapes ([#477](https://github.com/rapidsai/cusignal/pull/477)) [@charlesbluca](https://github.com/charlesbluca)
+- Add/fix installation sections for SDR example notebooks ([#476](https://github.com/rapidsai/cusignal/pull/476)) [@charlesbluca](https://github.com/charlesbluca)
+- Use conda compilers ([#461](https://github.com/rapidsai/cusignal/pull/461)) [@Ethyling](https://github.com/Ethyling)
+- Build packages using mambabuild ([#453](https://github.com/rapidsai/cusignal/pull/453)) [@Ethyling](https://github.com/Ethyling)
+
 # cuSignal 22.04.00 (6 Apr 2022)
 
 ## 🐛 Bug Fixes

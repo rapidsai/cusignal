@@ -12,17 +12,17 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestBsplines:
-    @pytest.mark.parametrize("x", [2 ** 16])
+    @pytest.mark.parametrize("x", [2**16])
     @pytest.mark.parametrize("n", [1])
     @pytest.mark.benchmark(group="GaussSpline")
     class TestGaussSpline:
@@ -49,7 +49,7 @@ class TestBsplines:
             key = self.cpu_version(cpu_sig, n)
             array_equal(output, key)
 
-    @pytest.mark.parametrize("x", [2 ** 16])
+    @pytest.mark.parametrize("x", [2**16])
     @pytest.mark.benchmark(group="Cubic")
     class TestCubic:
         def cpu_version(self, x):
@@ -74,7 +74,7 @@ class TestBsplines:
             key = self.cpu_version(cpu_sig)
             array_equal(output, key)
 
-    @pytest.mark.parametrize("x", [2 ** 16])
+    @pytest.mark.parametrize("x", [2**16])
     @pytest.mark.benchmark(group="Quadratic")
     class TestQuadratic:
         def cpu_version(self, x):

@@ -13,8 +13,8 @@
 
 import cupy as cp
 
+from ..utils.helper_tools import _get_numSM, _print_atts
 from . import _filters_cuda
-from ..utils.helper_tools import _print_atts, _get_numSM
 
 
 class KalmanFilter(object):
@@ -342,9 +342,7 @@ class KalmanFilter(object):
 
         # B will be ignored until implemented
         if u is not None:
-            raise NotImplementedError(
-                "Control Matrix implementation in process"
-            )
+            raise NotImplementedError("Control Matrix implementation in process")
 
         # if u is not None:
         #     u = cp.asarray(u)
@@ -363,9 +361,7 @@ class KalmanFilter(object):
             Q = self.Q
         elif cp.isscalar(Q):
             Q = cp.repeat(
-                (cp.identity(self.dim_x, dtype=self.x.dtype) * Q)[
-                    cp.newaxis, :, :
-                ],
+                (cp.identity(self.dim_x, dtype=self.x.dtype) * Q)[cp.newaxis, :, :],
                 self.points,
                 axis=0,
             )
@@ -411,9 +407,7 @@ class KalmanFilter(object):
             R = self.R
         elif cp.isscalar(R):
             R = cp.repeat(
-                (cp.identity(self.dim_z, dtype=self.x.dtype) * R)[
-                    cp.newaxis, :, :
-                ],
+                (cp.identity(self.dim_z, dtype=self.x.dtype) * R)[cp.newaxis, :, :],
                 self.points,
                 axis=0,
             )

@@ -15,19 +15,18 @@ import cupy as cp
 import numpy as np
 
 from ..utils._caches import _cupy_kernel_cache
-from ..utils.helper_tools import _print_atts, _get_function, _get_tpb_bpg
+from ..utils.helper_tools import _get_function, _get_tpb_bpg, _print_atts
 from .convolution_utils import (
+    CIRCULAR,
     FULL,
+    PAD,
+    REFLECT,
     SAME,
     VALID,
-    CIRCULAR,
-    REFLECT,
-    PAD,
+    _bvalfromboundary,
     _iDivUp,
     _valfrommode,
-    _bvalfromboundary,
 )
-
 
 _SUPPORTED_TYPES = [
     "int32",
@@ -186,9 +185,7 @@ class _cupy_convolve_2d_wrapper(object):
 def _populate_kernel_cache(np_type, k_type):
 
     if np_type not in _SUPPORTED_TYPES:
-        raise ValueError(
-            "Datatype {} not found for '{}'".format(np_type, k_type)
-        )
+        raise ValueError("Datatype {} not found for '{}'".format(np_type, k_type))
 
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
@@ -218,14 +215,10 @@ def _get_backend_kernel(
             return _cupy_convolve_1d3o_wrapper(grid, block, kernel)
         else:
             raise NotImplementedError(
-                "No CuPY kernel found for k_type {}, datatype {}".format(
-                    k_type, dtype
-                )
+                "No CuPY kernel found for k_type {}, datatype {}".format(k_type, dtype)
             )
     else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
+        raise ValueError("Kernel {} not found in _cupy_kernel_cache".format(k_type))
 
 
 def _convolve_gpu(
@@ -384,9 +377,7 @@ def _convolve2d_gpu(
             k_type,
         )
 
-    kernel(
-        d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick
-    )
+    kernel(d_inp, paddedW, paddedH, d_kernel, S[0], S[1], out, outW, outH, pick)
 
     _print_atts(kernel)
 
@@ -413,9 +404,7 @@ def _convolve(
     if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = (
-                max(in1.shape[i], in2.shape[i])
-                - min(in1.shape[i], in2.shape[i])
-                + 1
+                max(in1.shape[i], in2.shape[i]) - min(in1.shape[i], in2.shape[i]) + 1
             )
             if out_dimens[i] < 0:
                 raise Exception(
@@ -469,9 +458,7 @@ def _convolve2d(in1, in2, use_convolve, mode, boundary, fillvalue):
         if fill.size != 1:
             if fill.size == 0:
                 raise Exception("`fillvalue` cannot be an empty array.")
-            raise Exception(
-                "`fillvalue` must be scalar or an array with one element"
-            )
+            raise Exception("`fillvalue` must be scalar or an array with one element")
     else:
         fill = np.zeros(1, in1.dtype)
         if fill is None:

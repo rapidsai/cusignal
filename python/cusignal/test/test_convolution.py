@@ -12,19 +12,19 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestConvolution:
     @pytest.mark.benchmark(group="Correlate")
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
+    @pytest.mark.parametrize("num_samps", [2**7, 2**10 + 1, 2**13])
+    @pytest.mark.parametrize("num_taps", [125, 2**8, 2**13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
     class TestCorrelate:
@@ -33,9 +33,7 @@ class TestConvolution:
 
         def gpu_version(self, sig, num_taps, mode, method):
             with cp.cuda.Stream.null:
-                out = cusignal.correlate(
-                    sig, num_taps, mode=mode, method=method
-                )
+                out = cusignal.correlate(sig, num_taps, mode=mode, method=method)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -77,8 +75,8 @@ class TestConvolution:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Convolve")
-    @pytest.mark.parametrize("num_samps", [2 ** 7, 2 ** 10 + 1, 2 ** 13])
-    @pytest.mark.parametrize("num_taps", [125, 2 ** 8, 2 ** 13])
+    @pytest.mark.parametrize("num_samps", [2**7, 2**10 + 1, 2**13])
+    @pytest.mark.parametrize("num_taps", [125, 2**8, 2**13])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     @pytest.mark.parametrize("method", ["direct", "fft", "auto"])
     class TestConvolve:
@@ -118,16 +116,14 @@ class TestConvolution:
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
             gpu_win = cusignal.windows.hann(num_taps, 1)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, gpu_win, mode, method
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, gpu_win, mode, method)
 
             cpu_win = signal.windows.hann(num_taps, 1)
             key = self.cpu_version(cpu_sig, cpu_win, mode, method)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="FFTConvolve")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("num_samps", [2**15])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
     class TestFFTConvolve:
         def cpu_version(self, sig, mode):
@@ -140,15 +136,11 @@ class TestConvolution:
             return out
 
         @pytest.mark.cpu
-        def test_fftconvolve_cpu(
-            self, rand_data_gen, benchmark, num_samps, mode
-        ):
+        def test_fftconvolve_cpu(self, rand_data_gen, benchmark, num_samps, mode):
             cpu_sig, _ = rand_data_gen(num_samps, 1)
             benchmark(self.cpu_version, cpu_sig, mode)
 
-        def test_fftconvolve_gpu(
-            self, rand_data_gen, gpubenchmark, num_samps, mode
-        ):
+        def test_fftconvolve_gpu(self, rand_data_gen, gpubenchmark, num_samps, mode):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1)
             output = gpubenchmark(self.gpu_version, gpu_sig, mode)
@@ -157,7 +149,7 @@ class TestConvolution:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Convolve2d")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("num_samps", [2**8])
     @pytest.mark.parametrize("num_taps", [5, 100])
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
@@ -167,9 +159,7 @@ class TestConvolution:
 
         def gpu_version(self, sig, filt, boundary, mode):
             with cp.cuda.Stream.null:
-                out = cusignal.convolve2d(
-                    sig, filt, boundary=boundary, mode=mode
-                )
+                out = cusignal.convolve2d(sig, filt, boundary=boundary, mode=mode)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -211,7 +201,7 @@ class TestConvolution:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Correlate2d")
-    @pytest.mark.parametrize("num_samps", [2 ** 8])
+    @pytest.mark.parametrize("num_samps", [2**8])
     @pytest.mark.parametrize("num_taps", [5, 100])
     @pytest.mark.parametrize("boundary", ["fill", "wrap", "symm"])
     @pytest.mark.parametrize("mode", ["full", "valid", "same"])
@@ -221,9 +211,7 @@ class TestConvolution:
 
         def gpu_version(self, sig, filt, boundary, mode):
             with cp.cuda.Stream.null:
-                out = cusignal.correlate2d(
-                    sig, filt, boundary=boundary, mode=mode
-                )
+                out = cusignal.correlate2d(sig, filt, boundary=boundary, mode=mode)
             cp.cuda.Stream.null.synchronize()
             return out
 

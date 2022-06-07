@@ -11,6 +11,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cusignal.demod.demod import (
-    fm_demod,
-)
+from cusignal.demod.demod import fm_demod

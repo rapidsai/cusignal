@@ -37,11 +37,13 @@ def mvdr(x, sv, calc_cov=True):
     row is assumed to be complex-valued data from a given sensor (i.e. NxM)
     """
     if x.shape[0] > x.shape[1]:
-        raise ValueError('Matrix has more sensors than samples. Consider \
-            transposing and remember cuSignal is row-major, unlike MATLAB')
+        raise ValueError(
+            "Matrix has more sensors than samples. Consider \
+            transposing and remember cuSignal is row-major, unlike MATLAB"
+        )
 
     if x.shape[0] != sv.shape[0]:
-        raise ValueError('Steering Vector and input data do not align')
+        raise ValueError("Steering Vector and input data do not align")
 
     if calc_cov:
         R = cp.cov(x)

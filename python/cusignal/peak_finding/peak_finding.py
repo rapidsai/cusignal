@@ -228,8 +228,6 @@ def argrelextrema(data, comparator, axis=0, order=1, mode="clip"):
     results = _boolrelextrema(data, comparator, axis, order, mode)
 
     if mode == "raise":
-        raise NotImplementedError(
-            "CuPy `take` doesn't support `mode='raise'`."
-        )
+        raise NotImplementedError("CuPy `take` doesn't support `mode='raise'`.")
 
     return cp.nonzero(results)

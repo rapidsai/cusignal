@@ -12,8 +12,8 @@
 # limitations under the License.
 
 from cusignal.acoustics.cepstrum import (
-    real_cepstrum,
     complex_cepstrum,
     inverse_complex_cepstrum,
     minimum_phase,
+    real_cepstrum,
 )

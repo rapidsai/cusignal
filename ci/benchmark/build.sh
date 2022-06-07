@@ -1,6 +1,5 @@
-
 #!/usr/bin/env bash
-# Copyright (c) 2018-2020, NVIDIA CORPORATION.
+# Copyright (c) 2018-2022, NVIDIA CORPORATION.
 #############################################
 # cuSignal's Benchmark test script for CI   #
 #############################################
@@ -57,7 +56,7 @@ gpuci_logger "Activate conda env"
 conda activate rapids
 
 gpuci_logger "Install required packages"
-gpuci_conda_retry install -c nvidia -c rapidsai -c rapidsai-nightly -c conda-forge \
+gpuci_mamba_retry install -c nvidia -c rapidsai -c rapidsai-nightly -c conda-forge \
 	"cudatoolkit=$CUDA_REL" \
 	"rapids-build-env=${MINOR_VERSION}" \
 	rapids-pytest-benchmark

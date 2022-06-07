@@ -1,0 +1,20 @@
+repos:
+      - repo: https://github.com/pycqa/isort
+        rev: 5.6.4
+        hooks:
+              - id: isort
+                args: ["--settings-path=python/setup.cfg"]
+                files: python/.*
+      - repo: https://github.com/ambv/black
+        rev: 22.3.0
+        hooks:
+              - id: black
+                files: python/.*
+      - repo: https://gitlab.com/pycqa/flake8
+        rev: 3.8.3
+        hooks:
+              - id: flake8
+                args: ["--config=python/setup.cfg"]
+                files: python/.*
+default_language_version:
+      python: python3

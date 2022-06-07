@@ -13,7 +13,6 @@
 
 import cupy as cp
 
-
 _real_cepstrum_kernel = cp.ElementwiseKernel(
     "T spectrum",
     "T output",

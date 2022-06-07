@@ -9,7 +9,7 @@ package:
   version: {{ version }}
 
 source:
-  path: ../../..
+  git_url: ../../..
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
@@ -17,12 +17,15 @@ build:
   noarch: python
   script_env:
     - VERSION_SUFFIX
-    - CC
-    - CXX
-    - CUDAHOSTCXX
+  ignore_run_exports_from:
+    - {{ compiler('cuda') }}
 
 requirements:
   build:
+    - {{ compiler('cxx') }}
+    - {{ compiler('cuda') }} {{ cuda_version }}
+    - sysroot_{{ target_platform }} {{ sysroot_version }}
+  host:
     - python
     - setuptools
   run:

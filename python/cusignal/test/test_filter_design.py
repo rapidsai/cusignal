@@ -12,18 +12,18 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestFilterDesign:
     @pytest.mark.benchmark(group="FirWin2")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("num_samps", [2**15])
     @pytest.mark.parametrize("g1", [0.0, 1.0])
     @pytest.mark.parametrize("g2", [0.5, 1.0])
     @pytest.mark.parametrize("g3", [0.0, 0.0])
@@ -34,10 +34,9 @@ class TestFilterDesign:
 
         def gpu_version(self, num_samps, g1, g2, g3, gp):
             with cp.cuda.Stream.null:
-                out = cusignal.firwin2(num_samps,
-                                       [0.0, 0.5, 1.0],
-                                       [g1, g2, g3],
-                                       gpupath=gp)
+                out = cusignal.firwin2(
+                    num_samps, [0.0, 0.5, 1.0], [g1, g2, g3], gpupath=gp
+                )
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -66,7 +65,7 @@ class TestFilterDesign:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="FirWin")
-    @pytest.mark.parametrize("num_samps", [2 ** 15])
+    @pytest.mark.parametrize("num_samps", [2**15])
     @pytest.mark.parametrize("f1", [0.1, 0.15])
     @pytest.mark.parametrize("f2", [0.2, 0.4])
     @pytest.mark.parametrize("gp", [True, False])
@@ -76,8 +75,7 @@ class TestFilterDesign:
 
         def gpu_version(self, num_samps, f1, f2, gp):
             with cp.cuda.Stream.null:
-                out = cusignal.firwin(num_samps, [f1, f2], pass_zero=False,
-                                      gpupath=gp)
+                out = cusignal.firwin(num_samps, [f1, f2], pass_zero=False, gpupath=gp)
             cp.cuda.Stream.null.synchronize()
             return out
 

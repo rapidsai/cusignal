@@ -12,19 +12,19 @@
 # limitations under the License.
 
 import cupy as cp
-import cusignal
 import numpy as np
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestWavelets:
     @pytest.mark.benchmark(group="Qmf")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     class TestQmf:
         def cpu_version(self, sig):
             return signal.qmf(sig)
@@ -49,7 +49,7 @@ class TestWavelets:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Morlet")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     class TestMorlet:
         def cpu_version(self, num_samps):
             return signal.morlet(num_samps)
@@ -72,7 +72,7 @@ class TestWavelets:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Ricker")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("a", [10, 1000])
     class TestRicker:
         def cpu_version(self, num_samps, a):
@@ -96,7 +96,7 @@ class TestWavelets:
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Morlet2")
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("s", [10, 1000])
     class TestMorlet2:
         def cpu_version(self, num_samps, s):
@@ -121,7 +121,7 @@ class TestWavelets:
 
     @pytest.mark.benchmark(group="CWT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("widths", [31, 127])
     class TestCWT:
         def cpu_version(self, sig, wavelet, widths):
@@ -134,22 +134,16 @@ class TestWavelets:
             return out
 
         @pytest.mark.cpu
-        def test_cwt_cpu(
-            self, rand_data_gen, benchmark, dtype, num_samps, widths
-        ):
+        def test_cwt_cpu(self, rand_data_gen, benchmark, dtype, num_samps, widths):
             cpu_sig, _ = rand_data_gen(num_samps, 1, dtype)
             wavelet = signal.ricker
             benchmark(self.cpu_version, cpu_sig, wavelet, widths)
 
-        def test_cwt_gpu(
-            self, rand_data_gen, gpubenchmark, dtype, num_samps, widths
-        ):
+        def test_cwt_gpu(self, rand_data_gen, gpubenchmark, dtype, num_samps, widths):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
             cu_wavelet = cusignal.ricker
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, cu_wavelet, widths
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, cu_wavelet, widths)
 
             wavelet = signal.ricker
             key = self.cpu_version(cpu_sig, wavelet, widths)

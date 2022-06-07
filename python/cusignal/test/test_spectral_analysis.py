@@ -13,19 +13,19 @@
 
 import cupy as cp
 import numpy as np
-import cusignal
 import pytest
-
-from cusignal.test.utils import array_equal, _check_rapids_pytest_benchmark
 from scipy import signal
+
+import cusignal
+from cusignal.testing.utils import _check_rapids_pytest_benchmark, array_equal
 
 gpubenchmark = _check_rapids_pytest_benchmark()
 
 
 class TestSpectral:
     @pytest.mark.benchmark(group="LombScargle")
-    @pytest.mark.parametrize("num_in_samps", [2 ** 10])
-    @pytest.mark.parametrize("num_out_samps", [2 ** 16, 2 ** 18])
+    @pytest.mark.parametrize("num_in_samps", [2**10])
+    @pytest.mark.parametrize("num_out_samps", [2**16, 2**18])
     @pytest.mark.parametrize("precenter", [True, False])
     @pytest.mark.parametrize("normalize", [True, False])
     class TestLombScargle:
@@ -48,13 +48,9 @@ class TestSpectral:
             precenter,
             normalize,
         ):
-            cpu_x, cpu_y, cpu_f, _, _, _ = lombscargle_gen(
-                num_in_samps, num_out_samps
-            )
+            cpu_x, cpu_y, cpu_f, _, _, _ = lombscargle_gen(num_in_samps, num_out_samps)
 
-            benchmark(
-                self.cpu_version, cpu_x, cpu_y, cpu_f, precenter, normalize
-            )
+            benchmark(self.cpu_version, cpu_x, cpu_y, cpu_f, precenter, normalize)
 
         def test_lombscargle_gpu(
             self,
@@ -77,7 +73,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="Periodogram")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("window", ["flattop", "nuttall"])
     @pytest.mark.parametrize("scaling", ["spectrum", "density"])
@@ -87,9 +83,7 @@ class TestSpectral:
 
         def gpu_version(self, sig, fs, window, scaling):
             with cp.cuda.Stream.null:
-                out = cusignal.periodogram(
-                    sig, fs, window=window, scaling=scaling
-                )
+                out = cusignal.periodogram(sig, fs, window=window, scaling=scaling)
             cp.cuda.Stream.null.synchronize()
             return out
 
@@ -119,16 +113,14 @@ class TestSpectral:
         ):
 
             cpu_sig, gpu_sig = rand_data_gen(num_samps, 1, dtype)
-            output = gpubenchmark(
-                self.gpu_version, gpu_sig, fs, window, scaling
-            )
+            output = gpubenchmark(self.gpu_version, gpu_sig, fs, window, scaling)
 
             key = self.cpu_version(cpu_sig, fs, window, scaling)
             array_equal(output, key)
 
     @pytest.mark.benchmark(group="Welch")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestWelch:
@@ -160,7 +152,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="CSD")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCSD:
@@ -174,9 +166,7 @@ class TestSpectral:
             return out
 
         @pytest.mark.cpu
-        def test_csd_cpu(
-            self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg
-        ):
+        def test_csd_cpu(self, rand_data_gen, benchmark, dtype, num_samps, fs, nperseg):
             cpu_x, _ = rand_data_gen(num_samps, 1, dtype)
             cpu_y, _ = rand_data_gen(num_samps, 1, dtype)
             benchmark(self.cpu_version, cpu_x, cpu_y, fs, nperseg)
@@ -195,7 +185,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="Spectrogram")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSpectrogram:
@@ -227,7 +217,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="STFT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestSTFT:
@@ -259,7 +249,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="ISTFT")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 16])
+    @pytest.mark.parametrize("num_samps", [2**16])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestISTFT:
@@ -294,7 +284,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="Coherence")
     @pytest.mark.parametrize("dtype", [np.float64, np.complex128])
-    @pytest.mark.parametrize("num_samps", [2 ** 14])
+    @pytest.mark.parametrize("num_samps", [2**14])
     @pytest.mark.parametrize("fs", [1.0, 1e6])
     @pytest.mark.parametrize("nperseg", [1024, 2048])
     class TestCoherence:
@@ -328,7 +318,7 @@ class TestSpectral:
 
     @pytest.mark.benchmark(group="Vectorstrength")
     @pytest.mark.parametrize("period", [0.75, 5])
-    @pytest.mark.parametrize("num_samps", [2 ** 4])
+    @pytest.mark.parametrize("num_samps", [2**4])
     class TestVectorstrength:
         def cpu_version(self, events, period):
             return signal.vectorstrength(events, period)
@@ -340,9 +330,7 @@ class TestSpectral:
             return out
 
         @pytest.mark.cpu
-        def test_vectorstrength_cpu(
-            self, time_data_gen, benchmark, num_samps, period
-        ):
+        def test_vectorstrength_cpu(self, time_data_gen, benchmark, num_samps, period):
             events_cpu, _ = time_data_gen(0, 10, num_samps)
             benchmark(self.cpu_version, events_cpu, period)
 

@@ -11,20 +11,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from math import ceil
+
 import cupy as cp
 import numpy as np
 
-from math import ceil
-
 from ..utils._caches import _cupy_kernel_cache
 from ..utils.helper_tools import (
-    _print_atts,
     _get_function,
-    _get_tpb_bpg,
     _get_max_gdx,
     _get_max_gdy,
+    _get_tpb_bpg,
+    _print_atts,
 )
-
 
 _SUPPORTED_TYPES = ["float32", "float64", "complex64", "complex128"]
 
@@ -134,9 +133,7 @@ class _cupy_upfirdn2d_wrapper(object):
 def _populate_kernel_cache(np_type, k_type):
 
     if np_type not in _SUPPORTED_TYPES:
-        raise ValueError(
-            "Datatype {} not found for '{}'".format(np_type, k_type)
-        )
+        raise ValueError("Datatype {} not found for '{}'".format(np_type, k_type))
 
     if (str(np_type), k_type) in _cupy_kernel_cache:
         return
@@ -161,9 +158,7 @@ def _get_backend_kernel(
         elif k_type == "upfirdn2D":
             return _cupy_upfirdn2d_wrapper(grid, block, kernel)
     else:
-        raise ValueError(
-            "Kernel {} not found in _cupy_kernel_cache".format(k_type)
-        )
+        raise ValueError("Kernel {} not found in _cupy_kernel_cache".format(k_type))
 
 
 class _UpFIRDn(object):
@@ -200,9 +195,7 @@ class _UpFIRDn(object):
 
         x = cp.asarray(x, self._output_type)
 
-        output_len = _output_len(
-            self._h_len_orig, x.shape[axis], self._up, self._down
-        )
+        output_len = _output_len(self._h_len_orig, x.shape[axis], self._up, self._down)
         output_shape = list(x.shape)
         output_shape[axis] = output_len
         out = cp.empty(output_shape, dtype=self._output_type, order="C")
@@ -216,14 +209,10 @@ class _UpFIRDn(object):
         if out.ndim > 1:
             threadsperblock = (8, 8)
             blocks = ceil(out.shape[0] / threadsperblock[0])
-            blockspergrid_x = (
-                blocks if blocks < _get_max_gdx() else _get_max_gdx()
-            )
+            blockspergrid_x = blocks if blocks < _get_max_gdx() else _get_max_gdx()
 
             blocks = ceil(out.shape[1] / threadsperblock[1])
-            blockspergrid_y = (
-                blocks if blocks < _get_max_gdy() else _get_max_gdy()
-            )
+            blockspergrid_y = blocks if blocks < _get_max_gdy() else _get_max_gdy()
 
             blockspergrid = (blockspergrid_x, blockspergrid_y)
 

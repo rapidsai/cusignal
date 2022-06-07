@@ -11,10 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+
 import cupy as cp
 import numpy as np
-
-import warnings
 
 
 def _len_guards(M):
@@ -1935,7 +1935,7 @@ def taylor(M, nbar=4, sll=30, norm=True, sym=True):
     # assume the sidelobe level parameter to be positive.
     B = 10 ** (sll / 20)
     A = np.arccosh(B) / np.pi
-    s2 = nbar ** 2 / (A ** 2 + (nbar - 0.5) ** 2)
+    s2 = nbar**2 / (A**2 + (nbar - 0.5) ** 2)
     ma = np.arange(1, nbar)
 
     Fm = np.empty(nbar - 1)
@@ -1944,14 +1944,8 @@ def taylor(M, nbar=4, sll=30, norm=True, sym=True):
     signs[1::2] = -1
     m2 = ma * ma
     for mi, _ in enumerate(ma):
-        numer = signs[mi] * np.prod(
-            1 - m2[mi] / s2 / (A ** 2 + (ma - 0.5) ** 2)
-        )
-        denom = (
-            2
-            * np.prod(1 - m2[mi] / m2[:mi])
-            * np.prod(1 - m2[mi] / m2[mi + 1 :])
-        )
+        numer = signs[mi] * np.prod(1 - m2[mi] / s2 / (A**2 + (ma - 0.5) ** 2))
+        denom = 2 * np.prod(1 - m2[mi] / m2[:mi]) * np.prod(1 - m2[mi] / m2[mi + 1 :])
         Fm[mi] = numer / denom
 
     w = _taylor_kernel(nbar, cp.asarray(Fm), norm, size=M)
@@ -2105,9 +2099,7 @@ def get_window(window, Nx, fftbins=True):
             else:
                 winstr = window
         else:
-            raise ValueError(
-                "%s as window type is not supported." % str(type(window))
-            )
+            raise ValueError("%s as window type is not supported." % str(type(window)))
 
         try:
             winfunc = _win_equiv[winstr]

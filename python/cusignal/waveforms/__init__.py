@@ -12,9 +12,9 @@
 # limitations under the License.
 
 from cusignal.waveforms.waveforms import (
+    chirp,
+    gausspulse,
     sawtooth,
     square,
-    gausspulse,
-    chirp,
     unit_impulse,
 )

@@ -11,10 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import timeit
+
 import cupy as cp
 import numpy as np
-
-import timeit
 
 FULL = 2
 SAME = 1
@@ -146,9 +146,7 @@ def _fftconv_faster(x, h, mode):
     # see whether the Fourier transform convolution method or the direct
     # convolution method is faster (discussed in scikit-image PR #1792)
     direct_time = x.size * h.size * _prod(out_shape)
-    fft_time = sum(
-        n * np.log(n) for n in (x.shape + h.shape + tuple(out_shape))
-    )
+    fft_time = sum(n * np.log(n) for n in (x.shape + h.shape + tuple(out_shape)))
 
     return big_O_constant * fft_time < direct_time
 
@@ -172,7 +170,7 @@ def _timeit_fast(stmt="pass", setup="pass", repeat=3):
     # determine number of calls per rep so total time for 1 rep >= 5 ms
     x = 0
     for p in range(0, 10):
-        number = 10 ** p
+        number = 10**p
         x = timer.timeit(number)  # seconds
         if x >= 5e-3 / 10:  # 5 ms for final test, 1/10th that for this one
             break
@@ -192,9 +190,7 @@ def _valfrommode(mode):
     try:
         return _modedict[mode]
     except KeyError:
-        raise ValueError(
-            "Acceptable mode flags are 'valid'," " 'same', or 'full'."
-        )
+        raise ValueError("Acceptable mode flags are 'valid'," " 'same', or 'full'.")
 
 
 def _bvalfromboundary(boundary):
