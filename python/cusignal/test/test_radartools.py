@@ -1,7 +1,6 @@
 import cupy as cp
 import pytest
 from numpy import vectorize
-
 from cusignal.radartools import ca_cfar, cfar_alpha
 from cusignal.testing.utils import array_equal
 
