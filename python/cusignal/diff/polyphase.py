@@ -13,7 +13,7 @@ from cusignal import choose_conv_method
 from cusignal import correlate
 
 
-class FuncCusignalResample(Function):
+class FuncPolyphase(Function):
     @staticmethod
     def get_start_index(length):
         if length <= 2:
@@ -79,7 +79,7 @@ class FuncCusignalResample(Function):
         filt_size     = filter_coeffs.shape[0]
         up            = int(up[0])
         down          = int(down[0])
-        start         = FuncCusignalResample.get_start_index(filt_size)
+        start         = FuncPolyphase.get_start_index(filt_size)
         inverse_size  = int(inverse_size)
         out_x_len     = int(out_len)
         filter_coeffs = filter_coeffs.type(gradient.dtype)
@@ -106,12 +106,12 @@ class FuncCusignalResample(Function):
             tmp[:gradient.shape[0]] = gradient
             gradient_up[start :: down] = torch.clone(tmp)
 
-            out_x = FuncCusignalResample.best_corr(gradient_up,
-                                                   filter_coeffs,
-                                                   mode = 'valid')
+            out_x = FuncPolyphase.best_corr(gradient_up,
+                                            filter_coeffs,
+                                            mode = 'valid')
             out_x = up * out_x[::up]
-            out_f = FuncCusignalResample.best_corr(gradient_up, x_up,
-                                                   mode = 'valid')
+            out_f = FuncPolyphase.best_corr(gradient_up, x_up,
+                                            mode = 'valid')
         out_x = torch.as_tensor(out_x[:x_size],
                                 device = device)
         out_f = torch.as_tensor(out_f[:filter_coeffs.shape[0]],
@@ -119,7 +119,7 @@ class FuncCusignalResample(Function):
         return(out_x, out_f, None, None)
 
 
-class Resample(Module):
+class PolyphaseDiff(Module):
     def __init__(self, up, down, filter_coeffs):
         super(Resample, self).__init__()
         self.up = up
@@ -127,8 +127,8 @@ class Resample(Module):
         self.filter_coeffs = filter_coeffs
 
     def forward(self, x):
-        return FuncCusignalResample.apply(x, self.filter_coeffs, self.up,
-                                          self.down)
+        return FuncPolyphase.apply(x, self.filter_coeffs, self.up,
+                                   self.down)
 
 
 def accept_reps(f):
