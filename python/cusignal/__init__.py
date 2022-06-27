@@ -108,7 +108,6 @@ from cusignal.windows.windows import (
     triang,
     tukey,
 )
-from cusignal.diff import PolyphaseDiff
 
 # Versioneer
 from ._version import get_versions
