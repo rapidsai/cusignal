@@ -1,14 +1,26 @@
 import torch
-from cusignal.diff import 
+import pytest
+import numpy as np
+#from cusignal.diff import PolyphaseDiff
+import sys
+sys.path.insert(0, '..')
+from diff import PolyphaseDiff
+
+from cusignal import resample_poly
+from torch.autograd.gradcheck import gradcheck
 
 
-def gradcheck_main(eps=1e-6, atol=1e-3, rtol=-1, device = 'cpu'):
+@pytest.mark.parametrize("device", ['cpu', 'cuda'])
+@pytest.mark.parametrize("up", [1, 10, 20])
+@pytest.mark.parametrize("down", [1, 7, 15])
+@pytest.mark.parametrize("filter_size", [1, 10])
+def test_gradcheck(device, up, down, filter_size,
+                   eps=1e-3, atol=1e-1, rtol=-1):
     '''
     Verifies that our backward method works.
     '''
-    up = torch.randint(1, 20, (1,), requires_grad = False)
-    down = torch.randint(1, 20, (1,), requires_grad = False)
-    filter_size = np.random.randint(10,30)
+    up = torch.Tensor([up])
+    down = torch.Tensor([down])
     filter_coeffs = torch.randn(filter_size, requires_grad = True,
                                 dtype = torch.double,
                                 device = device)
@@ -23,7 +35,12 @@ def gradcheck_main(eps=1e-6, atol=1e-3, rtol=-1, device = 'cpu'):
     gradcheck(module, inputs, **kwargs, raise_exception = True)
 
 
-def forward_main(gpupath = True):
+@pytest.mark.parametrize("device", ['cpu', 'cuda'])
+@pytest.mark.parametrize("x_size", [30, 100])
+@pytest.mark.parametrize("filter_size", [5, 20])
+@pytest.mark.parametrize("up", [1, 10, 20])
+@pytest.mark.parametrize("down", [1, 7, 15])
+def test_forward(device, x_size, up, down, filter_size):
     '''
     Verifies that our module agress with scipy's implementation
     on randomly generated examples.
@@ -31,15 +48,13 @@ def forward_main(gpupath = True):
     gpupath = True accepts cupy typed windows.
     gpupath = False accepts numpy types windows.
     '''
-    if gpupath:
-        device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
-    x_size = np.random.randint(30, 100)
-    filter_size = np.random.randint(5, 20)
+    device = torch.device(device)
+    gpupath = True
+    if device != 'cuda':
+        gpupath = False
     x = torch.randn(x_size, device = device)
-    up = torch.randint(1, 20, (1,), device = device)
-    down = torch.randint(1, 20, (1,), device = device)
+    up = torch.Tensor([up])
+    down = torch.Tensor([down])
     window = torch.randn(filter_size, device = device)
     # The module requires a torch tensor window
     module = PolyphaseDiff(up, down, window)
@@ -51,13 +66,4 @@ def forward_main(gpupath = True):
                                    gpupath = gpupath)
     our_resample = module.forward(x)
     if not np.allclose(bench_resample, our_resample, atol=1e-4):
-        print(f"up: {up}, down: {down}")
-        print(f"scipy result: {scipy_resample[:10]}")
-        print(f"our result: {our_resample[:10]}")
-        raise Exception("Forward main failure")
-
-
-if __name__ == '__main__':
-    #forward_main(100)
-    gradcheck_main(100, eps = 1e-3, atol = 1e-1)
-    print("tests complete")
+        raise Exception("Module does not agree with resample")

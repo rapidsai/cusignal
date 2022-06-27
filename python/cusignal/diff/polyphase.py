@@ -1,12 +1,8 @@
 import torch
 import numpy as np
 import cupy as cp
-from torch import flip
 from torch.autograd import Function
 from torch.nn.modules.module import Module
-from torch.nn.parameter import Parameter
-from torch.nn.init import uniform_
-from torch.autograd.gradcheck import gradcheck
 from math import gcd
 from cusignal import resample_poly
 from cusignal import choose_conv_method
@@ -42,17 +38,21 @@ class FuncPolyphase(Function):
         up        = up // ud_gcd
         down      = down // ud_gcd
 
+        if 'cuda' in device:
+            gpupath = True
+        else:
+            gpupath = False
+
         if (up == 1 and down == 1):
             x_out = x
-            inverse_size = torch.Tensor([x.shape[0]])
-            out_len = torch.Tensor([0])
+            # These need device typing
+            inverse_size = torch.as_tensor([x.shape[0]], device=device)
+            out_len = torch.as_tensor([0], device=device)
             x_up = None
         else:
-            if 'cuda' in device:
-                gpupath = True
+            if gpupath:
                 window  = cp.array(filter_coeffs)
             else:
-                gpupath = False
                 window  = filter_coeffs.numpy()
             x_out = resample_poly(x, up, down, window = window,
                                   gpupath = gpupath)
@@ -65,7 +65,8 @@ class FuncPolyphase(Function):
                               torch.Tensor([down]),
                               torch.Tensor([inverse_size]),
                               torch.Tensor([len(x_out)]), x_up)
-        return(torch.Tensor(cp.asnumpy(x_out)))
+        out = torch.as_tensor(cp.asnumpy(x_out), device=device)
+        return(out)
 
     @staticmethod
     def backward(ctx, gradient):
@@ -73,7 +74,7 @@ class FuncPolyphase(Function):
         x_size, filter_coeffs, up, down, inverse_size, out_len, x_up \
         = ctx.saved_tensors
 
-        device        = gradient.device.type
+        device        = gradient.device
         x_size        = int(x_size[0])
         gradient_size = gradient.shape[0]
         filt_size     = filter_coeffs.shape[0]
