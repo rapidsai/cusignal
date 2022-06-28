@@ -3,6 +3,7 @@ import numpy as np
 import cupy as cp
 from torch.autograd import Function
 from torch.nn.modules.module import Module
+from torch.nn.parameter import Parameter
 from math import gcd
 from cusignal import resample_poly
 from cusignal import choose_conv_method
@@ -114,10 +115,16 @@ class FuncResamplePoly(Function):
 class ResamplePoly(Module):
     def __init__(self, up, down, filter_coeffs):
         super(ResamplePoly, self).__init__()
-        self.up = up
-        self.down = down
-        self.filter_coeffs = filter_coeffs
+        self.up = torch.Tensor([up])
+        self.down = torch.Tensor([down])
+        self.filter_coeffs = Parameter(filter_coeffs)
 
     def forward(self, x):
         return FuncResamplePoly.apply(x, self.filter_coeffs, self.up,
                                       self.down)
+
+    @classmethod
+    def output_size(self, input_size, up, down):
+        out_size = input_size * up
+        out_size = out_size // down + bool(out_size % down)
+        return out_size
