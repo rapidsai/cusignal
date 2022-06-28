@@ -15,28 +15,28 @@ class FuncResamplePoly(Function):
         if length <= 2:
             return 0
         return (length - 1) // 2
-    
+
     @staticmethod
     def best_corr(sig1, sig2, mode):
-        method = choose_conv_method(sig1, sig2, mode = mode)
-        out = correlate(sig1, sig2, mode = mode, method = method)
+        method = choose_conv_method(sig1, sig2, mode=mode)
+        out = correlate(sig1, sig2, mode=mode, method=method)
         return out
 
     @staticmethod
     def forward(ctx, x, filter_coeffs, up, down):
-        device        = x.device.type
-        x             = x.detach()
+        device = x.device.type
+        x = x.detach()
         filter_coeffs = filter_coeffs.detach()
-        up            = up.detach()
-        down          = down.detach()
+        up = up.detach()
+        down = down.detach()
 
-        x_size    = x.shape[0]
+        x_size = x.shape[0]
         filt_size = filter_coeffs.shape[0]
-        up        = int(up[0])
-        down      = int(down[0])
-        ud_gcd    = gcd(up, down)
-        up        = up // ud_gcd
-        down      = down // ud_gcd
+        up = int(up[0])
+        down = int(down[0])
+        ud_gcd = gcd(up, down)
+        up = up // ud_gcd
+        down = down // ud_gcd
 
         if 'cuda' in device:
             gpupath = True
@@ -49,13 +49,13 @@ class FuncResamplePoly(Function):
             x_up = None
         else:
             if gpupath:
-                window  = cp.array(filter_coeffs)
+                window = cp.array(filter_coeffs)
             else:
-                window  = filter_coeffs.numpy()
-            out_x = resample_poly(x, up, down, window = window,
-                                  gpupath = gpupath)
+                window = filter_coeffs.numpy()
+            out_x = resample_poly(x, up, down, window=window,
+                                  gpupath=gpupath)
             inverse_size = up * x_size + filt_size - 1
-            x_up = torch.zeros(up * x_size, device = device, dtype = x.dtype)
+            x_up = torch.zeros(up * x_size, device=device, dtype=x.dtype)
             x_up[::up] = up * x
 
         ctx.save_for_backward(torch.Tensor([x_size]), filter_coeffs,
@@ -70,17 +70,17 @@ class FuncResamplePoly(Function):
     def backward(ctx, gradient):
         gradient = gradient.detach()
         x_size, filter_coeffs, up, down, inverse_size, out_len, x_up \
-        = ctx.saved_tensors
+            = ctx.saved_tensors
 
-        device        = gradient.device.type
-        x_size        = int(x_size[0])
+        device = gradient.device.type
+        x_size = int(x_size[0])
         gradient_size = gradient.shape[0]
-        filt_size     = filter_coeffs.shape[0]
-        up            = int(up[0])
-        down          = int(down[0])
-        start         = FuncResamplePoly.get_start_index(filt_size)
-        inverse_size  = int(inverse_size)
-        out_x_len     = int(out_len)
+        filt_size = filter_coeffs.shape[0]
+        up = int(up[0])
+        down = int(down[0])
+        start = FuncResamplePoly.get_start_index(filt_size)
+        inverse_size = int(inverse_size)
+        out_x_len = int(out_len)
         filter_coeffs = filter_coeffs.type(gradient.dtype)
 
         if (up == 1 and down == 1):
@@ -88,26 +88,26 @@ class FuncResamplePoly(Function):
             out_x = gradient
             # J_f conv
             out_f = torch.zeros(filter_coeffs.shape[0],
-                                device = device,
-                                dtype = filter_coeffs.dtype)
+                                device=device,
+                                dtype=filter_coeffs.dtype)
         else:
             gradient_up = torch.zeros(inverse_size,
-                                      device = device,
-                                      dtype = gradient.dtype)
-            gradient_up[start : start + down * gradient.shape[0] : down] =\
+                                      device=device,
+                                      dtype=gradient.dtype)
+            gradient_up[start: start + down * gradient.shape[0]: down] =\
                 gradient
 
             out_x = FuncResamplePoly.best_corr(gradient_up,
                                                filter_coeffs,
-                                               mode = 'valid')
+                                               mode='valid')
             out_x = up * out_x[::up]
             out_f = FuncResamplePoly.best_corr(gradient_up, x_up,
-                                               mode = 'valid')
+                                               mode='valid')
 
         out_x = torch.as_tensor(out_x[:x_size],
-                                device = device)
+                                device=device)
         out_f = torch.as_tensor(out_f[:filter_coeffs.shape[0]],
-                                device = device)
+                                device=device)
         return(out_x, out_f, None, None)
 
 
