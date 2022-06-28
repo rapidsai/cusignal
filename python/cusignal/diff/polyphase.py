@@ -45,9 +45,7 @@ class FuncResamplePoly(Function):
 
         if (up == 1 and down == 1):
             out_x = x
-            # These need device typing
             inverse_size = x.shape[0]
-            out_len = torch.as_tensor([0], device=device)
             x_up = None
         else:
             if gpupath:
