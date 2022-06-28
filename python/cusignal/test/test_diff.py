@@ -1,14 +1,20 @@
-import torch
 import pytest
 from numpy import allclose
-from cusignal.diff import ResamplePoly
 from cusignal import resample_poly
-from torch.autograd.gradcheck import gradcheck
+
+
+try:
+    import torch
+    from cusignal.diff import ResamplePoly
+    from torch.autograd.gradcheck import gradcheck  
+except ImportError:
+    pytest.skip(f"skipping pytorch dependant tests in {__file__}",
+                allow_module_level = True)
 
 
 @pytest.mark.parametrize("device", ['cpu', 'cuda'])
-@pytest.mark.parametrize("up", [1, 10])
-@pytest.mark.parametrize("down", [1, 7, 10, 13])
+@pytest.mark.parametrize("up", [1, 3, 10])
+@pytest.mark.parametrize("down", [1, 7, 10])
 @pytest.mark.parametrize("filter_size", [1, 10])
 def test_gradcheck(device, up, down, filter_size,
                    eps=1e-3, atol=1e-1, rtol=-1):
