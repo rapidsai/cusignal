@@ -1,1 +1,1 @@
-from cusignal.diff.polyphase import PolyphaseDiff
+from cusignal.diff.polyphase import ResamplePoly

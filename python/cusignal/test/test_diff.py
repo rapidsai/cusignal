@@ -1,18 +1,14 @@
 import torch
 import pytest
-import numpy as np
-#from cusignal.diff import PolyphaseDiff
-import sys
-sys.path.insert(0, '..')
-from diff import PolyphaseDiff
-
+from numpy import allclose
+from cusignal.diff import ResamplePoly
 from cusignal import resample_poly
 from torch.autograd.gradcheck import gradcheck
 
 
 @pytest.mark.parametrize("device", ['cpu', 'cuda'])
-@pytest.mark.parametrize("up", [1, 10, 20])
-@pytest.mark.parametrize("down", [1, 7, 15])
+@pytest.mark.parametrize("up", [1, 10])
+@pytest.mark.parametrize("down", [1, 7, 10, 13])
 @pytest.mark.parametrize("filter_size", [1, 10])
 def test_gradcheck(device, up, down, filter_size,
                    eps=1e-3, atol=1e-1, rtol=-1):
@@ -26,7 +22,7 @@ def test_gradcheck(device, up, down, filter_size,
                                 device = device)
     inputs = torch.randn(100, dtype = torch.double, requires_grad = True,
                          device = device)
-    module = PolyphaseDiff(up, down, filter_coeffs)
+    module = ResamplePoly(up, down, filter_coeffs)
     kwargs = {"eps": eps}
     if rtol > 0:
         kwargs["rtol"] = rtol
@@ -38,8 +34,8 @@ def test_gradcheck(device, up, down, filter_size,
 @pytest.mark.parametrize("device", ['cpu', 'cuda'])
 @pytest.mark.parametrize("x_size", [30, 100])
 @pytest.mark.parametrize("filter_size", [5, 20])
-@pytest.mark.parametrize("up", [1, 10, 20])
-@pytest.mark.parametrize("down", [1, 7, 15])
+@pytest.mark.parametrize("up", [1, 10])
+@pytest.mark.parametrize("down", [1, 7, 10])
 def test_forward(device, x_size, up, down, filter_size):
     '''
     Verifies that our module agress with scipy's implementation
@@ -57,7 +53,7 @@ def test_forward(device, x_size, up, down, filter_size):
     down = torch.Tensor([down])
     window = torch.randn(filter_size, device = device)
     # The module requires a torch tensor window
-    module = PolyphaseDiff(up, down, window)
+    module = ResamplePoly(up, down, window)
     # resample_poly requires a cupy or numpy array window
     window = window.cpu().numpy()
     if gpupath:
@@ -65,5 +61,5 @@ def test_forward(device, x_size, up, down, filter_size):
     bench_resample = resample_poly(x, up, down, window = window,
                                    gpupath = gpupath)
     our_resample = module.forward(x)
-    if not np.allclose(bench_resample, our_resample, atol=1e-4):
+    if not allclose(bench_resample, our_resample, atol=1e-4):
         raise Exception("Module does not agree with resample")

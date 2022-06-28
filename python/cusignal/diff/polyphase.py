@@ -9,7 +9,7 @@ from cusignal import choose_conv_method
 from cusignal import correlate
 
 
-class FuncPolyphase(Function):
+class FuncResamplePoly(Function):
     @staticmethod
     def get_start_index(length):
         if length <= 2:
@@ -80,7 +80,7 @@ class FuncPolyphase(Function):
         filt_size     = filter_coeffs.shape[0]
         up            = int(up[0])
         down          = int(down[0])
-        start         = FuncPolyphase.get_start_index(filt_size)
+        start         = FuncResamplePoly.get_start_index(filt_size)
         inverse_size  = int(inverse_size)
         out_x_len     = int(out_len)
         filter_coeffs = filter_coeffs.type(gradient.dtype)
@@ -93,26 +93,18 @@ class FuncPolyphase(Function):
                                 device = device,
                                 dtype = filter_coeffs.dtype)
         else:
-            tmp = torch.zeros(out_x_len, device = device,
-                              dtype = gradient.dtype)
-            tmp[:gradient.shape[0]] = gradient
-            gradient = tmp
             gradient_up = torch.zeros(inverse_size,
                                       device = device,
                                       dtype = gradient.dtype)
-            extra = bool((inverse_size - start) % down)
-            tmp = torch.zeros((inverse_size - start) // down + extra,
-                              device = device,
-                              dtype = filter_coeffs.dtype)
-            tmp[:gradient.shape[0]] = gradient
-            gradient_up[start :: down] = torch.clone(tmp)
+            gradient_up[start : start + down * gradient.shape[0] : down] =\
+                gradient
 
-            out_x = FuncPolyphase.best_corr(gradient_up,
-                                            filter_coeffs,
-                                            mode = 'valid')
+            out_x = FuncResamplePoly.best_corr(gradient_up,
+                                               filter_coeffs,
+                                               mode = 'valid')
             out_x = up * out_x[::up]
-            out_f = FuncPolyphase.best_corr(gradient_up, x_up,
-                                            mode = 'valid')
+            out_f = FuncResamplePoly.best_corr(gradient_up, x_up,
+                                               mode = 'valid')
         out_x = torch.as_tensor(out_x[:x_size],
                                 device = device)
         out_f = torch.as_tensor(out_f[:filter_coeffs.shape[0]],
@@ -120,13 +112,13 @@ class FuncPolyphase(Function):
         return(out_x, out_f, None, None)
 
 
-class PolyphaseDiff(Module):
+class ResamplePoly(Module):
     def __init__(self, up, down, filter_coeffs):
-        super(PolyphaseDiff, self).__init__()
+        super(ResamplePoly, self).__init__()
         self.up = up
         self.down = down
         self.filter_coeffs = filter_coeffs
 
     def forward(self, x):
-        return FuncPolyphase.apply(x, self.filter_coeffs, self.up,
-                                   self.down)
+        return FuncResamplePoly.apply(x, self.filter_coeffs, self.up,
+                                      self.down)
