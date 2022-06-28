@@ -22,10 +22,6 @@ def test_gradcheck(device, up, down, filter_size,
     '''
     Verifies that our backward method works.
     '''
-    '''
-    up = torch.Tensor([up])
-    down = torch.Tensor([down])
-    '''
     filter_coeffs = torch.randn(filter_size, requires_grad=True,
                                 dtype=torch.double,
                                 device=device)
@@ -58,10 +54,6 @@ def test_forward(device, x_size, up, down, filter_size):
     if device != 'cuda':
         gpupath = False
     x = torch.randn(x_size, device=device)
-    '''
-    up = torch.Tensor([up])
-    down = torch.Tensor([down])
-    '''
     window = torch.randn(filter_size, device=device)
     # The module requires a torch tensor window
     module = ResamplePoly(up, down, window)
