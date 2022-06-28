@@ -7,10 +7,10 @@ from cusignal import resample_poly
 try:
     import torch
     from cusignal.diff import ResamplePoly
-    from torch.autograd.gradcheck import gradcheck  
+    from torch.autograd.gradcheck import gradcheck
 except ImportError:
     pytest.skip(f"skipping pytorch dependant tests in {__file__}",
-                allow_module_level = True)
+                allow_module_level=True)
 
 
 @pytest.mark.parametrize("device", ['cpu', 'cuda'])
@@ -26,18 +26,18 @@ def test_gradcheck(device, up, down, filter_size,
     up = torch.Tensor([up])
     down = torch.Tensor([down])
     '''
-    filter_coeffs = torch.randn(filter_size, requires_grad = True,
-                                dtype = torch.double,
-                                device = device)
-    inputs = torch.randn(100, dtype = torch.double, requires_grad = True,
-                         device = device)
+    filter_coeffs = torch.randn(filter_size, requires_grad=True,
+                                dtype=torch.double,
+                                device=device)
+    inputs = torch.randn(100, dtype=torch.double, requires_grad=True,
+                         device=device)
     module = ResamplePoly(up, down, filter_coeffs)
     kwargs = {"eps": eps}
     if rtol > 0:
         kwargs["rtol"] = rtol
     else:
         kwargs["atol"] = atol
-    gradcheck(module, inputs, **kwargs, raise_exception = True)
+    gradcheck(module, inputs, **kwargs, raise_exception=True)
 
 
 @pytest.mark.parametrize("device", ['cpu', 'cuda'])
@@ -57,20 +57,20 @@ def test_forward(device, x_size, up, down, filter_size):
     gpupath = True
     if device != 'cuda':
         gpupath = False
-    x = torch.randn(x_size, device = device)
+    x = torch.randn(x_size, device=device)
     '''
     up = torch.Tensor([up])
     down = torch.Tensor([down])
     '''
-    window = torch.randn(filter_size, device = device)
+    window = torch.randn(filter_size, device=device)
     # The module requires a torch tensor window
     module = ResamplePoly(up, down, window)
     # resample_poly requires a cupy or numpy array window
     window = window.cpu().numpy()
     if gpupath:
         window = cp.array(window)
-    bench_resample = resample_poly(x, up, down, window = window,
-                                   gpupath = gpupath)
+    bench_resample = resample_poly(x, up, down, window=window,
+                                   gpupath=gpupath)
     our_resample = module.forward(x)
     if not allclose(bench_resample, our_resample.detach().cpu(), atol=1e-4):
         raise Exception("Module does not agree with resample")
