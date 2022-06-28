@@ -44,9 +44,9 @@ class FuncResamplePoly(Function):
             gpupath = False
 
         if (up == 1 and down == 1):
-            x_out = x
+            out_x = x
             # These need device typing
-            inverse_size = torch.as_tensor([x.shape[0]], device=device)
+            inverse_size = x.shape[0]
             out_len = torch.as_tensor([0], device=device)
             x_up = None
         else:
@@ -54,7 +54,7 @@ class FuncResamplePoly(Function):
                 window  = cp.array(filter_coeffs)
             else:
                 window  = filter_coeffs.numpy()
-            x_out = resample_poly(x, up, down, window = window,
+            out_x = resample_poly(x, up, down, window = window,
                                   gpupath = gpupath)
             inverse_size = up * x_size + filt_size - 1
             x_up = torch.zeros(up * x_size, device = device, dtype = x.dtype)
@@ -64,8 +64,8 @@ class FuncResamplePoly(Function):
                               torch.Tensor([up]),
                               torch.Tensor([down]),
                               torch.Tensor([inverse_size]),
-                              torch.Tensor([len(x_out)]), x_up)
-        out = torch.as_tensor(cp.asnumpy(x_out), device=device)
+                              torch.Tensor([len(out_x)]), x_up)
+        out = torch.as_tensor(cp.asnumpy(out_x), device=device)
         return(out)
 
     @staticmethod
@@ -74,7 +74,7 @@ class FuncResamplePoly(Function):
         x_size, filter_coeffs, up, down, inverse_size, out_len, x_up \
         = ctx.saved_tensors
 
-        device        = gradient.device
+        device        = gradient.device.type
         x_size        = int(x_size[0])
         gradient_size = gradient.shape[0]
         filt_size     = filter_coeffs.shape[0]
@@ -105,6 +105,7 @@ class FuncResamplePoly(Function):
             out_x = up * out_x[::up]
             out_f = FuncResamplePoly.best_corr(gradient_up, x_up,
                                                mode = 'valid')
+
         out_x = torch.as_tensor(out_x[:x_size],
                                 device = device)
         out_f = torch.as_tensor(out_f[:filter_coeffs.shape[0]],
