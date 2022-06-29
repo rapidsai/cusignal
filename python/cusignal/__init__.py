@@ -28,6 +28,14 @@ from cusignal.convolution.convolve import (
 )
 from cusignal.convolution.correlate import correlate, correlate2d
 from cusignal.demod.demod import fm_demod
+try:
+    from cusignal import diff
+except:
+   msg = """
+   Warning - Could not find PyTorch. Please install to use
+   differentiable functions in cuSignal.
+   """
+   print(msg)
 from cusignal.estimation.filters import KalmanFilter
 from cusignal.filter_design.fir_filter_design import (
     cmplx_sort,
