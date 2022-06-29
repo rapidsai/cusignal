@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import cupy as cp
 from torch.autograd import Function
 from torch.nn.modules.module import Module
@@ -75,13 +74,11 @@ class FuncResamplePoly(Function):
 
         device = gradient.device.type
         x_size = int(x_size[0])
-        gradient_size = gradient.shape[0]
         filt_size = filter_coeffs.shape[0]
         up = int(up[0])
         down = int(down[0])
         start = FuncResamplePoly.get_start_index(filt_size)
         inverse_size = int(inverse_size)
-        out_x_len = int(out_len)
         filter_coeffs = filter_coeffs.type(gradient.dtype)
 
         if (up == 1 and down == 1):

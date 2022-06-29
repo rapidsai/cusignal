@@ -1,4 +1,5 @@
 import pytest
+import cupy as cp
 from numpy import sqrt
 from numpy import allclose
 from cusignal import resample_poly
@@ -49,9 +50,8 @@ def test_forward(device, x_size, up, down, filter_size):
     gpupath = True accepts cupy typed windows.
     gpupath = False accepts numpy types windows.
     '''
-    device = torch.device(device)
     gpupath = True
-    if device != 'cuda':
+    if 'cuda' not in device:
         gpupath = False
     x = torch.randn(x_size, device=device)
     window = torch.randn(filter_size, device=device)
