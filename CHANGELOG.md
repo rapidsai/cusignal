@@ -1,3 +1,15 @@
+# cuSignal 22.08.00 (17 Aug 2022)
+
+## 📖 Documentation
+
+- Switch to using common `js` &amp; `css` ([#499](https://github.com/rapidsai/cusignal/pull/499)) [@galipremsagar](https://github.com/galipremsagar)
+- Refresh README ([#487](https://github.com/rapidsai/cusignal/pull/487)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Revert &quot;Allow CuPy 11&quot; ([#497](https://github.com/rapidsai/cusignal/pull/497)) [@galipremsagar](https://github.com/galipremsagar)
+- Allow CuPy 11 ([#494](https://github.com/rapidsai/cusignal/pull/494)) [@jakirkham](https://github.com/jakirkham)
+
 # cuSignal 22.06.00 (7 Jun 2022)
 
 ## 🛠️ Improvements
