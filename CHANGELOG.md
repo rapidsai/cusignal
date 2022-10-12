@@ -1,3 +1,9 @@
+# cuSignal 22.10.00 (12 Oct 2022)
+
+## 🚀 New Features
+
+- Allow cupy 11 ([#505](https://github.com/rapidsai/cusignal/pull/505)) [@galipremsagar](https://github.com/galipremsagar)
+
 # cuSignal 22.08.00 (17 Aug 2022)
 
 ## 📖 Documentation
