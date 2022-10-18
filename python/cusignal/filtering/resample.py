@@ -264,9 +264,9 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     N = int(np.minimum(num, Nx))
     Y = cp.zeros(newshape, dtype=X.dtype)
     sl[axis] = slice(0, (N + 1) // 2)
-    Y[sl] = X[sl]
+    Y[tuple(sl)] = X[tuple(sl)]
     sl[axis] = slice(-(N - 1) // 2, None)
-    Y[sl] = X[sl]
+    Y[tuple(sl)] = X[tuple(sl)]
     y = cp.fft.ifft(Y, axis=axis) * (float(num) / float(Nx))
 
     if x.dtype.char not in ["F", "D"]:
