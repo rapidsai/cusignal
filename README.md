@@ -298,7 +298,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
 6. Optional: Confirm unit testing via PyTest
     In the cuSignal top level directory:
     ```
-    pip install pytest
+    pip install pytest pytest-benchmark
     pytest
     ```
     
