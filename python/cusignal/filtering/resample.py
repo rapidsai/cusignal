@@ -275,15 +275,15 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
         if num < Nx:
             # select the component of Y at frequency +N/2,
             # add the component of X at -N/2
-            sl[axis] = slice(-N//2, -N//2 + 1)
+            sl[axis] = slice(-N // 2, -N // 2 + 1)
             Y[tuple(sl)] += X[tuple(sl)]
         elif Nx < num:
             # select the component at frequency +N/2 and halve it
-            sl[axis] = slice(N//2, N//2 + 1)
+            sl[axis] = slice(N // 2, N // 2 + 1)
             Y[tuple(sl)] *= 0.5
             temp = Y[tuple(sl)]
             # set the component at -N/2 equal to the component at +N/2
-            sl[axis] = slice(num-N//2, num-N//2 + 1)
+            sl[axis] = slice(num - N // 2, num - N // 2 + 1)
             Y[tuple(sl)] = temp
 
     y = cp.fft.ifft(Y, axis=axis) * (float(num) / float(Nx))
@@ -431,8 +431,7 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     ):
         n_post_pad += 1
 
-    h = pp.concatenate((pp.zeros(n_pre_pad, h.dtype), h,
-                        pp.zeros(n_post_pad, h.dtype)))
+    h = pp.concatenate((pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype)))
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
