@@ -262,11 +262,30 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     newshape = list(x.shape)
     newshape[axis] = num
     N = int(np.minimum(num, Nx))
+    nyq = N // 2 + 1  # Slice index that includes Nyquist
     Y = cp.zeros(newshape, dtype=X.dtype)
-    sl[axis] = slice(0, (N + 1) // 2)
+    sl[axis] = slice(0, nyq)
     Y[tuple(sl)] = X[tuple(sl)]
-    sl[axis] = slice(-(N - 1) // 2, None)
-    Y[tuple(sl)] = X[tuple(sl)]
+    if N > 2:  # avoid empty slice
+        sl[axis] = slice(nyq - N, None)
+        Y[tuple(sl)] = X[tuple(sl)]
+
+    # symmetrize nyquest freq bins if N is even
+    if N % 2 == 0:
+        if num < Nx:
+            # select the component of Y at frequency +N/2,
+            # add the component of X at -N/2
+            sl[axis] = slice(-N // 2, -N // 2 + 1)
+            Y[tuple(sl)] += X[tuple(sl)]
+        elif Nx < num:
+            # select the component at frequency +N/2 and halve it
+            sl[axis] = slice(N // 2, N // 2 + 1)
+            Y[tuple(sl)] *= 0.5
+            temp = Y[tuple(sl)]
+            # set the component at -N/2 equal to the component at +N/2
+            sl[axis] = slice(num - N // 2, num - N // 2 + 1)
+            Y[tuple(sl)] = temp
+
     y = cp.fft.ifft(Y, axis=axis) * (float(num) / float(Nx))
 
     if x.dtype.char not in ["F", "D"]:

@@ -128,11 +128,11 @@ cuSignal can be installed with ([Miniconda](https://docs.conda.io/en/latest/mini
 
 ```
 For CUDA 11.5 and Python 3.8
-conda install -c rapidsai -c nvidia -c conda-forge \
+conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.5
 
 # or, for CUDA 11.2 and Python 3.8
-conda install -c rapidsai -c nvidia -c conda-forge \
+conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.2
 ```
 
@@ -140,11 +140,11 @@ For the nightly verison of `cusignal`, which includes pre-release features:
 
 ```
 For CUDA 11.5 and Python 3.8
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
+conda install -c rapidsai-nightly -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.5
 
 For CUDA 11.2 and Python 3.8
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
+conda install -c rapidsai-nightly -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.2
 ```
 
