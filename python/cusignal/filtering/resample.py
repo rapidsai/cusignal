@@ -262,11 +262,11 @@ def resample(x, num, t=None, axis=0, window=None, domain="time"):
     newshape = list(x.shape)
     newshape[axis] = num
     N = int(np.minimum(num, Nx))
-    nyq = N // 2 + 1 # Slice index that includes Nyquist
+    nyq = N // 2 + 1  # Slice index that includes Nyquist
     Y = cp.zeros(newshape, dtype=X.dtype)
     sl[axis] = slice(0, nyq)
     Y[tuple(sl)] = X[tuple(sl)]
-    if N > 2: # avoid empty slice
+    if N > 2:  # avoid empty slice
         sl[axis] = slice(nyq - N, None)
         Y[tuple(sl)] = X[tuple(sl)]
 
@@ -431,7 +431,8 @@ def resample_poly(x, up, down, axis=0, window=("kaiser", 5.0), gpupath=True):
     ):
         n_post_pad += 1
 
-    h = pp.concatenate((pp.zeros(n_pre_pad, h.dtype), h, pp.zeros(n_post_pad, h.dtype)))
+    h = pp.concatenate((pp.zeros(n_pre_pad, h.dtype), h,
+                        pp.zeros(n_post_pad, h.dtype)))
     n_pre_remove_end = n_pre_remove + n_out
 
     # filter then remove excess
