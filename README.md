@@ -2,12 +2,14 @@
 
 [![Build Status](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/badge/icon)](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/)
 
-**cuSignal** is a GPU-accelerated signal processing library that is both based on and extends the [SciPy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) API. Notably, cuSignal:
+**cuSignal** is a GPU-accelerated signal processing library in Python that is both based on and extends the [SciPy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) API. Notably, cuSignal:
 - Delivers orders-of-magnitude speedups over CPU with a familiar API
 - Supports a zero-copy connection to popular Deep Learning frameworks like PyTorch, Tensorflow, and Jax
 - Runs on any CUDA-capable GPU of Maxwell architecture or newer, including the Jetson Nano
 - Optimizes streaming, real-time applications via zero-copy memory buffer between CPU and GPU
 - Is fully built within the GPU Python Ecosystem, where both core functionality and optimized kernels are dependent on the [CuPy](https://cupy.dev/) and [Numba](http://numba.pydata.org/) projects
+
+If you're intersted in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
 
 
 ## Table of Contents
@@ -127,25 +129,23 @@ cuSignal can be installed with ([Miniconda](https://docs.conda.io/en/latest/mini
 
 
 ```
-For CUDA 11.5 and Python 3.8
+conda install -c rapidsai -c conda-forge -c nvidia \
+    cusignal
+
+# To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
 conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.5
-
-# or, for CUDA 11.2 and Python 3.8
-conda install -c rapidsai -c conda-forge -c nvidia \
-    cusignal python=3.8 cudatoolkit=11.2
 ```
 
 For the nightly verison of `cusignal`, which includes pre-release features:
 
 ```
-For CUDA 11.5 and Python 3.8
+conda install -c rapidsai-nightly -c conda-forge -c nvidia \
+    cusignal
+
+# To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
 conda install -c rapidsai-nightly -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.5
-
-For CUDA 11.2 and Python 3.8
-conda install -c rapidsai-nightly -c conda-forge -c nvidia \
-    cusignal python=3.8 cudatoolkit=11.2
 ```
 
 While only CUDA versions >= 11.2 are officially supported, cuSignal has been confirmed to work with CUDA version 10.2 and above. If you run into any issues with the conda install, please follow the source installation instructions, below.
@@ -305,7 +305,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-22.06 docker/.`.
+cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-22.12 docker/.`.
 
 ```
 docker build -t <image>:<tag> docker/.
