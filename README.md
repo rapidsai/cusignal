@@ -129,39 +129,23 @@ cuSignal can be installed with ([Miniconda](https://docs.conda.io/en/latest/mini
 
 
 ```
-<<<<<<< HEAD
 conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal
 
 # To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
 conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal python=3.8 cudatoolkit=11.5
-=======
-For CUDA 11.5 and Python 3.8
-conda install -c rapidsai -c nvidia -c conda-forge \
-    cusignal python=3.8 cudatoolkit=11.5
-
-# or, for CUDA 11.2 and Python 3.8
-conda install -c rapidsai -c nvidia -c conda-forge \
-    cusignal python=3.8 cudatoolkit=11.2
->>>>>>> 075571cec62b9a93b96de2d4f27b575383bcf3bb
 ```
 
 For the nightly verison of `cusignal`, which includes pre-release features:
 
 ```
-<<<<<<< HEAD
 conda install -c rapidsai-nightly -c conda-forge -c nvidia \
     cusignal
-=======
-For CUDA 11.5 and Python 3.8
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    cusignal python=3.8 cudatoolkit=11.5
 
-For CUDA 11.2 and Python 3.8
-conda install -c rapidsai-nightly -c nvidia -c conda-forge \
-    cusignal python=3.8 cudatoolkit=11.2
->>>>>>> 075571cec62b9a93b96de2d4f27b575383bcf3bb
+# To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
+conda install -c rapidsai-nightly -c conda-forge -c nvidia \
+    cusignal python=3.8 cudatoolkit=11.5
 ```
 
 While only CUDA versions >= 11.2 are officially supported, cuSignal has been confirmed to work with CUDA version 10.2 and above. If you run into any issues with the conda install, please follow the source installation instructions, below.
