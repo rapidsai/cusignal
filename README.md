@@ -305,11 +305,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
-<<<<<<< HEAD
 cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-22.12 docker/.`.
-=======
-cuSignal is part of the general RAPIDS docker container but can also be built using the included Dockerfile and the below instructions to build and run the container. Please note, `<image>` and `<tag>` are user specified, for example `docker build -t cusignal:cusignal-22.06 docker/.`.
->>>>>>> 075571cec62b9a93b96de2d4f27b575383bcf3bb
 
 ```
 docker build -t <image>:<tag> docker/.
