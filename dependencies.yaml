@@ -1,0 +1,116 @@
+# Dependency list for https://github.com/rapidsai/dependency-file-generator
+files:
+  all:
+    output: conda
+    matrix:
+      cuda: ["11.5"]
+      arch: [x86_64]
+    includes:
+      - build
+      - checks
+      - cudatoolkit
+      - py_version
+      - run
+      - test_python
+  test_python:
+    output: none
+    includes:
+      - cudatoolkit
+      - py_version
+      - test_python
+  checks:
+    output: none
+    includes:
+      - develop
+      - py_version
+channels:
+  - rapidsai
+  - rapidsai-nightly
+  - conda-forge
+  - nvidia
+dependencies:
+  build:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - ninja
+      - output_types: conda
+        packages:
+          - c-compiler
+          - cxx-compiler
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              arch: x86_64
+            packages:
+              - &gcc_amd64 gcc_linux-64=9.*
+              - &sysroot_amd64 sysroot_linux-64==2.17
+          - matrix:
+              arch: aarch64
+            packages:
+              - &gcc_aarch64 gcc_linux-aarch64=9.*
+              - &sysroot_aarch64 sysroot_linux-aarch64==2.17
+      - output_types: conda
+        matrices:
+          - matrix:
+              arch: x86_64
+              cuda: "11.5"
+            packages:
+              - &nvcc_amd64_115 nvcc_linux-64=11.5
+          - matrix:
+              arch: aarch64
+              cuda: "11.5"
+            packages:
+              - &nvcc_aarch64_115 nvcc_linux-aarch64=11.5
+  cudatoolkit:
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              cuda: "11.2"
+            packages:
+              - cudatoolkit=11.2
+          - matrix:
+              cuda: "11.4"
+            packages:
+              - cudatoolkit=11.4
+          - matrix:
+              cuda: "11.5"
+            packages:
+              - cudatoolkit=11.5
+  checks:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - pre-commit
+  py_version:
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              py: "3.8"
+            packages:
+              - python=3.8
+          - matrix:
+              py: "3.9"
+            packages:
+              - python=3.9
+          - matrix:
+            packages:
+              - python>=3.8,<3.10
+  run:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - cupy >=10,<12.0.0a0
+          - numba >=0.49.0
+          - numpy >=1.19
+          - scipy >=1.6.0
+  test_python:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - pytest
+          - pytest-cov
+          - pytest-xdist
