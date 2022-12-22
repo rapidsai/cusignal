@@ -17,6 +17,19 @@ build:
   noarch: python
   ignore_run_exports_from:
     - {{ compiler('cuda') }}
+  script_env:
+    - PARALLEL_LEVEL
+    - CMAKE_GENERATOR
+    - CMAKE_C_COMPILER_LAUNCHER
+    - CMAKE_CXX_COMPILER_LAUNCHER
+    - CMAKE_CUDA_COMPILER_LAUNCHER
+    - SCCACHE_S3_KEY_PREFIX=cusignal-aarch64 # [aarch64]
+    - SCCACHE_S3_KEY_PREFIX=cusignal-linux64 # [linux64]
+    - SCCACHE_BUCKET
+    - SCCACHE_REGION
+    - SCCACHE_IDLE_TIMEOUT
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
 
 requirements:
   build:
