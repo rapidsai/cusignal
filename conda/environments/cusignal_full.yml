@@ -9,7 +9,6 @@ dependencies:
   - scipy>=1.5.0
   - numpy
   - cudatoolkit>=9.2,<=11.2
-  - boost
   - matplotlib
   - numba>=0.49
   - pytest
