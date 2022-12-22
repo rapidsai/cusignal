@@ -39,17 +39,17 @@ set +e
 
 # TODO: exit code handling is too verbose. Find a cleaner solution.
 rapids-logger "pytest cusignal"
-pushd python/
+pushd python/cusignal
 pytest \
   --cache-clear \
   --junitxml="${RAPIDS_TESTS_DIR}/junit-cusignal.xml" \
   --numprocesses=8 \
   --dist=loadscope \
-  --cov-config=.coveragerc \
+  --cov-config=../.coveragerc \
   --cov=cusignal \
   --cov-report=xml:"${RAPIDS_COVERAGE_DIR}/cusignal-coverage.xml" \
   --cov-report=term \
-  .
+  tests
 exitcode=$?
 
 if (( ${exitcode} != 0 )); then
