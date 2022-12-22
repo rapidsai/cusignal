@@ -43,10 +43,13 @@ pushd python/
 pytest \
   --cache-clear \
   --junitxml="${RAPIDS_TESTS_DIR}/junit-cusignal.xml" \
+  --numprocesses=8 \
+  --dist=loadscope \
   --cov-config=.coveragerc \
   --cov=cusignal \
   --cov-report=xml:"${RAPIDS_COVERAGE_DIR}/cusignal-coverage.xml" \
-  --cov-report=term
+  --cov-report=term \
+  .
 exitcode=$?
 
 if (( ${exitcode} != 0 )); then

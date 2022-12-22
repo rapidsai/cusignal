@@ -112,5 +112,6 @@ dependencies:
       - output_types: [conda, requirements]
         packages:
           - pytest
+          - pytest-benchmark
           - pytest-cov
           - pytest-xdist
