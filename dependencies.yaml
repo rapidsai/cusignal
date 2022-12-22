@@ -21,7 +21,7 @@ files:
   checks:
     output: none
     includes:
-      - develop
+      - checks
       - py_version
 channels:
   - rapidsai
