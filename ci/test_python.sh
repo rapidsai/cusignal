@@ -29,7 +29,7 @@ SUITEERROR=0
 rapids-print-env
 
 rapids-mamba-retry install \
-  -c "${PYTHON_CHANNEL}" \
+  --channel "${PYTHON_CHANNEL}" \
   cusignal
 
 rapids-logger "Check GPU usage"
