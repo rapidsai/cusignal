@@ -49,7 +49,7 @@ pytest \
   --cov=cusignal \
   --cov-report=xml:"${RAPIDS_COVERAGE_DIR}/cusignal-coverage.xml" \
   --cov-report=term \
-  tests
+  test
 exitcode=$?
 
 if (( ${exitcode} != 0 )); then
