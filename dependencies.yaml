@@ -11,6 +11,11 @@ files:
       - py_version
       - run
       - test_python
+  test_notebooks:
+    output: none
+    includes:
+      - cudatoolkit
+      - py_version
   test_python:
     output: none
     includes:
