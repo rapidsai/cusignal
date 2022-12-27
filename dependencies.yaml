@@ -84,6 +84,7 @@ dependencies:
       - output_types: [conda, requirements]
         packages:
           - ipython
+          - matplotlib-base
           - notebook
   test_python:
     common:
