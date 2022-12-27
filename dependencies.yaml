@@ -86,6 +86,7 @@ dependencies:
           - ipython
           - matplotlib-base
           - notebook
+          - numpy>=1.23,<1.24
   test_python:
     common:
       - output_types: [conda, requirements]
