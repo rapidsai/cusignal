@@ -19,5 +19,6 @@ dependencies:
 - pytest-cov
 - pytest-xdist
 - python>=3.8,<3.10
+- pytorch <=1.12.1
 - scipy >=1.6.0
 name: all_cuda-115_arch-x86_64
