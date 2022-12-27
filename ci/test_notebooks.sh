@@ -32,7 +32,7 @@ pushd notebooks
 
 # Add notebooks that should be skipped here
 # (space-separated list of filenames without paths)
-SKIPNBS="sdr_wfm_demod.ipynb io_examples.ipynb"
+SKIPNBS="sdr_wfm_demod.ipynb io_examples.ipynb rtlsdr_offline_demod_to_transcript.ipynb"
 
 # Set SUITEERROR to failure if any run fails
 SUITEERROR=0
