@@ -10,12 +10,14 @@ files:
       - cudatoolkit
       - py_version
       - run
+      - test_notebooks
       - test_python
   test_notebooks:
     output: none
     includes:
       - cudatoolkit
       - py_version
+      - test_notebooks
   test_python:
     output: none
     includes:
@@ -77,6 +79,12 @@ dependencies:
           - numba >=0.49.0
           - numpy >=1.19
           - scipy >=1.6.0
+  test_notebooks:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - ipython
+          - notebook
   test_python:
     common:
       - output_types: [conda, requirements]
