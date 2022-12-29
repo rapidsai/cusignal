@@ -2,9 +2,21 @@
 
 Please see https://github.com/rapidsai/cusignal/releases/tag/v23.02.00a for the latest changes to this development branch.
 
-# cuSignal 22.12.00 (Date TBD)
+# cuSignal 22.12.00 (8 Dec 2022)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v22.12.00a for the latest changes to this development branch.
+## 📖 Documentation
+
+- Readme update ([#522](https://github.com/rapidsai/cusignal/pull/522)) [@awthomp](https://github.com/awthomp)
+- Revisit WSL install instructions: additional dependency needed for pytest ([#514](https://github.com/rapidsai/cusignal/pull/514)) [@evanmayer](https://github.com/evanmayer)
+
+## 🛠️ Improvements
+
+- Flake8 migrated to GitHub and that broke some pre-commit checks ([#518](https://github.com/rapidsai/cusignal/pull/518)) [@jacobtomlinson](https://github.com/jacobtomlinson)
+- fix filtering.resample output for even values of num parameter ([#517](https://github.com/rapidsai/cusignal/pull/517)) [@mattkinsey](https://github.com/mattkinsey)
+- Use rapidsai CODE_OF_CONDUCT.md ([#516](https://github.com/rapidsai/cusignal/pull/516)) [@bdice](https://github.com/bdice)
+- Update channel priority ([#515](https://github.com/rapidsai/cusignal/pull/515)) [@bdice](https://github.com/bdice)
+- Remove stale labeler ([#512](https://github.com/rapidsai/cusignal/pull/512)) [@raydouglass](https://github.com/raydouglass)
+- Add option for smaller dataset in IO notebook ([#473](https://github.com/rapidsai/cusignal/pull/473)) [@charlesbluca](https://github.com/charlesbluca)
 
 # cuSignal 22.10.00 (12 Oct 2022)
 
