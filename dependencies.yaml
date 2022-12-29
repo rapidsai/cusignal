@@ -86,7 +86,15 @@ dependencies:
           - ipython
           - matplotlib-base
           - notebook
-          - pytorch <=1.12.1
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              arch: x86_64
+            packages:
+              - pytorch <=1.12.1
+          - matrix:
+            packages:
   test_python:
     common:
       - output_types: [conda, requirements]
