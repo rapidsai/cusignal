@@ -9,14 +9,14 @@
 - Optimizes streaming, real-time applications via zero-copy memory buffer between CPU and GPU
 - Is fully built within the GPU Python Ecosystem, where both core functionality and optimized kernels are dependent on the [CuPy](https://cupy.dev/) and [Numba](http://numba.pydata.org/) projects
 
-If you're intersted in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
+If you're interested in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
 
 
 ## Table of Contents
 * [Quick Start](#quick-start)
 * [Installation](#installation)
-    * [Conda: Linux OS](#conda-linux-os)
-    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Conda: Linux OS](#conda-linux-os-preferred)
+    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-agx-clara-devkit-linux-os)
     * [Source: Linux OS](#source-linux-os)
     * [Source: Windows OS (with CUDA on WSL)](#source-windows-os)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
