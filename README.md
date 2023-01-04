@@ -9,7 +9,7 @@
 - Optimizes streaming, real-time applications via zero-copy memory buffer between CPU and GPU
 - Is fully built within the GPU Python Ecosystem, where both core functionality and optimized kernels are dependent on the [CuPy](https://cupy.dev/) and [Numba](http://numba.pydata.org/) projects
 
-If you're intersted in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
+If you're interested in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
 
 
 ## Table of Contents
