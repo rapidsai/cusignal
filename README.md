@@ -15,8 +15,8 @@ If you're intersted in the above concepts but prefer to program in C++ rather th
 ## Table of Contents
 * [Quick Start](#quick-start)
 * [Installation](#installation)
-    * [Conda: Linux OS](#conda-linux-os)
-    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Conda: Linux OS](#conda-linux-os-preferred)
+    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-agx-clara-devkit-linux-os)
     * [Source: Linux OS](#source-linux-os)
     * [Source: Windows OS (with CUDA on WSL)](#source-windows-os)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
