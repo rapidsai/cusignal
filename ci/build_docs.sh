@@ -7,11 +7,12 @@ rapids-logger "Create test conda environment"
 . /opt/conda/etc/profile.d/conda.sh
 
 rapids-dependency-file-generator \
-  --output conda \
+  --output requirements \
   --file_key docs \
-  --matrix "cuda=${RAPIDS_CUDA_VERSION%.*};arch=$(arch);py=${RAPIDS_PY_VERSION}" | tee env.yaml
+  --matrix "cuda=${RAPIDS_CUDA_VERSION%.*};arch=$(arch);py=${RAPIDS_PY_VERSION}" | tee req.txt
   
-rapids-mamba-retry env create --force -f env.yaml -n test
+rapids-mamba-retry create -y -n test
+pip install -r req.txt
 conda activate test
 
 rapids-print-env
