@@ -157,6 +157,12 @@ For more OS and version information, please visit the [RAPIDS version picker](ht
 
 Since the Jetson platform is based on the arm chipset, we need to use an aarch64 supported Anaconda environment. While there are multiple options here, we recommend [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
 
+Please note, prior to installing cuSignal, ensure that your PATH environment variables are set to find the CUDA Toolkit. This can be done with:
+```bash
+export PATH=/usr/local/cuda/bin${PATH:+:${PATH}}
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+```
+
 1. Clone the cuSignal repository
 
     ```bash
