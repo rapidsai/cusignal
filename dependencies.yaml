@@ -74,7 +74,7 @@ dependencies:
           - ipython
           - numpydoc
           - pydata-sphinx-theme
-          - sphinx
+          - sphinx=5.3.0
           - sphinx-copybutton
   py_version:
     specific:

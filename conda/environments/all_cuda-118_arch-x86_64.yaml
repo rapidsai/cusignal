@@ -23,6 +23,6 @@ dependencies:
 - python>=3.8,<3.11
 - pytorch <=1.12.1
 - scipy >=1.6.0
-- sphinx
 - sphinx-copybutton
+- sphinx=5.3.0
 name: all_cuda-118_arch-x86_64
