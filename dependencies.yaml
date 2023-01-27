@@ -34,7 +34,7 @@ files:
     output: none
     includes:
       - cudatoolkit
-      - docs
+      - docs_build
       - py_version
 channels:
   - rapidsai
@@ -67,7 +67,7 @@ dependencies:
       - output_types: [conda, requirements]
         packages:
           - pre-commit
-  docs:
+  docs_build:
     common:
       - output_types: [conda, requirements]
         packages:
