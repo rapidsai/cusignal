@@ -8,7 +8,7 @@ files:
     includes:
       - checks
       - cudatoolkit
-      - docs
+      - docs_build
       - py_version
       - run
       - test_notebooks
