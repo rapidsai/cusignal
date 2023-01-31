@@ -85,9 +85,8 @@ def correlate(
     then
 
     .. math::
-
-          z[k] = (x * y)(k - N + 1)
-               = \sum_{l=0}^{||x||-1}x_l y_{l-k+N-1}^{*}
+        z[k] = (x * y)(k - N + 1)
+            = \sum_{l=0}^{||x||-1}x_l y_{l-k+N-1}^{*}
 
     for :math:`k = 0, 1, ..., ||x|| + ||y|| - 2`
 
@@ -175,6 +174,7 @@ def correlate2d(
         Second input. Should have the same number of dimensions as `in1`.
     mode : str {'full', 'valid', 'same'}, optional
         A string indicating the size of the output:
+        
         ``full``
            The output is the full discrete linear cross-correlation
            of the inputs. (Default)
@@ -187,6 +187,7 @@ def correlate2d(
            with respect to the 'full' output.
     boundary : str {'fill', 'wrap', 'symm'}, optional
         A flag indicating how to handle boundaries:
+        
         ``fill``
            pad input arrays with fillvalue. (default)
         ``wrap``
@@ -206,6 +207,7 @@ def correlate2d(
     --------
     Use 2D cross-correlation to find the location of a template in a noisy
     image:
+    
     >>> import cusignal
     >>> import cupy as cp
     >>> from scipy import misc
@@ -261,6 +263,7 @@ def correlate2d(
 def correlation_lags(in1_len, in2_len, mode="full"):
     r"""
     Calculates the lag / displacement indices array for 1D cross-correlation.
+    
     Parameters
     ----------
     in1_size : int
@@ -270,19 +273,23 @@ def correlation_lags(in1_len, in2_len, mode="full"):
     mode : str {'full', 'valid', 'same'}, optional
         A string indicating the size of the output.
         See the documentation `correlate` for more information.
+    
     See Also
     --------
     correlate : Compute the N-dimensional cross-correlation.
+    
     Returns
     -------
     lags : array
         Returns an array containing cross-correlation lag/displacement indices.
         Indices can be indexed with the np.argmax of the correlation to return
         the lag/displacement.
+    
     Notes
     -----
     Cross-correlation for continuous functions :math:`f` and :math:`g` is
     defined as:
+    
     .. math::
         \left ( f\star g \right )\left ( \tau \right )
         \triangleq \int_{t_0}^{t_0 +T}
@@ -290,14 +297,17 @@ def correlation_lags(in1_len, in2_len, mode="full"):
     Where :math:`\tau` is defined as the displacement, also known as the lag.
     Cross correlation for discrete functions :math:`f` and :math:`g` is
     defined as:
+    
     .. math::
         \left ( f\star g \right )\left [ n \right ]
         \triangleq \sum_{-\infty}^{\infty}
         \overline{f\left [ m \right ]}g\left [ m+n \right ]
     Where :math:`n` is the lag.
+    
     Examples
     --------
     Cross-correlation of a signal with its time-delayed self.
+    
     >>> import cusignal
     >>> import cupy as cp
     >>> from cupy.random import default_rng
@@ -307,6 +317,7 @@ def correlation_lags(in1_len, in2_len, mode="full"):
     >>> correlation = cusignal.correlate(x, y, mode="full")
     >>> lags = cusignal.correlation_lags(x.size, y.size, mode="full")
     >>> lag = lags[cp.argmax(correlation)]
+    
     """
 
     # calculate lag ranges in different modes of operation
