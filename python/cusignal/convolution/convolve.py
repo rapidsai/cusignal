@@ -330,6 +330,7 @@ def convolve2d(
     Convolve two 2-dimensional arrays.
     Convolve `in1` and `in2` with output size determined by `mode`, and
     boundary conditions determined by `boundary` and `fillvalue`.
+    
     Parameters
     ----------
     in1 : array_like
