@@ -21,7 +21,7 @@ Correlate
 
 
 Modulation/Demodulation
-=======================
+============
 
 Demodulation
 ------------
@@ -34,7 +34,7 @@ Estimation
 ============
 
 Kalman Filter
--------------
+------------
 
 .. automodule:: cusignal.estimation.filters
     :members:

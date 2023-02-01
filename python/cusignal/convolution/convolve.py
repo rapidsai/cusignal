@@ -330,7 +330,6 @@ def convolve2d(
     Convolve two 2-dimensional arrays.
     Convolve `in1` and `in2` with output size determined by `mode`, and
     boundary conditions determined by `boundary` and `fillvalue`.
-    
     Parameters
     ----------
     in1 : array_like
@@ -339,7 +338,6 @@ def convolve2d(
         Second input. Should have the same number of dimensions as `in1`.
     mode : str {'full', 'valid', 'same'}, optional
         A string indicating the size of the output:
-        
         ``full``
            The output is the full discrete linear convolution
            of the inputs. (Default)
@@ -352,7 +350,6 @@ def convolve2d(
            with respect to the 'full' output.
     boundary : str {'fill', 'wrap', 'symm'}, optional
         A flag indicating how to handle boundaries:
-        
         ``fill``
            pad input arrays with fillvalue. (default)
         ``wrap``
@@ -475,7 +472,6 @@ def choose_conv_method(in1, in2, mode="full", measure=False):
     >>> b = cp.random.randn(1000000)
     >>> method = cusignal.choose_conv_method(a, b, mode='same')
     >>> method
-    
     'fft'
 
     This can then be applied to other arrays of the same dtype and shape:

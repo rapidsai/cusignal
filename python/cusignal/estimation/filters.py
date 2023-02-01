@@ -161,7 +161,6 @@ class KalmanFilter(object):
     Define the process noise  for all Kalman Filter points:
 
         .. code::
-
             motion_noise = np.eye(dim_x, dtype=dt) * np.array(
                 [10.0, 10.0, 10.0, 10.0], dtype=dt
             )
@@ -182,7 +181,6 @@ class KalmanFilter(object):
     Results are in:
 
         .. code::
-
             kf.x[:, :, :]
 
     References
