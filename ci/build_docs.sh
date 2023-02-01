@@ -24,7 +24,6 @@ rapids-mamba-retry install \
   --channel "${PYTHON_CHANNEL}" \
   cusignal
 
-# Build Python docs
 rapids-logger "Build Sphinx docs"
 pushd docs
 sphinx-build -b dirhtml source _html
