@@ -1,6 +1,20 @@
-# cuSignal 23.02.00 (Date TBD)
+# cuSignal 23.02.00 (9 Feb 2023)
 
-Please see https://github.com/rapidsai/cusignal/releases/tag/v23.02.00a for the latest changes to this development branch.
+## 📖 Documentation
+
+- Add path instructions for Jetson users with fresh JP installs ([#537](https://github.com/rapidsai/cusignal/pull/537)) [@awthomp](https://github.com/awthomp)
+- Fix documentation author ([#534](https://github.com/rapidsai/cusignal/pull/534)) [@bdice](https://github.com/bdice)
+- Fix broken TOC links in README ([#532](https://github.com/rapidsai/cusignal/pull/532)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Update shared workflow branches ([#544](https://github.com/rapidsai/cusignal/pull/544)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Update isort version to 5.12.0 ([#541](https://github.com/rapidsai/cusignal/pull/541)) [@awthomp](https://github.com/awthomp)
+- Build CUDA 11.8 and Python 3.10 Packages ([#533](https://github.com/rapidsai/cusignal/pull/533)) [@bdice](https://github.com/bdice)
+- Update workflows for nightly tests ([#531](https://github.com/rapidsai/cusignal/pull/531)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Enable `Recently Updated` Check ([#530](https://github.com/rapidsai/cusignal/pull/530)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add GitHub Actions Workflows ([#528](https://github.com/rapidsai/cusignal/pull/528)) [@bdice](https://github.com/bdice)
+- Enable copy_prs. ([#525](https://github.com/rapidsai/cusignal/pull/525)) [@bdice](https://github.com/bdice)
 
 # cuSignal 22.12.00 (8 Dec 2022)
 
