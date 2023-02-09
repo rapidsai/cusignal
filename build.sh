@@ -132,7 +132,7 @@ RETURN_ALL(){
         --generate-code arch=compute_62,code=sm_62 \
         --generate-code arch=compute_70,code=sm_70 \
         --generate-code arch=compute_72,code=sm_72"
-    
+
     if [ "$NVCC_MAJOR" -lt 11 ]; then
         GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_75,code=[sm_75,compute_75]"
         echo -e "\t including: CUDA 10.X - {50,52,53,60,61,62,70,72,75}"
@@ -141,10 +141,15 @@ RETURN_ALL(){
         if [ "$NVCC_MINOR" -eq 0 ]; then
             GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_80,code=[sm_80,compute_80]"
             echo -e "\t including: CUDA 11.0 - {50,52,53,60,61,62,70,72,75,80}"
-        else
+        elif [ "$NVCC_MINOR" -lt 8 ]; then
             GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_80,code=sm_80 \
                 --generate-code arch=compute_86,code=[sm_86,compute_86]"
             echo -e "\t including: CUDA 11.1+ - {50,52,53,60,61,62,70,72,75,80,86}"
+        else
+            GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_80,code=sm_80 \
+                --generate-code arch=compute_86,code=[sm_86,compute_86] \
+                --generate-code arch=compute_90,code=[sm_90,compute_90]"
+            echo -e "\t including: CUDA 11.8+ - {50,52,53,60,61,62,70,72,75,80,86,90}"
         fi
     fi
 }
@@ -178,7 +183,7 @@ if (( ${BUILD_ALL_GPU_ARCH} == 0 )); then
             GPU_ARCH="${GPU_ARCH} --generate-code arch=compute_${MAJOR}${MINOR},code=sm_${MAJOR}${MINOR}"
         done
     fi
-    
+
 else
     RETURN_ALL
 fi

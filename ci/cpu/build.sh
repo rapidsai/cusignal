@@ -19,6 +19,10 @@ cd "$WORKSPACE"
 export GPUCI_CONDA_RETRY_MAX=1
 export GPUCI_CONDA_RETRY_SLEEP=30
 
+# Workaround to keep Jenkins builds working
+# until we migrate fully to GitHub Actions
+export RAPIDS_CUDA_VERSION="${CUDA}"
+
 # If nightly build, append current YYMMDD to version
 if [[ "$BUILD_MODE" = "branch" && "$SOURCE_BRANCH" = branch-* ]] ; then
   export VERSION_SUFFIX=`date +%y%m%d`
@@ -70,5 +74,6 @@ gpuci_conda_retry mambabuild conda/recipes/cusignal --python=${PYTHON}
 # UPLOAD - Conda packages
 ################################################################################
 
-gpuci_logger "Upload conda pkgs for cuSignal"
-source ci/cpu/upload.sh
+# Uploads disabled due to new GH Actions implementation
+# gpuci_logger "Upload conda pkgs for cuSignal"
+# source ci/cpu/upload.sh

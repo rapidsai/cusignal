@@ -1,11 +1,10 @@
-{% set name = "cusignal" %}
 {% set version = environ.get('GIT_DESCRIBE_TAG', '0.0.0.dev').lstrip('v') + environ.get('VERSION_SUFFIX', '') %}
-{% set minor_version =  version.split('.')[0] + '.' + version.split('.')[1] %}
-{% set py_version=environ.get('CONDA_PY', 36) %}
-{% set cuda_version='.'.join(environ.get('CUDA', '10.1').split('.')[:2]) %}
+{% set minor_version = version.split('.')[0] + '.' + version.split('.')[1] %}
+{% set py_version = environ['CONDA_PY'] %}
+{% set cuda_version = '.'.join(environ['RAPIDS_CUDA_VERSION'].split('.')[:2]) %}
 
 package:
-  name: {{ name|lower }}
+  name: cusignal
   version: {{ version }}
 
 source:
@@ -15,35 +14,30 @@ build:
   number: {{ GIT_DESCRIBE_NUMBER }}
   string: py{{ py_version }}_{{ GIT_DESCRIBE_HASH }}_{{ GIT_DESCRIBE_NUMBER }}
   noarch: python
-  script_env:
-    - VERSION_SUFFIX
-  ignore_run_exports_from:
-    - {{ compiler('cuda') }}
 
 requirements:
   build:
+    - {{ compiler('c') }}
     - {{ compiler('cxx') }}
     - {{ compiler('cuda') }} {{ cuda_version }}
-    - sysroot_{{ target_platform }} {{ sysroot_version }}
   host:
     - python
     - setuptools
   run:
+    - cupy >=10,<12.0.0a0
+    - numba >=0.49.0
+    - numpy >=1.19,<1.24
     - python
-    - scipy>=1.6.0
-    - numpy>=1.17.3
-    - boost
-    - numba>=0.49.0
-    - cupy>=8.3.0,<12.0.0a0
+    - scipy >=1.6.0
 
 test:
   requires:
-    - cudatoolkit {{ cuda_version}}.*
+    - cudatoolkit ={{ cuda_version }}
   imports:
     - cusignal
 
 about:
-  home: http://rapids.ai/
+  home: https://rapids.ai/
   license: Apache-2.0
   license_family: Apache
   license_file: ../../../LICENSE

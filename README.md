@@ -9,14 +9,14 @@
 - Optimizes streaming, real-time applications via zero-copy memory buffer between CPU and GPU
 - Is fully built within the GPU Python Ecosystem, where both core functionality and optimized kernels are dependent on the [CuPy](https://cupy.dev/) and [Numba](http://numba.pydata.org/) projects
 
-If you're intersted in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
+If you're interested in the above concepts but prefer to program in C++ rather than Python, please consider [MatX](https://github.com/NVIDIA/MatX). MatX is an efficient C++17 GPU Numerical Computing library with a Pythonic Syntax.
 
 
 ## Table of Contents
 * [Quick Start](#quick-start)
 * [Installation](#installation)
-    * [Conda: Linux OS](#conda-linux-os)
-    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-linux-os)
+    * [Conda: Linux OS](#conda-linux-os-preferred)
+    * [Source: aarch64 (Jetson Nano, TK1, TX2, Xavier), Linux OS](#source-aarch64-jetson-nano-tk1-tx2-xavier-agx-clara-devkit-linux-os)
     * [Source: Linux OS](#source-linux-os)
     * [Source: Windows OS (with CUDA on WSL)](#source-windows-os)
     * [Docker](#docker---all-rapids-libraries-including-cusignal)
@@ -42,7 +42,7 @@ num_samps = int(1e8)
 resample_up = 2
 resample_down = 3
 
-cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cx = np.linspace(start, stop, num_samps, endpoint=False)
 cy = np.cos(-cx**2/6.0)
 
 %%timeit
@@ -61,7 +61,7 @@ num_samps = int(1e8)
 resample_up = 2
 resample_down = 3
 
-gx = cp.linspace(start, stop, num_samps, endpoint=False) 
+gx = cp.linspace(start, stop, num_samps, endpoint=False)
 gy = cp.cos(-gx**2/6.0)
 
 %%timeit
@@ -84,7 +84,7 @@ resample_up = 2
 resample_down = 3
 
 # Generate Data on CPU with NumPy
-cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cx = np.linspace(start, stop, num_samps, endpoint=False)
 cy = np.cos(-cx**2/6.0)
 
 # Create shared memory between CPU and GPU and load with CPU signal (cy)
@@ -112,7 +112,7 @@ resample_up = 2
 resample_down = 3
 
 # Generate Data on CPU
-cx = np.linspace(start, stop, num_samps, endpoint=False) 
+cx = np.linspace(start, stop, num_samps, endpoint=False)
 cy = np.cos(-cx**2/6.0)
 
 %%time
@@ -132,9 +132,9 @@ cuSignal can be installed with ([Miniconda](https://docs.conda.io/en/latest/mini
 conda install -c rapidsai -c conda-forge -c nvidia \
     cusignal
 
-# To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
+# To specify a certain CUDA or Python version (e.g. 11.8 and 3.8, respectively)
 conda install -c rapidsai -c conda-forge -c nvidia \
-    cusignal python=3.8 cudatoolkit=11.5
+    cusignal python=3.8 cudatoolkit=11.8
 ```
 
 For the nightly verison of `cusignal`, which includes pre-release features:
@@ -143,9 +143,9 @@ For the nightly verison of `cusignal`, which includes pre-release features:
 conda install -c rapidsai-nightly -c conda-forge -c nvidia \
     cusignal
 
-# To specify a certain CUDA or Python version (e.g. 11.5 and 3.8, respectively)
+# To specify a certain CUDA or Python version (e.g. 11.8 and 3.8, respectively)
 conda install -c rapidsai-nightly -c conda-forge -c nvidia \
-    cusignal python=3.8 cudatoolkit=11.5
+    cusignal python=3.8 cudatoolkit=11.8
 ```
 
 While only CUDA versions >= 11.2 are officially supported, cuSignal has been confirmed to work with CUDA version 10.2 and above. If you run into any issues with the conda install, please follow the source installation instructions, below.
@@ -156,6 +156,12 @@ For more OS and version information, please visit the [RAPIDS version picker](ht
 ### Source, aarch64 (Jetson Nano, TK1, TX2, Xavier, AGX Clara DevKit), Linux OS
 
 Since the Jetson platform is based on the arm chipset, we need to use an aarch64 supported Anaconda environment. While there are multiple options here, we recommend [miniforge](https://github.com/conda-forge/miniforge). Further, it's assumed that your Jetson device is running a current (>= 4.3) edition of [JetPack](https://developer.nvidia.com/embedded/jetpack) and contains the CUDA Toolkit.
+
+Please note, prior to installing cuSignal, ensure that your PATH environment variables are set to find the CUDA Toolkit. This can be done with:
+```bash
+export PATH=/usr/local/cuda/bin${PATH:+:${PATH}}
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+```
 
 1. Clone the cuSignal repository
 
@@ -179,7 +185,7 @@ Since the Jetson platform is based on the arm chipset, we need to use an aarch64
     ```bash
     export CUPY_NVCC_GENERATE_CODE="arch=compute_XX,code=sm_XX"
     ```
-    
+
     where `XX` is your GPU's [compute capability](https://developer.nvidia.com/cuda-gpus#compute). If you'd like to compile to multiple architectures (e.g Nano and Xavier), concatenate the `arch=...` string with semicolins.
 
 3. Activate created conda environment
@@ -268,9 +274,9 @@ Since the Jetson platform is based on the arm chipset, we need to use an aarch64
 
 ### Source, Windows OS
 
-We have confirmed that cuSignal successfully builds and runs on Windows by using [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html). Please follow the instructions in the link to install WSL 2 and the associated CUDA drivers. You can then proceed to follow the cuSignal source build instructions, below. 
+We have confirmed that cuSignal successfully builds and runs on Windows by using [CUDA on WSL](https://docs.nvidia.com/cuda/wsl-user-guide/index.html). Please follow the instructions in the link to install WSL 2 and the associated CUDA drivers. You can then proceed to follow the cuSignal source build instructions, below.
 
-1. Download and install [Andaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
+1. Download and install [Anaconda](https://www.anaconda.com/distribution/) for Windows. In an Anaconda Prompt, navigate to your checkout of cuSignal.
 
 2. Create cuSignal conda environment
 
@@ -287,7 +293,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
     pip install cupy-cudaXXX
     ```
 
-    Where XXX is the version of the CUDA toolkit you have installed. 11.5, for example is `cupy-cuda115`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting Windows wheels for other versions of CUDA.
+    Where XXX is the version of the CUDA toolkit you have installed. 11.5, for example is `cupy-cuda115`. See the [CuPy Documentation](https://docs-cupy.chainer.org/en/stable/install.html#install-cupy) for information on getting wheels for other versions of CUDA.
 
 5. Install cuSignal module
 
@@ -301,7 +307,7 @@ We have confirmed that cuSignal successfully builds and runs on Windows by using
     pip install pytest pytest-benchmark
     pytest
     ```
-    
+
 
 ### Docker - All RAPIDS Libraries, including cuSignal
 
@@ -360,7 +366,7 @@ As with the standard pytest tool, the user can use the `-v` and `-k` flags for v
 To reduce columns in benchmark result's table, add `--benchmark-columns=LABELS`, like `--benchmark-columns=min,max,mean`.
 For more information on `pytest-benchmark` please visit the [Usage Guide](https://pytest-benchmark.readthedocs.io/en/latest/usage.html).
 
-Parameter `--benchmark-gpu-disable` is to disable memory checks from [Rapids GPU benchmark tool](https://github.com/rapidsai/benchmark). 
+Parameter `--benchmark-gpu-disable` is to disable memory checks from [Rapids GPU benchmark tool](https://github.com/rapidsai/benchmark).
 Doing so speeds up benchmarking.
 
 If you wish to skip benchmarks of SciPy functions add `-m "not cpu"`
@@ -376,26 +382,26 @@ cusignal/test/test_filtering.py ..................                              
 
 
 ---------- benchmark 'UpFirDn2d': 18 tests -----------
-Name (time in us, mem in bytes)         Mean          
+Name (time in us, mem in bytes)         Mean
 ------------------------------------------------------
-test_upfirdn2d_gpu[-1-1-3-256]      195.2299 (1.0)    
-test_upfirdn2d_gpu[-1-9-3-256]      196.1766 (1.00)   
-test_upfirdn2d_gpu[-1-1-7-256]      196.2881 (1.01)   
-test_upfirdn2d_gpu[0-2-3-256]       196.9984 (1.01)   
-test_upfirdn2d_gpu[0-9-3-256]       197.5675 (1.01)   
-test_upfirdn2d_gpu[0-1-7-256]       197.9015 (1.01)   
-test_upfirdn2d_gpu[-1-9-7-256]      198.0923 (1.01)   
-test_upfirdn2d_gpu[-1-2-7-256]      198.3325 (1.02)   
-test_upfirdn2d_gpu[0-2-7-256]       198.4676 (1.02)   
-test_upfirdn2d_gpu[0-9-7-256]       198.6437 (1.02)   
-test_upfirdn2d_gpu[0-1-3-256]       198.7477 (1.02)   
-test_upfirdn2d_gpu[-1-2-3-256]      200.1589 (1.03)   
-test_upfirdn2d_gpu[-1-2-2-256]      213.0316 (1.09)   
-test_upfirdn2d_gpu[0-1-2-256]       213.0944 (1.09)   
-test_upfirdn2d_gpu[-1-9-2-256]      214.6168 (1.10)   
-test_upfirdn2d_gpu[0-2-2-256]       214.6975 (1.10)   
-test_upfirdn2d_gpu[-1-1-2-256]      216.4033 (1.11)   
-test_upfirdn2d_gpu[0-9-2-256]       217.1675 (1.11)   
+test_upfirdn2d_gpu[-1-1-3-256]      195.2299 (1.0)
+test_upfirdn2d_gpu[-1-9-3-256]      196.1766 (1.00)
+test_upfirdn2d_gpu[-1-1-7-256]      196.2881 (1.01)
+test_upfirdn2d_gpu[0-2-3-256]       196.9984 (1.01)
+test_upfirdn2d_gpu[0-9-3-256]       197.5675 (1.01)
+test_upfirdn2d_gpu[0-1-7-256]       197.9015 (1.01)
+test_upfirdn2d_gpu[-1-9-7-256]      198.0923 (1.01)
+test_upfirdn2d_gpu[-1-2-7-256]      198.3325 (1.02)
+test_upfirdn2d_gpu[0-2-7-256]       198.4676 (1.02)
+test_upfirdn2d_gpu[0-9-7-256]       198.6437 (1.02)
+test_upfirdn2d_gpu[0-1-3-256]       198.7477 (1.02)
+test_upfirdn2d_gpu[-1-2-3-256]      200.1589 (1.03)
+test_upfirdn2d_gpu[-1-2-2-256]      213.0316 (1.09)
+test_upfirdn2d_gpu[0-1-2-256]       213.0944 (1.09)
+test_upfirdn2d_gpu[-1-9-2-256]      214.6168 (1.10)
+test_upfirdn2d_gpu[0-2-2-256]       214.6975 (1.10)
+test_upfirdn2d_gpu[-1-1-2-256]      216.4033 (1.11)
+test_upfirdn2d_gpu[0-9-2-256]       217.1675 (1.11)
 ------------------------------------------------------
 ```
 
