@@ -8,7 +8,7 @@ files:
     includes:
       - checks
       - cudatoolkit
-      - docs_build
+      - docs
       - py_version
       - run
       - test_notebooks
@@ -34,7 +34,7 @@ files:
     output: none
     includes:
       - cudatoolkit
-      - docs_build
+      - docs
       - py_version
 channels:
   - rapidsai
@@ -67,7 +67,7 @@ dependencies:
       - output_types: [conda, requirements]
         packages:
           - pre-commit
-  docs_build:
+  docs:
     common:
       - output_types: [conda, requirements]
         packages:
