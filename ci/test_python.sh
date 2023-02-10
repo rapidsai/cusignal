@@ -38,7 +38,6 @@ EXITCODE=0
 trap "EXITCODE=1" ERR
 set +e
 
-# TODO: exit code handling is too verbose. Find a cleaner solution.
 rapids-logger "pytest cusignal"
 pushd python/cusignal
 pytest \
