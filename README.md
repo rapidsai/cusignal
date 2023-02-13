@@ -1,7 +1,5 @@
 # <div align="left"><img src="https://rapids.ai/assets/images/rapids_logo.png" width="90px"/>&nbsp;cuSignal</div>
 
-[![Build Status](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/badge/icon)](https://gpuci.gpuopenanalytics.com/job/rapidsai/job/gpuci/job/cusignal/job/branches/job/cusignal-branch-pipeline/)
-
 **cuSignal** is a GPU-accelerated signal processing library in Python that is both based on and extends the [SciPy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) API. Notably, cuSignal:
 - Delivers orders-of-magnitude speedups over CPU with a familiar API
 - Supports a zero-copy connection to popular Deep Learning frameworks like PyTorch, Tensorflow, and Jax
