@@ -570,7 +570,7 @@ def csd(
     coherence: Magnitude squared coherence by Welch's method.
 
     Notes
-    --------
+    -----
     By convention, Pxy is computed with the conjugate FFT of X
     multiplied by the FFT of Y.
 
@@ -1389,7 +1389,7 @@ def coherence(
     csd: Cross spectral density by Welch's method.
 
     Notes
-    --------
+    -----
     An appropriate amount of overlap will depend on the choice of window
     and on your requirements. For the default Hann window an overlap of
     50% is a reasonable trade off between accurately estimating the
