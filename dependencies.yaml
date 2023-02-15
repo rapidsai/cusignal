@@ -8,6 +8,7 @@ files:
     includes:
       - checks
       - cudatoolkit
+      - docs
       - py_version
       - run
       - test_notebooks
@@ -28,6 +29,12 @@ files:
     output: none
     includes:
       - checks
+      - py_version
+  docs:
+    output: none
+    includes:
+      - cudatoolkit
+      - docs
       - py_version
 channels:
   - rapidsai
@@ -60,6 +67,15 @@ dependencies:
       - output_types: [conda, requirements]
         packages:
           - pre-commit
+  docs:
+    common:
+      - output_types: [conda, requirements]
+        packages:
+          - ipython
+          - numpydoc
+          - pydata-sphinx-theme
+          - sphinx<6
+          - sphinx-copybutton
   py_version:
     specific:
       - output_types: conda

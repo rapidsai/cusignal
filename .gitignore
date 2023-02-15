@@ -9,3 +9,5 @@ lib64
 *.fatbin
 docs/build
 *.ipynb_checkpoints
+docs/_html
+docs/_text
