@@ -336,11 +336,10 @@ def firwin(
                              '{}'.format(pass_zero))
     
     pass_nyquist = bool(cutoff.size & 1) ^ pass_zero
+    
     if pass_nyquist and numtaps % 2 == 0:
-        raise ValueError(
-            "A filter with an even number of coefficients must "
-            "have zero response at the Nyquist rate."
-        )
+        raise ValueError('A filter with an even number of coefficients must '
+            'have zero response at the Nyquist rate.')
 
     # Insert 0 and/or 1 at the ends of cutoff so that the length of cutoff
     # is even, and each pair in cutoff corresponds to passband.
