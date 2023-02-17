@@ -307,7 +307,42 @@ def firwin(
         beta = kaiser_beta(atten)
         window = ("kaiser", beta)
 
+    if isinstance(pass_zero, str):
+        if pass_zero in ("bandstop", "lowpass"):
+            if pass_zero == "lowpass":
+                if cutoff.size != 1:
+                    raise ValueError(
+                        "cutoff must have one element if "
+                        'pass_zero=="lowpass", got %s' % (cutoff.shape,)
+                    )
+            elif cutoff.size <= 1:
+                raise ValueError(
+                    "cutoff must have at least two elements if "
+                    'pass_zero=="bandstop", got %s' % (cutoff.shape,)
+                )
+            pass_zero = True
+        elif pass_zero in ("bandpass", "highpass"):
+            if pass_zero == "highpass":
+                if cutoff.size != 1:
+                    raise ValueError(
+                        "cutoff must have one element if "
+                        'pass_zero=="highpass", got %s' % (cutoff.shape,)
+                    )
+            elif cutoff.size <= 1:
+                raise ValueError(
+                    "cutoff must have at least two elements if "
+                    'pass_zero=="bandpass", got %s' % (cutoff.shape,)
+                )
+            pass_zero = False
+        else:
+            raise ValueError(
+                'pass_zero must be True, False, "bandpass", '
+                '"lowpass", "highpass", or "bandstop", got '
+                "{}".format(pass_zero)
+            )
+
     pass_nyquist = bool(cutoff.size & 1) ^ pass_zero
+
     if pass_nyquist and numtaps % 2 == 0:
         raise ValueError(
             "A filter with an even number of coefficients must "
