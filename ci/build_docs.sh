@@ -32,6 +32,7 @@ popd
 
 
 if [[ ${RAPIDS_BUILD_TYPE} == "branch" ]]; then
-  aws s3 sync --delete docs/_html "s3://rapidsai-docs/cusignal/${VERSION_NUMBER}/html"
-  aws s3 sync --delete docs/_text "s3://rapidsai-docs/cusignal/${VERSION_NUMBER}/txt"
+  rapids-logger "Upload Docs to S3"
+  aws s3 sync --no-progress --delete docs/_html "s3://rapidsai-docs/cusignal/${VERSION_NUMBER}/html"
+  aws s3 sync --no-progress --delete docs/_text "s3://rapidsai-docs/cusignal/${VERSION_NUMBER}/txt"
 fi
