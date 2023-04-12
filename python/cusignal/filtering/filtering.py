@@ -1140,11 +1140,11 @@ def channelize_poly(x, h, n_chans):
         Number of channels for channelizer
 
     Returns
-    ----------
+    -------
     yy : channelized output matrix
 
     Notes
-    ----------
+    -----
     Currently only supports simple channelizer where channel
     spacing is equivalent to the number of channels used (zero overlap).
     Number of filter taps (len of filter / n_chans) must be <=32.

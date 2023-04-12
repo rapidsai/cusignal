@@ -4,24 +4,24 @@ cuSignal API Reference
 
 
 Convolution
-============
+===========
 
 Convolve
-------------
+--------
 
 .. automodule:: cusignal.convolution.convolve
     :members:
     :undoc-members:
 
 Correlate
-------------
+---------
 .. automodule:: cusignal.convolution.correlate
     :members:
     :undoc-members:
 
 
 Modulation/Demodulation
-============
+=======================
 
 Demodulation
 ------------
@@ -31,10 +31,10 @@ Demodulation
     :undoc-members:
 
 Estimation
-============
+==========
 
 Kalman Filter
-------------
+-------------
 
 .. automodule:: cusignal.estimation.filters
     :members:
@@ -42,17 +42,17 @@ Kalman Filter
 
 
 Filtering
-============
+=========
 
 Resample
-------------
+--------
 
 .. automodule:: cusignal.filtering.resample
     :members:
     :undoc-members:
 
 FIR Filters
-------------
+-----------
 
 .. automodule:: cusignal.filtering.filtering.firfilter
     :members:
@@ -63,17 +63,17 @@ FIR Filters
     :undoc-members:
 
 Channelizer
-------------
+-----------
 
 .. automodule:: cusignal.filtering.channelize_poly
     :members:
     :undoc-members:
 
 Filter Design
-============
+=============
 
 Resample
-------------
+--------
 
 .. automodule:: cusignal.filter_design.fir_filter_design
     :members:
@@ -92,10 +92,10 @@ Peak Finding
 
 
 Window Functions
-============
+================
 
 Windows
-------------
+-------
 
 .. automodule:: cusignal.windows.windows
     :members:
@@ -103,10 +103,10 @@ Windows
 
 
 Waveforms
-============
+=========
 
 Waveform Generation
-------------
+-------------------
 
 .. automodule:: cusignal.waveforms.waveforms
     :members:
@@ -114,17 +114,17 @@ Waveform Generation
 
 
 Spectrum Analysis
-============
+=================
 
 Spectral
-------------
+--------
 
 .. automodule:: cusignal.spectral_analysis.spectral
     :members:
     :undoc-members:
 
 Acoustics
-------------
+---------
 
 .. automodule:: cusignal.acoustics.cepstrum
     :members:
@@ -132,10 +132,10 @@ Acoustics
 
 
 Wavelets
-============
+========
 
 Wavelets
-------------
+--------
 
 .. automodule:: cusignal.wavelets.wavelets
     :members:
@@ -143,10 +143,10 @@ Wavelets
 
 
 B-splines
-============
+=========
 
 B-splines
-------------
+---------
 
 .. automodule:: cusignal.bsplines.bsplines
     :members:
@@ -154,17 +154,17 @@ B-splines
 
 
 Utilities
-============
+=========
 
 Array Tools
-------------
+-----------
 
 .. automodule:: cusignal.utils.arraytools
     :members:
     :undoc-members:
 
 FFTPack Helper
-------------
+--------------
 
 .. automodule:: cusignal.utils.fftpack_helper
     :members:
@@ -172,17 +172,17 @@ FFTPack Helper
 
 
 IO
-============
+==
 
 Reader
-------------
+------
 
 .. automodule:: cusignal.io.reader
     :members:
     :undoc-members:
 
 Writer
-------------
+------
 
 .. automodule:: cusignal.io.writer
     :members:
@@ -190,10 +190,10 @@ Writer
 
 
 Radar/Phased Array
-============
+==================
 
 Radar Tools
-------------
+-----------
 
 .. automodule:: cusignal.radartools.radartools
     :members:

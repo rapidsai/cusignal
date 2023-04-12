@@ -82,6 +82,7 @@ def _design_resample_poly(up, down, window, gpupath=True):
 def decimate(x, q, n=None, axis=-1, zero_phase=True, gpupath=True):
     """
     Downsample the signal after applying an anti-aliasing filter.
+
     Parameters
     ----------
     x : array_like
@@ -106,10 +107,12 @@ def decimate(x, q, n=None, axis=-1, zero_phase=True, gpupath=True):
     -------
     y : ndarray
         The down-sampled signal.
+
     See Also
     --------
     resample : Resample up or down using the FFT method.
     resample_poly : Resample using polyphase filtering and an FIR filter.
+
     Notes
     -----
     Only FIR filter types are currently supported in cuSignal.
