@@ -51,14 +51,10 @@ Resample
     :members:
     :undoc-members:
 
-FIR Filters
------------
+Filtering
+---------
 
-.. automodule:: cusignal.filtering.filtering.firfilter
-    :members:
-    :undoc-members:
-
-.. automodule:: cusignal.filter_design.fir_filter_design
+.. automodule:: cusignal.filtering.filtering
     :members:
     :undoc-members:
 
@@ -72,8 +68,8 @@ Channelizer
 Filter Design
 =============
 
-Resample
---------
+FIR Filter Design
+-----------------
 
 .. automodule:: cusignal.filter_design.fir_filter_design
     :members:
