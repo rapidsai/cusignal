@@ -26,7 +26,7 @@ from cusignal.convolution.convolve import (
     convolve2d,
     fftconvolve,
 )
-from cusignal.convolution.correlate import correlate, correlate2d
+from cusignal.convolution.correlate import correlate, correlate2d, correlation_lags
 from cusignal.demod.demod import fm_demod
 from cusignal.estimation.filters import KalmanFilter
 from cusignal.filter_design.fir_filter_design import (
