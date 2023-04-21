@@ -20,7 +20,7 @@ dependencies:
 - pytest-benchmark
 - pytest-cov
 - pytest-xdist
-- python>=3.8,<3.11
+- python>=3.9,<3.11
 - pytorch <=1.12.1
 - scipy >=1.6.0
 - sphinx-copybutton
