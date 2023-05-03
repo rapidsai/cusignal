@@ -1,3 +1,21 @@
+# cuSignal 23.04.00 (6 Apr 2023)
+
+## 🐛 Bug Fixes
+
+- Allow firwin to accept string argument for `pass_zero` ([#554](https://github.com/rapidsai/cusignal/pull/554)) [@awthomp](https://github.com/awthomp)
+
+## 🛠️ Improvements
+
+- Fix docs build to be `pydata-sphinx-theme=0.13.0` compatible ([#558](https://github.com/rapidsai/cusignal/pull/558)) [@galipremsagar](https://github.com/galipremsagar)
+- Update to GCC 11 ([#557](https://github.com/rapidsai/cusignal/pull/557)) [@bdice](https://github.com/bdice)
+- Make docs builds less verbose ([#556](https://github.com/rapidsai/cusignal/pull/556)) [@AyodeAwe](https://github.com/AyodeAwe)
+- Skip docs job in nightly runs ([#555](https://github.com/rapidsai/cusignal/pull/555)) [@AyodeAwe](https://github.com/AyodeAwe)
+- Reduce error handling verbosity in CI tests scripts ([#549](https://github.com/rapidsai/cusignal/pull/549)) [@AjayThorve](https://github.com/AjayThorve)
+- Update shared workflow branches ([#548](https://github.com/rapidsai/cusignal/pull/548)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Remove gpuCI scripts. ([#547](https://github.com/rapidsai/cusignal/pull/547)) [@bdice](https://github.com/bdice)
+- Move date to build string in `conda` recipe ([#543](https://github.com/rapidsai/cusignal/pull/543)) [@ajschmidt8](https://github.com/ajschmidt8)
+- Add docs build job ([#536](https://github.com/rapidsai/cusignal/pull/536)) [@AyodeAwe](https://github.com/AyodeAwe)
+
 # cuSignal 23.02.00 (9 Feb 2023)
 
 ## 📖 Documentation
