@@ -95,7 +95,7 @@ dependencies:
     common:
       - output_types: [conda, requirements]
         packages:
-          - cupy >=10,<12.0.0a0
+          - cupy >=12.0.0
           - numba >=0.49.0
           - numpy >=1.19,<1.24
           - scipy >=1.6.0
