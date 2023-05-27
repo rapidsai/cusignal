@@ -29,7 +29,7 @@ requirements:
   run:
     - cupy >=12.0.0
     - numba >=0.49.0
-    - numpy >=1.19,<1.24
+    - numpy >=1.19
     - python
     - scipy >=1.6.0
 
