@@ -12,7 +12,7 @@ dependencies:
 - matplotlib-base
 - notebook
 - numba >=0.57.0
-- numpy >=1.19
+- numpy >=1.21
 - numpydoc
 - pre-commit
 - pydata-sphinx-theme
