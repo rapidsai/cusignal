@@ -400,7 +400,7 @@ def _convolve(
     in2 = in2.astype(promType)
 
     # Create empty array to hold number of aout dimensions
-    out_dimens = np.empty(in1.ndim, np.int)
+    out_dimens = np.empty(in1.ndim, int)
     if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = (
@@ -465,7 +465,7 @@ def _convolve2d(in1, in2, use_convolve, mode, boundary, fillvalue):
             raise Exception("Unable to create fill array")
 
     # Create empty array to hold number of aout dimensions
-    out_dimens = np.empty(in1.ndim, np.int)
+    out_dimens = np.empty(in1.ndim, int)
     if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
@@ -539,7 +539,7 @@ def _convolve1d2o(in1, in2, mode):
     in2 = in2.astype(promType)
 
     # Create empty array to hold number of aout dimensions
-    out_dimens = np.empty(in1.ndim, np.int)
+    out_dimens = np.empty(in1.ndim, int)
     if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
@@ -602,7 +602,7 @@ def _convolve1d3o(in1, in2, mode):
     in2 = in2.astype(promType)
 
     # Create empty array to hold number of aout dimensions
-    out_dimens = np.empty(in1.ndim, np.int)
+    out_dimens = np.empty(in1.ndim, int)
     if val == VALID:
         for i in range(in1.ndim):
             out_dimens[i] = in1.shape[i] - in2.shape[i] + 1
