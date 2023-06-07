@@ -1,3 +1,19 @@
+# cuSignal 23.06.00 (7 Jun 2023)
+
+## 🚨 Breaking Changes
+
+- Dropping Python 3.8 ([#565](https://github.com/rapidsai/cusignal/pull/565)) [@divyegala](https://github.com/divyegala)
+
+## 🛠️ Improvements
+
+- Refresh requirements ([#576](https://github.com/rapidsai/cusignal/pull/576)) [@jakirkham](https://github.com/jakirkham)
+- run docs nightly too ([#572](https://github.com/rapidsai/cusignal/pull/572)) [@AyodeAwe](https://github.com/AyodeAwe)
+- Update cupy dependency ([#570](https://github.com/rapidsai/cusignal/pull/570)) [@vyasr](https://github.com/vyasr)
+- Revert shared-action-workflows pin ([#566](https://github.com/rapidsai/cusignal/pull/566)) [@divyegala](https://github.com/divyegala)
+- Dropping Python 3.8 ([#565](https://github.com/rapidsai/cusignal/pull/565)) [@divyegala](https://github.com/divyegala)
+- Remove usage of rapids-get-rapids-version-from-git ([#564](https://github.com/rapidsai/cusignal/pull/564)) [@jjacobelli](https://github.com/jjacobelli)
+- Use ARC V2 self-hosted runners for GPU jobs ([#561](https://github.com/rapidsai/cusignal/pull/561)) [@jjacobelli](https://github.com/jjacobelli)
+
 # cuSignal 23.04.00 (6 Apr 2023)
 
 ## 🐛 Bug Fixes
