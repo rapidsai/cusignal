@@ -7,12 +7,12 @@ channels:
 - nvidia
 dependencies:
 - cudatoolkit=11.8
-- cupy >=10,<12.0.0a0
+- cupy >=12.0.0
 - ipython
 - matplotlib-base
 - notebook
-- numba >=0.49.0
-- numpy >=1.19,<1.24
+- numba >=0.57.0
+- numpy >=1.21
 - numpydoc
 - pre-commit
 - pydata-sphinx-theme
@@ -20,7 +20,7 @@ dependencies:
 - pytest-benchmark
 - pytest-cov
 - pytest-xdist
-- python>=3.8,<3.11
+- python>=3.9,<3.11
 - pytorch <=1.12.1
 - scipy >=1.6.0
 - sphinx-copybutton
