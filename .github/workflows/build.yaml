@@ -28,7 +28,7 @@ concurrency:
 jobs:
   python-build:
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-build.yaml@branch-23.08
+    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-build.yaml@branch-23.10
     with:
       matrix_filter: map(select(.CUDA_VER | startswith("11")))
       build_type: ${{ inputs.build_type || 'branch' }}
@@ -38,7 +38,7 @@ jobs:
   upload-conda:
     needs: [python-build]
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/conda-upload-packages.yaml@branch-23.08
+    uses: rapidsai/shared-action-workflows/.github/workflows/conda-upload-packages.yaml@branch-23.10
     with:
       build_type: ${{ inputs.build_type || 'branch' }}
       branch: ${{ inputs.branch }}
@@ -48,7 +48,7 @@ jobs:
     if: github.ref_type == 'branch'
     needs: python-build
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.08
+    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.10
     with:
       arch: "amd64"
       branch: ${{ inputs.branch }}
