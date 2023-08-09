@@ -1,3 +1,11 @@
+# cuSignal 23.08.00 (9 Aug 2023)
+
+## 🛠️ Improvements
+
+- Only run cusignal CI for CUDA 11. ([#583](https://github.com/rapidsai/cusignal/pull/583)) [@bdice](https://github.com/bdice)
+- use rapids-upload-docs script ([#580](https://github.com/rapidsai/cusignal/pull/580)) [@AyodeAwe](https://github.com/AyodeAwe)
+- Remove documentation build scripts for Jenkins ([#578](https://github.com/rapidsai/cusignal/pull/578)) [@ajschmidt8](https://github.com/ajschmidt8)
+
 # cuSignal 23.06.00 (7 Jun 2023)
 
 ## 🚨 Breaking Changes
