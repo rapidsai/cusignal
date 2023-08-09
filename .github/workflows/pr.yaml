@@ -18,39 +18,41 @@ jobs:
       - conda-notebook-tests
       - docs-build
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/pr-builder.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/pr-builder.yaml@branch-23.08
   checks:
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/checks.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/checks.yaml@branch-23.08
   conda-python-build:
     needs: checks
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-build.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-build.yaml@branch-23.08
     with:
+      matrix_filter: map(select(.CUDA_VER | startswith("11")))
       build_type: pull-request
   conda-python-tests:
     needs: conda-python-build
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-tests.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/conda-python-tests.yaml@branch-23.08
     with:
+      matrix_filter: map(select(.CUDA_VER | startswith("11")))
       build_type: pull-request
   conda-notebook-tests:
     needs: conda-python-build
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.08
     with:
       build_type: pull-request
       node_type: "gpu-v100-latest-1"
       arch: "amd64"
-      container_image: "rapidsai/ci:latest"
+      container_image: "rapidsai/ci:cuda11.8.0-ubuntu22.04-py3.10"
       run_script: "ci/test_notebooks.sh"
   docs-build:
     needs: conda-python-build
     secrets: inherit
-    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.06
+    uses: rapidsai/shared-action-workflows/.github/workflows/custom-job.yaml@branch-23.08
     with:
       build_type: pull-request
       node_type: "gpu-v100-latest-1"
       arch: "amd64"
-      container_image: "rapidsai/ci:latest"
+      container_image: "rapidsai/ci:cuda11.8.0-ubuntu22.04-py3.9"
       run_script: "ci/build_docs.sh"
