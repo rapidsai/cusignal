@@ -41,8 +41,8 @@ test:
 
 about:
   home: https://rapids.ai/
-  license: Apache-2.0
-  license_family: Apache
+  license: MIT
+  license_family: MIT
   license_file: ../../../LICENSE
   summary: cuSignal core library
   dev_url: https://github.com/rapidsai/cusignal
