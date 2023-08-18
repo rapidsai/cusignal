@@ -1,5 +1,15 @@
 # <div align="left"><img src="https://rapids.ai/assets/images/rapids_logo.png" width="90px"/>&nbsp;cuSignal</div>
 
+# Deprecation Notice
+The RAPIDS v23.08 is the last formal release for cuSignal. Starting in 2019, cuSignal strived to provide a simple to use and highly performant library for signal processing developers working in Python. With over 400,000 total Anaconda downloads, we built an incredible community together. We are pleased to announce that much of the cuSignal codebase is moving to [CuPy](https://cupy.dev) and is highly aligned with CuPy's goal to GPU-accelerate the NumPy and SciPy ecosystems. By moving our work to CuPy, we allow developers to use a single library for signal processing (and more!) while also reducing software dependencies.
+
+To continue your journey with GPUs, Python, and Signal Processing, please:
+- [Download CuPy](https://docs.cupy.dev/en/stable/install.html)
+- Visit `cupyx.scipy.signal` [source code](https://github.com/cupy/cupy/tree/main/cupyx/scipy/signal)
+
+The offical deprecation announcement can be found [here](https://docs.rapids.ai/notices/rsn0032/)
+
+***
 **cuSignal** is a GPU-accelerated signal processing library in Python that is both based on and extends the [SciPy Signal](https://github.com/scipy/scipy/tree/master/scipy/signal) API. Notably, cuSignal:
 - Delivers orders-of-magnitude speedups over CPU with a familiar API
 - Supports a zero-copy connection to popular Deep Learning frameworks like PyTorch, Tensorflow, and Jax
