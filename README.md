@@ -6,6 +6,7 @@ RAPIDS v23.08 is the last formal release for cuSignal. Starting in 2019, cuSigna
 To continue your journey with GPUs, Python, and Signal Processing, please:
 - [Download CuPy](https://docs.cupy.dev/en/stable/install.html)
 - Visit `cupyx.scipy.signal` [source code](https://github.com/cupy/cupy/tree/main/cupyx/scipy/signal)
+- Read CuPy's `signal` module [documentation](https://docs.cupy.dev/en/latest/reference/scipy_signal.html)
 
 The offical deprecation announcement can be found [here](https://docs.rapids.ai/notices/rsn0032/)
 
